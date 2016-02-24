@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "es5",
+    "module": "amd",
+    "moduleResolution": "node",
+    "noImplicitAny": true,
+    "suppressImplicitAnyIndexErrors": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "allowUnreachableCode": true,
+    "allowUnusedLabels": true,
+    "preserveConstEnums": true,
+    "rootDir": "./",
+    "forceConsistentCasingInFileNames": true,
+    "removeComments": false
+  }
+}

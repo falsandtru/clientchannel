@@ -1,0 +1,9 @@
+﻿# Engine
+encoding: UTF-8
+markdown: kramdown
+kramdown:
+  input: GFM
+
+# Config
+baseurl: /localsocket
+permalink: /:categories/:year/:month/:day/:title

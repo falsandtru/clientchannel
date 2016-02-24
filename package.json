@@ -1,0 +1,73 @@
+{
+  "name": "localsocket",
+  "version": "0.0.0",
+  "description": "Communicate between other tabs via IndexedDB and LocalStorage.",
+  "private": true,
+  "homepage": "https://github.com/falsandtru/localsocket",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/falsandtru/localsocket"
+  },
+  "keywords": [
+    "indexeddb",
+    "webstorage",
+    "localstorage"
+  ],
+  "main": "./dist/localsocket.js",
+  "scripts": {
+    "test": "gulp server"
+  },
+  "files": [
+    "dist",
+    "index.*",
+    "typings",
+    "src",
+    "test",
+    "*.js",
+    "*.json",
+    "*.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "arch-stream": "0.0.85"
+  },
+  "devDependencies": {
+    "benchmark": "^2.1.0",
+    "browser-sync": "^2.11.1",
+    "del": "^2.2.0",
+    "extend": "^3.0.0",
+    "gulp": "^3.9.1",
+    "gulp-footer": "^1.0.5",
+    "gulp-header": "^1.7.1",
+    "gulp-load-plugins": "^1.2.0",
+    "gulp-mocha": "^2.2.0",
+    "gulp-rename": "^1.2.2",
+    "gulp-tslint": "^4.3.2",
+    "gulp-typescript": "^2.11.0",
+    "gulp-uglify": "^1.5.3",
+    "gulp-unassert": "^1.0.0",
+    "intelli-espower-loader": "^1.0.1",
+    "karma": "0.13.21",
+    "karma-chrome-launcher": "^0.2.2",
+    "karma-coverage": "^0.5.3",
+    "karma-coveralls": "^1.1.2",
+    "karma-espower-preprocessor": "0.0.4",
+    "karma-firefox-launcher": "^0.1.7",
+    "karma-html2js-preprocessor": "^0.1.0",
+    "karma-ie-launcher": "^0.2.0",
+    "karma-mocha": "^0.2.2",
+    "lodash": "^4.5.1",
+    "mocha": "^2.4.5",
+    "npm-check-updates": "^2.5.8",
+    "power-assert": "^1.2.0",
+    "run-sequence": "^1.1.5",
+    "tsd": "^0.6.5",
+    "tslint": "^3.4.0",
+    "typescript": "^1.9.0-dev.20160222"
+  },
+  "engines": {
+    "node": ">=4.0"
+  },
+  "author": "falsandtru",
+  "license": "MIT"
+}
