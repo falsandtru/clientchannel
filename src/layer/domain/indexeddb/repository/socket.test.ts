@@ -40,8 +40,8 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function () {
       const dao = sock.link('a');
 
       assert(dao === sock.link('a'));
-      assert(dao._id === void 0);
-      assert(dao._key === 'a');
+      assert(dao.__id === void 0);
+      assert(dao.__key === 'a');
       assert(dao.n === 0);
       assert(dao.s === '');
 
@@ -57,8 +57,8 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function () {
       assert(dao.n === 0);
       dao.n = 1;
       assert(dao === sock.link('a'));
-      assert(dao._id === void 0);
-      assert(dao._key === 'a');
+      assert(dao.__id === void 0);
+      assert(dao.__key === 'a');
       assert(dao.n === 1);
       assert(dao.s === '');
 
@@ -70,7 +70,7 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function () {
       const sock = socket('test', () => new Value(0, ''), () => true);
       const dao = sock.link('a');
 
-      dao._event.once(<any>['send', 'n'], ev => {
+      dao.__event.once(<any>['send', 'n'], ev => {
         assert.deepEqual(ev, {
           type: 'send',
           key: 'a',
@@ -80,7 +80,7 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function () {
         });
         sock.events.save.once(['a', 'n', 'put'], ev => {
           setTimeout(() => {
-            assert(localStorage.getItem('test').replace(/\d+/, '0') === '{"_key":"test","msgs":[{"key":"a","attr":"n","date":0}]}');
+            assert(localStorage.getItem('test').replace(/\d+/, '0') === '{"__key":"test","msgs":[{"key":"a","attr":"n","date":0}]}');
             sock.destroy();
             done();
           }, 100);
@@ -89,8 +89,8 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function () {
 
       assert(dao.n === 0);
       dao.n = 1;
-      assert(dao._id === void 0);
-      assert(dao._key === 'a');
+      assert(dao.__id === void 0);
+      assert(dao.__key === 'a');
       assert(dao.n === 1);
       assert(dao.s === '');
     });
@@ -103,7 +103,7 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function () {
       listen('test')(db => {
         db.transaction('data', 'readwrite').objectStore('data').put(new StorageRecord(<any>'a', { n: 1 })).onsuccess = _ => {
           sock['schema'].data.update(<any>'a');
-          dao._event.once(<any>['recv', 'n'], ev => {
+          dao.__event.once(<any>['recv', 'n'], ev => {
             assert(dao.n === 1);
             sock.destroy();
             done();

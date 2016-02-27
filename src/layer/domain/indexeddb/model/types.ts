@@ -31,8 +31,8 @@ export function KeyString<T extends string>(key: T): Key & T {
 }
 
 export interface EventValue {
-  _id: IdNumber;
-  _key: KeyString;
+  __id: IdNumber;
+  __key: KeyString;
 }
 
 export type IDBKey

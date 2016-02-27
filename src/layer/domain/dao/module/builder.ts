@@ -3,13 +3,13 @@ import {noop} from '../../../../lib/noop';
 
 export const SCHEMA = {
   ID: {
-    NAME: '_id'
+    NAME: '__id'
   },
   KEY: {
-    NAME: '_key'
+    NAME: '__key'
   },
   EVENT: {
-    NAME: '_event'
+    NAME: '__event'
   }
 };
 export function build<V>(source: V, factory: () => V, update: (attr: string, newVal: any, oldVal: any) => void = noop): V {

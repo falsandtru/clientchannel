@@ -27,10 +27,10 @@
     // connect to database
     var sock = localsocket.default('demo', indexedDB, {
       factory: function () {
-        // create schema
+        // define schema
         return {
           event: function () {
-            return this._event;
+            return this.__event;
           },
           title: '',
           content: null

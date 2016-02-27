@@ -77,7 +77,7 @@ class Store<T extends LocalSocketObject> implements LocalStore<T> {
       },
       parse<T>(this.storage.getItem(this.name) || '{}')
     );
-    source._event['toJSON'] = (): void => void 0;
+    source.__event['toJSON'] = (): void => void 0;
     const dao: T = build(source, this.factory, (attr, newValue, oldValue) => {
       if (this.storage === localStorage && this.storage.getItem(this.name) === null) {
         void this.meta.add(this.name, this.life);

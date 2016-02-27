@@ -16,9 +16,9 @@
   }
 
   export interface LocalSocketObject {
-    _id?: number;
-    _key?: string;
-    _event?: IObservableObserver<LocalSocketEventType, LocalSocketEvent, any>;
+    __id?: number;
+    __key?: string;
+    __event?: IObservableObserver<LocalSocketEventType, LocalSocketEvent, any>;
   }
   export interface LocalSocketConfig<T> {
     life?: number;

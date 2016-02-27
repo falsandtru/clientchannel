@@ -10,7 +10,7 @@ describe('Unit: layers/domain/webstorage/repository/store', () => {
       return new DAO();
     }
     const schema = {
-      _key: 'test'
+      __key: 'test'
     };
 
     before(() => {

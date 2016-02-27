@@ -63,10 +63,10 @@ describe('Unit: layers/domain/dao/module/build', () => {
         this.p_ = v;
       }
       get name(): string {
-        return this['_key']
+        return this['__key']
       }
       set name(name) {
-        this['_key'] = name;
+        this['__key'] = name;
       }
     }
 
@@ -75,10 +75,10 @@ describe('Unit: layers/domain/dao/module/build', () => {
     }
 
     it('init', () => {
-      const source = <DAO><any>{_key: 'test', m: 1};
+      const source = <DAO><any>{__key: 'test', m: 1};
       const dao = build(source, factory);
 
-      assert(dao['_key'] === 'test');
+      assert(dao['__key'] === 'test');
       assert(dao.name === 'test');
       assert(dao.n === 0);
       assert(dao.m === 1);
@@ -87,7 +87,7 @@ describe('Unit: layers/domain/dao/module/build', () => {
     });
 
     it('seal', () => {
-      const source = <DAO><any>{_key: 'test', m: 1};
+      const source = <DAO><any>{__key: 'test', m: 1};
       const dao = build(source, factory);
 
       try {
@@ -100,13 +100,13 @@ describe('Unit: layers/domain/dao/module/build', () => {
     });
 
     it('id', () => {
-      const source = <DAO><any>{_key: 'test', m: 1};
+      const source = <DAO><any>{__key: 'test', m: 1};
       const dao = build(source, factory);
 
-      assert(dao['_id'] === void 0);
+      assert(dao['__id'] === void 0);
 
       try {
-        dao['_id'] = 0;
+        dao['__id'] = 0;
         throw 0;
       }
       catch (e) {
@@ -115,7 +115,7 @@ describe('Unit: layers/domain/dao/module/build', () => {
     });
 
     it('key', () => {
-      const source = <DAO><any>{_key: 'test', m: 1};
+      const source = <DAO><any>{__key: 'test', m: 1};
       const dao = build(source, factory);
 
       assert(dao.name === 'test');
@@ -130,7 +130,7 @@ describe('Unit: layers/domain/dao/module/build', () => {
     });
 
     it('prop', () => {
-      const source = <DAO><any>{_key: 'test', m: 1};
+      const source = <DAO><any>{__key: 'test', m: 1};
       const dao = build(source, factory);
 
       dao.n = 2;
@@ -149,7 +149,7 @@ describe('Unit: layers/domain/dao/module/build', () => {
     });
 
     it('accessor', () => {
-      const source = <DAO><any>{_key: 'test', m: 1};
+      const source = <DAO><any>{__key: 'test', m: 1};
       const dao = build(source, factory);
 
       dao.p_ = 6;

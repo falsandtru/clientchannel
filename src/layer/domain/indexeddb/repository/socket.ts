@@ -46,7 +46,7 @@ class Socket<T extends StorageValue & LocalSocketObject> extends Storage<T> impl
     destroy: (err: DOMError, ev: Event) => boolean
   ) {
     super(name, destroy);
-    void this.port._event
+    void this.port.__event
       .monitor([], ({type, newValue}) => {
         switch (type) {
           case 'send': {
@@ -72,7 +72,7 @@ class Socket<T extends StorageValue & LocalSocketObject> extends Storage<T> impl
             const oldVal = source[attr];
             const newVal = this.get(key)[attr];
             source[attr] = newVal;
-            void (<Observable<LocalSocketEventType, LocalSocketEvent, void>>source._event)
+            void (<Observable<LocalSocketEventType, LocalSocketEvent, void>>source.__event)
               .emit(<any>['recv', attr], new StoreEvent('recv', key, attr, newVal, oldVal));
             return;
           }
@@ -85,7 +85,7 @@ class Socket<T extends StorageValue & LocalSocketObject> extends Storage<T> impl
                 const oldVal = source[attr];
                 const newVal = <void>void 0;
                 source[attr] = newVal;
-                void (<Observable<LocalSocketEventType, LocalSocketEvent, void>>source._event)
+                void (<Observable<LocalSocketEventType, LocalSocketEvent, void>>source.__event)
                   .emit(<any>['recv', attr], new StoreEvent('recv', key, attr, newVal, oldVal));
               }, void 0);
             return;
@@ -99,7 +99,7 @@ class Socket<T extends StorageValue & LocalSocketObject> extends Storage<T> impl
                 const oldVal = source[attr];
                 const newVal = cache[attr];
                 source[attr] = newVal;
-                void (<Observable<LocalSocketEventType, LocalSocketEvent, void>>source._event)
+                void (<Observable<LocalSocketEventType, LocalSocketEvent, void>>source.__event)
                   .emit(<any>['recv', attr], new StoreEvent('recv', key, attr, newVal, oldVal));
               }, void 0);
             return;
@@ -120,12 +120,12 @@ class Socket<T extends StorageValue & LocalSocketObject> extends Storage<T> impl
       },
       this.get(key)
     ));
-    source._event['toJSON'] = (): void => void 0;
+    source.__event['toJSON'] = (): void => void 0;
     const link: T = this.links.add(
       key,
       build(source, this.factory, (attr, newValue, oldValue) => {
         void this.add(new StorageRecord(KeyString(key), <T>{ [attr]: newValue }));
-        void (<Observable<LocalSocketEventType, LocalSocketEvent, void>>source._event)
+        void (<Observable<LocalSocketEventType, LocalSocketEvent, void>>source.__event)
           .emit(<any>['send', attr], new StoreEvent('send', key, attr, newValue, oldValue));
       })
     );
