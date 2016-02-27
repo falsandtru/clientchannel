@@ -5,6 +5,7 @@ sudo: false
 cache: bundler
 env:
   global:
+  - secure: QVD2t1kirhIWSJ5iI79CWsjj4Li8EyiNLgEJ0FySVFZEeZvfifOK5rukl/TtB5dsa/HoFaS7BSV+0DpZIYoepfiHClh4XxLmzeKCfPB+yOIQLNPFODG+vYv2AAJIOXdC/xHnzIrX6out/2ibpDchGGgrjHJy9yFTRgFFNtQcO4koy8AKpSeWks12UGe9K/5OOvsMwlhv7mP5ZiomPgnRL5rfSp5k1SCLsGZOIKIAy0lcyntlUKvHnyDvQtPWPeC7R011g7gQN4ZHU3Dx3MUfhlbc04w+4+7mM9FH1atDKOmeMHsWFKpcpNmR93MiiW0dEmb/Q0jNxv4vA90wprOFwwMPF+zP4HZdqiAOLtk2F/WRz+nRYgPCyHcz+I58XGUUE5dFaaSMM4BQsGFzUskSOL7VRYhibceRHQl9ugf8Zu1eKWQGR/hsQeNcmNAwvfuOIaPSH/eVGaahlwV7qPaHLGgezUUUkAPJimTY9W79aIjZYCZBSXdkFFtCz2Koikz67TQmOUOvwBII/fndb2yZJpmKaFFcbg3ysb2aRehCFr2512BG2gUeUoiRbJIwf8QBUZcEObaqTyHOJN0XXOgV9opJT7O2QinlJmLV2xTghTjM4UttbnQCq+ddnr1aE7bvwOw7fxvlK0PwoeTzmaEXq7U6vaQ84Ojl8UJV/hjvj3U=
   - GIT_OWNER=$(echo $TRAVIS_REPO_SLUG | cut -d/ -f1)
   - GIT_REPO=$(echo $TRAVIS_REPO_SLUG | cut -d/ -f2)
   - GIT_COMMITTER_NAME=$(git log -1 --pretty=format:%an)
@@ -33,3 +34,31 @@ notifications:
     - secure: l2LCzUCkGmwuzLi9mkKrY40V3/mYb2En4TcoAlLuVtRgx5UZyA/efGhmNVaD9J/dx0WaxNGGEJR1+18C+dHx7pbjmyZFk/9m3JCjgNagsPN40VSNOStORvmhgsAVEm3Nzzrmk0WVxaVDgU9HQ2UvuDaFdygxtBOYRCI1pi+5V8mWEpLdDUKnlZdWWLcI4YdeE9zrII46tQNlkvfqRZ+OTFLly9/AMWbCOHc56YMjVNqpJnZeExKFH1RLm5RrsNYE67XxN1e1GGqoyKDY33eLFMsNUtodtgMPlFvv5ntExKdNIVFa7mcCiA72f0tJ96BNvxrNGYCg7NBcQwzEu9Kdp7Hb/nZXH4jnRw/Lq7LlK3w0P3Io4nHSw6+od9uH9hdh2EeoVJVrIKHoTedMl6KrP9fl97KX4GgTMqPNOhuI6bOpQw+C2SEa6wFonNy4OwsPdaGn5AqiJevkrj6sQ1cmOsQQsulVzc5ktjAPo5BAvTwbt/wu1EYIofNvZ1zK2E1bXJp3iyRSHC3zvK2qCWBk3HaoE+8BbcNdaFZ1afs9QkUkrhj3h59652Q2piGpmXgahvRTNgBovI6qswtXYOUGz4CwZvnoaVMlw5OqlKnjoT4NpmMNytSmGGzLkbdkNLSPmoZsSZmIg0AWGhOYen/21sLmzdiiU8V0iTkvINgZMuY=
     on_success: change
     on_failure: always
+after_deploy:
+- if [ $TRAVIS_BRANCH != "master" ] || [ ! $GH_TOKEN ]; then exit 0; fi
+- if [ $deploy == "false" ]; then exit 0; fi
+- mkdir ../gh-pages
+- cp -rf ./gh-pages ../
+- cp -rf ./dist/* ../gh-pages/assets/js
+- cat package.json | json version
+- new_version=`cat package.json | json version | awk -F. '{printf("%d%05d%06d", ++$1,
+  $2, $3)}'`
+- git reset --hard HEAD~
+- cat package.json | json version
+- cat package.json | json version | awk -F. '{printf("%d%05d%06d", ++$1, $2, $3)}'
+- old_version=`cat package.json | json version | awk -F. '{printf("%d%05d%06d", ++$1,
+  $2, $3)}'`
+- git reset --hard ORIG_HEAD
+- if [ $new_version -lt $old_version ]; then exit 0; fi
+- git fetch origin gh-pages:gh-pages
+- git checkout --orphan gh-pages
+- git checkout -m gh-pages
+- ls -a | grep -vE "^.git$|^\.+$" | xargs rm -rf
+- cp -rf ../gh-pages/* ./
+- find | grep -vE "^./.git(/|$)"
+- sed -i 's|\(baseurl:\s\+\)|\1//falsandtru.github.io|' _config.yml
+- git config user.name "Travis-CI"
+- git config user.email "Travis-CI"
+- git add -A :/
+- git commit -m 'Deploy by Travis-CI'
+- git push https://${GH_TOKEN}@github.com/${GIT_OWNER}/${GIT_REPO}.git gh-pages:gh-pages 2>&1 | sed -e "s/:\/\/\w\+@/:\/\/[secure]@/g"
