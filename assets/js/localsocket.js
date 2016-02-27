@@ -424,9 +424,9 @@ define('src/layer/domain/dao/module/builder', [
 ], function (require, exports, arch_stream_2, noop_1) {
     'use strict';
     exports.SCHEMA = {
-        ID: { NAME: '_id' },
-        KEY: { NAME: '_key' },
-        EVENT: { NAME: '_event' }
+        ID: { NAME: '__id' },
+        KEY: { NAME: '__key' },
+        EVENT: { NAME: '__event' }
     };
     function build(source, factory, update) {
         if (update === void 0) {
@@ -1651,7 +1651,7 @@ define('src/layer/domain/webstorage/repository/store', [
                 return this.cache.get(this.name);
             void this.close();
             var source = arch_stream_8.assign((_a = {}, _a[api_5.SCHEMA.KEY.NAME] = this.name, _a[api_5.SCHEMA.EVENT.NAME] = this.event, _a), parse(this.storage.getItem(this.name) || '{}'));
-            source._event['toJSON'] = function () {
+            source.__event['toJSON'] = function () {
                 return void 0;
             };
             var dao = api_5.build(source, this.factory, function (attr, newValue, oldValue) {
@@ -1762,7 +1762,7 @@ define('src/layer/domain/indexeddb/repository/socket', [
             this.port = this.proxy.link();
             this.links = new arch_stream_9.Set();
             this.sources = new arch_stream_9.Set();
-            void this.port._event.monitor([], function (_a) {
+            void this.port.__event.monitor([], function (_a) {
                 var type = _a.type, newValue = _a.newValue;
                 switch (type) {
                 case 'send': {
@@ -1789,7 +1789,7 @@ define('src/layer/domain/indexeddb/repository/socket', [
                         var oldVal = source[attr];
                         var newVal = _this.get(key)[attr];
                         source[attr] = newVal;
-                        void source._event.emit([
+                        void source.__event.emit([
                             'recv',
                             attr
                         ], new store_1.StoreEvent('recv', key, attr, newVal, oldVal));
@@ -1801,7 +1801,7 @@ define('src/layer/domain/indexeddb/repository/socket', [
                             var oldVal = source[attr];
                             var newVal = void 0;
                             source[attr] = newVal;
-                            void source._event.emit([
+                            void source.__event.emit([
                                 'recv',
                                 attr
                             ], new store_1.StoreEvent('recv', key, attr, newVal, oldVal));
@@ -1814,7 +1814,7 @@ define('src/layer/domain/indexeddb/repository/socket', [
                             var oldVal = source[attr];
                             var newVal = cache_1[attr];
                             source[attr] = newVal;
-                            void source._event.emit([
+                            void source.__event.emit([
                                 'recv',
                                 attr
                             ], new store_1.StoreEvent('recv', key, attr, newVal, oldVal));
@@ -1829,12 +1829,12 @@ define('src/layer/domain/indexeddb/repository/socket', [
             if (this.links.has(key))
                 return this.links.get(key);
             var source = this.sources.add(key, assign_2.assign((_a = {}, _a[api_7.SCHEMA.KEY.NAME] = key, _a[api_7.SCHEMA.EVENT.NAME] = new arch_stream_9.Observable(), _a), this.get(key)));
-            source._event['toJSON'] = function () {
+            source.__event['toJSON'] = function () {
                 return void 0;
             };
             var link = this.links.add(key, api_7.build(source, this.factory, function (attr, newValue, oldValue) {
                 void _this.add(new storage_1.StorageRecord(types_3.KeyString(key), (_a = {}, _a[attr] = newValue, _a)));
-                void source._event.emit([
+                void source.__event.emit([
                     'send',
                     attr
                 ], new store_1.StoreEvent('send', key, attr, newValue, oldValue));
