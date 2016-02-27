@@ -1,4 +1,4 @@
-/*! localsocket v0.0.0 https://github.com/falsandtru/localsocket | (c) 2015, falsandtru | MIT Licence */
+/*! localsocket v0.0.1 https://github.com/falsandtru/localsocket | (c) 2015, falsandtru | MIT Licence */
 /*! Link: MIT Lisence http://www.opensource.org/licenses/mit-license.php */
 define = typeof define === 'function' && define.amd
   ? define
