@@ -1,0 +1,71 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noarchive">
+
+<title>Canvas | LocalSocket</title>
+
+</head>
+<body>
+<article id="content">
+  <input class="title" type="text" style="display: block; width: 300px;" />
+  <canvas class="canvas" width="400" height="400"></canvas>
+  <input class="clear" type="button" value="clear" />
+</article>
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/fabric.js/1.5.0/fabric.min.js"></script>
+<script src="//npmcdn.com/arch-stream"></script>
+<script src="/localsocket/assets/js/localsocket.js"></script>
+
+<script>
+  var width = 400, height = 500;
+  $(function () {
+    // connect to database
+    var sock = localsocket.default('demo', indexedDB, {
+      factory: function () {
+        // create schema
+        return {
+          event: function () {
+            return this._event;
+          },
+          title: '',
+          content: null
+        };
+      }
+    });
+    // create data binding object
+    var canvas = sock.link('canvas');
+    // sace
+    canvas.event().on(['recv', 'title'], function (ev) {
+      document.querySelector('.title').value = ev.newValue;
+    });
+    canvas.event().on(['recv', 'content'], function (ev) {
+      var c = document.createElement('canvas');
+      c.setAttribute('width', width);
+      c.setAttribute('height', height);
+      c.getContext('2d').putImageData(ev.newValue, 0, 0);
+      $canvas.clear();
+      $canvas.add(new fabric.Image(c));
+    });
+    document.querySelector('.title').addEventListener('keyup', function (ev) {
+      canvas.title = document.querySelector('.title').value;
+    });
+    document.querySelector('.clear').addEventListener('click', function (ev) {
+      $canvas.clear();
+      canvas.content = document.querySelector('.canvas').getContext('2d').getImageData(0, 0, width, height);
+    });
+    var $canvas = new fabric.Canvas(document.querySelector('.canvas'));
+    $canvas.isDrawingMode = true;
+    $canvas.freeDrawingBrush.width = 10;
+    $canvas.on('path:created', function () {
+      canvas.content = document.querySelector('.canvas').getContext('2d').getImageData(0, 0, width, height);
+    });
+  });
+</script>
+
+</body>
+</html>
