@@ -39,7 +39,7 @@
     });
     // create data binding object
     var canvas = sock.link('canvas');
-    // sace
+    // component
     canvas.event().on(['recv', 'title'], function (ev) {
       document.querySelector('.title').value = ev.newValue;
     });
