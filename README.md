@@ -5,3 +5,7 @@
 [![Dependency Status](https://gemnasium.com/falsandtru/localsocket.svg)](https://gemnasium.com/falsandtru/localsocket)
 
 Communicate between other tabs via IndexedDB and LocalStorage.
+
+## API
+
+[localsocket.d.ts](typings/localsocket.d.ts)
