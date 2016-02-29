@@ -1,7 +1,7 @@
 language: node_js
 node_js:
 - stable
-sudo: false
+sudo: required
 cache: bundler
 env:
   global:
@@ -13,7 +13,11 @@ env:
   - GIT_COMMIT_ID=$(git rev-parse HEAD)
 before_install:
 - export DISPLAY=:99.0
-- export CHROME_BIN=chromium-browser
+- wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+- sudo sh -c 'echo "deb http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list'
+- sudo apt-get update
+- sudo apt-get install google-chrome-stable
+- export CHROME_BIN=google-chrome-stable
 - sh -e /etc/init.d/xvfb start
 before_deploy:
 - sed -i 's/"private":\ true/"private":\ false/' package.json
