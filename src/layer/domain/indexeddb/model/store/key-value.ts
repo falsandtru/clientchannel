@@ -87,38 +87,6 @@ export abstract class AbstractKeyValueStore<K extends string, V extends IDBValue
       tx.oncomplete = tx.onerror = tx.onabort = _ => void cb(tx.error);
     });
   }
-  public has(key: K, cb: (result: boolean, error: DOMError) => any = noop): boolean {
-    void this.count(key, (count, err) => void cb(count > 0, err))
-    return this.cache.has(key);
-  }
-  public count(query: K | IDBKeyRange, cb: (count: number, error: DOMError) => any): this {
-    void this.access(db => {
-      const tx = db.transaction(this.name, IDBTransaction.readonly);
-      const req = this.index
-        ? tx
-          .objectStore(this.name)
-          .index(this.index)
-          .count(query)
-        : tx
-          .objectStore(this.name)
-          .get(query);
-      let result: number = 0;
-      req.onsuccess = _ => result = <number>req.result;
-      tx.oncomplete = tx.onerror = tx.onabort = _ => cb(result, tx.error);
-    });
-    return this;
-  }
-  public keys(cb: (value: K[], error: DOMError) => any = noop): K[] {
-    const keys: K[] = [];
-    void this.cursor(null, this.index, IDBCursorDirection.nextunique, IDBTransaction.readonly, (cursor, err) => {
-      if (!cursor) return void cb(keys, err);
-      void keys.push(cursor.primaryKey);
-      void cursor.continue();
-    });
-    return this.cache
-      .entries()
-      .map(([k]) => k);
-  }
   public cursor(query: any, index: string, direction: string, mode: string, cb: (cursor: IDBCursorWithValue, error: DOMError) => any): void {
     void this.access(db => {
       const tx = db

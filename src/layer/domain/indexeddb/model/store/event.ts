@@ -248,20 +248,9 @@ export abstract class AbstractEventStore<T extends EventValue> {
       void cursor.continue();
     });
   }
-  public head(key: KeyString): IdNumber
-  public head(key: KeyString, cb: (head: IdNumber, err: DOMError) => any): void
-  public head(key: KeyString, cb?: (head: IdNumber, err: DOMError) => any): any {
-    if (!cb) {
-      return this.cache.cast([key], void 0)
-        .reduce((id, e) => e.id > id ? e.id : id, IdNumber(0));
-    }
-    let head = IdNumber(0);
-    void this.cursor(key, STORE_FIELDS.key, IDBCursorDirection.nextunique, IDBTransaction.readonly, (cursor, err) => {
-      if (!cursor) return void cb(head, err);
-      const event: SavedEventRecord<T> = cursor.value;
-      if (event.type === EventType[EventType.delete]) return void cb(head, err);
-      head = event.id;
-    });
+  public head(key: KeyString): IdNumber {
+    return this.cache.cast([key], void 0)
+      .reduce((id, e) => e.id > id ? e.id : id, IdNumber(0));
   }
   // in cache
   public has(key: KeyString): boolean {
