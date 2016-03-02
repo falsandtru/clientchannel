@@ -858,21 +858,10 @@ define('src/layer/domain/indexeddb/model/store/event', [
                 void cursor.continue();
             });
         };
-        AbstractEventStore.prototype.head = function (key, cb) {
-            if (!cb) {
-                return this.cache.cast([key], void 0).reduce(function (id, e) {
-                    return e.id > id ? e.id : id;
-                }, types_1.IdNumber(0));
-            }
-            var head = types_1.IdNumber(0);
-            void this.cursor(key, STORE_FIELDS.key, api_1.IDBCursorDirection.nextunique, api_1.IDBTransaction.readonly, function (cursor, err) {
-                if (!cursor)
-                    return void cb(head, err);
-                var event = cursor.value;
-                if (event.type === EventType[EventType.delete])
-                    return void cb(head, err);
-                head = event.id;
-            });
+        AbstractEventStore.prototype.head = function (key) {
+            return this.cache.cast([key], void 0).reduce(function (id, e) {
+                return e.id > id ? e.id : id;
+            }, types_1.IdNumber(0));
         };
         AbstractEventStore.prototype.has = function (key) {
             return compose(this.cache.cast([key], void 0)).reduce(function (e) {
@@ -1303,46 +1292,6 @@ define('src/layer/domain/indexeddb/model/store/key-value', [
                 tx.oncomplete = tx.onerror = tx.onabort = function (_) {
                     return void cb(tx.error);
                 };
-            });
-        };
-        AbstractKeyValueStore.prototype.has = function (key, cb) {
-            if (cb === void 0) {
-                cb = noop_2.noop;
-            }
-            void this.count(key, function (count, err) {
-                return void cb(count > 0, err);
-            });
-            return this.cache.has(key);
-        };
-        AbstractKeyValueStore.prototype.count = function (query, cb) {
-            var _this = this;
-            void this.access(function (db) {
-                var tx = db.transaction(_this.name, api_2.IDBTransaction.readonly);
-                var req = _this.index ? tx.objectStore(_this.name).index(_this.index).count(query) : tx.objectStore(_this.name).get(query);
-                var result = 0;
-                req.onsuccess = function (_) {
-                    return result = req.result;
-                };
-                tx.oncomplete = tx.onerror = tx.onabort = function (_) {
-                    return cb(result, tx.error);
-                };
-            });
-            return this;
-        };
-        AbstractKeyValueStore.prototype.keys = function (cb) {
-            if (cb === void 0) {
-                cb = noop_2.noop;
-            }
-            var keys = [];
-            void this.cursor(null, this.index, api_2.IDBCursorDirection.nextunique, api_2.IDBTransaction.readonly, function (cursor, err) {
-                if (!cursor)
-                    return void cb(keys, err);
-                void keys.push(cursor.primaryKey);
-                void cursor.continue();
-            });
-            return this.cache.entries().map(function (_a) {
-                var k = _a[0];
-                return k;
             });
         };
         AbstractKeyValueStore.prototype.cursor = function (query, index, direction, mode, cb) {
