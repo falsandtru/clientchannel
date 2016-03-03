@@ -21,7 +21,7 @@
     __event?: IObservableObserver<LocalSocketEventType, LocalSocketEvent, any>;
   }
   export interface LocalSocketConfig<T> {
-    life?: number;
+    life?: number; // WebStorage only
     factory(): T;
     destroy?(error: DOMError, event: Event): boolean;
   }
