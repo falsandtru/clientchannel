@@ -38,4 +38,6 @@ class WebStorageMetaDataItemExpire {
 }
 
 const name = 'localsocket::meta';
-export const meta = repository(name, localStorage, () => new WebStorageMetaData(), Infinity).link();
+export const meta = localStorage
+  ? repository(name, localStorage, () => new WebStorageMetaData(), Infinity).link()
+  : new WebStorageMetaData();
