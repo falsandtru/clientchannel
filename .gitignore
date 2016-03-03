@@ -1,4 +1,5 @@
 ﻿# binary
+**/*.jekyll-metadata
 coverage
 dist/**/*
 
