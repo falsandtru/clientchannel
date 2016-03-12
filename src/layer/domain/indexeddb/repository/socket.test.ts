@@ -40,7 +40,7 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function () {
       const dao = sock.link('a');
 
       assert(dao === sock.link('a'));
-      assert(dao.__id === void 0);
+      assert(dao.__id === 0);
       assert(dao.__key === 'a');
       assert(dao.n === 0);
       assert(dao.s === '');
@@ -57,7 +57,7 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function () {
       assert(dao.n === 0);
       dao.n = 1;
       assert(dao === sock.link('a'));
-      assert(dao.__id === void 0);
+      assert(dao.__id === 0);
       assert(dao.__key === 'a');
       assert(dao.n === 1);
       assert(dao.s === '');
@@ -79,17 +79,18 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function () {
           oldValue: 0
         });
         sock.events.save.once(['a', 'n', 'put'], ev => {
+          assert(dao.__id === 1);
           setTimeout(() => {
             assert(localStorage.getItem('test').replace(/\d+/, '0') === '{"__key":"test","msgs":[{"key":"a","attr":"n","date":0}]}');
             sock.destroy();
             done();
-          }, 100);
+          }, 0);
         });
       });
 
       assert(dao.n === 0);
       dao.n = 1;
-      assert(dao.__id === void 0);
+      assert(dao.__id === 0);
       assert(dao.__key === 'a');
       assert(dao.n === 1);
       assert(dao.s === '');
@@ -104,6 +105,7 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function () {
         db.transaction('data', 'readwrite').objectStore('data').put(new StorageRecord(<any>'a', { n: 1 })).onsuccess = _ => {
           sock['schema'].data.update(<any>'a');
           dao.__event.once(<any>['recv', 'n'], ev => {
+            assert(dao.__id === 1);
             assert(dao.n === 1);
             sock.destroy();
             done();

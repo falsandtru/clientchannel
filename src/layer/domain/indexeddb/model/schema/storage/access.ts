@@ -2,12 +2,12 @@ import {Observable} from 'arch-stream';
 import {Config, Access} from '../../../../../infrastructure/indexeddb/api';
 import {KeyString} from '../../types';
 import {AbstractKeyValueStore} from '../../store/key-value';
-import {EventType} from '../../store/event';
+import {ESEventType, ESEvent} from '../../store/event';
 
 export const STORE_NAME = 'access';
 export const STORE_FIELDS = {
   key: 'key',
-  date: 'date',
+  date: 'date'
 };
 
 class AccessRecord {
@@ -50,12 +50,12 @@ export class AccessStore extends AbstractKeyValueStore<string, AccessRecord> {
   }
   constructor(
     access: Access,
-    event: Observable<string, [string, string, EventType], void>
+    event: Observable<string, ESEvent, void>
   ) {
     super(access, STORE_NAME, STORE_FIELDS.key);
     void event
-      .monitor([], ([key, , type]) =>
-        type === EventType.delete
+      .monitor([], ({key, type}) =>
+        type === ESEventType.delete
           ? void this.delete(key)
           : void this.set(key, new AccessRecord(key, Date.now()))
       );

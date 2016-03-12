@@ -1,9 +1,9 @@
 import {LocalSocket, LocalStore, LocalSocketObject, LocalSocketEvent, LocalSocketEventType} from 'localsocket';
 import {Observable, IObservableObserver, Set, Map, concat} from 'arch-stream';
 import {build, SCHEMA, isValidPropertyName, isValidPropertyValue} from '../../dao/api';
-import {Storage, StorageRecord, StorageValue, EventType} from '../model/schema/storage';
+import {Storage, StorageRecord, StorageValue, ESEventType} from '../model/schema/storage';
 import {localStorage} from '../../../infrastructure/webstorage/api';
-import {repository as storeRepository, StoreEvent} from '../../webstorage/repository/store';
+import {repository as portRepository, PortEvent} from '../../webstorage/repository/port';
 import {KeyString} from '../model/types';
 import {assign} from '../../lib/assign';
 
@@ -60,15 +60,15 @@ class Socket<T extends StorageValue & LocalSocketObject> extends Storage<T> impl
         assert(false);
       });
     void this.events.save
-      .monitor([], ([key, attr]) => {
+      .monitor([], ({id, key, attr}) => {
         void this.port.send(new Message(key, attr, Date.now()));
       });
     void this.events.load
-      .monitor([], ([key, attr, type]) => {
+      .monitor([], ({id, key, attr, type}) => {
         const source: T & LocalSocketObject = this.sources.get(key);
         if (!source) return;
         switch (type) {
-          case EventType.put: {
+          case ESEventType.put: {
             const oldVal = source[attr];
             const newVal = this.get(key)[attr];
             source[attr] = newVal;
@@ -76,7 +76,7 @@ class Socket<T extends StorageValue & LocalSocketObject> extends Storage<T> impl
               .emit(<any>['recv', attr], new StoreEvent('recv', key, attr, newVal, oldVal));
             return;
           }
-          case EventType.delete: {
+          case ESEventType.delete: {
             const cache = this.get(key);
             void Object.keys(cache)
               .filter(isValidPropertyName)
@@ -90,7 +90,7 @@ class Socket<T extends StorageValue & LocalSocketObject> extends Storage<T> impl
               }, void 0);
             return;
           }
-          case EventType.snapshot: {
+          case ESEventType.snapshot: {
             const cache = this.get(key);
             void Object.keys(cache)
               .filter(isValidPropertyName)
@@ -120,6 +120,9 @@ class Socket<T extends StorageValue & LocalSocketObject> extends Storage<T> impl
       },
       this.get(key)
     ));
+    void Object.defineProperty(source, '__id', {
+      get: () => this.head(key) || 0
+    });
     source.__event['toJSON'] = (): void => void 0;
     const link: T = this.links.add(
       key,

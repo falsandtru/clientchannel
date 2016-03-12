@@ -23,7 +23,7 @@ abstract class EventRecord<T extends EventValue> {
   ) {
     if (typeof this.id === 'number' && this.id > 0 === false || this.id !== void 0) throw new TypeError(`LocalSocket: EventRecord: Invalid event id: ${this.id}`);
     this.type = EventType[type];
-    if (typeof this.type !== 'string') throw new TypeError(`LocalSocket: EventRecord: Invalid event type: ${this.type}`);
+    if (typeof this.type !== 'string' || EventType[this.type] === void 0) throw new TypeError(`LocalSocket: EventRecord: Invalid event type: ${this.type}`);
     this.key = key;
     if (typeof this.key !== 'string') throw new TypeError(`LocalSocket: EventRecord: Invalid event key: ${this.key}`);
     this.value = value;
@@ -67,11 +67,13 @@ export class UnsavedEventRecord<T extends EventValue> extends EventRecord<T> {
   constructor(
     key: KeyString,
     value: T,
-    type: EventType = EventType.put
+    type: EventType = EventType.put,
+    date: number = Date.now()
   ) {
-    super(void 0, key, value, Date.now(), type);
+    super(void 0, key, value, date, type);
     // must not have id property
-    if (this.id !== void 0 || 'id' in this) throw new TypeError(`LocalSocket: EventRecord: Invalid event id: ${this.id}`);
+    if (this.id !== void 0 || 'id' in this) throw new TypeError(`LocalSocket: UnsavedEventRecord: Invalid event id: ${this.id}`);
+    //void Object.freeze(this);
   }
 }
 export class SavedEventRecord<T extends EventValue> extends EventRecord<T> {
@@ -84,7 +86,26 @@ export class SavedEventRecord<T extends EventValue> extends EventRecord<T> {
     type: EventType
   ) {
     super(id, key, value, date, type);
-    if (typeof this.id !== 'number' || this.id > 0 === false) throw new TypeError(`LocalSocket: EventRecord: Invalid event id: ${this.id}`);
+    if (this.id > 0 === false) throw new TypeError(`LocalSocket: SavedEventRecord: Invalid event id: ${this.id}`);
+    void Object.freeze(this);
+  }
+}
+
+export enum ESEventType {
+  put,
+  delete,
+  snapshot,
+  get
+}
+
+export class ESEvent {
+  constructor(
+    public type: ESEventType,
+    public id: IdNumber,
+    public key: KeyString,
+    public attr: string
+  ) {
+    void Object.freeze(this);
   }
 }
 
@@ -156,7 +177,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
       .monitor([], ([_, sub]) => {
         const event = sub(void 0);
         assert(event instanceof UnsavedEventRecord || event instanceof SavedEventRecord);
-        if (event.id > 0 === false) return void lastUpdatedDateSet.add(event.key, event.date);
+        if (event instanceof SavedEventRecord === false) return void lastUpdatedDateSet.add(event.key, event.date);
         const isNewMaxId = (): boolean =>
           !lastNotifiedIdSet.has(event.key)
           || event.id > lastNotifiedIdSet.get(event.key);
@@ -168,7 +189,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
         if (isNewMaxId() && isNewMaxDate()) {
           void lastNotifiedIdSet.add(event.key, event.id);
           void lastUpdatedDateSet.add(event.key, event.date);
-          void this.events.load.emit([event.key, event.attr, event.type], [event.key, event.attr, EventType[event.type]]);
+          void this.events.load.emit([event.key, event.attr, event.type], new ESEvent(ESEventType[event.type], event.id, event.key, event.attr));
         }
         else {
           void lastNotifiedIdSet.add(event.key, event.id);
@@ -178,11 +199,11 @@ export abstract class AbstractEventStore<T extends EventValue> {
   }
   protected cache = new Supervisor<string, void, UnsavedEventRecord<T> | SavedEventRecord<T>>();
   public events = {
-    sync: new Observable<string, [KeyString], void>(),
-    load: new Observable<string, [KeyString, string, EventType], void>(),
-    save: new Observable<string, [KeyString, string, EventType], void>(),
-    loss: new Observable<string, [KeyString, string, EventType], void>(),
-    access: new Observable<string, [KeyString, string, EventType], void>()
+    sync: new Observable<string, ESEvent, void>(),
+    load: new Observable<string, ESEvent, void>(),
+    save: new Observable<string, ESEvent, void>(),
+    loss: new Observable<string, ESEvent, void>(),
+    access: new Observable<string, ESEvent, void>()
   };
   private syncedKeyMap = new Map<KeyString, boolean>();
   protected sync(key: KeyString): void {
@@ -225,7 +246,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
         void this.cache.cast([key], void 0);
         if (this.syncedKeyMap.get(key) !== true) {
           void this.syncedKeyMap.set(key, true);
-          void this.events.sync.emit([key], [key]);
+          void this.events.sync.emit([key], new ESEvent(ESEventType.snapshot, this.head(key), key, ''));
         }
         if (savedEvents.length > this.snapshotCycle) {
           void this.snapshot(key);
@@ -244,7 +265,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
     void this.cursor(null, STORE_FIELDS.key, IDBCursorDirection.prevunique, IDBTransaction.readonly, (cursor, err) => {
       if (!cursor) return void cb(heads, err);
       const event: SavedEventRecord<T> = cursor.value;
-      void heads.push(event);
+      void heads.push(new SavedEventRecord(event.id, event.key, event.value, event.date, EventType[event.type]));
       void cursor.continue();
     });
   }
@@ -260,15 +281,15 @@ export abstract class AbstractEventStore<T extends EventValue> {
   public get(key: KeyString): T {
     void this.sync(key);
     void this.events.access
-      .emit([key], [key, '', void 0]);
+      .emit([key], new ESEvent(ESEventType.get, IdNumber(0), key, ''));
     return compose(this.cache.cast([key], void 0))
       .reduce(e => e)
       .value;
   }
   public add(event: UnsavedEventRecord<T>): this {
     void this.events.access
-      .emit([event.key, event.attr, event.type], [event.key, event.attr, EventType[event.type]]);
-    if (event.id !== void 0 || event instanceof UnsavedEventRecord === false) throw new Error(`LocalSocket: Cannot add a saved event: ${JSON.stringify(event)}`);
+      .emit([event.key, event.attr, event.type], new ESEvent(ESEventType[event.type], IdNumber(0), event.key, event.attr));
+    if (event instanceof UnsavedEventRecord === false) throw new Error(`LocalSocket: Cannot add a saved event: ${JSON.stringify(event)}`);
     void this.sync(event.key);
     const id = sqid();
     void this.cache
@@ -283,13 +304,14 @@ export abstract class AbstractEventStore<T extends EventValue> {
         .objectStore(this.name)
         .add(event);
       tx.oncomplete = _ => {
-        const savedEvent = new SavedEventRecord(IdNumber(req.result), event.key, event.value, event.date, EventType[event.type]);
+        assert(req.result > 0);
+        const savedEvent = new SavedEventRecord(IdNumber(<number>req.result), event.key, event.value, event.date, EventType[event.type]);
         void this.cache
           .terminate([savedEvent.key, savedEvent.attr, sqid(0), id]);
         void this.cache
           .register([savedEvent.key, savedEvent.attr, sqid(savedEvent.id)], _ => savedEvent);
         void this.events.save
-          .emit([savedEvent.key, savedEvent.attr, savedEvent.type], [savedEvent.key, savedEvent.attr, EventType[savedEvent.type]]);
+          .emit([savedEvent.key, savedEvent.attr, savedEvent.type], new ESEvent(ESEventType[savedEvent.type], savedEvent.id, savedEvent.key, savedEvent.attr));
         // emit update event
         void this.cache
           .cast([savedEvent.key, savedEvent.attr, sqid(savedEvent.id)], void 0);
@@ -300,7 +322,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
       tx.onerror = tx.onabort = _ => {
         void setTimeout(() => {
           if (this.cache.refs([event.key, event.attr, sqid(0), id]).length === 0) return;
-          void this.events.loss.emit([event.key, event.attr, event.type], [event.key, event.attr, EventType[event.type]]);
+          void this.events.loss.emit([event.key, event.attr, event.type], new ESEvent(ESEventType[event.type], event.id, event.key, event.attr));
         }, 1e3);
       };
     });
@@ -332,14 +354,15 @@ export abstract class AbstractEventStore<T extends EventValue> {
         if (!cursor || EventType[(<EventRecord<T>>cursor.value).type] !== EventType.put) {
           if (savedEvents.length < this.snapshotCycle) return;
           const event = compose(savedEvents).reduce(e => e);
-          // snapshot's date must not be after unsaved event's date.
-          event.date = savedEvents.reduce((date, e) => e.date > date ? e.date : date, 0);
           void this.clean(Infinity, key);
-          if (event.id > 0) return;
+          if (event instanceof SavedEventRecord) return;
           switch (event.type) {
             case EventType[EventType.snapshot]: {
-              if (event.id !== void 0) throw new Error(`LocalSocket: Cannot add a saved event: ${JSON.stringify(event)}`);
-              return void store.add(event);
+              // snapshot's date must not be after unsaved event's date.
+              return void store.add(new UnsavedEventRecord(event.key, event.value, EventType[event.type], savedEvents.reduce((date, e) => e.date > date ? e.date : date, 0)));
+            }
+            case EventType[EventType.delete]: {
+              return void 0;
             }
           }
           throw new TypeError(`LocalSocket: Invalid event type: ${event.type}`);
@@ -457,13 +480,10 @@ export function compose<T extends EventValue>(events: (UnsavedEventRecord<T> | S
           );
       }
       case EventType[EventType.snapshot]: {
-        return new UnsavedEventRecord(source.key, <T>assign(new EventValue(), source.value), EventType.snapshot);
+        return source;
       }
       case EventType[EventType.delete]: {
-        return new UnsavedEventRecord(source.key, <T>new EventValue(), EventType.delete);
-      }
-      default: {
-        return new UnsavedEventRecord(source.key, assign(new EventValue(), target.value, source.value), EventType.snapshot);
+        return source;
       }
     }
     throw new TypeError(`LocalSocket: Invalid event type: ${source.type}`);

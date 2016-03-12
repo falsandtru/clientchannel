@@ -1,7 +1,7 @@
 import {Observable, Set} from 'arch-stream';
 import {open, destroy, Config, Access, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../../../infrastructure/indexeddb/api';
 import {IdNumber, KeyString} from '../types';
-import {UnsavedEventRecord, SavedEventRecord, EventType} from '../store/event';
+import {UnsavedEventRecord, SavedEventRecord, ESEventType, ESEvent} from '../store/event';
 import {DataStore, DataValue as StorageValue} from './storage/data';
 import {AccessStore, STORE_FIELDS as AccessStoreFields} from './storage/access';
 import {noop} from '../../../../../lib/noop';
@@ -9,7 +9,7 @@ import {noop} from '../../../../../lib/noop';
 export {
   UnsavedEventRecord as StorageRecord,
   StorageValue,
-  EventType
+  ESEventType
 }
 
 export class Storage<T extends StorageValue> {
@@ -34,9 +34,9 @@ export class Storage<T extends StorageValue> {
   }
   protected schema: Schema<T>;
   public events: {
-    load: Observable<string, [KeyString, string, EventType], void>;
-    save: Observable<string, [KeyString, string, EventType], void>;
-    loss: Observable<string, [KeyString, string, EventType], void>;
+    load: Observable<string, ESEvent, void>;
+    save: Observable<string, ESEvent, void>;
+    loss: Observable<string, ESEvent, void>;
   };
   public keys(cb: (keys: string[], error: DOMError) => any = noop): void {
     return this.schema.data.keys(cb);
@@ -52,6 +52,9 @@ export class Storage<T extends StorageValue> {
   }
   public delete(key: string): void {
     void this.schema.data.delete(KeyString(key));
+  }
+  public head(key: string): number {
+    return this.schema.data.head(KeyString(key));
   }
   public recent(limit: number, cb: (keys: string[], error: DOMError) => any): void {
     const keys: string[] = [];

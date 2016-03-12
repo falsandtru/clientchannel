@@ -101,7 +101,7 @@ function drain(name: string): void {
       break;
     }
     catch (err) {
-      void console.error(err, err + '');
+      void console.error(err, err + '', err.stack);
       void handleFromCrashState(name, err);
     }
   }

@@ -1,4 +1,4 @@
-import {compose, AbstractEventStore, UnsavedEventRecord, EventValue, SavedEventRecord, EventType} from './event';
+import {compose, AbstractEventStore, UnsavedEventRecord, EventValue, SavedEventRecord, EventType, ESEventType} from './event';
 import {open, destroy, event, Config, Access, IDBEventName} from '../../../../infrastructure/indexeddb/api';
 import {KeyString} from '../types';
 
@@ -39,6 +39,15 @@ describe('Unit: layers/domain/indexeddb/model/store/event', function () {
             .once(['test', IDBEventName.disconnect], _ => done())
         );
       destroy('test');
+    });
+
+    describe('ESEventType', () => {
+      it('compare', () => {
+        assert(EventType[EventType.put] === ESEventType[ESEventType.put]);
+        assert(EventType[EventType.snapshot] === ESEventType[ESEventType.snapshot]);
+        assert(EventType[EventType.delete] === ESEventType[ESEventType.delete]);
+      });
+
     });
 
     describe('EventRecord', () => {
