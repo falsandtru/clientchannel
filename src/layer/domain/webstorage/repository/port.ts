@@ -1,14 +1,14 @@
-import {LocalStore, LocalSocketEvent, LocalSocketEventType, LocalSocketObject} from 'localsocket';
+import {LocalPort, LocalPortObject, LocalSocketEvent, LocalSocketEventType} from 'localsocket';
 import {Observable, Set, assign} from 'arch-stream';
 import {SCHEMA, build, isValidPropertyName, isValidPropertyValue} from '../../dao/api';
 import {events} from '../service/event';
 import {localStorage, sessionStorage} from '../../../infrastructure/webstorage/api';
 import {noop} from '../../../../lib/noop';
 
-const LocalStorageObjectCache = new Set<string, LocalSocketObject>();
+const LocalStorageObjectCache = new Set<string, LocalPortObject>();
 const LocalStorageSubscriber = new Set<string, (event: StorageEvent) => any>();
 
-const SessionStorageObjectCache = new Set<string, LocalSocketObject>();
+const SessionStorageObjectCache = new Set<string, LocalPortObject>();
 const SessionStorageSubscriber = new Set<string, (event: StorageEvent) => any>();
 
 declare var StorageEvent: {
@@ -24,7 +24,7 @@ declare var StorageEvent: {
   ): StorageEvent;
 };
 
-export class StoreEvent implements LocalSocketEvent {
+export class PortEvent implements LocalSocketEvent {
   constructor(
     public type: LocalSocketEventType,
     public key: string,
@@ -35,7 +35,7 @@ export class StoreEvent implements LocalSocketEvent {
   }
 }
 
-export function repository<T extends LocalSocketObject>(
+export function repository<T extends LocalPortObject>(
   name: string,
   storage: Storage = sessionStorage,
   factory: () => T,
@@ -44,11 +44,11 @@ export function repository<T extends LocalSocketObject>(
     add(name: string, life: number) { },
     delete(name: string) { }
   }
-): Store<T> {
-  return new Store(name, storage, factory, life, meta);
+): Port<T> {
+  return new Port(name, storage, factory, life, meta);
 }
 
-class Store<T extends LocalSocketObject> implements LocalStore<T> {
+class Port<T extends LocalPortObject> implements LocalPort<T> {
   constructor(
     public name: string,
     private storage: Storage,
@@ -61,7 +61,7 @@ class Store<T extends LocalSocketObject> implements LocalStore<T> {
   ) {
     this.event['toJSON'] = (): void => void 0;
   }
-  private event = new Observable<LocalSocketEventType, StoreEvent, void>();
+  private event = new Observable<LocalSocketEventType, PortEvent, void>();
   private cache = this.storage === localStorage ? LocalStorageObjectCache : SessionStorageObjectCache;
   private eventSource = this.storage === localStorage ? events.localStorage : events.sessionStorage;
   private subscriber: (event: StorageEvent) => any = noop;
@@ -83,7 +83,7 @@ class Store<T extends LocalSocketObject> implements LocalStore<T> {
         void this.meta.add(this.name, this.life);
       }
       void this.storage.setItem(this.name, JSON.stringify(source));
-      void this.event.emit(<any>['send', attr], new StoreEvent('send', this.name, attr, newValue, oldValue));
+      void this.event.emit(<any>['send', attr], new PortEvent('send', this.name, attr, newValue, oldValue));
     });
     this.subscriber = ({newValue, oldValue}: StorageEvent): void => {
       if (newValue) {
@@ -106,7 +106,7 @@ class Store<T extends LocalSocketObject> implements LocalStore<T> {
             */
           }, void 0);
       }
-      void this.event.emit(['recv'], new StoreEvent('recv', this.name, void 0, newValue, oldValue));
+      void this.event.emit(['recv'], new PortEvent('recv', this.name, void 0, newValue, oldValue));
     };
     void this.eventSource.on(this.name, this.subscriber);
     void this.cache.add(this.name, dao);

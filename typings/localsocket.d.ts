@@ -1,7 +1,7 @@
 ﻿declare module 'localsocket' {
   export default socket;
 
-  export function socket<T extends LocalSocketObject>(name: string, storage: IDBFactory, config: LocalSocketConfig<T>): LocalSocket<T>;
+  export function socket<T extends LocalSocketObject>(name: string, config: LocalSocketConfig<T>): LocalSocket<T>;
   export interface LocalSocket<T extends LocalSocketObject> {
     link(key: string): T;
     delete(key: string): void;
@@ -9,22 +9,31 @@
     recent(limit: number, cb: (keys: string[], error: DOMError) => any): void;
     destroy(): void;
   }
-  export function socket<T extends LocalSocketObject>(name: string, storage: Storage, config: LocalSocketConfig<T>): LocalStore<T>;
-  export interface LocalStore<T extends LocalSocketObject> {
-    link(): T;
-    destroy(): void;
-  }
-
   export interface LocalSocketObject {
     __id?: number;
     __key?: string;
     __event?: IObservableObserver<LocalSocketEventType, LocalSocketEvent, any>;
   }
   export interface LocalSocketConfig<T> {
-    life?: number; // WebStorage only
     factory(): T;
     destroy?(error: DOMError, event: Event): boolean;
   }
+
+  export function port<T extends LocalPortObject>(name: string, storage: Storage, config: LocalPortConfig<T>): LocalPort<T>;
+  export interface LocalPort<T extends LocalPortObject> {
+    link(): T;
+    destroy(): void;
+  }
+  export interface LocalPortObject {
+    __key?: string;
+    __event?: IObservableObserver<LocalSocketEventType, LocalSocketEvent, any>;
+  }
+  export interface LocalPortConfig<T> {
+    life?: number;
+    factory(): T;
+    destroy?(error: DOMError, event: Event): boolean;
+  }
+
   export type LocalSocketEventType
     = 'send'
     | 'recv';

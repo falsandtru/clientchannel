@@ -1,4 +1,5 @@
-import {LocalSocket, LocalStore, LocalSocketObject, LocalSocketConfig} from 'localsocket';
+import {LocalSocket, LocalSocketObject, LocalSocketConfig} from 'localsocket';
+import {LocalPort, LocalPortObject, LocalPortConfig} from 'localsocket';
 import {indexedDB} from '../infrastructure/indexeddb/api';
 import {configure} from './module/config';
 import {socket as indexeddb} from '../domain/indexeddb/api';
@@ -10,7 +11,8 @@ export function socket<T extends LocalSocketObject>(name: string, config: LocalS
   config = configure(config);
   return indexeddb(name, config.factory, config.destroy);
 }
-export function store<T extends LocalSocketObject>(name: string, storage: Storage, config: LocalSocketConfig<T>): LocalStore<T> {
+
+export function port<T extends LocalPortObject>(name: string, storage: Storage, config: LocalPortConfig<T>): LocalPort<T> {
   config = configure(config);
   switch (storage) {
     case localStorage: {

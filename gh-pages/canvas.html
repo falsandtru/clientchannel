@@ -25,7 +25,7 @@
   var width = 400, height = 500;
   $(function () {
     // connect to database
-    var sock = localsocket.default('demo', indexedDB, {
+    var sock = localsocket.default('demo', {
       factory: function () {
         // define schema
         return {

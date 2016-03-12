@@ -1,4 +1,4 @@
-import {repository} from '../repository/store';
+import {repository} from '../repository/port';
 import {WebStorageMetaData} from './meta';
 
 export function clean(meta: WebStorageMetaData, storage: Storage, now = Date.now()): void {

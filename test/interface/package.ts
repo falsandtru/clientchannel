@@ -1,6 +1,8 @@
-import socket, {
+import def, {
+  socket,
+  port,
   LocalSocket,
-  LocalStore,
+  LocalPort,
   LocalSocketConfig,
   LocalSocketObject,
   LocalSocketEvent,
@@ -8,9 +10,17 @@ import socket, {
 } from 'localsocket';
 
 describe('Interface: Package', function () {
-  describe('LocalSocket of default', function () {
+  describe('localsocket', function () {
+    it('default', function () {
+      assert(typeof def === 'function');
+    });
+
     it('socket', function () {
       assert(typeof socket === 'function');
+    });
+
+    it('port', function () {
+      assert(typeof port === 'function');
     });
 
   });

@@ -1,5 +1,5 @@
 import {localStorage} from '../../../infrastructure/webstorage/api';
-import {repository} from '../repository/store';
+import {repository} from '../repository/port';
 
 export class WebStorageMetaData {
   public expires: {

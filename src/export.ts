@@ -1,1 +1,1 @@
-export {localsocket as default} from './layer/interface/api';
+export {socket as default, socket, port} from './layer/interface/api';

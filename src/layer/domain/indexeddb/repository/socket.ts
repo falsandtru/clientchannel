@@ -1,4 +1,4 @@
-import {LocalSocket, LocalStore, LocalSocketObject, LocalSocketEvent, LocalSocketEventType} from 'localsocket';
+import {LocalSocket, LocalPort, LocalSocketObject, LocalSocketEvent, LocalSocketEventType} from 'localsocket';
 import {Observable, IObservableObserver, Set, Map, concat} from 'arch-stream';
 import {build, SCHEMA, isValidPropertyName, isValidPropertyValue} from '../../dao/api';
 import {Storage, StorageRecord, StorageValue, ESEventType} from '../model/schema/storage';
@@ -73,7 +73,7 @@ class Socket<T extends StorageValue & LocalSocketObject> extends Storage<T> impl
             const newVal = this.get(key)[attr];
             source[attr] = newVal;
             void (<Observable<LocalSocketEventType, LocalSocketEvent, void>>source.__event)
-              .emit(<any>['recv', attr], new StoreEvent('recv', key, attr, newVal, oldVal));
+              .emit(<any>['recv', attr], new PortEvent('recv', key, attr, newVal, oldVal));
             return;
           }
           case ESEventType.delete: {
@@ -86,7 +86,7 @@ class Socket<T extends StorageValue & LocalSocketObject> extends Storage<T> impl
                 const newVal = <void>void 0;
                 source[attr] = newVal;
                 void (<Observable<LocalSocketEventType, LocalSocketEvent, void>>source.__event)
-                  .emit(<any>['recv', attr], new StoreEvent('recv', key, attr, newVal, oldVal));
+                  .emit(<any>['recv', attr], new PortEvent('recv', key, attr, newVal, oldVal));
               }, void 0);
             return;
           }
@@ -100,14 +100,14 @@ class Socket<T extends StorageValue & LocalSocketObject> extends Storage<T> impl
                 const newVal = cache[attr];
                 source[attr] = newVal;
                 void (<Observable<LocalSocketEventType, LocalSocketEvent, void>>source.__event)
-                  .emit(<any>['recv', attr], new StoreEvent('recv', key, attr, newVal, oldVal));
+                  .emit(<any>['recv', attr], new PortEvent('recv', key, attr, newVal, oldVal));
               }, void 0);
             return;
           }
         }
       });
   }
-  protected proxy = storeRepository(this.name, localStorage, () => new Port());
+  protected proxy = portRepository(this.name, localStorage, () => new Port());
   protected port = this.proxy.link();
   protected links = new Set<string, T>();
   protected sources = new Set<string, T>();
@@ -129,7 +129,7 @@ class Socket<T extends StorageValue & LocalSocketObject> extends Storage<T> impl
       build(source, this.factory, (attr, newValue, oldValue) => {
         void this.add(new StorageRecord(KeyString(key), <T>{ [attr]: newValue }));
         void (<Observable<LocalSocketEventType, LocalSocketEvent, void>>source.__event)
-          .emit(<any>['send', attr], new StoreEvent('send', key, attr, newValue, oldValue));
+          .emit(<any>['send', attr], new PortEvent('send', key, attr, newValue, oldValue));
       })
     );
     return link;

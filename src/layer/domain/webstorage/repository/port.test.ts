@@ -1,7 +1,7 @@
 import {assign} from 'arch-stream';
-import {repository} from './store';
+import {repository} from './port';
 
-describe('Unit: layers/domain/webstorage/repository/store', () => {
+describe('Unit: layers/domain/webstorage/repository/port', () => {
   describe('repository', () => {
     class DAO {
       n = 0;

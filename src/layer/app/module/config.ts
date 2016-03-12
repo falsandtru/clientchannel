@@ -1,6 +1,6 @@
-import {LocalSocketConfig} from 'localsocket';
+import {LocalPortConfig} from 'localsocket';
 
-export function configure<T>(config: LocalSocketConfig<T>): StorageConfig<T> {
+export function configure<T>(config: LocalPortConfig<T>): StorageConfig<T> {
   return new StorageConfig(
     config.life,
     config.factory,
@@ -8,7 +8,7 @@ export function configure<T>(config: LocalSocketConfig<T>): StorageConfig<T> {
   );
 }
 
-class StorageConfig<T> implements LocalSocketConfig<T> {
+class StorageConfig<T> implements LocalPortConfig<T> {
   constructor(
     public life: number = 10,
     public factory: () => T,

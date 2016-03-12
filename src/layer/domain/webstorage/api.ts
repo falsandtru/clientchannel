@@ -1,4 +1,4 @@
-import {repository} from './repository/store';
+import {repository} from './repository/port';
 import {meta} from './service/meta';
 import {clean} from './service/clean';
 import {localStorage} from '../../infrastructure/webstorage/api';
