@@ -1,18 +1,19 @@
 import {LocalSocket, LocalPort, LocalSocketObject, LocalSocketEvent, LocalSocketEventType} from 'localsocket';
 import {Observable, IObservableObserver, Set, Map, concat} from 'arch-stream';
 import {build, SCHEMA, isValidPropertyName, isValidPropertyValue} from '../../dao/api';
-import {Storage, StorageRecord, StorageValue, ESEventType} from '../model/schema/storage';
+import {SocketStore, SocketRecord, SocketValue, ESEventType} from '../model/schema/socket';
 import {localStorage} from '../../../infrastructure/webstorage/api';
 import {repository as portRepository, PortEvent} from '../../webstorage/repository/port';
 import {KeyString} from '../model/types';
 import {assign} from '../../lib/assign';
 
-export function socket<T extends StorageValue>(
+export function socket<T extends SocketValue>(
   name: string,
   factory: () => T,
-  destroy: (err: DOMError, event: Event) => boolean
+  destroy: (err: DOMError, event: Event) => boolean,
+  expiry = Infinity
 ) {
-  return new Socket<T>(name, factory, destroy);
+  return new Socket<T>(name, factory, expiry, destroy);
 }
 
 class Message {
@@ -39,13 +40,14 @@ class Port {
 interface Port extends LocalSocketObject {
 }
 
-class Socket<T extends StorageValue & LocalSocketObject> extends Storage<T> implements LocalSocket<T> {
+class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> implements LocalSocket<T> {
   constructor(
     name: string,
     protected factory: () => T,
+    expiry: number,
     destroy: (err: DOMError, ev: Event) => boolean
   ) {
-    super(name, destroy);
+    super(name, destroy, expiry);
     void this.port.__event
       .monitor([], ({type, newValue}) => {
         switch (type) {
@@ -111,7 +113,8 @@ class Socket<T extends StorageValue & LocalSocketObject> extends Storage<T> impl
   protected port = this.proxy.link();
   protected links = new Set<string, T>();
   protected sources = new Set<string, T>();
-  public link(key: string): T {
+  public link(key: string, expiry?: number): T {
+    void this.expire(key, expiry);
     if (this.links.has(key)) return this.links.get(key);
     const source: T & LocalSocketObject = this.sources.add(key, assign<T>(
       <T><any>{
@@ -127,7 +130,7 @@ class Socket<T extends StorageValue & LocalSocketObject> extends Storage<T> impl
     const link: T = this.links.add(
       key,
       build(source, this.factory, (attr, newValue, oldValue) => {
-        void this.add(new StorageRecord(KeyString(key), <T>{ [attr]: newValue }));
+        void this.add(new SocketRecord(KeyString(key), <T>{ [attr]: newValue }));
         void (<Observable<LocalSocketEventType, LocalSocketEvent, void>>source.__event)
           .emit(<any>['send', attr], new PortEvent('send', key, attr, newValue, oldValue));
       })

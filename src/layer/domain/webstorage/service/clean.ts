@@ -1,21 +1,21 @@
 import {repository} from '../repository/port';
-import {WebStorageMetaData} from './meta';
+import {WebStorageExpiry} from './expiry';
 
-export function clean(meta: WebStorageMetaData, storage: Storage, now = Date.now()): void {
+export function clean(expiry: WebStorageExpiry, storage: Storage, now = Date.now()): void {
   if (!storage) return;
 
-  void meta.entries()
-    .reduce((_, [name, {expire}]) => {
-      if (expire.atime + 1000 * 3600 * 24 > now) {
-        expire.rest = expire.life;
+  void expiry.entries()
+    .reduce((_, [name, {life}]) => {
+      if (life.atime + 1000 * 3600 * 24 > now) {
+        life.value = life.max;
       }
       else {
-        expire.atime = now;
-        void --expire.rest;
+        life.atime = now;
+        void --life.value;
       }
-      if (expire.rest < 0) {
-        void repository(name, storage, () => ({}), 0, meta).destroy();
+      if (life.value < 0) {
+        void repository(name, storage, () => ({}), 0, expiry).destroy();
       }
     }, void 0);
-  void meta.commit();
+  void expiry.commit();
 }

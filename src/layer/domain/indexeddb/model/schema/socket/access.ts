@@ -12,7 +12,7 @@ export const STORE_FIELDS = {
 
 class AccessRecord {
   constructor(
-    public key: string,
+    public key: KeyString,
     public date: number
   ) {
   }
@@ -53,12 +53,13 @@ export class AccessStore extends AbstractKeyValueStore<string, AccessRecord> {
     event: Observable<string, ESEvent, void>
   ) {
     super(access, STORE_NAME, STORE_FIELDS.key);
+    void Object.freeze(this);
+
     void event
       .monitor([], ({key, type}) =>
         type === ESEventType.delete
           ? void this.delete(key)
           : void this.set(key, new AccessRecord(key, Date.now()))
       );
-    void Object.freeze(this);
   }
 }

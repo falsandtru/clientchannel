@@ -3,7 +3,7 @@
 
   export function socket<T extends LocalSocketObject>(name: string, config: LocalSocketConfig<T>): LocalSocket<T>;
   export interface LocalSocket<T extends LocalSocketObject> {
-    link(key: string): T;
+    link(key: string, expiry?: number): T;
     delete(key: string): void;
     keys(cb: (keys: string[], error: DOMError) => any): void;
     recent(limit: number, cb: (keys: string[], error: DOMError) => any): void;
@@ -15,6 +15,7 @@
     __event?: IObservableObserver<LocalSocketEventType, LocalSocketEvent, any>;
   }
   export interface LocalSocketConfig<T> {
+    expiry?: number;
     factory(): T;
     destroy?(error: DOMError, event: Event): boolean;
   }
