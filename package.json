@@ -11,7 +11,9 @@
   "keywords": [
     "indexeddb",
     "webstorage",
-    "localstorage"
+    "localstorage",
+    "store",
+    "repository"
   ],
   "main": "./dist/localsocket.js",
   "scripts": {
