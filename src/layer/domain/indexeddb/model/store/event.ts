@@ -335,7 +335,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
   protected snapshotCycle = 10;
   //protected snapshotLimit = 1;
   protected snapshotJobState = new Map<KeyString, boolean>();
-  protected snapshot(key: KeyString): this {
+  protected snapshot(key: KeyString): void {
     if (this.snapshotJobState.get(key)) return;
     void this.snapshotJobState.set(key, true);
     void this.access(db => {
@@ -377,7 +377,6 @@ export abstract class AbstractEventStore<T extends EventValue> {
         void this.snapshotJobState.set(key, false);
       };
     });
-    return this;
   }
   public keys(cb: (keys: KeyString[], err: DOMError) => any): void {
     void this.heads((heads, err) => void cb(heads.map(({key}) => key), err));
