@@ -6,6 +6,12 @@
 
 Communicate between other tabs via IndexedDB and LocalStorage.
 
+## Feature
+
+- Tab communication.
+- Bidirectional persistent data binding.
+- Data with expiry.
+
 ## API
 
 [localsocket.d.ts](typings/localsocket.d.ts)
