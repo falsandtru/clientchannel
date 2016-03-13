@@ -255,11 +255,13 @@ gulp.task('clean', function () {
 });
 
 gulp.task('install', function () {
+  shell('bundle install');
   shell('npm i');
   shell('tsd install --save --overwrite');
 });
 
 gulp.task('update', function () {
+  shell('bundle update');
   shell('npm-check-updates -u');
   shell('npm i');
   //shell('tsd update --save --overwrite');
