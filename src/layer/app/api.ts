@@ -28,17 +28,9 @@ export function socket<T extends LocalSocketObject>(name: string, config: LocalS
   }
 }
 
-export function port<T extends LocalPortObject>(name: string, storage: Storage, config: LocalPortConfig<T>): LocalPort<T> {
+export function port<T extends LocalPortObject>(name: string, config: LocalPortConfig<T>): LocalPort<T> {
   config = configure(config);
-  switch (storage) {
-    case localStorage: {
-      return webstorage(name, localStorage, config.factory, config.life);
-    }
-    case sessionStorage: {
-      return webstorage(name, sessionStorage, config.factory, config.life);
-    }
-  }
-  throw new TypeError(`LocalSocket: Invalid storage type ${storage}`);
+  return webstorage(name, localStorage, config.factory, config.life);
 
   function configure<T>(config: LocalPortConfig<T>): LocalPortConfig<T> {
     class Config<T> implements LocalPortConfig<T> {

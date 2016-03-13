@@ -27,7 +27,7 @@
     date: number;
   }
 
-  export function port<T extends LocalPortObject>(name: string, storage: Storage, config: LocalPortConfig<T>): LocalPort<T>;
+  export function port<T extends LocalPortObject>(name: string, config: LocalPortConfig<T>): LocalPort<T>;
   export interface LocalPort<T extends LocalPortObject> {
     link(): T;
     destroy(): void;
