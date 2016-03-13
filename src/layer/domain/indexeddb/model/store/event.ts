@@ -1,3 +1,4 @@
+import {LocalSocketObjectMetaData} from 'localsocket';
 import {Supervisor, Observable, Set, Map, sqid, concat} from 'arch-stream';
 import {open, Config, Access, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../../../infrastructure/indexeddb/api';
 import {IdNumber, KeyString, IDBValue, EventValue as IEventValue} from '../types';
@@ -29,7 +30,7 @@ abstract class EventRecord<T extends EventValue> {
     this.value = value;
     if (typeof this.value !== 'object' || !this.value) throw new TypeError(`LocalSocket: EventRecord: Invalid event value: ${this.value}`);
     this.date = date;
-    if (typeof this.date !== 'number' || this.date > 0 === false) throw new TypeError(`LocalSocket: EventRecord: Invalid event date: ${this.date}`);
+    if (typeof this.date !== 'number' || this.date >= 0 === false) throw new TypeError(`LocalSocket: EventRecord: Invalid event date: ${this.date}`);
     // put -> string, delete or snapshot -> empty string
     this.attr = this.type === EventType[EventType.put]
       ? Object.keys(value).reduce((r, p) => p.length > 0 && p[0] !== '_' && p[p.length - 1] !== '_' ? p : r, '')
@@ -260,7 +261,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
       void cursor.continue();
     });
   }
-  public heads(cb: (heads: SavedEventRecord<T>[], err: DOMError) => any): void {
+  protected heads(cb: (heads: SavedEventRecord<T>[], err: DOMError) => any): void {
     const heads: SavedEventRecord<T>[] = [];
     void this.cursor(null, STORE_FIELDS.key, IDBCursorDirection.prevunique, IDBTransaction.readonly, (cursor, err) => {
       if (!cursor) return void cb(heads, err);
@@ -272,6 +273,20 @@ export abstract class AbstractEventStore<T extends EventValue> {
   public head(key: KeyString): IdNumber {
     return this.cache.cast([key], void 0)
       .reduce((id, e) => e.id > id ? e.id : id, IdNumber(0));
+  }
+  public meta(key: KeyString): LocalSocketObjectMetaData {
+    return Object.freeze(
+      assign(
+        <LocalSocketObjectMetaData>{
+          id: 0
+        },
+        this.cache.cast([key], void 0)
+          .reduce((m, e) =>
+            e.date > m.date ? assign(m, e) : m
+          , assign({}, new UnsavedEventRecord(key, <T>new EventValue(), EventType.delete, 0))
+        )
+      )
+    );
   }
   // in cache
   public has(key: KeyString): boolean {

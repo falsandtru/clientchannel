@@ -2,11 +2,17 @@ import {assign} from 'arch-stream';
 import {noop} from '../../../../lib/noop';
 
 export const SCHEMA = {
+  META: {
+    NAME: '__meta'
+  },
   ID: {
     NAME: '__id'
   },
   KEY: {
     NAME: '__key'
+  },
+  DATE: {
+    NAME: '__date'
   },
   EVENT: {
     NAME: '__event'
@@ -42,19 +48,29 @@ export function build<V>(source: V, factory: () => V, update: (attr: string, new
       };
       return map;
     }, {}), {
+      [SCHEMA.META.NAME]: {
+        configurable: false,
+        enumerable: false,
+        get: () => source[SCHEMA.META.NAME]
+      },
       [SCHEMA.ID.NAME]: {
         configurable: false,
-        enumerable: true,
+        enumerable: false,
         get: () => source[SCHEMA.ID.NAME]
       },
       [SCHEMA.KEY.NAME]: {
         configurable: false,
-        enumerable: true,
+        enumerable: false,
         get: () => source[SCHEMA.KEY.NAME]
+      },
+      [SCHEMA.DATE.NAME]: {
+        configurable: false,
+        enumerable: false,
+        get: () => source[SCHEMA.DATE.NAME]
       },
       [SCHEMA.EVENT.NAME]: {
         configurable: false,
-        enumerable: true,
+        enumerable: false,
         get: () => source[SCHEMA.EVENT.NAME]
       }
     });

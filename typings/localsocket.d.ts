@@ -10,14 +10,21 @@
     destroy(): void;
   }
   export interface LocalSocketObject {
+    __meta?: LocalSocketObjectMetaData;
     __id?: number;
     __key?: string;
+    __date?: number;
     __event?: IObservableObserver<LocalSocketEventType, LocalSocketEvent, any>;
   }
   export interface LocalSocketConfig<T> {
     expiry?: number;
     factory(): T;
     destroy?(error: DOMError, event: Event): boolean;
+  }
+  export interface LocalSocketObjectMetaData {
+    id: number;
+    key: string;
+    date: number;
   }
 
   export function port<T extends LocalPortObject>(name: string, storage: Storage, config: LocalPortConfig<T>): LocalPort<T>;

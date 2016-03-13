@@ -116,17 +116,30 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
   public link(key: string, expiry?: number): T {
     void this.expire(key, expiry);
     if (this.links.has(key)) return this.links.get(key);
-    const source: T & LocalSocketObject = this.sources.add(key, assign<T>(
-      <T><any>{
-        [SCHEMA.KEY.NAME]: key,
-        [SCHEMA.EVENT.NAME]: new Observable<LocalSocketEventType, LocalSocketEvent, any>()
+    const source: T & LocalSocketObject = this.sources.add(key, assign<T>({}, this.get(key)));
+    void Object.defineProperties(source, {
+      __meta: {
+        get: () => this.meta(key)
       },
-      this.get(key)
-    ));
-    void Object.defineProperty(source, '__id', {
-      get: () => this.head(key) || 0
+      __id: {
+        get(): number {
+          return (<LocalSocketObject>this).__meta.id;
+        }
+      },
+      __key: {
+        get(): string {
+          return (<LocalSocketObject>this).__meta.key;
+        }
+      },
+      __date: {
+        get(): number {
+          return (<LocalSocketObject>this).__meta.date;
+        }
+      },
+      __event: {
+        value: new Observable<LocalSocketEventType, LocalSocketEvent, any>()
+      }
     });
-    source.__event['toJSON'] = (): void => void 0;
     const link: T = this.links.add(
       key,
       build(source, this.factory, (attr, newValue, oldValue) => {

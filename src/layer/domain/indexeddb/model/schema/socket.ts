@@ -1,3 +1,4 @@
+import {LocalSocketObjectMetaData} from 'localsocket';
 import {Observable, Set, Map} from 'arch-stream';
 import {open, destroy, Config, Access, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../../../infrastructure/indexeddb/api';
 import {IdNumber, KeyString} from '../types';
@@ -60,6 +61,9 @@ export class SocketStore<T extends SocketValue> {
   }
   public delete(key: string): void {
     void this.schema.data.delete(KeyString(key));
+  }
+  public meta(key: string): LocalSocketObjectMetaData {
+    return this.schema.data.meta(KeyString(key));
   }
   public head(key: string): number {
     return this.schema.data.head(KeyString(key));
