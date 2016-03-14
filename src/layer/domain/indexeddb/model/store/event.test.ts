@@ -71,7 +71,7 @@ describe('Unit: layers/domain/indexeddb/model/store/event', function () {
 
     });
 
-    describe('compress', () => {
+    describe('compose', () => {
       class Value extends EventValue {
         constructor(
           value: any
@@ -384,7 +384,7 @@ describe('Unit: layers/domain/indexeddb/model/store/event', function () {
         });
     });
 
-    it('autoclean', done => {
+    it('snapshot', done => {
       const es = new EventStore<Value>(open('test', EventStore.configure('test')), 'test');
 
       for (let i = 0; i < 11; ++i) {
@@ -394,25 +394,6 @@ describe('Unit: layers/domain/indexeddb/model/store/event', function () {
         assert(es.head(KeyString('a')) === 12);
         assert(es.get(KeyString('a')).value === 11);
         done();
-      }, 1000);
-    });
-
-    it('eventcompless', done => {
-      const es = new EventStore<Value>(open('test', EventStore.configure('test')), 'test');
-
-      for (let i = 0; i < 5; ++i) {
-        es.add(new UnsavedEventRecord(KeyString('a'), new Value(i + 1)));
-      }
-      setTimeout(() => {
-        const es = new EventStore<Value>(open('test', EventStore.configure('test')), 'test');
-        es.get(KeyString('a'));
-        es.events.load
-          .on(['a', 'value', 'put'], _ => {
-            assert(es.head(KeyString('a')) === 5);
-            assert(es.has(KeyString('a')) === true);
-            assert(es.get(KeyString('a')).value === 5);
-            setTimeout(done, 10);
-          });
       }, 1000);
     });
 

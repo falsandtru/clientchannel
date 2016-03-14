@@ -23,7 +23,7 @@ abstract class EventRecord<T extends EventValue> {
     type: EventType
   ) {
     if (typeof this.id === 'number' && this.id > 0 === false || this.id !== void 0) throw new TypeError(`LocalSocket: EventRecord: Invalid event id: ${this.id}`);
-    this.type = EventType[type];
+    this.type = <'put' | 'snapshot' | 'delete'>EventType[type];
     if (typeof this.type !== 'string' || EventType[this.type] === void 0) throw new TypeError(`LocalSocket: EventRecord: Invalid event type: ${this.type}`);
     this.key = key;
     if (typeof this.key !== 'string') throw new TypeError(`LocalSocket: EventRecord: Invalid event key: ${this.key}`);
@@ -42,22 +42,25 @@ abstract class EventRecord<T extends EventValue> {
     switch (type) {
       case EventType.put: {
         this.value = value = <T>assign(new EventValue(), <EventValue>{ [this.attr]: value[this.attr] });
+        void Object.freeze(this.value);
         return;
       }
       case EventType.snapshot: {
         this.value = value = <T>assign(new EventValue(), value);
+        void Object.freeze(this.value);
         return;
       }
       case EventType.delete:
       default: {
         this.value = value = <T>new EventValue();
+        void Object.freeze(this.value);
         return;
       }
     }
     throw new TypeError(`LocalSocket: Invalid event type: ${type}`);
   }
   public id: IdNumber;
-  public type: string;
+  public type: 'put' | 'snapshot' | 'delete';
   public key: KeyString;
   public attr: string;
   public value: T;
@@ -367,9 +370,10 @@ export abstract class AbstractEventStore<T extends EventValue> {
           void savedEvents.unshift(new SavedEventRecord(event.id, event.key, event.value, event.date, EventType[event.type]));
         }
         if (!cursor || EventType[(<EventRecord<T>>cursor.value).type] !== EventType.put) {
+          assert(this.snapshotCycle > 0);
           if (savedEvents.length < this.snapshotCycle) return;
-          const event = compose(savedEvents).reduce(e => e);
           void this.clean(Infinity, key);
+          const event = compose(savedEvents).reduce(e => e);
           if (event instanceof SavedEventRecord) return;
           switch (event.type) {
             case EventType[EventType.snapshot]: {
