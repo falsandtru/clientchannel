@@ -32,17 +32,18 @@ export function build<V>(source: V, factory: () => V, update: (attr: string, new
         const desc = Object.getOwnPropertyDescriptor(dao, prop)
         if (desc && (desc.get || desc.set)) return map;
       }
+      const iniVal = dao[prop];
       if (source[prop] === void 0) {
-        source[prop] = dao[prop];
+        source[prop] = iniVal;
       }
       map[prop] = {
         configurable: false,
         enumerable: true,
-        get: () => source[prop],
+        get: () => source[prop] === void 0 ? iniVal : source[prop],
         set: newVal => {
           const oldVal = source[prop];
           if (newVal === oldVal) return;
-          source[prop] = newVal;
+          source[prop] = newVal === void 0 ? iniVal : newVal;
           void update(prop, newVal, oldVal);
         }
       };
