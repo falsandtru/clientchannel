@@ -72,5 +72,8 @@
     "node": ">=4.0"
   },
   "author": "falsandtru",
-  "license": "MIT"
+  "license": {
+    "type": "MIT",
+    "url": "https://opensource.org/licenses/MIT"
+  }
 }

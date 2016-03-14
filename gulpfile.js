@@ -63,8 +63,7 @@ const config = {
     }
   },
   banner: [
-    `/*! ${pkg.name} v${pkg.version} ${pkg.repository.url} | (c) 2015, ${pkg.author} | ${pkg.license} Licence */`,
-    `/*! Link: MIT Lisence http://www.opensource.org/licenses/mit-license.php */`,
+    `/*! ${pkg.name} v${pkg.version} ${pkg.repository.url} | (c) 2015, ${pkg.author} | ${pkg.license.type} (${pkg.license.url}) */`,
     ''
   ].join('\n'),
   exporter:
