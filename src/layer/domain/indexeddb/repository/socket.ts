@@ -22,6 +22,9 @@ class Message {
     public attr: string,
     public date: number
   ) {
+    assert(typeof key === 'string');
+    assert(typeof attr === 'string');
+    assert(typeof date === 'number');
   }
 }
 
@@ -30,10 +33,12 @@ class Port {
   private msgHeadSet_ = new Set<string, number>((o, n) => n > o ? n : o);
   public recv(): Message[] {
     return this.msgs
+      .map(msg => new Message(msg.key, msg.attr, msg.date))
       .filter(msg => !this.msgHeadSet_.has(msg.key) || msg.date > this.msgHeadSet_.get(msg.key))
       .filter(msg => !void this.msgHeadSet_.add(msg.key, msg.date));
   }
   public send(msg: Message): void {
+    assert(msg instanceof Message);
     this.msgs = concat([msg], this.msgs.slice(0, 9));
   }
 }
