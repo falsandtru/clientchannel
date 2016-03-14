@@ -48,7 +48,7 @@
   export interface LocalSocketEvent {
     type: LocalSocketEventType;
     key: string;
-    attr: string | void;
+    attr: string;
     newValue: any;
     oldValue: any;
   }

@@ -28,10 +28,13 @@ export class PortEvent implements LocalSocketEvent {
   constructor(
     public type: LocalSocketEventType,
     public key: string,
-    public attr: string | void,
+    public attr: string,
     public newValue: any,
     public oldValue: any
   ) {
+    assert(typeof type === 'string');
+    assert(typeof key === 'string');
+    assert(typeof attr === 'string');
   }
 }
 
@@ -106,7 +109,7 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
             */
           }, void 0);
       }
-      void this.event.emit(['recv'], new PortEvent('recv', this.name, void 0, newValue, oldValue));
+      void this.event.emit(['recv'], new PortEvent('recv', this.name, '', newValue, oldValue));
     };
     void this.eventSource.on(this.name, this.subscriber);
     void this.cache.add(this.name, dao);
