@@ -209,23 +209,35 @@ export abstract class AbstractEventStore<T extends EventValue> {
     loss: new Observable<string, ESEvent, void>(),
     access: new Observable<string, ESEvent, void>()
   };
-  private syncedKeyMap = new Map<KeyString, boolean>();
-  protected sync(key: KeyString): void {
-    // sync only when first loading or after request faild
-    return this.syncedKeyMap.has(key)
-      ? void this.syncedKeyMap.get(key)
-      : void this.syncedKeyMap.set(key, !!void this.update(key));
+  protected syncState = new Map<KeyString, boolean>();
+  protected syncWaits = new Observable<KeyString, DOMError, any>();
+  public sync(key: KeyString, cb: (err?: DOMError) => any = noop): void {
+    if (this.syncState.has(key) && cb === noop) return;
+    switch (this.syncState.get(key)) {
+      case true: {
+        if (cb === noop) return;
+        void cb();
+        return;
+      }
+      case false: {
+        if (cb === noop) return;
+        void this.syncWaits.once(key, err => void cb(err));
+        return;
+      }
+      default: {
+        if (cb === noop) return void this.update(key);
+        void this.syncWaits.once(key, err => void cb(err));
+        void this.update(key);
+        return;
+      }
+    }
   }
   public update(key: KeyString): void {
     const head = this.head(key);
     const savedEvents: SavedEventRecord<T>[] = [];
+    void this.syncState.set(key, this.syncState.get(key) === true);
     void this.cursor(key, STORE_FIELDS.key, IDBCursorDirection.prev, IDBTransaction.readonly, (cursor, err) => {
-      if (err) {
-        if (this.syncedKeyMap.get(key) === false) {
-          void this.syncedKeyMap.delete(key);
-        }
-        return;
-      }
+      if (err) return void this.syncWaits.emit(key, err);
       if (!cursor || (<SavedEventRecord<T>>cursor.value).id <= head) {
         // register latest events
         void savedEvents
@@ -248,10 +260,8 @@ export abstract class AbstractEventStore<T extends EventValue> {
               .register([e.key, e.attr, sqid(e.id)], _ => e);
           }, void 0);
         void this.cache.cast([key], void 0);
-        if (this.syncedKeyMap.get(key) !== true) {
-          void this.syncedKeyMap.set(key, true);
-          void this.events.sync.emit([key], new ESEvent(ESEventType.snapshot, this.head(key), key, ''));
-        }
+        void this.syncState.set(key, true);
+        void this.syncWaits.emit(key, void 0);
         if (savedEvents.length > this.snapshotCycle) {
           void this.snapshot(key);
         }

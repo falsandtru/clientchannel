@@ -47,6 +47,9 @@ export class SocketStore<T extends SocketValue> {
     save: Observable<string, ESEvent, void>;
     loss: Observable<string, ESEvent, void>;
   };
+  public sync(key: KeyString, cb: (err?: DOMError) => any = noop): void {
+    return this.schema.data.sync(key, cb);
+  }
   public keys(cb: (keys: string[], error: DOMError) => any = noop): void {
     return this.schema.data.keys(cb);
   }

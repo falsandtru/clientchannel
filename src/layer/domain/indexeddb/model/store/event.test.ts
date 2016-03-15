@@ -324,6 +324,25 @@ describe('Unit: layers/domain/indexeddb/model/store/event', function () {
         });
     });
 
+    it('sync', done => {
+      const es = new EventStore<Value>(open('test', EventStore.configure('test')), 'test');
+
+      let cnt = 0;
+      es.sync(KeyString(''), err => {
+        assert(++cnt === 1);
+        assert(err === void 0);
+      });
+      es.sync(KeyString(''), err => {
+        assert(++cnt === 2);
+        assert(err === void 0);
+        es.sync(KeyString(''), err => {
+          assert(++cnt === 3);
+          assert(err === void 0);
+          done();
+        });
+      });
+    });
+
     it('keys', done => {
       const es = new EventStore<Value>(open('test', EventStore.configure('test')), 'test');
 

@@ -3,6 +3,7 @@
 
   export function socket<T extends LocalSocketObject>(name: string, config: LocalSocketConfig<T>): LocalSocket<T>;
   export interface LocalSocket<T extends LocalSocketObject> {
+    sync(key: string, cb?: (err: DOMError) => any): void;
     link(key: string, expiry?: number): T;
     delete(key: string): void;
     keys(cb: (keys: string[], error: DOMError) => any): void;
