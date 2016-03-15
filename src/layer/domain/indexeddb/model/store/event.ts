@@ -314,7 +314,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
       .reduce(e => e)
       .value;
   }
-  public add(event: UnsavedEventRecord<T>): this {
+  public add(event: UnsavedEventRecord<T>): void {
     void this.events.access
       .emit([event.key, event.attr, event.type], new ESEvent(ESEventType[event.type], IdNumber(0), event.key, event.attr));
     if (event instanceof UnsavedEventRecord === false) throw new Error(`LocalSocket: Cannot add a saved event: ${JSON.stringify(event)}`);
@@ -354,11 +354,10 @@ export abstract class AbstractEventStore<T extends EventValue> {
         }, 1e3);
       };
     });
-    return this;
   }
-  public delete(key: KeyString): this {
+  public delete(key: KeyString): void {
     void setTimeout((): void => void this.clean(Infinity, key), 10);
-    return this.add(new UnsavedEventRecord(key, <T>new EventValue(), EventType.delete));
+    void this.add(new UnsavedEventRecord(key, <T>new EventValue(), EventType.delete));
   }
   protected snapshotCycle = 10;
   //protected snapshotLimit = 1;

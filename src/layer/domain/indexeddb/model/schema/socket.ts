@@ -60,10 +60,10 @@ export class SocketStore<T extends SocketValue> {
     return this.schema.data.get(KeyString(key));
   }
   public add(record: UnsavedEventRecord<T>): void {
-    return void this.schema.data.add(record);
+    return this.schema.data.add(record);
   }
   public delete(key: string): void {
-    void this.schema.data.delete(KeyString(key));
+    return this.schema.data.delete(KeyString(key));
   }
   public meta(key: string): LocalSocketObjectMetaData {
     return this.schema.data.meta(KeyString(key));
@@ -93,10 +93,10 @@ export class SocketStore<T extends SocketValue> {
     );
   }
   public clean(until: number = Infinity, key?: string): void {
-    void this.schema.data.clean(until, key && KeyString(key));
+    return this.schema.data.clean(until, key && KeyString(key));
   }
   public destroy(): void {
-    void destroy(this.name);
+    return destroy(this.name);
   }
 }
 
