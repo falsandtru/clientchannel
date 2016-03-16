@@ -192,6 +192,9 @@ gulp.task('ts:dist', function () {
     .pipe($.typescript(Object.assign({
       outFile: `${pkg.name}.js`
     }, config.ts.options)))
+    .once("error", function () {
+      this.once("finish", () => process.exit(1));
+    })
     .pipe($.unassert())
     .pipe($.header(config.exporter))
     .pipe($.header(config.banner))
