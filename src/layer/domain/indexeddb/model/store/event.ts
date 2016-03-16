@@ -1,5 +1,5 @@
 import {LocalSocketObjectMetaData} from 'localsocket';
-import {Supervisor, Observable, Set, Map, sqid, concat} from 'arch-stream';
+import {Supervisor, Observable, Set, Map, Msg, sqid, concat} from 'arch-stream';
 import {open, Config, Access, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../../../infrastructure/indexeddb/api';
 import {IdNumber, KeyString, IDBValue, EventValue as IEventValue} from '../types';
 import {assign} from '../../../lib/assign';
@@ -211,26 +211,29 @@ export abstract class AbstractEventStore<T extends EventValue> {
   };
   protected syncState = new Map<KeyString, boolean>();
   protected syncWaits = new Observable<KeyString, DOMError, any>();
-  public sync(key: KeyString, cb: (err?: DOMError) => any = noop): void {
-    if (this.syncState.has(key) && cb === noop) return;
-    switch (this.syncState.get(key)) {
-      case true: {
-        if (cb === noop) return;
-        void cb();
-        return;
-      }
-      case false: {
-        if (cb === noop) return;
-        void this.syncWaits.once(key, err => void cb(err));
-        return;
-      }
-      default: {
-        if (cb === noop) return void this.update(key);
-        void this.syncWaits.once(key, err => void cb(err));
-        void this.update(key);
-        return;
-      }
-    }
+  public sync(keys: KeyString[], cb: (errs?: DOMError[]) => any = noop): void {
+    void keys
+      .reduce<PromiseLike<DOMError[]>>((msg, key) => {
+        switch (this.syncState.get(key)) {
+          case true: {
+            return msg.then(a => concat(a, [<DOMError>void 0]));
+          }
+          case false: {
+            if (cb === noop) return msg.then(a => concat(a, [<DOMError>void 0]));
+            const job = Msg<DOMError[]>();
+            void this.syncWaits.once(key, err => void job.send([err]));
+            return msg.then(a => job.then(b => concat(a, b)));
+          }
+          default: {
+            void this.update(key);
+            if (cb === noop) return msg.then(a => concat(a, [<DOMError>void 0]));
+            const job = Msg<DOMError[]>();
+            void this.syncWaits.once(key, err => void job.send([err]));
+            return msg.then(a => job.then(b => concat(a, b)));
+          }
+        }
+      }, Msg<DOMError[]>().send([], true))
+      .then(cb);
   }
   public update(key: KeyString): void {
     const latest = this.meta(key);
@@ -299,7 +302,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
       .reduce(e => e).type !== EventType[EventType.delete];
   }
   public get(key: KeyString): T {
-    void this.sync(key);
+    void this.sync([key]);
     void this.events.access
       .emit([key], new ESEvent(ESEventType.get, IdNumber(0), key, ''));
     return compose(this.cache.cast([key], void 0))
@@ -310,7 +313,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
     void this.events.access
       .emit([event.key, event.attr, event.type], new ESEvent(ESEventType[event.type], IdNumber(0), event.key, event.attr));
     if (event instanceof UnsavedEventRecord === false) throw new Error(`LocalSocket: Cannot add a saved event: ${JSON.stringify(event)}`);
-    void this.sync(event.key);
+    void this.sync([event.key]);
     const id = sqid();
     void this.cache
       .register([event.key, event.attr, sqid(0), id], _ => event);
