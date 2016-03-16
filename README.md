@@ -12,6 +12,12 @@ Communicate between other tabs via IndexedDB and LocalStorage.
 - Bidirectional persistent data binding.
 - Data with expiry.
 
+## Demo
+
+Text and Canvas.
+
+https://falsandtru.github.io/localsocket/
+
 ## API
 
 [localsocket.d.ts](typings/localsocket.d.ts)
