@@ -6,7 +6,6 @@
     sync(key: string, cb?: (err: DOMError) => any): void;
     link(key: string, expiry?: number): T;
     delete(key: string): void;
-    keys(cb: (keys: string[], error: DOMError) => any): void;
     recent(limit: number, cb: (keys: string[], error: DOMError) => any): void;
     destroy(): void;
   }

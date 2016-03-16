@@ -73,55 +73,25 @@ describe('Unit: layers/domain/indexeddb/model/schema/socket', function () {
     it('clean', done => {
       const socket = new SocketStore<CustomSocketValue>('test', _ => false);
 
-      socket.clean();
-      setTimeout(() => {
-        socket.add(new SocketRecord(KeyString('a'), new CustomSocketValue(0)));
-        socket.clean();
-        socket.keys(keys => {
-          assert.deepEqual(keys, ['a']);
-          assert(socket.has('a'));
-          socket.delete('a');
-          socket.add(new SocketRecord(KeyString('b'), new CustomSocketValue(0)));
-          socket.clean();
-          socket.keys(keys => {
-            assert.deepEqual(keys, ['b']);
-            assert(!socket.has('a'));
-            assert(socket.has('b'));
-            socket.delete('b');
-            socket.clean(0);
-            socket.keys(keys => {
-              assert.deepEqual(keys, ['b']);
-              assert(!socket.has('a'));
-              assert(!socket.has('b'));
-              socket.clean(Infinity);
-              socket.keys(keys => {
-                assert.deepEqual(keys, []);
-                assert(!socket.has('a'));
-                assert(!socket.has('b'));
-                done();
-              });
-            });
-          });
-        });
-      }, 10);
-    });
-
-    it('autoclean', done => {
-      const socket = new SocketStore<CustomSocketValue>('test', _ => false);
-
       socket.add(new SocketRecord(KeyString('a'), new CustomSocketValue(0)));
-      socket.keys(keys => {
+      socket.recent(Infinity, keys => {
         assert.deepEqual(keys, ['a']);
+        assert(socket.has('a') === true);
         socket.delete('a');
         socket.add(new SocketRecord(KeyString('b'), new CustomSocketValue(0)));
-        setTimeout(() => {
-          socket.keys(keys => {
-            assert.deepEqual(keys, ['b']);
+        socket.recent(Infinity, keys => {
+          assert.deepEqual(keys, ['b']);
+          assert(socket.has('a') === false);
+          assert(socket.has('b') === true);
+          socket.delete('b');
+          socket.recent(Infinity, keys => {
+            assert.deepEqual(keys, []);
+            assert(socket.has('a') === false);
+            assert(socket.has('b') === false);
             done();
           });
-        }, 10);
+        });
       });
-
     });
 
     it('expiry', done => {
@@ -130,20 +100,24 @@ describe('Unit: layers/domain/indexeddb/model/schema/socket', function () {
       socket.expire('a');
       socket.add(new SocketRecord(KeyString('a'), new CustomSocketValue(0)));
       assert(socket.get('a').val === 0);
-      socket.keys(keys => {
+      socket.recent(Infinity, keys => {
         assert.deepEqual(keys, ['a']);
         assert(socket.has('a') === true);
         setTimeout(() => {
           socket.expire('b', 100);
           socket.add(new SocketRecord(KeyString('b'), new CustomSocketValue(0)));
-          socket.keys(keys => {
+          socket.recent(Infinity, keys => {
             assert.deepEqual(keys, ['b']);
             assert(socket.has('a') === false);
             assert(socket.has('b') === true);
             setTimeout(() => {
-              assert(socket.has('b') === false);
-              done();
-            }, 100);
+              socket.recent(Infinity, keys => {
+                assert.deepEqual(keys, []);
+                assert(socket.has('a') === false);
+                assert(socket.has('b') === false);
+                done();
+              });
+            }, 200);
           });
         }, 500);
       });

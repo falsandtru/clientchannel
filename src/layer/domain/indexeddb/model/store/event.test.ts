@@ -299,27 +299,28 @@ describe('Unit: layers/domain/indexeddb/model/store/event', function () {
     it('CRUD', done => {
       const es = new EventStore<Value>(open('test', EventStore.configure('test')), 'test');
 
-      assert(es.head(KeyString('a')) === 0);
+      assert(es.meta(KeyString('a')).id === 0);
       assert(es.has(KeyString('a')) === false);
       assert(es.get(KeyString('a')).value === void 0);
       es.add(new UnsavedEventRecord(KeyString('a'), new Value(0)));
-      assert(es.head(KeyString('a')) === 0);
+      assert(es.meta(KeyString('a')).id === 0);
       assert(es.has(KeyString('a')) === true);
       assert(es.get(KeyString('a')).value === 0);
       es.events.save
         .once(['a', 'value', 'put'], _ => {
-          assert(es.head(KeyString('a')) === 1);
+          assert(es.meta(KeyString('a')).id === 1);
           assert(es.has(KeyString('a')) === true);
           assert(es.get(KeyString('a')).value === 0);
           es.delete(KeyString('a'));
+          assert(es.meta(KeyString('a')).id === 1);
+          assert(es.has(KeyString('a')) === false);
+          assert(es.get(KeyString('a')).value === void 0);
           es.events.save
             .once(['a', '', 'delete'], _ => {
-              setTimeout(() => {
-                //assert(es.head(KeyString('a')) === 2);
-                assert(es.has(KeyString('a')) === false);
-                assert(es.get(KeyString('a')).value === void 0);
-                done();
-              }, 10);
+              assert(es.meta(KeyString('a')).id === 2);
+              assert(es.has(KeyString('a')) === false);
+              assert(es.get(KeyString('a')).value === void 0);
+              done();
             });
         });
     });
@@ -343,63 +344,30 @@ describe('Unit: layers/domain/indexeddb/model/store/event', function () {
       });
     });
 
-    it('keys', done => {
-      const es = new EventStore<Value>(open('test', EventStore.configure('test')), 'test');
-
-      es.add(new UnsavedEventRecord(KeyString('a'), new Value(0)));
-      es.add(new UnsavedEventRecord(KeyString('a'), new Value(0)));
-      es.add(new UnsavedEventRecord(KeyString('b'), new Value(0)));
-      es.add(new UnsavedEventRecord(KeyString('b'), new Value(0)));
-      es.add(new UnsavedEventRecord(KeyString('c'), new Value(0)));
-      es.add(new UnsavedEventRecord(KeyString('c'), new Value(0)));
-
-      es.keys(keys => {
-        assert.deepEqual(keys, [
-          'c',
-          'b',
-          'a'
-        ]);
-        done();
-      });
-    });
-
     it('clean', done => {
       const es = new EventStore<Value>(open('test', EventStore.configure('test')), 'test');
 
       es.add(new UnsavedEventRecord(KeyString('a'), new Value(0)));
+      es.add(new UnsavedEventRecord(KeyString('b'), new Value(0)));
       es.events.save
         .once(['a', 'value', 'put'], _ => {
-          assert(es.head(KeyString('a')) === 1);
-          assert(es.has(KeyString('a')) === true);
-          assert(es.get(KeyString('a')).value === 0);
-          es.clean(0);
-          setTimeout(() => {
-            assert(es.head(KeyString('a')) === 1);
-            assert(es.has(KeyString('a')) === true);
-            assert(es.get(KeyString('a')).value === 0);
-            es.clean(Infinity);
-            setTimeout(() => {
-              assert(es.head(KeyString('a')) === 1);
-              assert(es.has(KeyString('a')) === true);
-              assert(es.get(KeyString('a')).value === 0);
-              es.delete(KeyString('a'));
-              es.events.save
-                .once(['a', '', 'delete'], _ => {
-                  //assert(es.head(KeyString('a')) === 2);
-                  assert(es.has(KeyString('a')) === false);
-                  assert(es.get(KeyString('a')).value === void 0);
-                  es.clean(0);
-                  setTimeout(() => {
-                    //assert(es.head(KeyString('a')) === 2);
-                    es.clean(Infinity);
-                    setTimeout(() => {
-                      assert(es.head(KeyString('a')) === 0);
-                      done();
-                    }, 100);
-                  }, 10);
-                });
-            }, 10);
-          }, 10);
+          es.delete(KeyString('a'));
+          es.events.save
+            .once(['a', '', 'delete'], _ => {
+              assert(es.meta(KeyString('a')).id === 3);
+              assert(es.has(KeyString('a')) === false);
+              assert(es.get(KeyString('a')).value === void 0);
+              assert(es.meta(KeyString('b')).id === 2);
+              assert(es.has(KeyString('b')) === true);
+              assert(es.get(KeyString('b')).value === 0);
+              setTimeout(() => {
+                assert(es.meta(KeyString('a')).id === 0);
+                assert(es.has(KeyString('a')) === false);
+                assert(es.meta(KeyString('b')).id === 2);
+                assert(es.has(KeyString('b')) === true);
+                done();
+              }, 1000);
+            });
         });
     });
 
@@ -410,7 +378,7 @@ describe('Unit: layers/domain/indexeddb/model/store/event', function () {
         es.add(new UnsavedEventRecord(KeyString('a'), new Value(i + 1)));
       }
       setTimeout(() => {
-        assert(es.head(KeyString('a')) === 12);
+        assert(es.meta(KeyString('a')).id === 12);
         assert(es.get(KeyString('a')).value === 11);
         done();
       }, 1000);

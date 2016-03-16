@@ -50,8 +50,8 @@ export class SocketStore<T extends SocketValue> {
   public sync(key: KeyString, cb: (err?: DOMError) => any = noop): void {
     return this.schema.data.sync(key, cb);
   }
-  public keys(cb: (keys: string[], error: DOMError) => any = noop): void {
-    return this.schema.data.keys(cb);
+  public meta(key: string): LocalSocketObjectMetaData {
+    return this.schema.data.meta(KeyString(key));
   }
   public has(key: string): boolean {
     return this.schema.data.has(KeyString(key));
@@ -64,12 +64,6 @@ export class SocketStore<T extends SocketValue> {
   }
   public delete(key: string): void {
     return this.schema.data.delete(KeyString(key));
-  }
-  public meta(key: string): LocalSocketObjectMetaData {
-    return this.schema.data.meta(KeyString(key));
-  }
-  public head(key: string): number {
-    return this.schema.data.head(KeyString(key));
   }
   private expiries = new Map<string, number>();
   public expire(key: string, expiry: number = this.expiry): void {
@@ -91,9 +85,6 @@ export class SocketStore<T extends SocketValue> {
         void cursor.continue();
       }
     );
-  }
-  public clean(until: number = Infinity, key?: string): void {
-    return this.schema.data.clean(until, key && KeyString(key));
   }
   public destroy(): void {
     return destroy(this.name);
