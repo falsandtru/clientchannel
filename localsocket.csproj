@@ -30,6 +30,7 @@
     <TypeScriptSourceMap>true</TypeScriptSourceMap>
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
     <TypeScriptModuleResolution>NodeJs</TypeScriptModuleResolution>
+    <TypeScriptAllowSyntheticDefaultImports>True</TypeScriptAllowSyntheticDefaultImports>
     <TypeScriptCompileOnSaveEnabled>False</TypeScriptCompileOnSaveEnabled>
     <TypeScriptTarget>ES5</TypeScriptTarget>
     <TypeScriptJSXEmit>None</TypeScriptJSXEmit>

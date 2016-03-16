@@ -3,6 +3,7 @@
     "target": "es5",
     "module": "amd",
     "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
     "noImplicitAny": true,
     "suppressImplicitAnyIndexErrors": true,
     "noImplicitReturns": true,
