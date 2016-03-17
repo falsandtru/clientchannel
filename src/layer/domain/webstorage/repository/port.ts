@@ -1,5 +1,5 @@
 import {LocalPort, LocalPortObject, LocalSocketEvent, LocalSocketEventType} from 'localsocket';
-import {Observable, Set, assign} from 'arch-stream';
+import {Observable, Set, assign, uuid} from 'arch-stream';
 import {SCHEMA, build, isValidPropertyName, isValidPropertyValue} from '../../dao/api';
 import {events} from '../service/event';
 import {localStorage, sessionStorage} from '../../../infrastructure/webstorage/api';
@@ -63,15 +63,14 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
     }
   ) {
     this.event['toJSON'] = (): void => void 0;
+    void Object.freeze(this);
   }
   private event = new Observable<LocalSocketEventType, PortEvent, void>();
   private cache = this.storage === localStorage ? LocalStorageObjectCache : SessionStorageObjectCache;
   private eventSource = this.storage === localStorage ? events.localStorage : events.sessionStorage;
-  private subscriber: (event: StorageEvent) => any = noop;
+  private uuid = uuid();
   public link(): T {
     if (this.cache.has(this.name)) return <T>this.cache.get(this.name);
-
-    void this.close();
 
     const source: T = assign<T>(
       <T><any>{
@@ -80,7 +79,6 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
       },
       parse<T>(this.storage.getItem(this.name) || '{}')
     );
-    source.__event['toJSON'] = (): void => void 0;
     const dao: T = build(source, this.factory, (attr, newValue, oldValue) => {
       if (this.storage === localStorage && this.storage.getItem(this.name) === null) {
         void this.expiry.add(this.name, this.life);
@@ -88,7 +86,7 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
       void this.storage.setItem(this.name, JSON.stringify(source));
       void this.event.emit(<any>['send', attr], new PortEvent('send', this.name, attr, newValue, oldValue));
     });
-    this.subscriber = ({newValue, oldValue}: StorageEvent): void => {
+    const subscriber = ({newValue, oldValue}: StorageEvent): void => {
       if (newValue) {
         const item: T = parse<T>(newValue);
         void Object.keys(item)
@@ -111,7 +109,7 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
       }
       void this.event.emit(['recv'], new PortEvent('recv', this.name, '', newValue, oldValue));
     };
-    void this.eventSource.on(this.name, this.subscriber);
+    void this.eventSource.on([this.name, this.uuid], subscriber);
     void this.cache.add(this.name, dao);
     void this.storage.setItem(this.name, JSON.stringify(source));
     void this.expiry.add(this.name, this.life);
@@ -127,7 +125,7 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
     }
   }
   public close(): void {
-    void this.eventSource.off(this.name, this.subscriber);
+    void this.eventSource.off([this.name, this.uuid]);
     void this.cache.delete(this.name);
   }
   public destroy(): void {

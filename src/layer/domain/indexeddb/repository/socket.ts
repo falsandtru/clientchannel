@@ -48,7 +48,7 @@ interface Port extends LocalSocketObject {
 class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> implements LocalSocket<T> {
   constructor(
     name: string,
-    protected factory: () => T,
+    private factory: () => T,
     expiry: number,
     destroy: (err: DOMError, ev: Event) => boolean
   ) {
@@ -113,11 +113,12 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
           }
         }
       });
+    void Object.freeze(this);
   }
-  protected proxy = portRepository(this.name, localStorage, () => new Port());
-  protected port = this.proxy.link();
-  protected links = new Set<string, T>();
-  protected sources = new Set<string, T>();
+  private proxy = portRepository(this.name, localStorage, () => new Port());
+  private port = this.proxy.link();
+  private links = new Set<string, T>();
+  private sources = new Set<string, T>();
   public link(key: string, expiry?: number): T {
     void this.expire(key, expiry);
     if (this.links.has(key)) return this.links.get(key);
