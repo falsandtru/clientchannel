@@ -15,19 +15,3 @@ interface IDBDatabase {
   end: () => any;
   destroy: () => any;
 }
-
-interface IDBObjectStore {
-  createIndex(name: string, keyPath: string | string[], options?: {}): IDBIndex;
-}
-
-/*
-interface IDBObjectStoreParameters {
-  keyPath?: string | string[];
-  autoIncrement: boolean;
-}
-
-interface IDBIndexParameters {
-  unique?: boolean;
-  multiEntry?: boolean;
-}
-*/

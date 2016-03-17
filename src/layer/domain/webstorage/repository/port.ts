@@ -11,19 +11,6 @@ const LocalStorageSubscriber = new Set<string, (event: StorageEvent) => any>();
 const SessionStorageObjectCache = new Set<string, LocalPortObject>();
 const SessionStorageSubscriber = new Set<string, (event: StorageEvent) => any>();
 
-declare var StorageEvent: {
-  new (
-    type: string,
-    init?: {
-      key: string;
-      oldValue: string;
-      newValue: string;
-      url: string;
-      storageArea: Storage;
-    }
-  ): StorageEvent;
-};
-
 export class PortEvent implements LocalSocketEvent {
   constructor(
     public type: LocalSocketEventType,
