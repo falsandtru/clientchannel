@@ -69,11 +69,11 @@ export class SocketStore<T extends SocketValue> {
   public expire(key: string, expiry: number = this.expiry): void {
     assert(expiry > 0);
     if (expiry === Infinity) return;
-    void this.expiries.set(key, expiry);
+    return void this.expiries.set(key, expiry);
   }
   public recent(limit: number, cb: (keys: string[], error: DOMError) => any): void {
     const keys: string[] = [];
-    void this.schema.access.cursor(
+    return void this.schema.access.cursor(
       null,
       AccessStoreFields.date,
       IDBCursorDirection.prevunique,

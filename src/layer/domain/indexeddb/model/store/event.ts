@@ -212,7 +212,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
   protected syncState = new Map<KeyString, boolean>();
   protected syncWaits = new Observable<KeyString, DOMError, any>();
   public sync(keys: KeyString[], cb: (errs?: DOMError[]) => any = noop): void {
-    void keys
+    return void keys
       .reduce<PromiseLike<DOMError[]>>((msg, key) => {
         switch (this.syncState.get(key)) {
           case true: {
@@ -239,7 +239,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
     const latest = this.meta(key);
     const savedEvents: SavedEventRecord<T>[] = [];
     void this.syncState.set(key, this.syncState.get(key) === true);
-    void this.cursor(key, STORE_FIELDS.key, IDBCursorDirection.prev, IDBTransaction.readonly, (cursor, err) => {
+    return void this.cursor(key, STORE_FIELDS.key, IDBCursorDirection.prev, IDBTransaction.readonly, (cursor, err) => {
       if (err) return void this.syncWaits.emit(key, err);
       if (!cursor || (<SavedEventRecord<T>>cursor.value).id <= latest.id) {
         if (compose(savedEvents).reduce(e => e).type === EventType[EventType.delete]) {
@@ -320,7 +320,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
     // update max date
     void this.cache
       .cast([event.key, event.attr, sqid(0), id], void 0);
-    void this.access(db => {
+    return void this.access(db => {
       if (this.cache.refs([event.key, event.attr, sqid(0)]).length === 0) return;
       const tx = db.transaction(this.name, IDBTransaction.readwrite);
       const req = tx
@@ -354,7 +354,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
     });
   }
   public delete(key: KeyString): void {
-    void this.add(new UnsavedEventRecord(key, <T>new EventValue(), EventType.delete));
+    return void this.add(new UnsavedEventRecord(key, <T>new EventValue(), EventType.delete));
   }
   protected snapshotCycle = 10;
   //protected snapshotLimit = 1;
@@ -362,7 +362,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
   protected snapshot(key: KeyString): void {
     if (this.snapshotJobState.get(key)) return;
     void this.snapshotJobState.set(key, true);
-    void this.access(db => {
+    return void this.access(db => {
       const tx = db.transaction(this.name, IDBTransaction.readwrite);
       const store = tx.objectStore(this.name);
       const req = store
@@ -413,7 +413,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
   protected clean(until: number = Infinity, key?: KeyString): void {
     const removedEvents: SavedEventRecord<T>[] = [];
     const cleanStateMap = new Map<KeyString, boolean>();
-    void this.cursor(
+    return void this.cursor(
       key ? IDBKeyRange.bound([key, 0], [key, until]) : IDBKeyRange.upperBound(until),
       key ? STORE_FIELDS.surrogateKeyDateField : STORE_FIELDS.date,
       IDBCursorDirection.prev,
@@ -452,7 +452,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
     );
   }
   public cursor(query: any, index: string, direction: string, mode: string, cb: (cursor: IDBCursorWithValue, error: DOMError) => any): void {
-    void this.access(db => {
+    return void this.access(db => {
       const tx = db
         .transaction(this.name, mode);
       const req = index

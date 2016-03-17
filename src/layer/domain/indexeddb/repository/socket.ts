@@ -121,39 +121,40 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
   public link(key: string, expiry?: number): T {
     void this.expire(key, expiry);
     if (this.links.has(key)) return this.links.get(key);
-    const source: T & LocalSocketObject = this.sources.add(key, assign<T>({}, this.get(key)));
-    void Object.defineProperties(source, {
-      __meta: {
-        get: () => this.meta(key)
-      },
-      __id: {
-        get(): number {
-          return (<LocalSocketObject>this).__meta.id;
+    return this.links.add(key, build(
+      Object.defineProperties(
+        this.sources.add(key, assign<T>({}, this.get(key))),
+        {
+          __meta: {
+            get: () => this.meta(key)
+          },
+          __id: {
+            get(): number {
+              return (<LocalSocketObject>this).__meta.id;
+            }
+          },
+          __key: {
+            get(): string {
+              return (<LocalSocketObject>this).__meta.key;
+            }
+          },
+          __date: {
+            get(): number {
+              return (<LocalSocketObject>this).__meta.date;
+            }
+          },
+          __event: {
+            value: new Observable<LocalSocketEventType, LocalSocketEvent, any>()
+          }
         }
-      },
-      __key: {
-        get(): string {
-          return (<LocalSocketObject>this).__meta.key;
-        }
-      },
-      __date: {
-        get(): number {
-          return (<LocalSocketObject>this).__meta.date;
-        }
-      },
-      __event: {
-        value: new Observable<LocalSocketEventType, LocalSocketEvent, any>()
-      }
-    });
-    const link: T = this.links.add(
-      key,
-      build(source, this.factory, (attr, newValue, oldValue) => {
+      ),
+      this.factory,
+      (attr, newValue, oldValue) => {
         void this.add(new SocketRecord(KeyString(key), <T>{ [attr]: newValue }));
-        void (<Observable<LocalSocketEventType, LocalSocketEvent, void>>source.__event)
+        void (<Observable<LocalSocketEventType, LocalSocketEvent, void>>this.sources.get(key).__event)
           .emit(<any>['send', attr], new PortEvent('send', key, attr, newValue, oldValue));
       })
     );
-    return link;
   }
   public close(): void {
     void this.proxy.close();
