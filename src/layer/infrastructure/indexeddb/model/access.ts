@@ -1,6 +1,7 @@
 import {Observable, IObservableObserver, Set, Map, Timer} from 'arch-stream';
 import {indexedDB} from '../module/global';
 import {IDBEvent, IDBEvenType} from './event';
+import {supportWebStorage as status} from '../../webstorage/api';
 
 const IDBEventObserver = new Observable<string, IDBEvent, void>();
 export const event: IObservableObserver<string, IDBEvent, void> = IDBEventObserver;
@@ -90,6 +91,7 @@ export function destroy(name: string): void {
 }
 
 function drain(name: string): void {
+  if (!status) return void RequestQueueSet.delete(name);
   const db = ConnectionSet.get(name);
   const reqs = RequestQueueSet.get(name) || [];
   while (true) {

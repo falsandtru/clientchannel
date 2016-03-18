@@ -3,6 +3,7 @@ import {Observable, Set, assign, uuid} from 'arch-stream';
 import {SCHEMA, build, isValidPropertyName, isValidPropertyValue} from '../../dao/api';
 import {events} from '../service/event';
 import {localStorage, sessionStorage} from '../../../infrastructure/webstorage/api';
+import {fakeStorage} from '../service/storage';
 import {noop} from '../../../../lib/noop';
 
 const LocalStorageObjectCache = new Set<string, LocalPortObject>();
@@ -27,7 +28,7 @@ export class PortEvent implements LocalSocketEvent {
 
 export function repository<T extends LocalPortObject>(
   name: string,
-  storage: Storage = sessionStorage,
+  storage: Storage = sessionStorage || fakeStorage,
   factory: () => T,
   log = {
     update(name: string) { },
