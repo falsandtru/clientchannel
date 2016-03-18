@@ -1,13 +1,11 @@
 import {repository} from './repository/port';
+import {log} from './service/log';
 import {expiry} from './service/expiry';
-import {clean} from './service/clean';
-import {localStorage} from '../../infrastructure/webstorage/api';
+import {localStorage, supportWebStorage} from '../../infrastructure/webstorage/api';
 
-export {localStorage, sessionStorage} from '../../infrastructure/webstorage/api';
+export {localStorage, sessionStorage, supportWebStorage} from '../../infrastructure/webstorage/api';
 export {events} from './service/event';
-export function webstorage<T>(name: string, storage: Storage, factory: () => T, life: number) {
-  return repository(name, storage, factory, life, storage === localStorage ? expiry : void 0);
+export function webstorage<T>(name: string, storage: Storage, factory: () => T, expiry_: number) {
+  void expiry.add(name, expiry_);
+  return repository(name, storage, factory, storage === localStorage ? log : void 0);
 }
-
-void clean(expiry, localStorage);
-void setInterval((): void => void clean(expiry, localStorage), 1e3 * 3600);

@@ -4,7 +4,7 @@ let webStorage: {
   sessionStorage: Storage
 } = <any>{};
 
-const existWebStorage: boolean = (() => {
+export const supportWebStorage: boolean = (() => {
   try {
     const key = 'localsocket#' + uuid();
     void self.sessionStorage.setItem(key, key);
@@ -17,5 +17,5 @@ const existWebStorage: boolean = (() => {
   }
 })();
 
-export const localStorage: Storage = existWebStorage ? self.localStorage : void 0;
-export const sessionStorage: Storage = existWebStorage ? self.sessionStorage : void 0;
+export const localStorage: Storage = supportWebStorage ? self.localStorage : void 0;
+export const sessionStorage: Storage = supportWebStorage ? self.sessionStorage : void 0;

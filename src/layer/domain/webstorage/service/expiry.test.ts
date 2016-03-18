@@ -1,8 +1,9 @@
-import {expiry} from './expiry';
+import {log, namespace as logns} from './log';
+import {expiry, namespace as expiryns} from './expiry';
 import {webstorage} from '../api';
 
 describe('Unit: layers/domain/webstorage/service/expiry', () => {
-  describe('expiry', () => {
+  describe('clean', () => {
     class DAO {
       n = 0;
     }
@@ -11,27 +12,40 @@ describe('Unit: layers/domain/webstorage/service/expiry', () => {
     }
 
     before(() => {
-      localStorage.removeItem('meta');
+      localStorage.removeItem(logns);
+      localStorage.removeItem(expiryns);
       localStorage.removeItem('test');
     });
 
     afterEach(() => {
-      localStorage.removeItem('meta');
+      localStorage.removeItem(logns);
+      localStorage.removeItem(expiryns);
       localStorage.removeItem('test');
     });
 
-    it('make/destroy', () => {
-      const repo = webstorage('test', localStorage, factory, 1);
-      assert('test' in expiry.expiries === false);
+    it('clean', done => {
+      const repo = webstorage('test', localStorage, factory, 100);
       const dao = repo.link();
-      assert(dao.n === 0);
-      assert('test' in expiry.expiries === true);
-      assert(expiry.expiries['test'].name === 'test');
-      assert(expiry.expiries['test'].life.max === 1);
-      assert(expiry.expiries['test'].life.value === 1);
-      assert(expiry.expiries['test'].life.atime > 0);
-      repo.destroy();
-      assert('test' in expiry.expiries === false);
+      assert(log.get('test') > 0);
+      assert(expiry.get('test') === 100);
+      dao.n = 1;
+      assert(localStorage.getItem('test') === "{\"n\":1}");
+      expiry.clean();
+      assert(localStorage.getItem('test') === "{\"n\":1}");
+      setTimeout(() => {
+        dao.n = 2;
+        setTimeout(() => {
+          expiry.clean();
+          assert(localStorage.getItem('test') === "{\"n\":2}");
+          expiry.clean(Date.now() + 200);
+          assert(localStorage.getItem('test') === null);
+          repo.destroy();
+          assert(localStorage.getItem('test') === null);
+          assert('test' in log.logs === false);
+          assert('test' in expiry.expiries === false);
+          done();
+        }, 50);
+      }, 50);
     });
 
   });

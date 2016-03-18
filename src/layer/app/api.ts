@@ -6,6 +6,8 @@ import {webstorage, localStorage, sessionStorage} from '../domain/webstorage/api
 import {event as IDBEventStream} from '../domain/indexeddb/api';
 import {events as WebStorageEventStreams} from '../domain/webstorage/api';
 
+export {supportWebStorage as status} from '../domain/webstorage/api';
+
 export function socket<T extends LocalSocketObject>(name: string, config: LocalSocketConfig<T>): LocalSocket<T> {
   config = configure(config);
   return indexeddb(name, config.factory, config.destroy, config.expiry);
@@ -30,12 +32,12 @@ export function socket<T extends LocalSocketObject>(name: string, config: LocalS
 
 export function port<T extends LocalPortObject>(name: string, config: LocalPortConfig<T>): LocalPort<T> {
   config = configure(config);
-  return webstorage(name, localStorage, config.factory, config.life);
+  return webstorage(name, localStorage, config.factory, config.expiry);
 
   function configure<T>(config: LocalPortConfig<T>): LocalPortConfig<T> {
     class Config<T> implements LocalPortConfig<T> {
       constructor(
-        public life: number = 10,
+        public expire: number = 30 * 24 * 60 * 60 * 1e3,
         public factory: () => T,
         public destroy: (err: DOMError, event: Event) => boolean = () => true
       ) {
@@ -43,7 +45,7 @@ export function port<T extends LocalPortObject>(name: string, config: LocalPortC
       }
     }
     return new Config(
-      config.life,
+      config.expiry,
       config.factory,
       config.destroy
     );

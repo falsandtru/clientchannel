@@ -1,17 +1,16 @@
-import {assign} from 'arch-stream';
+import {LocalPortObject} from 'localsocket';
 import {repository} from './port';
 
 describe('Unit: layers/domain/webstorage/repository/port', () => {
   describe('repository', () => {
+    interface DAO extends LocalPortObject {
+    }
     class DAO {
       n = 0;
     }
     function factory() {
       return new DAO();
     }
-    const schema = {
-      __key: 'test'
-    };
 
     before(() => {
       sessionStorage.removeItem('test');
@@ -24,20 +23,27 @@ describe('Unit: layers/domain/webstorage/repository/port', () => {
     it('make/destroy', () => {
       assert(sessionStorage.getItem('test') === null);
       const repo = repository('test', sessionStorage, factory);
-      repo.link();
-      assert.deepEqual(JSON.parse(sessionStorage.getItem('test')), assign<{}>({}, schema, factory()));
+      const dao = repo.link();
+      assert(dao.__key === 'test');
+      assert(dao.n === 0);
+      assert(sessionStorage.getItem('test') === null);
+      dao.n = 1;
+      assert(dao.__key === 'test');
+      assert(dao.n === 1);
+      assert(sessionStorage.getItem('test') === '{\"n\":1}');
       repo.destroy();
+      assert(dao.__key === 'test');
+      assert(dao.n === 1);
       assert(sessionStorage.getItem('test') === null);
     });
 
     it('remake', () => {
       assert(sessionStorage.getItem('test') === null);
-      const repo = repository('test', sessionStorage, factory);
-      repo.link();
-      assert.deepEqual(JSON.parse(sessionStorage.getItem('test')), assign<{}>({}, schema, factory()));
-      repo.link();
-      assert.deepEqual(JSON.parse(sessionStorage.getItem('test')), assign<{}>({}, schema, factory()));
-      repo.destroy();
+      assert.equal(
+        repository('test', sessionStorage, factory).link(),
+        repository('test', sessionStorage, factory).link()
+      );
+      repository('test', sessionStorage, factory).destroy();
       assert(sessionStorage.getItem('test') === null);
     });
 

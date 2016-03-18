@@ -1,6 +1,8 @@
 ﻿declare module 'localsocket' {
   export default socket;
 
+  export const status: boolean;
+
   export function socket<T extends LocalSocketObject>(name: string, config: LocalSocketConfig<T>): LocalSocket<T>;
   export interface LocalSocket<T extends LocalSocketObject> {
     sync(keys: string[], cb?: (errs: DOMError[]) => any): void;
@@ -37,7 +39,7 @@
     __event?: IObservableObserver<LocalSocketEventType, LocalSocketEvent, any>;
   }
   export interface LocalPortConfig<T> {
-    life?: number;
+    expiry?: number;
     factory(): T;
     destroy?(error: DOMError, event: Event): boolean;
   }

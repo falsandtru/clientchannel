@@ -85,7 +85,7 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function () {
           assert(dao.__key === 'a');
           assert(dao.__date > 0);
           setTimeout(() => {
-            assert(localStorage.getItem('test').replace(/\d+/, '0') === '{"__key":"test","msgs":[{"key":"a","attr":"n","date":0}]}');
+            assert(localStorage.getItem('test').replace(/\d+/, '0') === '{"msgs":[{"key":"a","attr":"n","date":0}]}');
             sock.destroy();
             done();
           }, 0);

@@ -1,1 +1,1 @@
-export {socket, port, events} from '../app/api';
+export {socket, port, events, status} from '../app/api';

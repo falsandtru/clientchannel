@@ -1,7 +1,11 @@
-import {localStorage, sessionStorage} from './global';
+import {localStorage, sessionStorage, supportWebStorage} from './global';
 
 describe('Unit: layers/infrastructure/webstorage/module/global', () => {
   describe('webStorage', () => {
+    it('supportWebStorage', () => {
+      assert(supportWebStorage);
+    });
+
     it('localStorage', () => {
       assert(localStorage);
     });

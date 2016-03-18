@@ -46,7 +46,7 @@ describe('Integration: Package', function () {
       }
 
       const sock = port('version', {
-        life: 3,
+        expiry: 3,
         factory() {
           return new Schema();
         }

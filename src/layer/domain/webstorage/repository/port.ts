@@ -29,13 +29,12 @@ export function repository<T extends LocalPortObject>(
   name: string,
   storage: Storage = sessionStorage,
   factory: () => T,
-  life: number = 0,
-  meta = {
-    add(name: string, life: number) { },
+  log = {
+    update(name: string) { },
     delete(name: string) { }
   }
 ): Port<T> {
-  return new Port(name, storage, factory, life, meta);
+  return new Port(name, storage, factory, log);
 }
 
 class Port<T extends LocalPortObject> implements LocalPort<T> {
@@ -43,9 +42,8 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
     public name: string,
     private storage: Storage,
     private factory: () => T,
-    private life: number,
-    private expiry = {
-      add(name: string, life: number) { },
+    private log = {
+      update(name: string) { },
       delete(name: string) { }
     }
   ) {
@@ -67,10 +65,15 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
       parse<T>(this.storage.getItem(this.name) || '{}')
     );
     const dao: T = build(source, this.factory, (attr, newValue, oldValue) => {
-      if (this.storage === localStorage && this.storage.getItem(this.name) === null) {
-        void this.expiry.add(this.name, this.life);
-      }
-      void this.storage.setItem(this.name, JSON.stringify(source));
+      void this.log.update(this.name);
+      void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, prop) =>
+        Object.defineProperty(acc, prop, {
+          value: source[prop],
+          enumerable: true,
+          writable: true,
+          configurable: true
+        })
+      , {})));
       void this.event.emit(<any>['send', attr], new PortEvent('send', this.name, attr, newValue, oldValue));
     });
     const subscriber = ({newValue, oldValue}: StorageEvent): void => {
@@ -98,8 +101,7 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
     };
     void this.eventSource.on([this.name, this.uuid], subscriber);
     void this.cache.add(this.name, dao);
-    void this.storage.setItem(this.name, JSON.stringify(source));
-    void this.expiry.add(this.name, this.life);
+    void this.log.update(this.name);
     return dao;
 
     function parse<T>(item: string): T {
@@ -118,6 +120,6 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
   public destroy(): void {
     void this.close();
     void this.storage.removeItem(this.name);
-    void this.expiry.delete(this.name);
+    void this.log.delete(this.name);
   }
 }
