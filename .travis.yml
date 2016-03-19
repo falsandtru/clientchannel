@@ -39,7 +39,7 @@ notifications:
     - secure: l2LCzUCkGmwuzLi9mkKrY40V3/mYb2En4TcoAlLuVtRgx5UZyA/efGhmNVaD9J/dx0WaxNGGEJR1+18C+dHx7pbjmyZFk/9m3JCjgNagsPN40VSNOStORvmhgsAVEm3Nzzrmk0WVxaVDgU9HQ2UvuDaFdygxtBOYRCI1pi+5V8mWEpLdDUKnlZdWWLcI4YdeE9zrII46tQNlkvfqRZ+OTFLly9/AMWbCOHc56YMjVNqpJnZeExKFH1RLm5RrsNYE67XxN1e1GGqoyKDY33eLFMsNUtodtgMPlFvv5ntExKdNIVFa7mcCiA72f0tJ96BNvxrNGYCg7NBcQwzEu9Kdp7Hb/nZXH4jnRw/Lq7LlK3w0P3Io4nHSw6+od9uH9hdh2EeoVJVrIKHoTedMl6KrP9fl97KX4GgTMqPNOhuI6bOpQw+C2SEa6wFonNy4OwsPdaGn5AqiJevkrj6sQ1cmOsQQsulVzc5ktjAPo5BAvTwbt/wu1EYIofNvZ1zK2E1bXJp3iyRSHC3zvK2qCWBk3HaoE+8BbcNdaFZ1afs9QkUkrhj3h59652Q2piGpmXgahvRTNgBovI6qswtXYOUGz4CwZvnoaVMlw5OqlKnjoT4NpmMNytSmGGzLkbdkNLSPmoZsSZmIg0AWGhOYen/21sLmzdiiU8V0iTkvINgZMuY=
     on_success: change
     on_failure: always
-after_deploy:
+after_success:
 - if [ $TRAVIS_BRANCH != "master" ] || [ ! $GH_TOKEN ]; then exit 0; fi
 - if [ $deploy == "false" ]; then exit 0; fi
 - mkdir ../gh-pages
@@ -54,7 +54,7 @@ after_deploy:
 - old_version=`cat package.json | json version | awk -F. '{printf("%d%05d%06d", ++$1,
   $2, $3)}'`
 - git reset --hard ORIG_HEAD
-- if [ $new_version -le $old_version ]; then exit 0; fi
+- if [ $new_version -lt $old_version ]; then exit 0; fi
 - git fetch origin gh-pages:gh-pages
 - git checkout --orphan gh-pages
 - git checkout -m gh-pages
