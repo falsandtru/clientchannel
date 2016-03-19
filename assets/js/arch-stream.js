@@ -1,5 +1,4 @@
-/*! arch-stream v0.0.86 https://github.com/falsandtru/arch-stream | (c) 2015, falsandtru | MIT Licence */
-/*! Link: MIT Lisence http://www.opensource.org/licenses/mit-license.php */
+/*! arch-stream v0.0.88 https://github.com/falsandtru/arch-stream | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
 define = typeof define === 'function' && define.amd
   ? define
   : (function () {
@@ -685,11 +684,7 @@ define('src/lib/observable', [
     'use strict';
     var CACHE_SIZE = 100;
     var Observable = function () {
-        function Observable(separator_) {
-            if (separator_ === void 0) {
-                separator_ = '';
-            }
-            this.separator_ = separator_;
+        function Observable() {
             this.node_ = {
                 parent: void 0,
                 childrenMap: Object.create(null),
@@ -697,52 +692,44 @@ define('src/lib/observable', [
                 registers: []
             };
         }
-        Observable.prototype.formatEventType_ = function (type) {
-            if (type && typeof type === 'object') {
-                if (type['map'] === [].map) {
-                    return concat_1.concat([], type);
-                } else {
-                    var event_1 = type;
-                    return event_1.namespace ? concat_1.concat(this.formatEventType_(event_1.namespace), [event_1.type]) : [event_1.type];
-                }
-            }
-            return this.separator_ && type ? (type + '').split(this.separator_) : [type + ''];
-        };
-        Observable.prototype.monitor = function (type, subscriber, identifier) {
+        Observable.prototype.monitor = function (namespace, subscriber, identifier) {
+            var _this = this;
             if (identifier === void 0) {
                 identifier = subscriber;
             }
-            var types = this.formatEventType_(type);
-            void this.throwTypeErrorIfInvalidSubscriber_(subscriber, types);
-            void this.seekNode_(types).registers.push([
-                types,
+            void this.throwTypeErrorIfInvalidSubscriber_(subscriber, namespace);
+            void this.seekNode_(namespace).registers.push([
+                namespace,
                 identifier,
                 true,
                 subscriber
             ]);
-            return this;
+            return function () {
+                return _this.off(namespace, identifier);
+            };
         };
-        Observable.prototype.on = function (type, subscriber, identifier) {
+        Observable.prototype.on = function (namespace, subscriber, identifier) {
+            var _this = this;
             if (identifier === void 0) {
                 identifier = subscriber;
             }
-            var types = this.formatEventType_(type);
-            void this.throwTypeErrorIfInvalidSubscriber_(subscriber, types);
-            void this.seekNode_(types).registers.push([
-                types,
+            void this.throwTypeErrorIfInvalidSubscriber_(subscriber, namespace);
+            void this.seekNode_(namespace).registers.push([
+                namespace,
                 identifier,
                 false,
                 function (data) {
                     return subscriber(data);
                 }
             ]);
-            return this;
+            return function () {
+                return _this.off(namespace, identifier);
+            };
         };
-        Observable.prototype.off = function (type, subscriber) {
-            var types = this.formatEventType_(type);
+        Observable.prototype.off = function (namespace, subscriber) {
             switch (typeof subscriber) {
             case 'function': {
-                    void this.seekNode_(types).registers.some(function (_a, i, registers) {
+                    void this.seekNode_(namespace).registers.some(function (_a, i, registers) {
                         var identifier = _a[1];
                         if (subscriber !== identifier)
                             return false;
@@ -758,36 +745,34 @@ define('src/lib/observable', [
                             }
                         }
                     });
-                    return this;
+                    return;
                 }
             case 'undefined': {
-                    var node = this.seekNode_(types);
+                    var node = this.seekNode_(namespace);
                     node.childrenMap = Object.create(null);
                     node.childrenList = [];
                     node.registers = [];
-                    return this;
+                    return;
                 }
             default: {
-                    throw this.throwTypeErrorIfInvalidSubscriber_(subscriber, types);
+                    throw this.throwTypeErrorIfInvalidSubscriber_(subscriber, namespace);
                 }
             }
         };
-        Observable.prototype.once = function (type, subscriber) {
+        Observable.prototype.once = function (namespace, subscriber) {
             var _this = this;
-            void this.throwTypeErrorIfInvalidSubscriber_(subscriber, this.formatEventType_(type));
-            return this.on(type, function (data) {
-                void _this.off(type, subscriber);
+            void this.throwTypeErrorIfInvalidSubscriber_(subscriber, namespace);
+            return this.on(namespace, function (data) {
+                void _this.off(namespace, subscriber);
                 return subscriber(data);
             }, subscriber);
         };
-        Observable.prototype.emit = function (type, data, tracker) {
-            return type && typeof type === 'object' && type['map'] !== [].map ? this.drain_(this.formatEventType_(type), type, data) : this.drain_(this.formatEventType_(type), data, tracker);
+        Observable.prototype.emit = function (namespace, data, tracker) {
+            void this.drain_(namespace, data, tracker);
         };
-        Observable.prototype.reflect = function (type, data) {
+        Observable.prototype.reflect = function (namespace, data) {
             var results;
-            type && typeof type === 'object' && type['map'] !== [].map ? void this.emit(this.formatEventType_(type), type, function (_, r) {
-                return results = r;
-            }) : void this.emit(this.formatEventType_(type), data, function (_, r) {
+            void this.emit(namespace, data, function (_, r) {
                 return results = r;
             });
             return results;
@@ -828,10 +813,9 @@ define('src/lib/observable', [
                     void console.error(err, err + '');
                 }
             }
-            return this;
         };
-        Observable.prototype.refs = function (type) {
-            return this.refsBelow_(this.seekNode_(this.formatEventType_(type)));
+        Observable.prototype.refs = function (namespace) {
+            return this.refsBelow_(this.seekNode_(namespace));
         };
         Observable.prototype.refsAbove_ = function (_a) {
             var parent = _a.parent, registers = _a.registers;
@@ -1039,6 +1023,14 @@ define('src/lib/map', [
         return Map;
     }();
     exports.Map = Map;
+    var MultiMap = function (_super) {
+        __extends(MultiMap, _super);
+        function MultiMap() {
+            _super.apply(this, arguments);
+        }
+        return MultiMap;
+    }(Map);
+    exports.MultiMap = MultiMap;
 });
 define('src/lib/set', [
     'require',
@@ -1062,6 +1054,14 @@ define('src/lib/set', [
         return Set;
     }(map_1.Map);
     exports.Set = Set;
+    var MultiSet = function (_super) {
+        __extends(MultiSet, _super);
+        function MultiSet() {
+            _super.apply(this, arguments);
+        }
+        return MultiSet;
+    }(Set);
+    exports.MultiSet = MultiSet;
 });
 define('src/lib/supervisor', [
     'require',
@@ -1074,13 +1074,11 @@ define('src/lib/supervisor', [
     'src/lib/noop'
 ], function (require, exports, observable_1, set_1, tick_3, thenable_2, concat_2, noop_4) {
     'use strict';
-    var SupervisorCounter = 0;
-    var ProcessCounter = 0;
     var Supervisor = function () {
         function Supervisor(_a) {
             var _this = this;
             var _b = _a === void 0 ? {} : _a, _c = _b.name, name = _c === void 0 ? 'anonymous' : _c, _d = _b.dependencies, dependencies = _d === void 0 ? [] : _d, _e = _b.retry, retry = _e === void 0 ? false : _e, _f = _b.timeout, timeout = _f === void 0 ? 0 : _f, _g = _b.destructor, destructor = _g === void 0 ? noop_4.noop : _g;
-            this.deps = new set_1.Set();
+            this.deps = new set_1.MultiSet();
             this.events = {
                 exec: new observable_1.Observable(),
                 fail: new observable_1.Observable(),
@@ -1106,22 +1104,8 @@ define('src/lib/supervisor', [
             this.retry = retry;
             this.timeout = timeout;
             this.destructor_ = destructor;
-            void ++SupervisorCounter;
+            void ++this.constructor.count;
         }
-        Object.defineProperty(Supervisor, 'count', {
-            get: function () {
-                return SupervisorCounter;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Supervisor, 'procs', {
-            get: function () {
-                return ProcessCounter;
-            },
-            enumerable: true,
-            configurable: true
-        });
         Supervisor.prototype.destructor = function (reason) {
             void this.checkState();
             this.alive = false;
@@ -1138,7 +1122,7 @@ define('src/lib/supervisor', [
             } catch (err) {
                 void console.error(err, err + '');
             }
-            void --SupervisorCounter;
+            void --this.constructor.count;
             void Object.freeze(this);
         };
         Supervisor.prototype.schedule = function () {
@@ -1212,7 +1196,8 @@ define('src/lib/supervisor', [
             if (namespace === void 0) {
                 this.registerable = false;
             }
-            void this.procs.emit(namespace || [], new WorkerCommand_$Exit(reason)).off(namespace || []);
+            void this.procs.emit(namespace || [], new WorkerCommand_$Exit(reason));
+            void this.procs.off(namespace || []);
             if (namespace === void 0) {
                 void this.destructor(reason);
             }
@@ -1267,6 +1252,8 @@ define('src/lib/supervisor', [
                 i = out_i_1;
             }
         };
+        Supervisor.count = 0;
+        Supervisor.procs = 0;
         return Supervisor;
     }();
     exports.Supervisor = Supervisor;
@@ -1318,14 +1305,14 @@ define('src/lib/supervisor', [
             };
             this.sharedResource.allRefsCache = void 0;
             this.sharedResource.rejectedDependencies = [];
-            void ++ProcessCounter;
+            void ++this.sv.constructor.procs;
             void this.sharedResource.procs.on(namespace, this.receive);
         }
         Worker.prototype.destructor = function (reason) {
             void this.checkState();
             void this.sharedResource.procs.off(this.namespace, this.receive);
             this.alive = false;
-            void --ProcessCounter;
+            void --this.sv.constructor.procs;
             this.sharedResource.allRefsCache = void 0;
             this.sharedResource.resolvedDependencies = [];
             void Object.freeze(this);
@@ -1830,9 +1817,9 @@ define('src/export', [
     exports.Supervisor = supervisor_1.Supervisor;
     exports.Observable = observable_2.Observable;
     exports.Map = map_2.Map;
-    exports.MultiMap = map_2.Map;
+    exports.MultiMap = map_2.MultiMap;
     exports.Set = set_2.Set;
-    exports.MultiSet = set_2.Set;
+    exports.MultiSet = set_2.MultiSet;
     exports.Tick = tick_4.Tick;
     exports.Timer = timer_1.Timer;
     exports.Maybe = maybe_1.Maybe;
