@@ -7,6 +7,11 @@
 
   export function socket<T extends LocalSocketObject>(name: string, config: LocalSocketConfig<T>): LocalSocket<T>;
   export interface LocalSocket<T extends LocalSocketObject> {
+    events: {
+      load: IObservableObserver<[string] | [string, string] | [string, string, LocalSocketEventType], LocalSocketEvent, void>,
+      save: IObservableObserver<[string] | [string, string] | [string, string, LocalSocketEventType], LocalSocketEvent, void>,
+      loss: IObservableObserver<[string] | [string, string] | [string, string, LocalSocketEventType], LocalSocketEvent, void>
+    };
     sync(keys: string[], cb?: (errs: DOMError[]) => any): void;
     link(key: string, expiry?: number): T;
     delete(key: string): void;
