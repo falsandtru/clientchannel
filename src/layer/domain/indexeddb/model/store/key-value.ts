@@ -3,7 +3,7 @@ import {open, Config, Access, IDBTransaction, IDBCursorDirection, IDBKeyRange} f
 import {IDBValue} from '../types';
 import {noop} from '../../../../../lib/noop';
 
-export enum EventType {
+export enum EventTypes {
   get,
   put,
   delete
@@ -32,10 +32,10 @@ export abstract class AbstractKeyValueStore<K extends string, V extends IDBValue
   }
   protected cache = new Map<K, V>();
   public events = {
-    access: new Observable<[K], [[K], EventType], void>()
+    access: new Observable<[K], [[K], EventTypes], void>()
   };
   public get(key: K, cb: (value: V, error: DOMError) => any = noop): V {
-    void this.events.access.emit([key], [[key], EventType.get]);
+    void this.events.access.emit([key], [[key], EventTypes.get]);
     void this.access(db => {
       const tx = db.transaction(this.name, IDBTransaction.readonly);
       const req = this.index
@@ -61,7 +61,7 @@ export abstract class AbstractKeyValueStore<K extends string, V extends IDBValue
   }
   protected put(value: V, key: K, cb: (key: K, error: DOMError) => any = noop): V {
     void this.cache.set(key, value);
-    void this.events.access.emit([key], [[key], EventType.put]);
+    void this.events.access.emit([key], [[key], EventTypes.put]);
     void this.access(db => {
       if (!this.cache.has(key)) return;
       const tx = db.transaction(this.name, IDBTransaction.readwrite);
@@ -78,7 +78,7 @@ export abstract class AbstractKeyValueStore<K extends string, V extends IDBValue
   }
   public delete(key: K, cb: (error: DOMError) => any = noop): void {
     void this.cache.delete(key);
-    void this.events.access.emit([key], [[key], EventType.delete]);
+    void this.events.access.emit([key], [[key], EventTypes.delete]);
     void this.access(db => {
       const tx = db.transaction(this.name, IDBTransaction.readwrite);
       const req = tx

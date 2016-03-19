@@ -2,7 +2,7 @@ import {LocalSocketObjectMetaData} from 'localsocket';
 import {IObservableObserver, Set, Map} from 'arch-stream';
 import {open, destroy, Config, Access, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../../../infrastructure/indexeddb/api';
 import {IdNumber, KeyString} from '../types';
-import {UnsavedEventRecord, SavedEventRecord, ESEventType, ESEvent} from '../store/event';
+import {UnsavedEventRecord, SavedEventRecord, ESEvent, ESEventTypes} from '../store/event';
 import {DataStore, DataValue as SocketValue} from './socket/data';
 import {AccessStore, STORE_FIELDS as AccessStoreFields} from './socket/access';
 import {ExpiryStore, STORE_FIELDS as ExpireStoreFields} from './socket/expiry';
@@ -11,7 +11,7 @@ import {noop} from '../../../../../lib/noop';
 export {
   UnsavedEventRecord as SocketRecord,
   SocketValue,
-  ESEventType
+  ESEventTypes
 }
 
 export class SocketStore<T extends SocketValue> {

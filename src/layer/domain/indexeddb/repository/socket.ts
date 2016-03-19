@@ -1,7 +1,7 @@
-import {LocalSocket, LocalPort, LocalSocketObject, LocalSocketEvent, LocalSocketEventType} from 'localsocket';
+import {LocalSocket, LocalPort, LocalSocketObject, LocalPortEvent, LocalPortEventType} from 'localsocket';
 import {Observable, IObservableObserver, Set, Map, concat} from 'arch-stream';
 import {build, SCHEMA, isValidPropertyName, isValidPropertyValue} from '../../dao/api';
-import {SocketStore, SocketRecord, SocketValue, ESEventType} from '../model/schema/socket';
+import {SocketStore, SocketRecord, SocketValue, ESEventTypes} from '../model/schema/socket';
 import {localStorage} from '../../../infrastructure/webstorage/api';
 import {repository as portRepository, PortEvent} from '../../webstorage/repository/port';
 import {KeyString} from '../model/types';
@@ -75,15 +75,15 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
         const source: T & LocalSocketObject = this.sources.get(key);
         if (!source) return;
         switch (type) {
-          case ESEventType.put: {
+          case ESEventTypes.put: {
             const oldVal = source[attr];
             const newVal = this.get(key)[attr];
             source[attr] = newVal;
-            void (<Observable<[LocalSocketEventType] | [LocalSocketEventType, string], LocalSocketEvent, any>>source.__event)
+            void (<Observable<[LocalPortEventType] | [LocalPortEventType, string], LocalPortEvent, any>>source.__event)
               .emit(['recv', attr], new PortEvent('recv', key, attr, newVal, oldVal));
             return;
           }
-          case ESEventType.delete: {
+          case ESEventTypes.delete: {
             const cache = this.get(key);
             void Object.keys(cache)
               .filter(isValidPropertyName)
@@ -92,12 +92,12 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
                 const oldVal = source[attr];
                 const newVal = <void>void 0;
                 source[attr] = newVal;
-                void (<Observable<[LocalSocketEventType] | [LocalSocketEventType, string], LocalSocketEvent, any>>source.__event)
+                void (<Observable<[LocalPortEventType] | [LocalPortEventType, string], LocalPortEvent, any>>source.__event)
                   .emit(['recv', attr], new PortEvent('recv', key, attr, newVal, oldVal));
               }, void 0);
             return;
           }
-          case ESEventType.snapshot: {
+          case ESEventTypes.snapshot: {
             const cache = this.get(key);
             void Object.keys(cache)
               .filter(isValidPropertyName)
@@ -106,7 +106,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
                 const oldVal = source[attr];
                 const newVal = cache[attr];
                 source[attr] = newVal;
-                void (<Observable<[LocalSocketEventType] | [LocalSocketEventType, string], LocalSocketEvent, any>>source.__event)
+                void (<Observable<[LocalPortEventType] | [LocalPortEventType, string], LocalPortEvent, any>>source.__event)
                   .emit(['recv', attr], new PortEvent('recv', key, attr, newVal, oldVal));
               }, void 0);
             return;
@@ -145,14 +145,14 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
             }
           },
           __event: {
-            value: new Observable<[LocalSocketEventType], LocalSocketEvent, any>()
+            value: new Observable<[LocalPortEventType], LocalPortEvent, any>()
           }
         }
       ),
       this.factory,
       (attr, newValue, oldValue) => {
         void this.add(new SocketRecord(KeyString(key), <T>{ [attr]: newValue }));
-        void (<Observable<[LocalSocketEventType, string], LocalSocketEvent, void>>this.sources.get(key).__event)
+        void (<Observable<[LocalPortEventType, string], LocalPortEvent, void>>this.sources.get(key).__event)
           .emit(['send', attr], new PortEvent('send', key, attr, newValue, oldValue));
       })
     );

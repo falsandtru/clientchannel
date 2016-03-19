@@ -18,18 +18,29 @@
     __id?: number;
     __key?: string;
     __date?: number;
-    __event?: IObservableObserver<[LocalSocketEventType] | [LocalSocketEventType, string], LocalSocketEvent, any>;
-  }
-  export interface LocalSocketConfig<T> {
-    expiry?: number;
-    factory(): T;
-    destroy?(error: DOMError, event: Event): boolean;
+    __event?: IObservableObserver<[LocalPortEventType] | [LocalPortEventType, string], LocalPortEvent, any>;
   }
   export interface LocalSocketObjectMetaData {
     id: number;
     key: string;
     date: number;
   }
+  export interface LocalSocketConfig<T> {
+    expiry?: number;
+    factory(): T;
+    destroy?(error: DOMError, event: Event): boolean;
+  }
+  export interface LocalSocketEvent {
+    type: LocalSocketEventType;
+    id: number;
+    key: string;
+    attr: string;
+  }
+  export type LocalSocketEventType
+    = 'put'
+    | 'delete'
+    | 'snapshot'
+    | 'query';
 
   export function port<T extends LocalPortObject>(name: string, config: LocalPortConfig<T>): LocalPort<T>;
   export interface LocalPort<T extends LocalPortObject> {
@@ -38,23 +49,22 @@
   }
   export interface LocalPortObject {
     __key?: string;
-    __event?: IObservableObserver<[LocalSocketEventType] | [LocalSocketEventType, string], LocalSocketEvent, any>;
+    __event?: IObservableObserver<[LocalPortEventType] | [LocalPortEventType, string], LocalPortEvent, any>;
   }
   export interface LocalPortConfig<T> {
     expiry?: number;
     factory(): T;
     destroy?(error: DOMError, event: Event): boolean;
   }
-
-  export type LocalSocketEventType
-    = 'send'
-    | 'recv';
-  export interface LocalSocketEvent {
-    type: LocalSocketEventType;
+  export interface LocalPortEvent {
+    type: LocalPortEventType;
     key: string;
     attr: string;
     newValue: any;
     oldValue: any;
   }
+  export type LocalPortEventType
+    = 'send'
+    | 'recv';
 
 }

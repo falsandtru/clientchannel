@@ -1,4 +1,4 @@
-import {LocalPort, LocalPortObject, LocalSocketEvent, LocalSocketEventType} from 'localsocket';
+import {LocalPort, LocalPortObject, LocalPortEvent, LocalPortEventType} from 'localsocket';
 import {Observable, Set, assign, uuid} from 'arch-stream';
 import {SCHEMA, build, isValidPropertyName, isValidPropertyValue} from '../../dao/api';
 import {events} from '../service/event';
@@ -12,9 +12,9 @@ const LocalStorageSubscriber = new Set<string, (event: StorageEvent) => any>();
 const SessionStorageObjectCache = new Set<string, LocalPortObject>();
 const SessionStorageSubscriber = new Set<string, (event: StorageEvent) => any>();
 
-export class PortEvent implements LocalSocketEvent {
+export class PortEvent implements LocalPortEvent {
   constructor(
-    public type: LocalSocketEventType,
+    public type: LocalPortEventType,
     public key: string,
     public attr: string,
     public newValue: any,
@@ -51,7 +51,7 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
     this.event['toJSON'] = (): void => void 0;
     void Object.freeze(this);
   }
-  private event = new Observable<[LocalSocketEventType] | [LocalSocketEventType, string], PortEvent, void>();
+  private event = new Observable<[LocalPortEventType] | [LocalPortEventType, string], PortEvent, void>();
   private cache = this.storage === localStorage ? LocalStorageObjectCache : SessionStorageObjectCache;
   private eventSource = this.storage === localStorage ? events.localStorage : events.sessionStorage;
   private uuid = uuid();

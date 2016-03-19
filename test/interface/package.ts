@@ -3,11 +3,16 @@ import def, {
   socket,
   port,
   LocalSocket,
-  LocalPort,
-  LocalSocketConfig,
   LocalSocketObject,
+  LocalSocketObjectMetaData,
+  LocalSocketConfig,
   LocalSocketEvent,
-  LocalSocketEventType
+  LocalSocketEventType,
+  LocalPort,
+  LocalPortObject,
+  LocalPortConfig,
+  LocalPortEvent,
+  LocalPortEventType
 } from 'localsocket';
 
 describe('Interface: Package', function () {
