@@ -65,5 +65,5 @@ after_success:
 - git config user.name "Travis-CI"
 - git config user.email "Travis-CI"
 - git add -A :/
-- git commit -m "chore(deploy): deploy web contents by Travis-CI"
+- git commit -m 'chore(deploy)'\:' deploy web contents by Travis-CI'
 - git push https://${GH_TOKEN}@github.com/${GIT_OWNER}/${GIT_REPO}.git gh-pages:gh-pages 2>&1 | sed -e "s/:\/\/\w\+@/:\/\/[secure]@/g"
