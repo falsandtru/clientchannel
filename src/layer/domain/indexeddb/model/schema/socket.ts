@@ -1,5 +1,5 @@
 import {LocalSocketObjectMetaData} from 'localsocket';
-import {Observable, Set, Map} from 'arch-stream';
+import {IObservableObserver, Set, Map} from 'arch-stream';
 import {open, destroy, Config, Access, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../../../infrastructure/indexeddb/api';
 import {IdNumber, KeyString} from '../types';
 import {UnsavedEventRecord, SavedEventRecord, ESEventType, ESEvent} from '../store/event';
@@ -43,9 +43,9 @@ export class SocketStore<T extends SocketValue> {
   }
   protected schema: Schema<T>;
   public events: {
-    load: Observable<string, ESEvent, void>;
-    save: Observable<string, ESEvent, void>;
-    loss: Observable<string, ESEvent, void>;
+    load: IObservableObserver<[string] | [string, string] | [string, string, string], ESEvent, void>,
+    save: IObservableObserver<[string] | [string, string] | [string, string, string], ESEvent, void>,
+    loss: IObservableObserver<[string] | [string, string] | [string, string, string], ESEvent, void>
   };
   public sync(keys: KeyString[], cb: (errs?: DOMError[]) => any = noop): void {
     return this.schema.data.sync(keys, cb);

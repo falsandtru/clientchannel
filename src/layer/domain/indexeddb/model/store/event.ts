@@ -178,7 +178,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
     const lastNotifiedIdSet = new Set<KeyString, IdNumber>((o, n) => n > o ? n : o);
     const lastUpdatedDateSet = new Set<KeyString, number>((o, n) => n > o ? n : o);
     void this.cache.events.exec
-      .monitor([], ([_, sub]) => {
+      .monitor(<any>[], ([_, sub]) => {
         const event = sub(void 0);
         assert(event instanceof UnsavedEventRecord || event instanceof SavedEventRecord);
         if (event instanceof SavedEventRecord === false) return void lastUpdatedDateSet.add(event.key, event.date);
@@ -201,16 +201,16 @@ export abstract class AbstractEventStore<T extends EventValue> {
         }
       });
   }
-  protected cache = new Supervisor<string, void, UnsavedEventRecord<T> | SavedEventRecord<T>>();
+  protected cache = new Supervisor<[KeyString] | [KeyString, string] | [KeyString, string, string], void, UnsavedEventRecord<T> | SavedEventRecord<T>>();
   public events = {
-    sync: new Observable<string, ESEvent, void>(),
-    load: new Observable<string, ESEvent, void>(),
-    save: new Observable<string, ESEvent, void>(),
-    loss: new Observable<string, ESEvent, void>(),
-    access: new Observable<string, ESEvent, void>()
+    sync: new Observable<[KeyString], ESEvent, void>(),
+    load: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, string], ESEvent, void>(),
+    save: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, string], ESEvent, void>(),
+    loss: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, string], ESEvent, void>(),
+    access: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, string], ESEvent, void>()
   };
   protected syncState = new Map<KeyString, boolean>();
-  protected syncWaits = new Observable<KeyString, DOMError, any>();
+  protected syncWaits = new Observable<[KeyString], DOMError, any>();
   public sync(keys: KeyString[], cb: (errs?: DOMError[]) => any = noop): void {
     return void keys
       .reduce<PromiseLike<DOMError[]>>((msg, key) => {
@@ -221,14 +221,14 @@ export abstract class AbstractEventStore<T extends EventValue> {
           case false: {
             if (cb === noop) return msg.then(a => concat(a, [<DOMError>void 0]));
             const job = Msg<DOMError[]>();
-            void this.syncWaits.once(key, err => void job.send([err]));
+            void this.syncWaits.once([key], err => void job.send([err]));
             return msg.then(a => job.then(b => concat(a, b)));
           }
           default: {
             void this.update(key);
             if (cb === noop) return msg.then(a => concat(a, [<DOMError>void 0]));
             const job = Msg<DOMError[]>();
-            void this.syncWaits.once(key, err => void job.send([err]));
+            void this.syncWaits.once([key], err => void job.send([err]));
             return msg.then(a => job.then(b => concat(a, b)));
           }
         }
@@ -240,7 +240,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
     const savedEvents: SavedEventRecord<T>[] = [];
     void this.syncState.set(key, this.syncState.get(key) === true);
     return void this.cursor(key, STORE_FIELDS.key, IDBCursorDirection.prev, IDBTransaction.readonly, (cursor, err) => {
-      if (err) return void this.syncWaits.emit(key, err);
+      if (err) return void this.syncWaits.emit([key], err);
       if (!cursor || (<SavedEventRecord<T>>cursor.value).id <= latest.id) {
         if (compose(savedEvents).reduce(e => e).type === EventType[EventType.delete]) {
           void this.clean(Infinity, key);
@@ -269,7 +269,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
           void this.cache.cast([key], void 0);
         }
         void this.syncState.set(key, true);
-        void this.syncWaits.emit(key, void 0);
+        void this.syncWaits.emit([key], void 0);
         if (savedEvents.length > this.snapshotCycle) {
           void this.snapshot(key);
         }

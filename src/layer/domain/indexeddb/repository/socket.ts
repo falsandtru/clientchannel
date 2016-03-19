@@ -54,7 +54,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
   ) {
     super(name, destroy, expiry);
     void this.port.__event
-      .monitor([], ({type, newValue}) => {
+      .monitor(<any>[], ({type, newValue}) => {
         switch (type) {
           case 'send': {
             return;
@@ -67,11 +67,11 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
         assert(false);
       });
     void this.events.save
-      .monitor([], ({id, key, attr}) => {
+      .monitor(<any>[], ({id, key, attr}) => {
         void this.port.send(new Message(key, attr, Date.now()));
       });
     void this.events.load
-      .monitor([], ({id, key, attr, type}) => {
+      .monitor(<any>[], ({id, key, attr, type}) => {
         const source: T & LocalSocketObject = this.sources.get(key);
         if (!source) return;
         switch (type) {
@@ -79,8 +79,8 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
             const oldVal = source[attr];
             const newVal = this.get(key)[attr];
             source[attr] = newVal;
-            void (<Observable<LocalSocketEventType, LocalSocketEvent, void>>source.__event)
-              .emit(<any>['recv', attr], new PortEvent('recv', key, attr, newVal, oldVal));
+            void (<Observable<[LocalSocketEventType] | [LocalSocketEventType, string], LocalSocketEvent, any>>source.__event)
+              .emit(['recv', attr], new PortEvent('recv', key, attr, newVal, oldVal));
             return;
           }
           case ESEventType.delete: {
@@ -92,8 +92,8 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
                 const oldVal = source[attr];
                 const newVal = <void>void 0;
                 source[attr] = newVal;
-                void (<Observable<LocalSocketEventType, LocalSocketEvent, void>>source.__event)
-                  .emit(<any>['recv', attr], new PortEvent('recv', key, attr, newVal, oldVal));
+                void (<Observable<[LocalSocketEventType] | [LocalSocketEventType, string], LocalSocketEvent, any>>source.__event)
+                  .emit(['recv', attr], new PortEvent('recv', key, attr, newVal, oldVal));
               }, void 0);
             return;
           }
@@ -106,8 +106,8 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
                 const oldVal = source[attr];
                 const newVal = cache[attr];
                 source[attr] = newVal;
-                void (<Observable<LocalSocketEventType, LocalSocketEvent, void>>source.__event)
-                  .emit(<any>['recv', attr], new PortEvent('recv', key, attr, newVal, oldVal));
+                void (<Observable<[LocalSocketEventType] | [LocalSocketEventType, string], LocalSocketEvent, any>>source.__event)
+                  .emit(['recv', attr], new PortEvent('recv', key, attr, newVal, oldVal));
               }, void 0);
             return;
           }
@@ -145,15 +145,15 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
             }
           },
           __event: {
-            value: new Observable<LocalSocketEventType, LocalSocketEvent, any>()
+            value: new Observable<[LocalSocketEventType], LocalSocketEvent, any>()
           }
         }
       ),
       this.factory,
       (attr, newValue, oldValue) => {
         void this.add(new SocketRecord(KeyString(key), <T>{ [attr]: newValue }));
-        void (<Observable<LocalSocketEventType, LocalSocketEvent, void>>this.sources.get(key).__event)
-          .emit(<any>['send', attr], new PortEvent('send', key, attr, newValue, oldValue));
+        void (<Observable<[LocalSocketEventType, string], LocalSocketEvent, void>>this.sources.get(key).__event)
+          .emit(['send', attr], new PortEvent('send', key, attr, newValue, oldValue));
       })
     );
   }

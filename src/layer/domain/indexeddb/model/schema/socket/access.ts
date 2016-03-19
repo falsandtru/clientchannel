@@ -50,13 +50,13 @@ export class AccessStore extends AbstractKeyValueStore<string, AccessRecord> {
   }
   constructor(
     access: Access,
-    event: Observable<string, ESEvent, void>
+    event: Observable<[KeyString] | [KeyString, string] | [KeyString, string, string], ESEvent, void>
   ) {
     super(access, STORE_NAME, STORE_FIELDS.key);
     void Object.freeze(this);
 
     void event
-      .monitor([], ({key, type}) =>
+      .monitor(<any>[], ({key, type}) =>
         type === ESEventType.delete
           ? void this.delete(key)
           : void this.set(key, new AccessRecord(key, Date.now()))

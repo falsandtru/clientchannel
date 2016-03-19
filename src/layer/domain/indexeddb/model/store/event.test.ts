@@ -307,7 +307,7 @@ describe('Unit: layers/domain/indexeddb/model/store/event', function () {
       assert(es.has(KeyString('a')) === true);
       assert(es.get(KeyString('a')).value === 0);
       es.events.save
-        .once(['a', 'value', 'put'], _ => {
+        .once([KeyString('a'), 'value', 'put'], _ => {
           assert(es.meta(KeyString('a')).id === 1);
           assert(es.has(KeyString('a')) === true);
           assert(es.get(KeyString('a')).value === 0);
@@ -316,7 +316,7 @@ describe('Unit: layers/domain/indexeddb/model/store/event', function () {
           assert(es.has(KeyString('a')) === false);
           assert(es.get(KeyString('a')).value === void 0);
           es.events.save
-            .once(['a', '', 'delete'], _ => {
+            .once([KeyString('a'), '', 'delete'], _ => {
               assert(es.meta(KeyString('a')).id === 2);
               assert(es.has(KeyString('a')) === false);
               assert(es.get(KeyString('a')).value === void 0);
@@ -350,10 +350,10 @@ describe('Unit: layers/domain/indexeddb/model/store/event', function () {
       es.add(new UnsavedEventRecord(KeyString('a'), new Value(0)));
       es.add(new UnsavedEventRecord(KeyString('b'), new Value(0)));
       es.events.save
-        .once(['a', 'value', 'put'], _ => {
+        .once([KeyString('a'), 'value', 'put'], _ => {
           es.delete(KeyString('a'));
           es.events.save
-            .once(['a', '', 'delete'], _ => {
+            .once([KeyString('a'), '', 'delete'], _ => {
               assert(es.meta(KeyString('a')).id === 3);
               assert(es.has(KeyString('a')) === false);
               assert(es.get(KeyString('a')).value === void 0);

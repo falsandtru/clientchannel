@@ -3,8 +3,8 @@ import {indexedDB} from '../module/global';
 import {IDBEvent, IDBEvenType} from './event';
 import {supportWebStorage as status} from '../../webstorage/api';
 
-const IDBEventObserver = new Observable<string, IDBEvent, void>();
-export const event: IObservableObserver<string, IDBEvent, void> = IDBEventObserver;
+const IDBEventObserver = new Observable<[string] | [string, string], IDBEvent, void>();
+export const event: IObservableObserver<[string] | [string, string], IDBEvent, void> = IDBEventObserver;
 
 export type Config = {
   make: (db: IDBDatabase) => boolean;
@@ -132,7 +132,7 @@ function handleFromInitialState(name: string, version: number = 0): void {
 }
 
 function handleFromBlockedState(name: string, openRequest: IDBOpenDBRequest): void {
-  void IDBEventObserver.emit(new IDBEvent(IDBEvenType.block, name));
+  void IDBEventObserver.emit([name, IDBEvenType[IDBEvenType.block]], new IDBEvent(IDBEvenType.block, name));
 }
 
 function handleFromUpgradeState(name: string, openRequest: IDBOpenDBRequest): void {
@@ -187,7 +187,7 @@ function handleFromSuccessState(name: string, db: IDBDatabase): void {
       const {verify} = ConfigMap.get(name);
       try {
         if (!verify(db)) return void handleFromEndState(name, +db.version + 1);
-        void IDBEventObserver.emit(new IDBEvent(IDBEvenType.connect, name));
+        void IDBEventObserver.emit([name, IDBEvenType[IDBEvenType.connect]], new IDBEvent(IDBEvenType.connect, name));
         void ConnectionSet.add(name, db);
         void drain(name);
       }
@@ -209,7 +209,7 @@ function handleFromSuccessState(name: string, db: IDBDatabase): void {
 function handleFromErrorState(name: string, error: DOMError, event: Event): void {
   void event.preventDefault();
   void ConnectionSet.delete(name);
-  void IDBEventObserver.emit(new IDBEvent(IDBEvenType.error, name));
+  void IDBEventObserver.emit([name, IDBEvenType[IDBEvenType.error]], new IDBEvent(IDBEvenType.error, name));
   const {destroy} = ConfigMap.get(name);
   if (destroy(error, event)) {
     return void handleFromDestroyState(name);
@@ -222,7 +222,7 @@ function handleFromErrorState(name: string, error: DOMError, event: Event): void
 function handleFromAbortState(name: string, error: DOMError, event: Event): void {
   void event.preventDefault();
   void ConnectionSet.delete(name);
-  void IDBEventObserver.emit(new IDBEvent(IDBEvenType.abort, name));
+  void IDBEventObserver.emit([name, IDBEvenType[IDBEvenType.abort]], new IDBEvent(IDBEvenType.abort, name));
   const {destroy} = ConfigMap.get(name);
   if (destroy(error, event)) {
     return void handleFromDestroyState(name);
@@ -234,7 +234,7 @@ function handleFromAbortState(name: string, error: DOMError, event: Event): void
 
 function handleFromCrashState(name: string, error: DOMError): void {
   void ConnectionSet.delete(name);
-  void IDBEventObserver.emit(new IDBEvent(IDBEvenType.crash, name));
+  void IDBEventObserver.emit([name, IDBEvenType[IDBEvenType.crash]], new IDBEvent(IDBEvenType.crash, name));
   const {destroy} = ConfigMap.get(name);
   if (destroy(error, null)) {
     return void handleFromDestroyState(name);
@@ -249,7 +249,7 @@ function handleFromDestroyState(name: string): void {
   const deleteRequest = indexedDB.deleteDatabase(name);
   deleteRequest.onsuccess = _ => {
     void RequestQueueSet.delete(name);
-    void IDBEventObserver.emit(new IDBEvent(IDBEvenType.destroy, name));
+    void IDBEventObserver.emit([name, IDBEvenType[IDBEvenType.destroy]], new IDBEvent(IDBEvenType.destroy, name));
     return void handleFromEndState(name);
   };
   deleteRequest.onerror = event => {
@@ -259,7 +259,7 @@ function handleFromDestroyState(name: string): void {
 
 function handleFromEndState(name: string, version = 0): void {
   void ConnectionSet.delete(name);
-  void IDBEventObserver.emit(new IDBEvent(IDBEvenType.disconnect, name));
+  void IDBEventObserver.emit([name, IDBEvenType[IDBEvenType.disconnect]], new IDBEvent(IDBEvenType.disconnect, name));
   switch (StateCommandMap.get(name)) {
     case StateCommand.open: {
       return void handleFromInitialState(name, version);

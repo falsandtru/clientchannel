@@ -1,4 +1,6 @@
 ﻿declare module 'localsocket' {
+  import {IObservableObserver} from 'arch-stream';
+
   export default socket;
 
   export const status: boolean;
@@ -16,7 +18,7 @@
     __id?: number;
     __key?: string;
     __date?: number;
-    __event?: IObservableObserver<LocalSocketEventType, LocalSocketEvent, any>;
+    __event?: IObservableObserver<[LocalSocketEventType] | [LocalSocketEventType, string], LocalSocketEvent, any>;
   }
   export interface LocalSocketConfig<T> {
     expiry?: number;
@@ -36,7 +38,7 @@
   }
   export interface LocalPortObject {
     __key?: string;
-    __event?: IObservableObserver<LocalSocketEventType, LocalSocketEvent, any>;
+    __event?: IObservableObserver<[LocalSocketEventType] | [LocalSocketEventType, string], LocalSocketEvent, any>;
   }
   export interface LocalPortConfig<T> {
     expiry?: number;
@@ -54,17 +56,5 @@
     newValue: any;
     oldValue: any;
   }
-
-  // arch-stream
-  export interface IObservableObserver<T extends string | number, D, R> extends IObservableSubscriber<T, D, R> {
-    monitor(type: T | T[], subscriber: Subscriber<D, R>): this;
-    refs(type: T | T[]): [T[], Subscriber<D, R>, boolean][];
-  }
-  export interface IObservableSubscriber<T extends string | number, D, R> {
-    on(type: T | T[], subscriber: Subscriber<D, R>): this;
-    off(type: T | T[], subscriber?: Subscriber<D, R>): this;
-    once(type: T | T[], subscriber: Subscriber<D, R>): this;
-  }
-  type Subscriber<D, R> = (data: D) => R;
 
 }

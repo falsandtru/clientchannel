@@ -1,5 +1,6 @@
 import {LocalSocketObject} from 'localsocket';
 import {socket} from './socket';
+import {KeyString} from '../model/types';
 import {SocketStore, SocketRecord} from '../model/schema/socket';
 import {listen, destroy, event, Config, IDBEventName} from '../../../infrastructure/indexeddb/api';
 
@@ -72,7 +73,7 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function () {
       const sock = socket('test', () => new Value(0, ''), () => true);
       const dao = sock.link('a');
 
-      dao.__event.once(<any>['send', 'n'], ev => {
+      dao.__event.once(['send', 'n'], ev => {
         assert.deepEqual(ev, {
           type: 'send',
           key: 'a',
@@ -107,9 +108,9 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function () {
 
       assert(dao.n === 0);
       listen('test')(db => {
-        db.transaction('data', 'readwrite').objectStore('data').put(new SocketRecord(<any>'a', { n: 1 })).onsuccess = _ => {
-          sock['schema'].data.update(<any>'a');
-          dao.__event.once(<any>['recv', 'n'], ev => {
+        db.transaction('data', 'readwrite').objectStore('data').put(new SocketRecord(KeyString('a'), { n: 1 })).onsuccess = _ => {
+          sock['schema'].data.update(KeyString('a'));
+          dao.__event.once(['recv', 'n'], ev => {
             assert(dao.__id === 1);
             assert(dao.__key === 'a');
             assert(dao.__date > 0);

@@ -6,8 +6,8 @@ export const events = {
   sessionStorage: subscribe(sources.sessionStorage)
 };
 
-function subscribe(source: IObservableObserver<'storage', StorageEvent, void>): IObservableObserver<string, StorageEvent, void> {
-  const observer = new Observable<string, StorageEvent, void>();
-  void source.on('storage', event => void observer.emit(event.key, event));
+function subscribe(source: IObservableObserver<['storage'], StorageEvent, void>): IObservableObserver<[string], StorageEvent, void> {
+  const observer = new Observable<[string], StorageEvent, void>();
+  void source.on(['storage'], event => void observer.emit([event.key], event));
   return observer;
 }

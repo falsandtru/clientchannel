@@ -51,7 +51,7 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
     this.event['toJSON'] = (): void => void 0;
     void Object.freeze(this);
   }
-  private event = new Observable<LocalSocketEventType, PortEvent, void>();
+  private event = new Observable<[LocalSocketEventType] | [LocalSocketEventType, string], PortEvent, void>();
   private cache = this.storage === localStorage ? LocalStorageObjectCache : SessionStorageObjectCache;
   private eventSource = this.storage === localStorage ? events.localStorage : events.sessionStorage;
   private uuid = uuid();
@@ -75,7 +75,7 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
           configurable: true
         })
       , {})));
-      void this.event.emit(<any>['send', attr], new PortEvent('send', this.name, attr, newValue, oldValue));
+      void this.event.emit(['send', attr], new PortEvent('send', this.name, attr, newValue, oldValue));
     });
     const subscriber = ({newValue, oldValue}: StorageEvent): void => {
       if (newValue) {

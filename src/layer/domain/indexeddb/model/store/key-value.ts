@@ -32,7 +32,7 @@ export abstract class AbstractKeyValueStore<K extends string, V extends IDBValue
   }
   protected cache = new Map<K, V>();
   public events = {
-    access: new Observable<K, [[K], EventType], void>()
+    access: new Observable<[K], [[K], EventType], void>()
   };
   public get(key: K, cb: (value: V, error: DOMError) => any = noop): V {
     void this.events.access.emit([key], [[key], EventType.get]);
