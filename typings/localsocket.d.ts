@@ -44,6 +44,10 @@
 
   export function port<T extends LocalPortObject>(name: string, config: LocalPortConfig<T>): LocalPort<T>;
   export interface LocalPort<T extends LocalPortObject> {
+    events: {
+      send: IObservableObserver<[string], LocalPortEvent, void>;
+      recv: IObservableObserver<[string], LocalPortEvent, void>;
+    };
     link(): T;
     destroy(): void;
   }

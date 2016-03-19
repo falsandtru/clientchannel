@@ -3,7 +3,7 @@ import {Observable, IObservableObserver, Set, Map, concat} from 'arch-stream';
 import {build, SCHEMA, isValidPropertyName, isValidPropertyValue} from '../../dao/api';
 import {SocketStore, SocketRecord, SocketValue, ESEventTypes} from '../model/schema/socket';
 import {localStorage} from '../../../infrastructure/webstorage/api';
-import {repository as portRepository, PortEvent} from '../../webstorage/repository/port';
+import {repository as portRepository, PortEvent, PortEventTypes} from '../../webstorage/repository/port';
 import {KeyString} from '../model/types';
 import {assign} from '../../lib/assign';
 
@@ -56,10 +56,10 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
     void this.port.__event
       .monitor(<any>[], ({type, newValue}) => {
         switch (type) {
-          case 'send': {
+          case PortEventTypes.send: {
             return;
           }
-          case 'recv': {
+          case PortEventTypes.recv: {
             return void this.port.recv()
               .reduce((_, msg) => void this.schema.data.update(msg.key), void 0);
           }
@@ -80,7 +80,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
             const newVal = this.get(key)[attr];
             source[attr] = newVal;
             void (<Observable<[LocalPortEventType] | [LocalPortEventType, string], LocalPortEvent, any>>source.__event)
-              .emit(['recv', attr], new PortEvent('recv', key, attr, newVal, oldVal));
+              .emit([PortEventTypes.recv, attr], new PortEvent(PortEventTypes.recv, key, attr, newVal, oldVal));
             return;
           }
           case ESEventTypes.delete: {
@@ -93,7 +93,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
                 const newVal = <void>void 0;
                 source[attr] = newVal;
                 void (<Observable<[LocalPortEventType] | [LocalPortEventType, string], LocalPortEvent, any>>source.__event)
-                  .emit(['recv', attr], new PortEvent('recv', key, attr, newVal, oldVal));
+                  .emit([PortEventTypes.recv, attr], new PortEvent(PortEventTypes.recv, key, attr, newVal, oldVal));
               }, void 0);
             return;
           }
@@ -107,7 +107,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
                 const newVal = cache[attr];
                 source[attr] = newVal;
                 void (<Observable<[LocalPortEventType] | [LocalPortEventType, string], LocalPortEvent, any>>source.__event)
-                  .emit(['recv', attr], new PortEvent('recv', key, attr, newVal, oldVal));
+                  .emit([PortEventTypes.recv, attr], new PortEvent(PortEventTypes.recv, key, attr, newVal, oldVal));
               }, void 0);
             return;
           }
@@ -153,7 +153,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
       (attr, newValue, oldValue) => {
         void this.add(new SocketRecord(KeyString(key), <T>{ [attr]: newValue }));
         void (<Observable<[LocalPortEventType, string], LocalPortEvent, void>>this.sources.get(key).__event)
-          .emit(['send', attr], new PortEvent('send', key, attr, newValue, oldValue));
+          .emit([PortEventTypes.send, attr], new PortEvent(PortEventTypes.send, key, attr, newValue, oldValue));
       })
     );
   }

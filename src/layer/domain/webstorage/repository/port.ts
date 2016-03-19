@@ -12,6 +12,10 @@ const LocalStorageSubscriber = new Set<string, (event: StorageEvent) => any>();
 const SessionStorageObjectCache = new Set<string, LocalPortObject>();
 const SessionStorageSubscriber = new Set<string, (event: StorageEvent) => any>();
 
+export namespace PortEventTypes {
+  export const send: 'send' = 'send';
+  export const recv: 'recv' = 'recv';
+}
 export class PortEvent implements LocalPortEvent {
   constructor(
     public type: LocalPortEventType,
@@ -48,20 +52,22 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
       delete(name: string) { }
     }
   ) {
-    this.event['toJSON'] = (): void => void 0;
     void Object.freeze(this);
   }
-  private event = new Observable<[LocalPortEventType] | [LocalPortEventType, string], PortEvent, void>();
   private cache = this.storage === localStorage ? LocalStorageObjectCache : SessionStorageObjectCache;
   private eventSource = this.storage === localStorage ? events.localStorage : events.sessionStorage;
   private uuid = uuid();
+  public events = {
+    send: new Observable<[string], PortEvent, void>(),
+    recv: new Observable<[string], PortEvent, void>()
+  };
   public link(): T {
     if (this.cache.has(this.name)) return <T>this.cache.get(this.name);
 
     const source: T = assign<T>(
       <T><any>{
         [SCHEMA.KEY.NAME]: this.name,
-        [SCHEMA.EVENT.NAME]: this.event
+        [SCHEMA.EVENT.NAME]: new Observable<[LocalPortEventType] | [LocalPortEventType, string], PortEvent, void>()
       },
       parse<T>(this.storage.getItem(this.name) || '{}')
     );
@@ -74,8 +80,12 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
           writable: true,
           configurable: true
         })
-      , {})));
-      void this.event.emit(['send', attr], new PortEvent('send', this.name, attr, newValue, oldValue));
+        , {})));
+      {
+        const event = new PortEvent(PortEventTypes.send, this.name, attr, newValue, oldValue);
+        void source[SCHEMA.EVENT.NAME].emit([PortEventTypes.send, attr], event);
+        void this.events.send.emit([attr], event);
+      }
     });
     const subscriber = ({newValue, oldValue}: StorageEvent): void => {
       if (newValue) {
@@ -98,7 +108,11 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
             */
           }, void 0);
       }
-      void this.event.emit(['recv'], new PortEvent('recv', this.name, '', newValue, oldValue));
+      {
+        const event = new PortEvent(PortEventTypes.recv, this.name, '', newValue, oldValue);
+        void source[SCHEMA.EVENT.NAME].emit([PortEventTypes.recv, ''], event);
+        void this.events.recv.emit([''], event);
+      }
     };
     void this.eventSource.on([this.name, this.uuid], subscriber);
     void this.cache.add(this.name, dao);
