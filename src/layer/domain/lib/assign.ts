@@ -16,25 +16,31 @@ export function assign<T extends Object>(target: T | {}, ...sources: T[]): T {
       if (desc !== undefined && desc.enumerable) {
         const nextValue = nextSource[nextKey];
         const prevValue = to[nextKey];
-        if (!nextValue || typeof nextValue !== 'object') {
+        if (isClonable(nextValue)) {
+          to[nextKey] = Array.isArray(nextValue)
+            ? nextValue.slice()
+            : assign({}, nextValue);
+        }
+        else {
           to[nextKey] = nextValue;
-          continue;
         }
-        if (Array.isArray(nextValue)) {
-          to[nextKey] = nextValue.slice();
-          continue;
-        }
-        if (nextValue instanceof Blob || nextValue instanceof ImageData) {
-          to[nextKey] = nextValue;
-          continue;
-        }
-        if (prevValue && nextValue && typeof prevValue === 'object' && !Array.isArray(prevValue)) {
-          to[nextKey] = assign(prevValue, nextValue);
-          continue;
-        }
-        to[nextKey] = assign({}, nextValue);
       }
     }
   }
   return to;
+
+  function isClonable(obj: any): boolean {
+    return !!obj
+        && typeof obj === 'object'
+        && !isTypedArray(obj)
+        && obj instanceof Blob === false
+        && obj instanceof ImageData === false
+        && obj instanceof ArrayBuffer === false;
+
+    function isTypedArray(obj: any): boolean {
+      return obj instanceof Object
+        && obj.constructor['BYTES_PER_ELEMENT'] > 0
+        && obj.buffer instanceof ArrayBuffer;
+    }
+  }
 }
