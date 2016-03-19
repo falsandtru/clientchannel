@@ -12,12 +12,13 @@ describe('Integration: Package', function () {
           return this.__key;
         }
         // property names that has underscore prefix or postfix will exclude in schema.
-        private _value = 0;
+        private _separator = ' ';
         // basic property names will include in schema.
-        value = 1;
+        firstName = '';
+        lastName = '';
         // invalid value types will exclude in schema.
-        join() {
-          return this._value + this.value;
+        name() {
+          return this.firstName + this._separator + this.lastName;
         }
       }
 
@@ -31,7 +32,8 @@ describe('Integration: Package', function () {
       // load data from indexeddb a little later.
       const link: Schema = sock.link('path');
       // save data to indexeddb, and sync data between all tabs.
-      link.value = 1;
+      link.firstName = 'john';
+      link.lastName = 'smith';
       sock.destroy();
     });
 
