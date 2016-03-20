@@ -104,7 +104,7 @@ describe('Unit: layers/domain/indexeddb/model/schema/socket', function () {
         assert.deepEqual(keys, ['a']);
         assert(socket.has('a') === true);
         setTimeout(() => {
-          socket.expire('b', 200);
+          socket.expire('b', 500);
           socket.add(new SocketRecord(KeyString('b'), new CustomSocketValue(0)));
           socket.recent(Infinity, keys => {
             assert.deepEqual(keys, ['b']);
@@ -117,7 +117,7 @@ describe('Unit: layers/domain/indexeddb/model/schema/socket', function () {
                 assert(socket.has('b') === false);
                 done();
               });
-            }, 200);
+            }, 500);
           });
         }, 500);
       });
