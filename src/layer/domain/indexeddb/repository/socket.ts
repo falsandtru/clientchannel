@@ -88,6 +88,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
             void Object.keys(cache)
               .filter(isValidPropertyName)
               .filter(isValidPropertyValue(cache))
+              .sort()
               .reduce((_, attr) => {
                 const oldVal = source[attr];
                 const newVal = <void>void 0;
@@ -102,6 +103,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
             void Object.keys(cache)
               .filter(isValidPropertyName)
               .filter(isValidPropertyValue(cache))
+              .sort()
               .reduce((_, attr) => {
                 const oldVal = source[attr];
                 const newVal = cache[attr];
