@@ -18,7 +18,7 @@
     recent(limit: number, cb: (keys: string[], error: DOMError) => any): void;
     destroy(): void;
   }
-  export interface LocalSocketConfig<T> {
+  export interface LocalSocketConfig<T extends LocalSocketObject> {
     schema(): T;
     expiry?: number;
     destroy?(error: DOMError, event: Event): boolean;
@@ -56,7 +56,7 @@
     link(): T;
     destroy(): void;
   }
-  export interface LocalPortConfig<T> {
+  export interface LocalPortConfig<T extends LocalPortObject> {
     schema(): T;
     expiry?: number;
     destroy?(error: DOMError, event: Event): boolean;
