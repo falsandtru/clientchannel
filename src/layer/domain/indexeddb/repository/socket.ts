@@ -1,4 +1,4 @@
-import {LocalSocket, LocalPort, LocalSocketObject, LocalPortEvent, LocalPortEventType} from 'localsocket';
+import {LocalSocket, LocalSocketObject, LocalPort, LocalPortObject, LocalPortEvent, LocalPortEventType} from 'localsocket';
 import {Observable, IObservableObserver, Set, Map, concat} from 'arch-stream';
 import {build, SCHEMA, isValidPropertyName, isValidPropertyValue} from '../../dao/api';
 import {SocketStore, SocketRecord, SocketValue, ESEventTypes} from '../model/schema/socket';
@@ -28,6 +28,8 @@ class Message {
   }
 }
 
+interface Port extends LocalPortObject {
+}
 class Port {
   public msgs: Message[] = [];
   private msgHeadSet_ = new Set<string, number>((o, n) => n > o ? n : o);
@@ -42,8 +44,6 @@ class Port {
     this.msgs = concat([msg], this.msgs.slice(0, 9));
   }
 }
-interface Port extends LocalSocketObject {
-}
 
 class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> implements LocalSocket<T> {
   constructor(
@@ -54,17 +54,9 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
   ) {
     super(name, destroy, expiry);
     void this.port.__event
-      .monitor(<any>[], ({type, newValue}) => {
-        switch (type) {
-          case PortEventTypes.send: {
-            return;
-          }
-          case PortEventTypes.recv: {
-            return void this.port.recv()
-              .reduce((_, msg) => void this.schema.data.update(msg.key), void 0);
-          }
-        }
-        assert(false);
+      .on([PortEventTypes.recv, 'msgs'], ({newValue}) => {
+        void this.port.recv()
+          .reduce((_, msg) => void this.schema.data.update(msg.key), void 0);
       });
     void this.events.save
       .monitor(<any>[], ({id, key, attr}) => {

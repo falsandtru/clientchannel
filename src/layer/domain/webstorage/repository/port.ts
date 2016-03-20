@@ -73,46 +73,32 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
     );
     const dao: T = build(source, this.factory, (attr, newValue, oldValue) => {
       void this.log.update(this.name);
-      void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, prop) =>
-        Object.defineProperty(acc, prop, {
-          value: source[prop],
+      void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, attr) =>
+        Object.defineProperty(acc, attr, {
+          value: source[attr],
           enumerable: true,
           writable: true,
           configurable: true
         })
         , {})));
-      {
-        const event = new PortEvent(PortEventTypes.send, this.name, attr, newValue, oldValue);
-        void source[SCHEMA.EVENT.NAME].emit([PortEventTypes.send, attr], event);
-        void this.events.send.emit([attr], event);
-      }
+      const event = new PortEvent(PortEventTypes.send, this.name, attr, newValue, oldValue);
+      void (<Observable<[LocalPortEventType, string], PortEvent, any>>source.__event).emit([event.type, event.attr], event);
+      void this.events.send.emit([event.attr], event);
     });
-    const subscriber = ({newValue, oldValue}: StorageEvent): void => {
-      if (newValue) {
-        const item: T = parse<T>(newValue);
-        void Object.keys(item)
-          .filter(isValidPropertyName)
-          .filter(isValidPropertyValue(item))
-          .reduce((_, prop) => {
-            const [newVal, oldVal] = [item[prop], source[prop]];
-            if (newVal === oldVal) return;
-            source[prop] = newVal;
-            /*
-            void document.defaultView.dispatchEvent(new StorageEvent(`storage:${this.name}`, {
-              key: prop,
-              oldValue: JSON.stringify(oldVal),
-              newValue: JSON.stringify(newVal),
-              url: location.href,
-              storageArea: storage
-            }));
-            */
-          }, void 0);
-      }
-      {
-        const event = new PortEvent(PortEventTypes.recv, this.name, '', newValue, oldValue);
-        void source[SCHEMA.EVENT.NAME].emit([PortEventTypes.recv, ''], event);
-        void this.events.recv.emit([''], event);
-      }
+    const subscriber = ({newValue}: StorageEvent): void => {
+      const item: T = parse<T>(newValue);
+      void Object.keys(item)
+        .filter(isValidPropertyName)
+        .filter(isValidPropertyValue(item))
+        .reduce((_, attr) => {
+          const oldVal = source[attr];
+          const newVal = item[attr];
+          if (newVal === oldVal) return;
+          source[attr] = newVal;
+          const event = new PortEvent(PortEventTypes.recv, this.name, attr, newVal, oldVal);
+          void (<Observable<[LocalPortEventType, string], PortEvent, any>>source.__event).emit([event.type, event.attr], event);
+          void this.events.recv.emit([event.attr], event);
+        }, void 0);
     };
     void this.eventSource.on([this.name, this.uuid], subscriber);
     void this.cache.add(this.name, dao);
@@ -121,7 +107,7 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
 
     function parse<T>(item: string): T {
       try {
-        return JSON.parse(item);
+        return JSON.parse(item) || <T>{};
       }
       catch (_) {
         return <T>{};

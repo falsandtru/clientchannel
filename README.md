@@ -93,7 +93,7 @@ const sock = port('version', {
 });
 const link: Schema = sock.link();
 const VERSION = 1;
-link.event.monitor('recv', ({newValue}) => {
+link.event.on(['recv', 'version'], ({newValue}) => {
 	if (newValue === VERSION) return;
 	if (newValue > VERSION) {
 		location.reload();
