@@ -1,4 +1,4 @@
-/*! localsocket v0.0.5 https://github.com/falsandtru/localsocket | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
+/*! localsocket v0.0.6 https://github.com/falsandtru/localsocket | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
 define = typeof define === 'function' && define.amd
   ? define
   : (function () {
@@ -165,28 +165,23 @@ define('src/layer/infrastructure/indexeddb/model/access', [
     var IDBEventObserver = new arch_stream_3.Observable();
     exports.event = IDBEventObserver;
     exports.ConfigMap = new arch_stream_3.Map();
-    var StateCommand;
-    (function (StateCommand) {
-        StateCommand[StateCommand['open'] = 0] = 'open';
-        StateCommand[StateCommand['close'] = 1] = 'close';
-        StateCommand[StateCommand['destroy'] = 2] = 'destroy';
-    }(StateCommand || (StateCommand = {})));
-    var StateCommandMap = new arch_stream_3.Map();
+    var StateTypes;
+    (function (StateTypes) {
+        StateTypes[StateTypes['open'] = 0] = 'open';
+        StateTypes[StateTypes['close'] = 1] = 'close';
+        StateTypes[StateTypes['destroy'] = 2] = 'destroy';
+    }(StateTypes || (StateTypes = {})));
+    var StateMap = new arch_stream_3.Map();
     var RequestQueueSet = new arch_stream_3.Set();
-    var StateSet = new arch_stream_3.Set();
-    var ConnectionSet = new arch_stream_3.Set();
+    var ConnectionStateSet = new arch_stream_3.Set();
+    var ConnectionHandleSet = new arch_stream_3.Set();
     function open(name, config) {
-        void StateCommandMap.set(name, 0);
+        void StateMap.set(name, 0);
         void exports.ConfigMap.set(name, config);
-        if (!StateSet.get(name)) {
-            void StateSet.add(name, true);
-            void handleFromInitialState(name);
-        }
-        return function (req) {
-            var queue = RequestQueueSet.get(name) || RequestQueueSet.add(name, []);
-            void queue.push(req);
-            void drain(name);
-        };
+        if (ConnectionStateSet.has(name))
+            return;
+        void ConnectionStateSet.add(name, void 0);
+        void handleFromInitialState(name);
     }
     exports.open = open;
     function listen(name) {
@@ -198,7 +193,7 @@ define('src/layer/infrastructure/indexeddb/model/access', [
     }
     exports.listen = listen;
     function close(name) {
-        void StateCommandMap.set(name, 1);
+        void StateMap.set(name, 1);
         void exports.ConfigMap.set(name, {
             make: function () {
                 return false;
@@ -210,17 +205,16 @@ define('src/layer/infrastructure/indexeddb/model/access', [
                 return false;
             }
         });
-        if (ConnectionSet.get(name)) {
-            return ConnectionSet.get(name).end();
-        }
-        if (!StateSet.get(name)) {
-            void StateSet.add(name, true);
-            void handleFromInitialState(name);
-        }
+        if (ConnectionHandleSet.has(name))
+            return ConnectionHandleSet.get(name).end();
+        if (ConnectionStateSet.has(name))
+            return;
+        void ConnectionStateSet.add(name, void 0);
+        void handleFromInitialState(name);
     }
     exports.close = close;
     function destroy(name) {
-        void StateCommandMap.set(name, 2);
+        void StateMap.set(name, 2);
         void exports.ConfigMap.set(name, {
             make: function () {
                 return false;
@@ -232,31 +226,33 @@ define('src/layer/infrastructure/indexeddb/model/access', [
                 return true;
             }
         });
-        if (ConnectionSet.get(name)) {
-            return ConnectionSet.get(name).destroy();
-        }
-        if (!StateSet.get(name)) {
-            void StateSet.add(name, true);
-            void handleFromInitialState(name);
-        }
+        if (ConnectionHandleSet.has(name))
+            return ConnectionHandleSet.get(name).destroy();
+        if (ConnectionStateSet.has(name))
+            return;
+        void ConnectionStateSet.add(name, void 0);
+        void handleFromInitialState(name);
     }
     exports.destroy = destroy;
     function drain(name) {
         if (!api_1.supportWebStorage)
             return void RequestQueueSet.delete(name);
-        var db = ConnectionSet.get(name);
+        if (!ConnectionHandleSet.has(name) || !exports.ConfigMap.has(name))
+            return;
+        var db = ConnectionHandleSet.get(name);
         var reqs = RequestQueueSet.get(name) || [];
-        while (true) {
-            try {
-                while (db && reqs.length > 0 && StateCommandMap.get(name) === 0) {
-                    void reqs[0](db);
-                    void reqs.shift();
-                }
-                break;
-            } catch (err) {
-                void console.error(err, err + '', err.stack);
-                void handleFromCrashState(name, err);
+        try {
+            while (db && reqs.length > 0 && StateMap.get(name) === 0) {
+                void reqs[0](db);
+                void reqs.shift();
             }
+        } catch (err) {
+            if (err instanceof Error) {
+                void console.error(err, err + '', err.stack);
+            } else {
+                void console.error(err);
+            }
+            void handleFromCrashState(name, err);
         }
     }
     function handleFromInitialState(name, version) {
@@ -314,39 +310,38 @@ define('src/layer/infrastructure/indexeddb/model/access', [
             return void db.close();
         };
         db.end = function () {
-            void ConnectionSet.delete(name);
+            void ConnectionHandleSet.delete(name);
             void db.close();
             void handleFromEndState(name);
         };
         db.destroy = function () {
-            void ConnectionSet.delete(name);
+            void ConnectionHandleSet.delete(name);
             void db.close();
             void handleFromDestroyState(name);
         };
         db.onerror = function (event) {
-            void ConnectionSet.delete(name);
+            void ConnectionHandleSet.delete(name);
             void handleFromErrorState(name, event.target.error, event);
         };
         db.onabort = function (event) {
-            void ConnectionSet.delete(name);
+            void ConnectionHandleSet.delete(name);
             void handleFromAbortState(name, event.target.error, event);
         };
-        switch (StateCommandMap.get(name)) {
+        switch (StateMap.get(name)) {
         case 0: {
                 var verify = exports.ConfigMap.get(name).verify;
                 try {
                     if (!verify(db))
                         return void handleFromEndState(name, +db.version + 1);
-                    void IDBEventObserver.emit([
-                        name,
-                        event_2.IDBEvenTypes[event_2.IDBEvenTypes.connect]
-                    ], new event_2.IDBEvent(event_2.IDBEvenTypes.connect, name));
-                    void ConnectionSet.add(name, db);
-                    void drain(name);
                 } catch (err) {
-                    void handleFromCrashState(name, err);
+                    return void handleFromCrashState(name, err);
                 }
-                return;
+                void IDBEventObserver.emit([
+                    name,
+                    event_2.IDBEvenTypes[event_2.IDBEvenTypes.connect]
+                ], new event_2.IDBEvent(event_2.IDBEvenTypes.connect, name));
+                void ConnectionHandleSet.add(name, db);
+                return void drain(name);
             }
         case 1: {
                 return void db.end();
@@ -355,11 +350,11 @@ define('src/layer/infrastructure/indexeddb/model/access', [
                 return void db.destroy();
             }
         }
-        throw new TypeError('LocalSocket: Invalid command ' + StateCommandMap.get(name) + '.');
+        throw new TypeError('LocalSocket: Invalid command ' + StateMap.get(name) + '.');
     }
     function handleFromErrorState(name, error, event) {
         void event.preventDefault();
-        void ConnectionSet.delete(name);
+        void ConnectionHandleSet.delete(name);
         void IDBEventObserver.emit([
             name,
             event_2.IDBEvenTypes[event_2.IDBEvenTypes.error]
@@ -373,7 +368,7 @@ define('src/layer/infrastructure/indexeddb/model/access', [
     }
     function handleFromAbortState(name, error, event) {
         void event.preventDefault();
-        void ConnectionSet.delete(name);
+        void ConnectionHandleSet.delete(name);
         void IDBEventObserver.emit([
             name,
             event_2.IDBEvenTypes[event_2.IDBEvenTypes.abort]
@@ -386,7 +381,7 @@ define('src/layer/infrastructure/indexeddb/model/access', [
         }
     }
     function handleFromCrashState(name, error) {
-        void ConnectionSet.delete(name);
+        void ConnectionHandleSet.delete(name);
         void IDBEventObserver.emit([
             name,
             event_2.IDBEvenTypes[event_2.IDBEvenTypes.crash]
@@ -399,7 +394,7 @@ define('src/layer/infrastructure/indexeddb/model/access', [
         }
     }
     function handleFromDestroyState(name) {
-        void ConnectionSet.delete(name);
+        void ConnectionHandleSet.delete(name);
         var deleteRequest = global_3.indexedDB.deleteDatabase(name);
         deleteRequest.onsuccess = function (_) {
             void RequestQueueSet.delete(name);
@@ -417,27 +412,27 @@ define('src/layer/infrastructure/indexeddb/model/access', [
         if (version === void 0) {
             version = 0;
         }
-        void ConnectionSet.delete(name);
+        void ConnectionHandleSet.delete(name);
         void IDBEventObserver.emit([
             name,
             event_2.IDBEvenTypes[event_2.IDBEvenTypes.disconnect]
         ], new event_2.IDBEvent(event_2.IDBEvenTypes.disconnect, name));
-        switch (StateCommandMap.get(name)) {
+        switch (StateMap.get(name)) {
         case 0: {
                 return void handleFromInitialState(name, version);
             }
         case 1: {
                 void exports.ConfigMap.delete(name);
-                void StateSet.delete(name);
+                void ConnectionStateSet.delete(name);
                 return void 0;
             }
         case 2: {
                 void exports.ConfigMap.delete(name);
-                void StateSet.delete(name);
+                void ConnectionStateSet.delete(name);
                 return void 0;
             }
         }
-        throw new TypeError('LocalSocket: Invalid command ' + StateCommandMap.get(name) + '.');
+        throw new TypeError('LocalSocket: Invalid command ' + StateMap.get(name) + '.');
     }
 });
 define('src/layer/infrastructure/indexeddb/api', [
@@ -1578,7 +1573,7 @@ define('src/layer/domain/indexeddb/model/schema/socket', [
             this.name = name;
             this.expiry = expiry;
             this.expiries = new arch_stream_7.Map();
-            var access = api_5.open(name, {
+            void api_5.open(name, {
                 make: function (db) {
                     return data_1.DataStore.configure().make(db) && access_2.AccessStore.configure().make(db) && expiry_1.ExpiryStore.configure().make(db);
                 },
@@ -1589,7 +1584,7 @@ define('src/layer/domain/indexeddb/model/schema/socket', [
                     return data_1.DataStore.configure().destroy(err, ev) && access_2.AccessStore.configure().destroy(err, ev) && expiry_1.ExpiryStore.configure().destroy(err, ev) && destroy(err, ev);
                 }
             });
-            this.schema = new Schema(access, this.expiries);
+            this.schema = new Schema(api_5.listen(name), this.expiries);
             this.events = this.schema.data.events;
         }
         SocketStore.prototype.sync = function (keys, cb) {
@@ -1775,45 +1770,37 @@ define('src/layer/domain/webstorage/repository/port', [
             var source = arch_stream_10.assign((_a = {}, _a[api_7.SCHEMA.KEY.NAME] = this.name, _a[api_7.SCHEMA.EVENT.NAME] = new arch_stream_10.Observable(), _a), parse(this.storage.getItem(this.name) || '{}'));
             var dao = api_7.build(source, this.factory, function (attr, newValue, oldValue) {
                 void _this.log.update(_this.name);
-                void _this.storage.setItem(_this.name, JSON.stringify(Object.keys(source).filter(api_7.isValidPropertyName).filter(api_7.isValidPropertyValue(source)).reduce(function (acc, prop) {
-                    return Object.defineProperty(acc, prop, {
-                        value: source[prop],
+                void _this.storage.setItem(_this.name, JSON.stringify(Object.keys(source).filter(api_7.isValidPropertyName).filter(api_7.isValidPropertyValue(source)).reduce(function (acc, attr) {
+                    return Object.defineProperty(acc, attr, {
+                        value: source[attr],
                         enumerable: true,
                         writable: true,
                         configurable: true
                     });
                 }, {})));
-                {
-                    var event_10 = new PortEvent(PortEventTypes.send, _this.name, attr, newValue, oldValue);
-                    void source[api_7.SCHEMA.EVENT.NAME].emit([
-                        PortEventTypes.send,
-                        attr
-                    ], event_10);
-                    void _this.events.send.emit([attr], event_10);
-                }
+                var event = new PortEvent(PortEventTypes.send, _this.name, attr, newValue, oldValue);
+                void source.__event.emit([
+                    event.type,
+                    event.attr
+                ], event);
+                void _this.events.send.emit([event.attr], event);
             });
             var subscriber = function (_a) {
-                var newValue = _a.newValue, oldValue = _a.oldValue;
-                if (newValue) {
-                    var item_1 = parse(newValue);
-                    void Object.keys(item_1).filter(api_7.isValidPropertyName).filter(api_7.isValidPropertyValue(item_1)).reduce(function (_, prop) {
-                        var _a = [
-                                item_1[prop],
-                                source[prop]
-                            ], newVal = _a[0], oldVal = _a[1];
-                        if (newVal === oldVal)
-                            return;
-                        source[prop] = newVal;
-                    }, void 0);
-                }
-                {
-                    var event_11 = new PortEvent(PortEventTypes.recv, _this.name, '', newValue, oldValue);
-                    void source[api_7.SCHEMA.EVENT.NAME].emit([
-                        PortEventTypes.recv,
-                        ''
-                    ], event_11);
-                    void _this.events.recv.emit([''], event_11);
-                }
+                var newValue = _a.newValue;
+                var item = parse(newValue);
+                void Object.keys(item).filter(api_7.isValidPropertyName).filter(api_7.isValidPropertyValue(item)).reduce(function (_, attr) {
+                    var oldVal = source[attr];
+                    var newVal = item[attr];
+                    if (newVal === oldVal)
+                        return;
+                    source[attr] = newVal;
+                    var event = new PortEvent(PortEventTypes.recv, _this.name, attr, newVal, oldVal);
+                    void source.__event.emit([
+                        event.type,
+                        event.attr
+                    ], event);
+                    void _this.events.recv.emit([event.attr], event);
+                }, void 0);
             };
             void this.eventSource.on([
                 this.name,
@@ -1824,7 +1811,7 @@ define('src/layer/domain/webstorage/repository/port', [
             return dao;
             function parse(item) {
                 try {
-                    return JSON.parse(item);
+                    return JSON.parse(item) || {};
                 } catch (_) {
                     return {};
                 }
@@ -1907,18 +1894,14 @@ define('src/layer/domain/indexeddb/repository/socket', [
             this.port = this.proxy.link();
             this.links = new arch_stream_11.Set();
             this.sources = new arch_stream_11.Set();
-            void this.port.__event.monitor([], function (_a) {
-                var type = _a.type, newValue = _a.newValue;
-                switch (type) {
-                case port_1.PortEventTypes.send: {
-                        return;
-                    }
-                case port_1.PortEventTypes.recv: {
-                        return void _this.port.recv().reduce(function (_, msg) {
-                            return void _this.schema.data.update(msg.key);
-                        }, void 0);
-                    }
-                }
+            void this.port.__event.on([
+                port_1.PortEventTypes.recv,
+                'msgs'
+            ], function (_a) {
+                var newValue = _a.newValue;
+                void _this.port.recv().reduce(function (_, msg) {
+                    return void _this.schema.data.update(msg.key);
+                }, void 0);
             });
             void this.events.save.monitor([], function (_a) {
                 var id = _a.id, key = _a.key, attr = _a.attr;
@@ -1942,7 +1925,7 @@ define('src/layer/domain/indexeddb/repository/socket', [
                     }
                 case socket_1.ESEventTypes.delete: {
                         var cache = _this.get(key);
-                        void Object.keys(cache).filter(api_9.isValidPropertyName).filter(api_9.isValidPropertyValue(cache)).reduce(function (_, attr) {
+                        void Object.keys(cache).filter(api_9.isValidPropertyName).filter(api_9.isValidPropertyValue(cache)).sort().reduce(function (_, attr) {
                             var oldVal = source[attr];
                             var newVal = void 0;
                             source[attr] = newVal;
@@ -1955,7 +1938,7 @@ define('src/layer/domain/indexeddb/repository/socket', [
                     }
                 case socket_1.ESEventTypes.snapshot: {
                         var cache_1 = _this.get(key);
-                        void Object.keys(cache_1).filter(api_9.isValidPropertyName).filter(api_9.isValidPropertyValue(cache_1)).reduce(function (_, attr) {
+                        void Object.keys(cache_1).filter(api_9.isValidPropertyName).filter(api_9.isValidPropertyValue(cache_1)).sort().reduce(function (_, attr) {
                             var oldVal = source[attr];
                             var newVal = cache_1[attr];
                             source[attr] = newVal;
@@ -2030,10 +2013,10 @@ define('src/layer/domain/indexeddb/api', [
     'exports',
     'src/layer/domain/indexeddb/repository/socket',
     'src/layer/domain/indexeddb/service/event'
-], function (require, exports, socket_2, event_12) {
+], function (require, exports, socket_2, event_10) {
     'use strict';
     exports.socket = socket_2.socket;
-    exports.event = event_12.event;
+    exports.event = event_10.event;
 });
 define('src/layer/domain/webstorage/service/log', [
     'require',
@@ -2213,12 +2196,12 @@ define('src/layer/domain/webstorage/api', [
     'src/layer/infrastructure/webstorage/api',
     'src/layer/infrastructure/webstorage/api',
     'src/layer/domain/webstorage/service/event'
-], function (require, exports, port_4, log_2, expiry_2, api_14, api_15, event_13) {
+], function (require, exports, port_4, log_2, expiry_2, api_14, api_15, event_11) {
     'use strict';
     exports.localStorage = api_15.localStorage;
     exports.sessionStorage = api_15.sessionStorage;
     exports.supportWebStorage = api_15.supportWebStorage;
-    exports.events = event_13.events;
+    exports.events = event_11.events;
     function webstorage(name, storage, factory, expiry_) {
         void expiry_2.expiry.add(name, expiry_);
         return port_4.repository(name, storage, factory, storage === api_14.localStorage ? log_2.log : void 0);
@@ -2238,10 +2221,10 @@ define('src/layer/app/api', [
     exports.status = api_20.supportWebStorage;
     function socket(name, config) {
         config = configure(config);
-        return api_16.socket(name, config.factory, config.destroy, config.expiry);
+        return api_16.socket(name, config.schema, config.destroy, config.expiry);
         function configure(config) {
             var Config = function () {
-                function Config(expiry, factory, destroy) {
+                function Config(schema, expiry, destroy) {
                     if (expiry === void 0) {
                         expiry = Infinity;
                     }
@@ -2250,23 +2233,23 @@ define('src/layer/app/api', [
                             return true;
                         };
                     }
+                    this.schema = schema;
                     this.expiry = expiry;
-                    this.factory = factory;
                     this.destroy = destroy;
                     void Object.freeze(this);
                 }
                 return Config;
             }();
-            return new Config(config.expiry, config.factory, config.destroy);
+            return new Config(config.schema, config.expiry, config.destroy);
         }
     }
     exports.socket = socket;
     function port(name, config) {
         config = configure(config);
-        return api_17.webstorage(name, api_17.localStorage, config.factory, config.expiry);
+        return api_17.webstorage(name, api_17.localStorage, config.schema, config.expiry);
         function configure(config) {
             var Config = function () {
-                function Config(expire, factory, destroy) {
+                function Config(schema, expire, destroy) {
                     if (expire === void 0) {
                         expire = 30 * 24 * 60 * 60 * 1000;
                     }
@@ -2275,14 +2258,14 @@ define('src/layer/app/api', [
                             return true;
                         };
                     }
+                    this.schema = schema;
                     this.expire = expire;
-                    this.factory = factory;
                     this.destroy = destroy;
                     void Object.freeze(this);
                 }
                 return Config;
             }();
-            return new Config(config.expiry, config.factory, config.destroy);
+            return new Config(config.schema, config.expiry, config.destroy);
         }
     }
     exports.port = port;
