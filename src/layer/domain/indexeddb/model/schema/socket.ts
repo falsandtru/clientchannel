@@ -1,6 +1,6 @@
 import {LocalSocketObjectMetaData} from 'localsocket';
 import {IObservableObserver, Set, Map} from 'arch-stream';
-import {open, destroy, Config, Access, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../../../infrastructure/indexeddb/api';
+import {open, listen, destroy, Config, Access, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../../../infrastructure/indexeddb/api';
 import {IdNumber, KeyString} from '../types';
 import {UnsavedEventRecord, SavedEventRecord, ESEvent, ESEventTypes} from '../store/event';
 import {DataStore, DataValue as SocketValue} from './socket/data';
@@ -20,7 +20,7 @@ export class SocketStore<T extends SocketValue> {
     destroy: (err: DOMError, event: Event) => boolean,
     public expiry = Infinity
   ) {
-    const access = open(name, {
+    void open(name, {
       make(db) {
         return DataStore.configure().make(db)
             && AccessStore.configure().make(db)
@@ -38,7 +38,7 @@ export class SocketStore<T extends SocketValue> {
             && destroy(err, ev);
       }
     });
-    this.schema = new Schema<T>(access, this.expiries);
+    this.schema = new Schema<T>(listen(name), this.expiries);
     this.events = this.schema.data.events;
   }
   protected schema: Schema<T>;

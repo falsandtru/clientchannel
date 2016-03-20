@@ -13,32 +13,26 @@ export type Config = {
 };
 export const ConfigMap = new Map<string, Config>();
 
-const enum StateCommand {
+const enum StateTypes {
   open,
   close,
   destroy
 }
-const StateCommandMap = new Map<string, StateCommand>();
+const StateMap = new Map<string, StateTypes>();
 
-export type Access = (req: Request) => any;
 type Request = (db: IDBDatabase) => any;
 const RequestQueueSet = new Set<string, Request[]>();
+const ConnectionStateSet = new Set<string, void>();
+const ConnectionHandleSet = new Set<string, IDBDatabase>();
 
-const StateSet = new Set<string, boolean>();
-const ConnectionSet = new Set<string, IDBDatabase>();
+export type Access = (req: Request) => any;
 
-export function open(name: string, config: Config): Access {
-  void StateCommandMap.set(name, StateCommand.open);
+export function open(name: string, config: Config): void {
+  void StateMap.set(name, StateTypes.open);
   void ConfigMap.set(name, config);
-  if (!StateSet.get(name)) {
-    void StateSet.add(name, true);
-    void handleFromInitialState(name);
-  }
-  return (req: Request) => {
-    const queue = RequestQueueSet.get(name) || RequestQueueSet.add(name, []);
-    void queue.push(req);
-    void drain(name);
-  };
+  if (ConnectionStateSet.has(name)) return;
+  void ConnectionStateSet.add(name, void 0);
+  void handleFromInitialState(name);
 }
 export function listen(name: string): Access {
   return (req: Request) => {
@@ -48,7 +42,7 @@ export function listen(name: string): Access {
   };
 }
 export function close(name: string): void {
-  void StateCommandMap.set(name, StateCommand.close);
+  void StateMap.set(name, StateTypes.close);
   void ConfigMap.set(name, {
     make() {
       return false;
@@ -60,16 +54,13 @@ export function close(name: string): void {
       return false;
     }
   });
-  if (ConnectionSet.get(name)) {
-    return ConnectionSet.get(name).end();
-  }
-  if (!StateSet.get(name)) {
-    void StateSet.add(name, true);
-    void handleFromInitialState(name);
-  }
+  if (ConnectionHandleSet.has(name)) return ConnectionHandleSet.get(name).end();
+  if (ConnectionStateSet.has(name)) return;
+  void ConnectionStateSet.add(name, void 0);
+  void handleFromInitialState(name);
 }
 export function destroy(name: string): void {
-  void StateCommandMap.set(name, StateCommand.destroy);
+  void StateMap.set(name, StateTypes.destroy);
   void ConfigMap.set(name, {
     make() {
       return false;
@@ -81,31 +72,31 @@ export function destroy(name: string): void {
       return true;
     }
   });
-  if (ConnectionSet.get(name)) {
-    return ConnectionSet.get(name).destroy();
-  }
-  if (!StateSet.get(name)) {
-    void StateSet.add(name, true);
-    void handleFromInitialState(name);
-  }
+  if (ConnectionHandleSet.has(name)) return ConnectionHandleSet.get(name).destroy();
+  if (ConnectionStateSet.has(name)) return;
+  void ConnectionStateSet.add(name, void 0);
+  void handleFromInitialState(name);
 }
 
 function drain(name: string): void {
   if (!status) return void RequestQueueSet.delete(name);
-  const db = ConnectionSet.get(name);
+  if (!ConnectionHandleSet.has(name) || !ConfigMap.has(name)) return;
+  const db = ConnectionHandleSet.get(name);
   const reqs = RequestQueueSet.get(name) || [];
-  while (true) {
-    try {
-      while (db && reqs.length > 0 && StateCommandMap.get(name) === StateCommand.open) {
-        void reqs[0](db);
-        void reqs.shift();
-      }
-      break;
+  try {
+    while (db && reqs.length > 0 && StateMap.get(name) === StateTypes.open) {
+      void reqs[0](db);
+      void reqs.shift();
     }
-    catch (err) {
+  }
+  catch (err) {
+    if (err instanceof Error) {
       void console.error(err, err + '', err.stack);
-      void handleFromCrashState(name, err);
     }
+    else {
+      void console.error(err);
+    }
+    void handleFromCrashState(name, err);
   }
 }
 
@@ -164,51 +155,50 @@ function handleFromSuccessState(name: string, db: IDBDatabase): void {
   db.onversionchange = _ =>
     void db.close();
   db.end = () => {
-    void ConnectionSet.delete(name);
+    void ConnectionHandleSet.delete(name);
     void db.close();
     void handleFromEndState(name);
   };
   db.destroy = () => {
-    void ConnectionSet.delete(name);
+    void ConnectionHandleSet.delete(name);
     void db.close();
     void handleFromDestroyState(name);
   };
   db.onerror = event => {
-    void ConnectionSet.delete(name);
+    void ConnectionHandleSet.delete(name);
     void handleFromErrorState(name, (<any>event.target).error, event);
   };
   db.onabort = event => {
-    void ConnectionSet.delete(name);
+    void ConnectionHandleSet.delete(name);
     void handleFromAbortState(name, (<any>event.target).error, event);
   };
 
-  switch (StateCommandMap.get(name)) {
-    case StateCommand.open: {
+  switch (StateMap.get(name)) {
+    case StateTypes.open: {
       const {verify} = ConfigMap.get(name);
       try {
         if (!verify(db)) return void handleFromEndState(name, +db.version + 1);
-        void IDBEventObserver.emit([name, IDBEvenTypes[IDBEvenTypes.connect]], new IDBEvent(IDBEvenTypes.connect, name));
-        void ConnectionSet.add(name, db);
-        void drain(name);
       }
       catch (err) {
-        void handleFromCrashState(name, err);
+        return void handleFromCrashState(name, err);
       }
-      return;
+      void IDBEventObserver.emit([name, IDBEvenTypes[IDBEvenTypes.connect]], new IDBEvent(IDBEvenTypes.connect, name));
+      void ConnectionHandleSet.add(name, db);
+      return void drain(name);
     }
-    case StateCommand.close: {
+    case StateTypes.close: {
       return void db.end();
     }
-    case StateCommand.destroy: {
+    case StateTypes.destroy: {
       return void db.destroy();
     }
   }
-  throw new TypeError(`LocalSocket: Invalid command ${StateCommandMap.get(name)}.`);
+  throw new TypeError(`LocalSocket: Invalid command ${StateMap.get(name)}.`);
 }
 
 function handleFromErrorState(name: string, error: DOMError, event: Event): void {
   void event.preventDefault();
-  void ConnectionSet.delete(name);
+  void ConnectionHandleSet.delete(name);
   void IDBEventObserver.emit([name, IDBEvenTypes[IDBEvenTypes.error]], new IDBEvent(IDBEvenTypes.error, name));
   const {destroy} = ConfigMap.get(name);
   if (destroy(error, event)) {
@@ -221,7 +211,7 @@ function handleFromErrorState(name: string, error: DOMError, event: Event): void
 
 function handleFromAbortState(name: string, error: DOMError, event: Event): void {
   void event.preventDefault();
-  void ConnectionSet.delete(name);
+  void ConnectionHandleSet.delete(name);
   void IDBEventObserver.emit([name, IDBEvenTypes[IDBEvenTypes.abort]], new IDBEvent(IDBEvenTypes.abort, name));
   const {destroy} = ConfigMap.get(name);
   if (destroy(error, event)) {
@@ -233,7 +223,7 @@ function handleFromAbortState(name: string, error: DOMError, event: Event): void
 }
 
 function handleFromCrashState(name: string, error: DOMError): void {
-  void ConnectionSet.delete(name);
+  void ConnectionHandleSet.delete(name);
   void IDBEventObserver.emit([name, IDBEvenTypes[IDBEvenTypes.crash]], new IDBEvent(IDBEvenTypes.crash, name));
   const {destroy} = ConfigMap.get(name);
   if (destroy(error, null)) {
@@ -245,7 +235,7 @@ function handleFromCrashState(name: string, error: DOMError): void {
 }
 
 function handleFromDestroyState(name: string): void {
-  void ConnectionSet.delete(name);
+  void ConnectionHandleSet.delete(name);
   const deleteRequest = indexedDB.deleteDatabase(name);
   deleteRequest.onsuccess = _ => {
     void RequestQueueSet.delete(name);
@@ -258,22 +248,22 @@ function handleFromDestroyState(name: string): void {
 }
 
 function handleFromEndState(name: string, version = 0): void {
-  void ConnectionSet.delete(name);
+  void ConnectionHandleSet.delete(name);
   void IDBEventObserver.emit([name, IDBEvenTypes[IDBEvenTypes.disconnect]], new IDBEvent(IDBEvenTypes.disconnect, name));
-  switch (StateCommandMap.get(name)) {
-    case StateCommand.open: {
+  switch (StateMap.get(name)) {
+    case StateTypes.open: {
       return void handleFromInitialState(name, version);
     }
-    case StateCommand.close: {
+    case StateTypes.close: {
       void ConfigMap.delete(name);
-      void StateSet.delete(name);
+      void ConnectionStateSet.delete(name);
       return void 0;
     }
-    case StateCommand.destroy: {
+    case StateTypes.destroy: {
       void ConfigMap.delete(name);
-      void StateSet.delete(name);
+      void ConnectionStateSet.delete(name);
       return void 0;
     }
   }
-  throw new TypeError(`LocalSocket: Invalid command ${StateCommandMap.get(name)}.`);
+  throw new TypeError(`LocalSocket: Invalid command ${StateMap.get(name)}.`);
 }

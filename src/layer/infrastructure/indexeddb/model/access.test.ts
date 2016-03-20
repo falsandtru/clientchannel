@@ -1,4 +1,4 @@
-import {Config, event, open, close, destroy} from './access';
+import {Config, event, open, listen, close, destroy} from './access';
 import {IDBEventName} from './event';
 import {IDBTransaction} from '../module/global';
 
@@ -32,7 +32,8 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
     });
 
     it('open', done => {
-      open('test', config)
+      open('test', config);
+      listen('test')
         (db => {
           db.transaction('test', IDBTransaction.readonly).objectStore('test').count().onsuccess = event => {
             assert(event.target['result'] === 0);
@@ -65,7 +66,8 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
 
     it('cancel closing', done => {
       close('test');
-      open('test', config)
+      open('test', config);
+      listen('test')
         (db => {
           event
             .once(['test', IDBEventName.disconnect], _ => done());
@@ -75,7 +77,8 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
 
     it('cancel destroying', done => {
       destroy('test');
-      open('test', config)
+      open('test', config);
+      listen('test')
         (db => {
           event
             .once(['test', IDBEventName.disconnect], _ => done());
@@ -86,7 +89,8 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
     it('reopen after closing', done => {
       event
         .once(['test', IDBEventName.disconnect], _ => {
-          open('test', config)
+          open('test', config);
+          listen('test')
             (db => {
               event
                 .once(['test', IDBEventName.disconnect], _ => done());
@@ -99,7 +103,8 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
     it('reopen after destroying', done => {
       event
         .once(['test', IDBEventName.disconnect], _ => {
-          open('test', config)
+          open('test', config);
+          listen('test')
             (db => {
               event
                 .once(['test', IDBEventName.disconnect], _ => done());
@@ -112,19 +117,22 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
     it('concurrent', done => {
       // call in random order on IE
       let cnt = 0;
-      open('test', config)
+      open('test', config);
+      listen('test')
         (db => {
           db.transaction('test', IDBTransaction.readwrite).objectStore('test').count().onsuccess = _ => {
             assert(++cnt === 1);
           };
         });
-      open('test', config)
+      open('test', config);
+      listen('test')
         (db => {
           db.transaction('test', IDBTransaction.readwrite).objectStore('test').count().onsuccess = _ => {
             assert(++cnt === 2);
           };
         });
-      open('test', config)
+      open('test', config);
+      listen('test')
         (db => {
           db.transaction('test', IDBTransaction.readwrite).objectStore('test').count().onsuccess = _ => {
             assert(++cnt === 3);

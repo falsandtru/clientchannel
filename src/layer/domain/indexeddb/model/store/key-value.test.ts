@@ -1,6 +1,6 @@
 import {AbstractKeyValueStore} from './key-value';
 import {IDBKey, IDBValue} from '../types';
-import {open, destroy, event, Config, IDBEventName} from '../../../../infrastructure/indexeddb/api';
+import {open, listen, destroy, event, Config, IDBEventName} from '../../../../infrastructure/indexeddb/api';
 
 describe('Unit: layers/domain/indexeddb/model/store/key-value', function () {
   this.timeout(5 * 1e3);
@@ -47,7 +47,8 @@ describe('Unit: layers/domain/indexeddb/model/store/key-value', function () {
     });
 
     it('CRUD', done => {
-      const kvs = new KeyValueStore<string, number>(open('test', KeyValueStore.configure()), 'test', '');
+      open('test', KeyValueStore.configure());
+      const kvs = new KeyValueStore<string, number>(listen('test'), 'test', '');
 
       kvs.set('a', 0, (key, err) => {
         assert(key === 'a');

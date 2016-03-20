@@ -1,5 +1,5 @@
 import {compose, AbstractEventStore, UnsavedEventRecord, EventValue, SavedEventRecord, EventTypes, ESEventTypes} from './event';
-import {open, destroy, event, Config, Access, IDBEventName} from '../../../../infrastructure/indexeddb/api';
+import {open, listen, destroy, event, Config, Access, IDBEventName} from '../../../../infrastructure/indexeddb/api';
 import {KeyString} from '../types';
 
 describe('Unit: layers/domain/indexeddb/model/store/event', function () {
@@ -297,7 +297,8 @@ describe('Unit: layers/domain/indexeddb/model/store/event', function () {
     });
 
     it('CRUD', done => {
-      const es = new EventStore<Value>(open('test', EventStore.configure('test')), 'test');
+      open('test', EventStore.configure('test'));
+      const es = new EventStore<Value>(listen('test'), 'test');
 
       assert(es.meta(KeyString('a')).id === 0);
       assert(es.has(KeyString('a')) === false);
@@ -326,7 +327,8 @@ describe('Unit: layers/domain/indexeddb/model/store/event', function () {
     });
 
     it('sync', done => {
-      const es = new EventStore<Value>(open('test', EventStore.configure('test')), 'test');
+      open('test', EventStore.configure('test'));
+      const es = new EventStore<Value>(listen('test'), 'test');
 
       let cnt = 0;
       es.sync([KeyString('')], err => {
@@ -345,7 +347,8 @@ describe('Unit: layers/domain/indexeddb/model/store/event', function () {
     });
 
     it('clean', done => {
-      const es = new EventStore<Value>(open('test', EventStore.configure('test')), 'test');
+      open('test', EventStore.configure('test'));
+      const es = new EventStore<Value>(listen('test'), 'test');
 
       es.add(new UnsavedEventRecord(KeyString('a'), new Value(0)));
       es.add(new UnsavedEventRecord(KeyString('b'), new Value(0)));
@@ -372,7 +375,8 @@ describe('Unit: layers/domain/indexeddb/model/store/event', function () {
     });
 
     it('snapshot', done => {
-      const es = new EventStore<Value>(open('test', EventStore.configure('test')), 'test');
+      open('test', EventStore.configure('test'));
+      const es = new EventStore<Value>(listen('test'), 'test');
 
       for (let i = 0; i < 11; ++i) {
         es.add(new UnsavedEventRecord(KeyString('a'), new Value(i + 1)));
