@@ -25,7 +25,7 @@ describe('Integration: Package', function () {
       const sock = socket('domain', {
         // delete linked record 3 days later from last access.
         expiry: 3 * 24 * 60 * 60 * 1e3,
-        factory() {
+        schema() {
           return new Schema();
         }
       });
@@ -49,7 +49,7 @@ describe('Integration: Package', function () {
 
       const sock = port('version', {
         expiry: 3,
-        factory() {
+        schema() {
           return new Schema();
         }
       });

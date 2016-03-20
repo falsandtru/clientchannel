@@ -10,21 +10,21 @@ export {supportWebStorage as status} from '../domain/webstorage/api';
 
 export function socket<T extends LocalSocketObject>(name: string, config: LocalSocketConfig<T>): LocalSocket<T> {
   config = configure(config);
-  return indexeddb(name, config.factory, config.destroy, config.expiry);
+  return indexeddb(name, config.schema, config.destroy, config.expiry);
 
   function configure<T>(config: LocalSocketConfig<T>): LocalSocketConfig<T> {
     class Config<T> implements LocalSocketConfig<T> {
       constructor(
+        public schema: () => T,
         public expiry: number = Infinity,
-        public factory: () => T,
         public destroy: (err: DOMError, event: Event) => boolean = () => true
       ) {
         void Object.freeze(this);
       }
     }
     return new Config(
+      config.schema,
       config.expiry,
-      config.factory,
       config.destroy
     );
   }
@@ -32,21 +32,21 @@ export function socket<T extends LocalSocketObject>(name: string, config: LocalS
 
 export function port<T extends LocalPortObject>(name: string, config: LocalPortConfig<T>): LocalPort<T> {
   config = configure(config);
-  return webstorage(name, localStorage, config.factory, config.expiry);
+  return webstorage(name, localStorage, config.schema, config.expiry);
 
   function configure<T>(config: LocalPortConfig<T>): LocalPortConfig<T> {
     class Config<T> implements LocalPortConfig<T> {
       constructor(
+        public schema: () => T,
         public expire: number = 30 * 24 * 60 * 60 * 1e3,
-        public factory: () => T,
         public destroy: (err: DOMError, event: Event) => boolean = () => true
       ) {
         void Object.freeze(this);
       }
     }
     return new Config(
+      config.schema,
       config.expiry,
-      config.factory,
       config.destroy
     );
   }

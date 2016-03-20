@@ -19,7 +19,7 @@
     destroy(): void;
   }
   export interface LocalSocketConfig<T> {
-    factory(): T;
+    schema(): T;
     expiry?: number;
     destroy?(error: DOMError, event: Event): boolean;
   }
@@ -57,7 +57,7 @@
     destroy(): void;
   }
   export interface LocalPortConfig<T> {
-    factory(): T;
+    schema(): T;
     expiry?: number;
     destroy?(error: DOMError, event: Event): boolean;
   }
