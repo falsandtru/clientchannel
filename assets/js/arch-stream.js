@@ -1,4 +1,4 @@
-/*! arch-stream v0.0.88 https://github.com/falsandtru/arch-stream | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
+/*! arch-stream v0.0.89 https://github.com/falsandtru/arch-stream | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
 define = typeof define === 'function' && define.amd
   ? define
   : (function () {
@@ -1727,15 +1727,11 @@ define('src/lib/assign', [
                 if (desc !== undefined && desc.enumerable) {
                     var nextValue = nextSource[nextKey];
                     var prevValue = to[nextKey];
-                    if (!nextValue || typeof nextValue !== 'object') {
+                    if (nextValue && typeof nextValue === 'object') {
+                        to[nextKey] = Array.isArray(nextValue) ? nextValue.slice() : assign({}, nextValue);
+                    } else {
                         to[nextKey] = nextValue;
-                        continue;
                     }
-                    if (Array.isArray(nextValue)) {
-                        to[nextKey] = nextValue.slice();
-                        continue;
-                    }
-                    to[nextKey] = assign({}, nextValue);
                 }
             }
         }
@@ -1769,19 +1765,11 @@ define('src/lib/extend', [
                 if (desc !== undefined && desc.enumerable) {
                     var nextValue = nextSource[nextKey];
                     var prevValue = to[nextKey];
-                    if (!nextValue || typeof nextValue !== 'object') {
+                    if (nextValue && typeof nextValue === 'object') {
+                        to[nextKey] = Array.isArray(nextValue) ? nextValue.slice() : extend(prevValue && typeof prevValue === 'object' && !Array.isArray(prevValue) ? prevValue : {}, nextValue);
+                    } else {
                         to[nextKey] = nextValue;
-                        continue;
                     }
-                    if (Array.isArray(nextValue)) {
-                        to[nextKey] = nextValue.slice();
-                        continue;
-                    }
-                    if (prevValue && nextValue && typeof prevValue === 'object' && !Array.isArray(prevValue)) {
-                        to[nextKey] = extend(prevValue, nextValue);
-                        continue;
-                    }
-                    to[nextKey] = extend({}, nextValue);
                 }
             }
         }

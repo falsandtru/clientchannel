@@ -1,4 +1,4 @@
-/*! localsocket v0.0.4 https://github.com/falsandtru/localsocket | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
+/*! localsocket v0.0.5 https://github.com/falsandtru/localsocket | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
 define = typeof define === 'function' && define.amd
   ? define
   : (function () {
@@ -65,31 +65,31 @@ define('src/layer/infrastructure/indexeddb/model/event', [
     'exports'
 ], function (require, exports) {
     'use strict';
-    (function (IDBEvenType) {
-        IDBEvenType[IDBEvenType['connect'] = 0] = 'connect';
-        IDBEvenType[IDBEvenType['disconnect'] = 1] = 'disconnect';
-        IDBEvenType[IDBEvenType['block'] = 2] = 'block';
-        IDBEvenType[IDBEvenType['error'] = 3] = 'error';
-        IDBEvenType[IDBEvenType['abort'] = 4] = 'abort';
-        IDBEvenType[IDBEvenType['crash'] = 5] = 'crash';
-        IDBEvenType[IDBEvenType['destroy'] = 6] = 'destroy';
-    }(exports.IDBEvenType || (exports.IDBEvenType = {})));
-    var IDBEvenType = exports.IDBEvenType;
+    (function (IDBEvenTypes) {
+        IDBEvenTypes[IDBEvenTypes['connect'] = 0] = 'connect';
+        IDBEvenTypes[IDBEvenTypes['disconnect'] = 1] = 'disconnect';
+        IDBEvenTypes[IDBEvenTypes['block'] = 2] = 'block';
+        IDBEvenTypes[IDBEvenTypes['error'] = 3] = 'error';
+        IDBEvenTypes[IDBEvenTypes['abort'] = 4] = 'abort';
+        IDBEvenTypes[IDBEvenTypes['crash'] = 5] = 'crash';
+        IDBEvenTypes[IDBEvenTypes['destroy'] = 6] = 'destroy';
+    }(exports.IDBEvenTypes || (exports.IDBEvenTypes = {})));
+    var IDBEvenTypes = exports.IDBEvenTypes;
     var IDBEventName;
     (function (IDBEventName) {
-        IDBEventName.connect = IDBEvenType[IDBEvenType.connect];
-        IDBEventName.disconnect = IDBEvenType[IDBEvenType.disconnect];
-        IDBEventName.block = IDBEvenType[IDBEvenType.block];
-        IDBEventName.error = IDBEvenType[IDBEvenType.error];
-        IDBEventName.abort = IDBEvenType[IDBEvenType.abort];
-        IDBEventName.crash = IDBEvenType[IDBEvenType.crash];
-        IDBEventName.destroy = IDBEvenType[IDBEvenType.destroy];
+        IDBEventName.connect = IDBEvenTypes[IDBEvenTypes.connect];
+        IDBEventName.disconnect = IDBEvenTypes[IDBEvenTypes.disconnect];
+        IDBEventName.block = IDBEvenTypes[IDBEvenTypes.block];
+        IDBEventName.error = IDBEvenTypes[IDBEvenTypes.error];
+        IDBEventName.abort = IDBEvenTypes[IDBEvenTypes.abort];
+        IDBEventName.crash = IDBEvenTypes[IDBEvenTypes.crash];
+        IDBEventName.destroy = IDBEvenTypes[IDBEvenTypes.destroy];
     }(IDBEventName = exports.IDBEventName || (exports.IDBEventName = {})));
     var IDBEvent = function () {
         function IDBEvent(type, name) {
             this.name = name;
             this.namespace = [this.name];
-            this.type = IDBEvenType[type];
+            this.type = IDBEvenTypes[type];
             void Object.freeze(this);
         }
         return IDBEvent;
@@ -285,8 +285,8 @@ define('src/layer/infrastructure/indexeddb/model/access', [
     function handleFromBlockedState(name, openRequest) {
         void IDBEventObserver.emit([
             name,
-            event_2.IDBEvenType[event_2.IDBEvenType.block]
-        ], new event_2.IDBEvent(event_2.IDBEvenType.block, name));
+            event_2.IDBEvenTypes[event_2.IDBEvenTypes.block]
+        ], new event_2.IDBEvent(event_2.IDBEvenTypes.block, name));
     }
     function handleFromUpgradeState(name, openRequest) {
         var db = openRequest.result;
@@ -339,8 +339,8 @@ define('src/layer/infrastructure/indexeddb/model/access', [
                         return void handleFromEndState(name, +db.version + 1);
                     void IDBEventObserver.emit([
                         name,
-                        event_2.IDBEvenType[event_2.IDBEvenType.connect]
-                    ], new event_2.IDBEvent(event_2.IDBEvenType.connect, name));
+                        event_2.IDBEvenTypes[event_2.IDBEvenTypes.connect]
+                    ], new event_2.IDBEvent(event_2.IDBEvenTypes.connect, name));
                     void ConnectionSet.add(name, db);
                     void drain(name);
                 } catch (err) {
@@ -362,8 +362,8 @@ define('src/layer/infrastructure/indexeddb/model/access', [
         void ConnectionSet.delete(name);
         void IDBEventObserver.emit([
             name,
-            event_2.IDBEvenType[event_2.IDBEvenType.error]
-        ], new event_2.IDBEvent(event_2.IDBEvenType.error, name));
+            event_2.IDBEvenTypes[event_2.IDBEvenTypes.error]
+        ], new event_2.IDBEvent(event_2.IDBEvenTypes.error, name));
         var destroy = exports.ConfigMap.get(name).destroy;
         if (destroy(error, event)) {
             return void handleFromDestroyState(name);
@@ -376,8 +376,8 @@ define('src/layer/infrastructure/indexeddb/model/access', [
         void ConnectionSet.delete(name);
         void IDBEventObserver.emit([
             name,
-            event_2.IDBEvenType[event_2.IDBEvenType.abort]
-        ], new event_2.IDBEvent(event_2.IDBEvenType.abort, name));
+            event_2.IDBEvenTypes[event_2.IDBEvenTypes.abort]
+        ], new event_2.IDBEvent(event_2.IDBEvenTypes.abort, name));
         var destroy = exports.ConfigMap.get(name).destroy;
         if (destroy(error, event)) {
             return void handleFromDestroyState(name);
@@ -389,8 +389,8 @@ define('src/layer/infrastructure/indexeddb/model/access', [
         void ConnectionSet.delete(name);
         void IDBEventObserver.emit([
             name,
-            event_2.IDBEvenType[event_2.IDBEvenType.crash]
-        ], new event_2.IDBEvent(event_2.IDBEvenType.crash, name));
+            event_2.IDBEvenTypes[event_2.IDBEvenTypes.crash]
+        ], new event_2.IDBEvent(event_2.IDBEvenTypes.crash, name));
         var destroy = exports.ConfigMap.get(name).destroy;
         if (destroy(error, null)) {
             return void handleFromDestroyState(name);
@@ -405,8 +405,8 @@ define('src/layer/infrastructure/indexeddb/model/access', [
             void RequestQueueSet.delete(name);
             void IDBEventObserver.emit([
                 name,
-                event_2.IDBEvenType[event_2.IDBEvenType.destroy]
-            ], new event_2.IDBEvent(event_2.IDBEvenType.destroy, name));
+                event_2.IDBEvenTypes[event_2.IDBEvenTypes.destroy]
+            ], new event_2.IDBEvent(event_2.IDBEvenTypes.destroy, name));
             return void handleFromEndState(name);
         };
         deleteRequest.onerror = function (event) {
@@ -420,8 +420,8 @@ define('src/layer/infrastructure/indexeddb/model/access', [
         void ConnectionSet.delete(name);
         void IDBEventObserver.emit([
             name,
-            event_2.IDBEvenType[event_2.IDBEvenType.disconnect]
-        ], new event_2.IDBEvent(event_2.IDBEvenType.disconnect, name));
+            event_2.IDBEvenTypes[event_2.IDBEvenTypes.disconnect]
+        ], new event_2.IDBEvent(event_2.IDBEvenTypes.disconnect, name));
         switch (StateCommandMap.get(name)) {
         case 0: {
                 return void handleFromInitialState(name, version);
@@ -632,27 +632,21 @@ define('src/layer/domain/lib/assign', [
                 if (desc !== undefined && desc.enumerable) {
                     var nextValue = nextSource[nextKey];
                     var prevValue = to[nextKey];
-                    if (!nextValue || typeof nextValue !== 'object') {
+                    if (isClonable(nextValue)) {
+                        to[nextKey] = Array.isArray(nextValue) ? nextValue.slice() : assign({}, nextValue);
+                    } else {
                         to[nextKey] = nextValue;
-                        continue;
                     }
-                    if (Array.isArray(nextValue)) {
-                        to[nextKey] = nextValue.slice();
-                        continue;
-                    }
-                    if (nextValue instanceof Blob || nextValue instanceof ImageData) {
-                        to[nextKey] = nextValue;
-                        continue;
-                    }
-                    if (prevValue && nextValue && typeof prevValue === 'object' && !Array.isArray(prevValue)) {
-                        to[nextKey] = assign(prevValue, nextValue);
-                        continue;
-                    }
-                    to[nextKey] = assign({}, nextValue);
                 }
             }
         }
         return to;
+        function isClonable(obj) {
+            return !!obj && typeof obj === 'object' && !isTypedArray(obj) && obj instanceof Blob === false && obj instanceof ImageData === false && obj instanceof ArrayBuffer === false;
+            function isTypedArray(obj) {
+                return obj instanceof Object && obj.constructor['BYTES_PER_ELEMENT'] > 0 && obj.buffer instanceof ArrayBuffer;
+            }
+        }
     }
     exports.assign = assign;
 });
@@ -666,12 +660,12 @@ define('src/layer/domain/indexeddb/model/store/event', [
     'src/lib/noop'
 ], function (require, exports, arch_stream_5, api_2, types_1, assign_1, noop_2) {
     'use strict';
-    (function (EventType) {
-        EventType[EventType['put'] = 0] = 'put';
-        EventType[EventType['delete'] = 1] = 'delete';
-        EventType[EventType['snapshot'] = 2] = 'snapshot';
-    }(exports.EventType || (exports.EventType = {})));
-    var EventType = exports.EventType;
+    (function (EventTypes) {
+        EventTypes[EventTypes['put'] = 0] = 'put';
+        EventTypes[EventTypes['delete'] = 1] = 'delete';
+        EventTypes[EventTypes['snapshot'] = 2] = 'snapshot';
+    }(exports.EventTypes || (exports.EventTypes = {})));
+    var EventTypes = exports.EventTypes;
     var EventValue = function () {
         function EventValue() {
         }
@@ -682,8 +676,8 @@ define('src/layer/domain/indexeddb/model/store/event', [
         function EventRecord(id, key, value, date, type) {
             if (typeof this.id === 'number' && this.id > 0 === false || this.id !== void 0)
                 throw new TypeError('LocalSocket: EventRecord: Invalid event id: ' + this.id);
-            this.type = EventType[type];
-            if (typeof this.type !== 'string' || EventType[this.type] === void 0)
+            this.type = EventTypes[type];
+            if (typeof this.type !== 'string' || EventTypes[this.type] === void 0)
                 throw new TypeError('LocalSocket: EventRecord: Invalid event type: ' + this.type);
             this.key = key;
             if (typeof this.key !== 'string')
@@ -694,27 +688,27 @@ define('src/layer/domain/indexeddb/model/store/event', [
             this.date = date;
             if (typeof this.date !== 'number' || this.date >= 0 === false)
                 throw new TypeError('LocalSocket: EventRecord: Invalid event date: ' + this.date);
-            this.attr = this.type === EventType[EventType.put] ? Object.keys(value).reduce(function (r, p) {
+            this.attr = this.type === EventTypes[EventTypes.put] ? Object.keys(value).reduce(function (r, p) {
                 return p.length > 0 && p[0] !== '_' && p[p.length - 1] !== '_' ? p : r;
             }, '') : '';
             if (typeof this.attr !== 'string')
                 throw new TypeError('LocalSocket: EventRecord: Invalid event attr: ' + this.key);
-            if (this.type === EventType[EventType.put] && this.attr.length === 0)
+            if (this.type === EventTypes[EventTypes.put] && this.attr.length === 0)
                 throw new TypeError('LocalSocket: EventRecord: Invalid event attr with ' + this.type + ': ' + this.attr);
-            if (this.type !== EventType[EventType.put] && this.attr.length !== 0)
+            if (this.type !== EventTypes[EventTypes.put] && this.attr.length !== 0)
                 throw new TypeError('LocalSocket: EventRecord: Invalid event attr with ' + this.type + ': ' + this.attr);
             switch (type) {
-            case EventType.put: {
+            case EventTypes.put: {
                     this.value = value = assign_1.assign(new EventValue(), (_a = {}, _a[this.attr] = value[this.attr], _a));
                     void Object.freeze(this.value);
                     return;
                 }
-            case EventType.snapshot: {
+            case EventTypes.snapshot: {
                     this.value = value = assign_1.assign(new EventValue(), value);
                     void Object.freeze(this.value);
                     return;
                 }
-            case EventType.delete:
+            case EventTypes.delete:
             default: {
                     this.value = value = new EventValue();
                     void Object.freeze(this.value);
@@ -730,7 +724,7 @@ define('src/layer/domain/indexeddb/model/store/event', [
         __extends(UnsavedEventRecord, _super);
         function UnsavedEventRecord(key, value, type, date) {
             if (type === void 0) {
-                type = EventType.put;
+                type = EventTypes.put;
             }
             if (date === void 0) {
                 date = Date.now();
@@ -754,13 +748,12 @@ define('src/layer/domain/indexeddb/model/store/event', [
         return SavedEventRecord;
     }(EventRecord);
     exports.SavedEventRecord = SavedEventRecord;
-    (function (ESEventType) {
-        ESEventType[ESEventType['put'] = 0] = 'put';
-        ESEventType[ESEventType['delete'] = 1] = 'delete';
-        ESEventType[ESEventType['snapshot'] = 2] = 'snapshot';
-        ESEventType[ESEventType['get'] = 3] = 'get';
-    }(exports.ESEventType || (exports.ESEventType = {})));
-    var ESEventType = exports.ESEventType;
+    exports.ESEventTypes = {
+        put: 'put',
+        delete: 'delete',
+        snapshot: 'snapshot',
+        query: 'query'
+    };
     var ESEvent = function () {
         function ESEvent(type, id, key, attr) {
             this.type = type;
@@ -788,7 +781,6 @@ define('src/layer/domain/indexeddb/model/store/event', [
             this.name = name;
             this.cache = new arch_stream_5.Supervisor();
             this.events = {
-                sync: new arch_stream_5.Observable(),
                 load: new arch_stream_5.Observable(),
                 save: new arch_stream_5.Observable(),
                 loss: new arch_stream_5.Observable(),
@@ -826,7 +818,7 @@ define('src/layer/domain/indexeddb/model/store/event', [
                         event.key,
                         event.attr,
                         event.type
-                    ], new ESEvent(ESEventType[event.type], event.id, event.key, event.attr));
+                    ], new ESEvent(event.type, event.id, event.key, event.attr));
                 } else {
                     void lastNotifiedIdSet.add(event.key, event.id);
                     void lastUpdatedDateSet.add(event.key, event.date);
@@ -931,7 +923,7 @@ define('src/layer/domain/indexeddb/model/store/event', [
                 if (!cursor || cursor.value.id <= latest.id) {
                     if (compose(savedEvents).reduce(function (e) {
                             return e;
-                        }).type === EventType[EventType.delete]) {
+                        }).type === EventTypes[EventTypes.delete]) {
                         void _this.clean(Infinity, key);
                     } else {
                         void savedEvents.reduceRight(function (acc, e) {
@@ -940,8 +932,8 @@ define('src/layer/domain/indexeddb/model/store/event', [
                                 return attr === e.attr;
                             }) ? acc : arch_stream_5.concat([e], acc);
                         }, []).reduce(function (acc, e) {
-                            switch (EventType[e.type]) {
-                            case EventType.put: {
+                            switch (EventTypes[e.type]) {
+                            case EventTypes.put: {
                                     return arch_stream_5.concat([e], acc);
                                 }
                             default: {
@@ -978,8 +970,8 @@ define('src/layer/domain/indexeddb/model/store/event', [
                         arch_stream_5.sqid(event.id)
                     ]).length > 0)
                     return;
-                void savedEvents.unshift(new SavedEventRecord(event.id, event.key, event.value, EventType[event.type], event.date));
-                if (event.type !== EventType[EventType.put])
+                void savedEvents.unshift(new SavedEventRecord(event.id, event.key, event.value, EventTypes[event.type], event.date));
+                if (event.type !== EventTypes[EventTypes.put])
                     return;
                 void cursor.continue();
             });
@@ -998,11 +990,11 @@ define('src/layer/domain/indexeddb/model/store/event', [
         AbstractEventStore.prototype.has = function (key) {
             return compose(this.cache.cast([key], void 0)).reduce(function (e) {
                 return e;
-            }).type !== EventType[EventType.delete];
+            }).type !== EventTypes[EventTypes.delete];
         };
         AbstractEventStore.prototype.get = function (key) {
             void this.sync([key]);
-            void this.events.access.emit([key], new ESEvent(ESEventType.get, types_1.IdNumber(0), key, ''));
+            void this.events.access.emit([key], new ESEvent(exports.ESEventTypes.query, types_1.IdNumber(0), key, ''));
             return compose(this.cache.cast([key], void 0)).reduce(function (e) {
                 return e;
             }).value;
@@ -1013,7 +1005,7 @@ define('src/layer/domain/indexeddb/model/store/event', [
                 event.key,
                 event.attr,
                 event.type
-            ], new ESEvent(ESEventType[event.type], types_1.IdNumber(0), event.key, event.attr));
+            ], new ESEvent(event.type, types_1.IdNumber(0), event.key, event.attr));
             if (event instanceof UnsavedEventRecord === false)
                 throw new Error('LocalSocket: Cannot add a saved event: ' + JSON.stringify(event));
             void this.sync([event.key]);
@@ -1042,7 +1034,7 @@ define('src/layer/domain/indexeddb/model/store/event', [
                 var tx = db.transaction(_this.name, api_2.IDBTransaction.readwrite);
                 var req = tx.objectStore(_this.name).add(event);
                 tx.oncomplete = function (_) {
-                    var savedEvent = new SavedEventRecord(types_1.IdNumber(req.result), event.key, event.value, EventType[event.type], event.date);
+                    var savedEvent = new SavedEventRecord(types_1.IdNumber(req.result), event.key, event.value, EventTypes[event.type], event.date);
                     void _this.cache.terminate([
                         savedEvent.key,
                         savedEvent.attr,
@@ -1060,7 +1052,7 @@ define('src/layer/domain/indexeddb/model/store/event', [
                         savedEvent.key,
                         savedEvent.attr,
                         savedEvent.type
-                    ], new ESEvent(ESEventType[savedEvent.type], savedEvent.id, savedEvent.key, savedEvent.attr));
+                    ], new ESEvent(savedEvent.type, savedEvent.id, savedEvent.key, savedEvent.attr));
                     void _this.cache.cast([
                         savedEvent.key,
                         savedEvent.attr,
@@ -1071,7 +1063,7 @@ define('src/layer/domain/indexeddb/model/store/event', [
                             return sub(void 0) instanceof SavedEventRecord;
                         }).length > _this.snapshotCycle) {
                         void _this.snapshot(event.key);
-                    } else if (savedEvent.type === EventType[EventType.delete]) {
+                    } else if (savedEvent.type === EventTypes[EventTypes.delete]) {
                         void _this.clean(Infinity, savedEvent.key);
                     }
                 };
@@ -1088,13 +1080,13 @@ define('src/layer/domain/indexeddb/model/store/event', [
                             event.key,
                             event.attr,
                             event.type
-                        ], new ESEvent(ESEventType[event.type], event.id, event.key, event.attr));
+                        ], new ESEvent(event.type, event.id, event.key, event.attr));
                     }, 1000);
                 };
             });
         };
         AbstractEventStore.prototype.delete = function (key) {
-            return void this.add(new UnsavedEventRecord(key, new EventValue(), EventType.delete));
+            return void this.add(new UnsavedEventRecord(key, new EventValue(), EventTypes.delete));
         };
         AbstractEventStore.prototype.snapshot = function (key) {
             var _this = this;
@@ -1110,9 +1102,9 @@ define('src/layer/domain/indexeddb/model/store/event', [
                     var cursor = req.result;
                     if (cursor) {
                         var event_4 = cursor.value;
-                        void savedEvents.unshift(new SavedEventRecord(event_4.id, event_4.key, event_4.value, EventType[event_4.type], event_4.date));
+                        void savedEvents.unshift(new SavedEventRecord(event_4.id, event_4.key, event_4.value, EventTypes[event_4.type], event_4.date));
                     }
-                    if (!cursor || EventType[cursor.value.type] !== EventType.put) {
+                    if (!cursor || EventTypes[cursor.value.type] !== EventTypes.put) {
                         if (savedEvents.length < _this.snapshotCycle)
                             return;
                         void _this.clean(Infinity, key);
@@ -1122,12 +1114,12 @@ define('src/layer/domain/indexeddb/model/store/event', [
                         if (composedEvent instanceof SavedEventRecord)
                             return;
                         switch (composedEvent.type) {
-                        case EventType[EventType.snapshot]: {
-                                return void store.add(new UnsavedEventRecord(composedEvent.key, composedEvent.value, EventType[composedEvent.type], savedEvents.reduce(function (date, e) {
+                        case EventTypes[EventTypes.snapshot]: {
+                                return void store.add(new UnsavedEventRecord(composedEvent.key, composedEvent.value, EventTypes[composedEvent.type], savedEvents.reduce(function (date, e) {
                                     return e.date > date ? e.date : date;
                                 }, 0)));
                             }
-                        case EventType[EventType.delete]: {
+                        case EventTypes[EventTypes.delete]: {
                                 return void 0;
                             }
                         }
@@ -1168,11 +1160,11 @@ define('src/layer/domain/indexeddb/model/store/event', [
                     }, void 0);
                 var event = cursor.value;
                 switch (event.type) {
-                case EventType[EventType.put]: {
+                case EventTypes[EventTypes.put]: {
                         void cleanStateMap.set(event.key, cleanStateMap.get(event.key) || false);
                         break;
                     }
-                case EventType[EventType.snapshot]: {
+                case EventTypes[EventTypes.snapshot]: {
                         if (!cleanStateMap.get(event.key)) {
                             void cleanStateMap.set(event.key, true);
                             void cursor.continue();
@@ -1180,7 +1172,7 @@ define('src/layer/domain/indexeddb/model/store/event', [
                         }
                         break;
                     }
-                case EventType[EventType.delete]: {
+                case EventTypes[EventTypes.delete]: {
                         void cleanStateMap.set(event.key, true);
                         break;
                     }
@@ -1218,7 +1210,7 @@ define('src/layer/domain/indexeddb/model/store/event', [
     exports.AbstractEventStore = AbstractEventStore;
     function compose(events) {
         return group(events).map(function (events) {
-            return events.reduceRight(compose, new UnsavedEventRecord(types_1.KeyString(''), new EventValue(), EventType.delete, 0));
+            return events.reduceRight(compose, new UnsavedEventRecord(types_1.KeyString(''), new EventValue(), EventTypes.delete, 0));
         });
         function group(events) {
             return events.map(function (e, i) {
@@ -1241,18 +1233,18 @@ define('src/layer/domain/indexeddb/model/store/event', [
         }
         function compose(target, source) {
             switch (source.type) {
-            case EventType[EventType.put]: {
-                    return source.value[source.attr] !== void 0 ? new UnsavedEventRecord(source.key, assign_1.assign(new EventValue(), target.value, source.value), EventType.snapshot) : new UnsavedEventRecord(source.key, Object.keys(target.value).reduce(function (value, prop) {
+            case EventTypes[EventTypes.put]: {
+                    return source.value[source.attr] !== void 0 ? new UnsavedEventRecord(source.key, assign_1.assign(new EventValue(), target.value, source.value), EventTypes.snapshot) : new UnsavedEventRecord(source.key, Object.keys(target.value).reduce(function (value, prop) {
                         if (prop === source.attr)
                             return value;
                         value[prop] = target[prop];
                         return value;
-                    }, new EventValue()), EventType.snapshot);
+                    }, new EventValue()), EventTypes.snapshot);
                 }
-            case EventType[EventType.snapshot]: {
+            case EventTypes[EventTypes.snapshot]: {
                     return source;
                 }
-            case EventType[EventType.delete]: {
+            case EventTypes[EventTypes.delete]: {
                     return source;
                 }
             }
@@ -1296,12 +1288,12 @@ define('src/layer/domain/indexeddb/model/store/key-value', [
     'src/lib/noop'
 ], function (require, exports, arch_stream_6, api_3, noop_3) {
     'use strict';
-    (function (EventType) {
-        EventType[EventType['get'] = 0] = 'get';
-        EventType[EventType['put'] = 1] = 'put';
-        EventType[EventType['delete'] = 2] = 'delete';
-    }(exports.EventType || (exports.EventType = {})));
-    var EventType = exports.EventType;
+    (function (EventTypes) {
+        EventTypes[EventTypes['get'] = 0] = 'get';
+        EventTypes[EventTypes['put'] = 1] = 'put';
+        EventTypes[EventTypes['delete'] = 2] = 'delete';
+    }(exports.EventTypes || (exports.EventTypes = {})));
+    var EventTypes = exports.EventTypes;
     var AbstractKeyValueStore = function () {
         function AbstractKeyValueStore(access, name, index) {
             this.access = access;
@@ -1332,7 +1324,7 @@ define('src/layer/domain/indexeddb/model/store/key-value', [
             }
             void this.events.access.emit([key], [
                 [key],
-                EventType.get
+                EventTypes.get
             ]);
             void this.access(function (db) {
                 var tx = db.transaction(_this.name, api_3.IDBTransaction.readonly);
@@ -1364,7 +1356,7 @@ define('src/layer/domain/indexeddb/model/store/key-value', [
             void this.cache.set(key, value);
             void this.events.access.emit([key], [
                 [key],
-                EventType.put
+                EventTypes.put
             ]);
             void this.access(function (db) {
                 if (!_this.cache.has(key))
@@ -1385,7 +1377,7 @@ define('src/layer/domain/indexeddb/model/store/key-value', [
             void this.cache.delete(key);
             void this.events.access.emit([key], [
                 [key],
-                EventType.delete
+                EventTypes.delete
             ]);
             void this.access(function (db) {
                 var tx = db.transaction(_this.name, api_3.IDBTransaction.readwrite);
@@ -1443,7 +1435,7 @@ define('src/layer/domain/indexeddb/model/schema/socket/access', [
             void Object.freeze(this);
             void event.monitor([], function (_a) {
                 var key = _a.key, type = _a.type;
-                return type === event_6.ESEventType.delete ? void _this.delete(key) : void _this.set(key, new AccessRecord(key, Date.now()));
+                return type === event_6.ESEventTypes.delete ? void _this.delete(key) : void _this.set(key, new AccessRecord(key, Date.now()));
             });
         }
         AccessStore.configure = function () {
@@ -1524,7 +1516,7 @@ define('src/layer/domain/indexeddb/model/schema/socket/expiry', [
             void schedule(Date.now());
             void data.events.access.monitor([], function (_a) {
                 var key = _a.key, type = _a.type;
-                if (type === event_7.ESEventType.delete) {
+                if (type === event_7.ESEventTypes.delete) {
                     void _this.delete(key);
                 } else {
                     if (!expiries.has(key))
@@ -1576,7 +1568,7 @@ define('src/layer/domain/indexeddb/model/schema/socket', [
 ], function (require, exports, arch_stream_7, api_5, types_2, event_8, data_1, access_2, expiry_1, noop_4) {
     'use strict';
     exports.SocketRecord = event_8.UnsavedEventRecord;
-    exports.ESEventType = event_8.ESEventType;
+    exports.ESEventTypes = event_8.ESEventTypes;
     exports.SocketValue = data_1.DataValue;
     var SocketStore = function () {
         function SocketStore(name, destroy, expiry) {
@@ -1722,6 +1714,11 @@ define('src/layer/domain/webstorage/repository/port', [
     var LocalStorageSubscriber = new arch_stream_10.Set();
     var SessionStorageObjectCache = new arch_stream_10.Set();
     var SessionStorageSubscriber = new arch_stream_10.Set();
+    var PortEventTypes;
+    (function (PortEventTypes) {
+        PortEventTypes.send = 'send';
+        PortEventTypes.recv = 'recv';
+    }(PortEventTypes = exports.PortEventTypes || (exports.PortEventTypes = {})));
     var PortEvent = function () {
         function PortEvent(type, key, attr, newValue, oldValue) {
             this.type = type;
@@ -1762,12 +1759,12 @@ define('src/layer/domain/webstorage/repository/port', [
             this.storage = storage;
             this.factory = factory;
             this.log = log;
-            this.event = new arch_stream_10.Observable();
             this.cache = this.storage === api_8.localStorage ? LocalStorageObjectCache : SessionStorageObjectCache;
             this.eventSource = this.storage === api_8.localStorage ? event_9.events.localStorage : event_9.events.sessionStorage;
             this.uuid = arch_stream_10.uuid();
-            this.event['toJSON'] = function () {
-                return void 0;
+            this.events = {
+                send: new arch_stream_10.Observable(),
+                recv: new arch_stream_10.Observable()
             };
             void Object.freeze(this);
         }
@@ -1775,7 +1772,7 @@ define('src/layer/domain/webstorage/repository/port', [
             var _this = this;
             if (this.cache.has(this.name))
                 return this.cache.get(this.name);
-            var source = arch_stream_10.assign((_a = {}, _a[api_7.SCHEMA.KEY.NAME] = this.name, _a[api_7.SCHEMA.EVENT.NAME] = this.event, _a), parse(this.storage.getItem(this.name) || '{}'));
+            var source = arch_stream_10.assign((_a = {}, _a[api_7.SCHEMA.KEY.NAME] = this.name, _a[api_7.SCHEMA.EVENT.NAME] = new arch_stream_10.Observable(), _a), parse(this.storage.getItem(this.name) || '{}'));
             var dao = api_7.build(source, this.factory, function (attr, newValue, oldValue) {
                 void _this.log.update(_this.name);
                 void _this.storage.setItem(_this.name, JSON.stringify(Object.keys(source).filter(api_7.isValidPropertyName).filter(api_7.isValidPropertyValue(source)).reduce(function (acc, prop) {
@@ -1786,10 +1783,14 @@ define('src/layer/domain/webstorage/repository/port', [
                         configurable: true
                     });
                 }, {})));
-                void _this.event.emit([
-                    'send',
-                    attr
-                ], new PortEvent('send', _this.name, attr, newValue, oldValue));
+                {
+                    var event_10 = new PortEvent(PortEventTypes.send, _this.name, attr, newValue, oldValue);
+                    void source[api_7.SCHEMA.EVENT.NAME].emit([
+                        PortEventTypes.send,
+                        attr
+                    ], event_10);
+                    void _this.events.send.emit([attr], event_10);
+                }
             });
             var subscriber = function (_a) {
                 var newValue = _a.newValue, oldValue = _a.oldValue;
@@ -1805,7 +1806,14 @@ define('src/layer/domain/webstorage/repository/port', [
                         source[prop] = newVal;
                     }, void 0);
                 }
-                void _this.event.emit(['recv'], new PortEvent('recv', _this.name, '', newValue, oldValue));
+                {
+                    var event_11 = new PortEvent(PortEventTypes.recv, _this.name, '', newValue, oldValue);
+                    void source[api_7.SCHEMA.EVENT.NAME].emit([
+                        PortEventTypes.recv,
+                        ''
+                    ], event_11);
+                    void _this.events.recv.emit([''], event_11);
+                }
             };
             void this.eventSource.on([
                 this.name,
@@ -1902,10 +1910,10 @@ define('src/layer/domain/indexeddb/repository/socket', [
             void this.port.__event.monitor([], function (_a) {
                 var type = _a.type, newValue = _a.newValue;
                 switch (type) {
-                case 'send': {
+                case port_1.PortEventTypes.send: {
                         return;
                     }
-                case 'recv': {
+                case port_1.PortEventTypes.recv: {
                         return void _this.port.recv().reduce(function (_, msg) {
                             return void _this.schema.data.update(msg.key);
                         }, void 0);
@@ -1922,39 +1930,39 @@ define('src/layer/domain/indexeddb/repository/socket', [
                 if (!source)
                     return;
                 switch (type) {
-                case socket_1.ESEventType.put: {
+                case socket_1.ESEventTypes.put: {
                         var oldVal = source[attr];
                         var newVal = _this.get(key)[attr];
                         source[attr] = newVal;
                         void source.__event.emit([
-                            'recv',
+                            port_1.PortEventTypes.recv,
                             attr
-                        ], new port_1.PortEvent('recv', key, attr, newVal, oldVal));
+                        ], new port_1.PortEvent(port_1.PortEventTypes.recv, key, attr, newVal, oldVal));
                         return;
                     }
-                case socket_1.ESEventType.delete: {
+                case socket_1.ESEventTypes.delete: {
                         var cache = _this.get(key);
                         void Object.keys(cache).filter(api_9.isValidPropertyName).filter(api_9.isValidPropertyValue(cache)).reduce(function (_, attr) {
                             var oldVal = source[attr];
                             var newVal = void 0;
                             source[attr] = newVal;
                             void source.__event.emit([
-                                'recv',
+                                port_1.PortEventTypes.recv,
                                 attr
-                            ], new port_1.PortEvent('recv', key, attr, newVal, oldVal));
+                            ], new port_1.PortEvent(port_1.PortEventTypes.recv, key, attr, newVal, oldVal));
                         }, void 0);
                         return;
                     }
-                case socket_1.ESEventType.snapshot: {
+                case socket_1.ESEventTypes.snapshot: {
                         var cache_1 = _this.get(key);
                         void Object.keys(cache_1).filter(api_9.isValidPropertyName).filter(api_9.isValidPropertyValue(cache_1)).reduce(function (_, attr) {
                             var oldVal = source[attr];
                             var newVal = cache_1[attr];
                             source[attr] = newVal;
                             void source.__event.emit([
-                                'recv',
+                                port_1.PortEventTypes.recv,
                                 attr
-                            ], new port_1.PortEvent('recv', key, attr, newVal, oldVal));
+                            ], new port_1.PortEvent(port_1.PortEventTypes.recv, key, attr, newVal, oldVal));
                         }, void 0);
                         return;
                     }
@@ -1992,9 +2000,9 @@ define('src/layer/domain/indexeddb/repository/socket', [
             }), this.factory, function (attr, newValue, oldValue) {
                 void _this.add(new socket_1.SocketRecord(types_3.KeyString(key), (_a = {}, _a[attr] = newValue, _a)));
                 void _this.sources.get(key).__event.emit([
-                    'send',
+                    port_1.PortEventTypes.send,
                     attr
-                ], new port_1.PortEvent('send', key, attr, newValue, oldValue));
+                ], new port_1.PortEvent(port_1.PortEventTypes.send, key, attr, newValue, oldValue));
                 var _a;
             }));
         };
@@ -2022,10 +2030,10 @@ define('src/layer/domain/indexeddb/api', [
     'exports',
     'src/layer/domain/indexeddb/repository/socket',
     'src/layer/domain/indexeddb/service/event'
-], function (require, exports, socket_2, event_10) {
+], function (require, exports, socket_2, event_12) {
     'use strict';
     exports.socket = socket_2.socket;
-    exports.event = event_10.event;
+    exports.event = event_12.event;
 });
 define('src/layer/domain/webstorage/service/log', [
     'require',
@@ -2205,12 +2213,12 @@ define('src/layer/domain/webstorage/api', [
     'src/layer/infrastructure/webstorage/api',
     'src/layer/infrastructure/webstorage/api',
     'src/layer/domain/webstorage/service/event'
-], function (require, exports, port_4, log_2, expiry_2, api_14, api_15, event_11) {
+], function (require, exports, port_4, log_2, expiry_2, api_14, api_15, event_13) {
     'use strict';
     exports.localStorage = api_15.localStorage;
     exports.sessionStorage = api_15.sessionStorage;
     exports.supportWebStorage = api_15.supportWebStorage;
-    exports.events = event_11.events;
+    exports.events = event_13.events;
     function webstorage(name, storage, factory, expiry_) {
         void expiry_2.expiry.add(name, expiry_);
         return port_4.repository(name, storage, factory, storage === api_14.localStorage ? log_2.log : void 0);
