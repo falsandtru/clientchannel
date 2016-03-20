@@ -18,6 +18,11 @@
     recent(limit: number, cb: (keys: string[], error: DOMError) => any): void;
     destroy(): void;
   }
+  export interface LocalSocketConfig<T> {
+    factory(): T;
+    expiry?: number;
+    destroy?(error: DOMError, event: Event): boolean;
+  }
   export interface LocalSocketObject {
     __meta?: LocalSocketObjectMetaData;
     __id?: number;
@@ -29,11 +34,6 @@
     id: number;
     key: string;
     date: number;
-  }
-  export interface LocalSocketConfig<T> {
-    expiry?: number;
-    factory(): T;
-    destroy?(error: DOMError, event: Event): boolean;
   }
   export interface LocalSocketEvent {
     type: LocalSocketEventType;
@@ -56,14 +56,14 @@
     link(): T;
     destroy(): void;
   }
+  export interface LocalPortConfig<T> {
+    factory(): T;
+    expiry?: number;
+    destroy?(error: DOMError, event: Event): boolean;
+  }
   export interface LocalPortObject {
     __key?: string;
     __event?: IObservableObserver<[LocalPortEventType] | [LocalPortEventType, string], LocalPortEvent, any>;
-  }
-  export interface LocalPortConfig<T> {
-    expiry?: number;
-    factory(): T;
-    destroy?(error: DOMError, event: Event): boolean;
   }
   export interface LocalPortEvent {
     type: LocalPortEventType;
