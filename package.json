@@ -31,7 +31,7 @@
     "LICENSE"
   ],
   "dependencies": {
-    "arch-stream": "0.0.88"
+    "arch-stream": "0.0.89"
   },
   "devDependencies": {
     "benchmark": "^2.1.0",
