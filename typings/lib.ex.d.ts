@@ -12,6 +12,4 @@ interface PromiseLike<T> {
 
 interface IDBDatabase {
   onversionchange: (ev: IDBVersionChangeEvent) => any;
-  end: () => any;
-  destroy: () => any;
 }
