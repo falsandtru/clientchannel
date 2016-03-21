@@ -1,6 +1,5 @@
 import {LocalSocket, LocalSocketObject, LocalSocketConfig} from 'localsocket';
 import {LocalPort, LocalPortObject, LocalPortConfig} from 'localsocket';
-import {indexedDB} from '../infrastructure/indexeddb/api';
 import {socket as indexeddb} from '../domain/indexeddb/api';
 import {webstorage, localStorage, sessionStorage} from '../domain/webstorage/api';
 import {event as IDBEventStream} from '../domain/indexeddb/api';

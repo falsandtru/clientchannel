@@ -2,7 +2,7 @@ import {Observable, Map} from 'arch-stream';
 import {Config, Access, IDBCursorDirection, IDBTransaction} from '../../../../../infrastructure/indexeddb/api';
 import {KeyString} from '../../types';
 import {AbstractKeyValueStore} from '../../store/key-value';
-import {ESEvent, ESEventTypes} from '../../store/event';
+import {ESEvent, ESEventType} from '../../store/event';
 import {DataStore} from './data';
 
 export const STORE_NAME = 'expiry';
@@ -83,7 +83,7 @@ export class ExpiryStore extends AbstractKeyValueStore<string, ExpiryRecord> {
     void schedule(Date.now());
     void data.events.access
       .monitor(<any>[], ({key, type}) => {
-        if (type === ESEventTypes.delete) {
+        if (type === ESEventType.delete) {
           void this.delete(key)
         }
         else {

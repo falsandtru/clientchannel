@@ -2,7 +2,7 @@ import {LocalSocketObject} from 'localsocket';
 import {socket} from './socket';
 import {KeyString} from '../model/types';
 import {SocketStore, SocketRecord} from '../model/schema/socket';
-import {listen, destroy, event, Config, IDBEventName} from '../../../infrastructure/indexeddb/api';
+import {listen, destroy, event, Config, IDBEventType} from '../../../infrastructure/indexeddb/api';
 
 describe('Unit: layers/domain/indexeddb/repository/socket', function () {
   this.timeout(5 * 1e3);
@@ -10,18 +10,18 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function () {
   describe('spec', () => {
     before(done => {
       event
-        .once(['test', IDBEventName.destroy], _ =>
+        .once(['test', IDBEventType.destroy], _ =>
           event
-            .once(['test', IDBEventName.disconnect], _ => done())
+            .once(['test', IDBEventType.disconnect], _ => done())
         );
       destroy('test');
     });
 
     afterEach(done => {
       event
-        .once(['test', IDBEventName.destroy], _ =>
+        .once(['test', IDBEventType.destroy], _ =>
           event
-            .once(['test', IDBEventName.disconnect], _ => done())
+            .once(['test', IDBEventType.disconnect], _ => done())
         );
       destroy('test');
     });

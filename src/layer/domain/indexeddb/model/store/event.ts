@@ -95,14 +95,14 @@ export class SavedEventRecord<T extends EventValue> extends EventRecord<T> {
   }
 }
 
-export const ESEventTypes = {
+export type ESEventType = LocalSocketEventType;
+export const ESEventType = {
   put: <'put'>'put',
   delete: <'delete'>'delete',
   snapshot: <'snapshot'>'snapshot',
   query: <'query'>'query'
 }
 
-export type ESEventType = LocalSocketEventType;
 export class ESEvent implements LocalSocketEvent {
   constructor(
     public type: ESEventType,
@@ -304,7 +304,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
   public get(key: KeyString): T {
     void this.sync([key]);
     void this.events.access
-      .emit([key], new ESEvent(ESEventTypes.query, IdNumber(0), key, ''));
+      .emit([key], new ESEvent(ESEventType.query, IdNumber(0), key, ''));
     return compose(this.cache.cast([key], void 0))
       .reduce(e => e)
       .value;

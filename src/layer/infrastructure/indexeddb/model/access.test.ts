@@ -1,5 +1,5 @@
 import {Config, event, open, listen, close, destroy} from './access';
-import {IDBEventName} from './event';
+import {IDBEventType} from './event';
 import {IDBTransaction} from '../module/global';
 
 describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
@@ -15,18 +15,18 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
 
     before(done => {
       event
-        .once(['test', IDBEventName.destroy], _ =>
+        .once(['test', IDBEventType.destroy], _ =>
           event
-            .once(['test', IDBEventName.disconnect], _ => done())
+            .once(['test', IDBEventType.disconnect], _ => done())
         );
       destroy('test');
     });
 
     after(done => {
       event
-        .once(['test', IDBEventName.destroy], _ =>
+        .once(['test', IDBEventType.destroy], _ =>
           event
-            .once(['test', IDBEventName.disconnect], _ => done())
+            .once(['test', IDBEventType.disconnect], _ => done())
         );
       destroy('test');
     });
@@ -44,22 +44,22 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
 
     it('close', done => {
       event
-        .once(['test', IDBEventName.disconnect], _ => done())
+        .once(['test', IDBEventType.disconnect], _ => done())
       close('test');
     });
 
     it('destroy', done => {
       event
-        .once(['test', IDBEventName.destroy], _ =>
+        .once(['test', IDBEventType.destroy], _ =>
           event
-            .once(['test', IDBEventName.disconnect], _ => done())
+            .once(['test', IDBEventType.disconnect], _ => done())
         );
       destroy('test');
     });
 
     it('cancel opening', done => {
       event
-        .once(['test', IDBEventName.disconnect], _ => done());
+        .once(['test', IDBEventType.disconnect], _ => done());
       open('test', config);
       close('test');
     });
@@ -70,7 +70,7 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
       listen('test')
         (db => {
           event
-            .once(['test', IDBEventName.disconnect], _ => done());
+            .once(['test', IDBEventType.disconnect], _ => done());
           close('test');
         });
     });
@@ -81,19 +81,19 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
       listen('test')
         (db => {
           event
-            .once(['test', IDBEventName.disconnect], _ => done());
+            .once(['test', IDBEventType.disconnect], _ => done());
           close('test');
         });
     });
 
     it('reopen after closing', done => {
       event
-        .once(['test', IDBEventName.disconnect], _ => {
+        .once(['test', IDBEventType.disconnect], _ => {
           open('test', config);
           listen('test')
             (db => {
               event
-                .once(['test', IDBEventName.disconnect], _ => done());
+                .once(['test', IDBEventType.disconnect], _ => done());
               close('test');
             });
         });
@@ -102,12 +102,12 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
 
     it('reopen after destroying', done => {
       event
-        .once(['test', IDBEventName.disconnect], _ => {
+        .once(['test', IDBEventType.disconnect], _ => {
           open('test', config);
           listen('test')
             (db => {
               event
-                .once(['test', IDBEventName.disconnect], _ => done());
+                .once(['test', IDBEventType.disconnect], _ => done());
               close('test');
             });
         });
@@ -137,7 +137,7 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
           db.transaction('test', IDBTransaction.readwrite).objectStore('test').count().onsuccess = _ => {
             assert(++cnt === 3);
             event
-              .once(['test', IDBEventName.disconnect], _ => done());
+              .once(['test', IDBEventType.disconnect], _ => done());
             close('test');
           };
         });

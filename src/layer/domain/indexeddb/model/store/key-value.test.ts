@@ -1,6 +1,6 @@
 import {AbstractKeyValueStore} from './key-value';
 import {IDBKey, IDBValue} from '../types';
-import {open, listen, destroy, event, Config, IDBEventName} from '../../../../infrastructure/indexeddb/api';
+import {open, listen, destroy, event, Config, IDBEventType} from '../../../../infrastructure/indexeddb/api';
 
 describe('Unit: layers/domain/indexeddb/model/store/key-value', function () {
   this.timeout(5 * 1e3);
@@ -30,18 +30,18 @@ describe('Unit: layers/domain/indexeddb/model/store/key-value', function () {
 
     before(done => {
       event
-        .once(['test', IDBEventName.destroy], _ =>
+        .once(['test', IDBEventType.destroy], _ =>
           event
-            .once(['test', IDBEventName.disconnect], _ => done())
+            .once(['test', IDBEventType.disconnect], _ => done())
         );
       destroy('test');
     });
 
     afterEach(done => {
       event
-        .once(['test', IDBEventName.destroy], _ =>
+        .once(['test', IDBEventType.destroy], _ =>
           event
-            .once(['test', IDBEventName.disconnect], _ => done())
+            .once(['test', IDBEventType.disconnect], _ => done())
         );
       destroy('test');
     });

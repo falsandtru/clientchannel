@@ -1,7 +1,7 @@
 import {LocalSocket, LocalSocketObject, LocalPort, LocalPortObject, LocalPortEvent, LocalPortEventType} from 'localsocket';
 import {Observable, IObservableObserver, Set, Map, concat} from 'arch-stream';
 import {build, SCHEMA, isValidPropertyName, isValidPropertyValue} from '../../dao/api';
-import {SocketStore, SocketRecord, SocketValue, ESEventTypes} from '../model/schema/socket';
+import {SocketStore, SocketRecord, SocketValue, ESEventType} from '../model/schema/socket';
 import {localStorage} from '../../../infrastructure/webstorage/api';
 import {repository as port, PortEvent, PortEventTypes} from '../../webstorage/repository/port';
 import {KeyString} from '../model/types';
@@ -67,7 +67,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
         const source: T & LocalSocketObject = this.sources.get(key);
         if (!source) return;
         switch (type) {
-          case ESEventTypes.put: {
+          case ESEventType.put: {
             const oldVal = source[attr];
             const newVal = this.get(key)[attr];
             source[attr] = newVal;
@@ -75,7 +75,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
               .emit([PortEventTypes.recv, attr], new PortEvent(PortEventTypes.recv, key, attr, newVal, oldVal));
             return;
           }
-          case ESEventTypes.delete: {
+          case ESEventType.delete: {
             const cache = this.get(key);
             void Object.keys(cache)
               .filter(isValidPropertyName)
@@ -90,7 +90,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
               }, void 0);
             return;
           }
-          case ESEventTypes.snapshot: {
+          case ESEventType.snapshot: {
             const cache = this.get(key);
             void Object.keys(cache)
               .filter(isValidPropertyName)

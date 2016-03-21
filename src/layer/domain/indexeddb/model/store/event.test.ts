@@ -1,5 +1,5 @@
-import {compose, AbstractEventStore, UnsavedEventRecord, EventValue, SavedEventRecord, EventTypes, ESEventTypes} from './event';
-import {open, listen, destroy, event, Config, Access, IDBEventName} from '../../../../infrastructure/indexeddb/api';
+import {compose, AbstractEventStore, UnsavedEventRecord, EventValue, SavedEventRecord, EventTypes, ESEventType} from './event';
+import {open, listen, destroy, event, Config, Access, IDBEventType} from '../../../../infrastructure/indexeddb/api';
 import {KeyString} from '../types';
 
 describe('Unit: layers/domain/indexeddb/model/store/event', function () {
@@ -25,27 +25,27 @@ describe('Unit: layers/domain/indexeddb/model/store/event', function () {
 
     before(done => {
       event
-        .once(['test', IDBEventName.destroy], _ =>
+        .once(['test', IDBEventType.destroy], _ =>
           event
-            .once(['test', IDBEventName.disconnect], _ => done())
+            .once(['test', IDBEventType.disconnect], _ => done())
         );
       destroy('test');
     });
 
     afterEach(done => {
       event
-        .once(['test', IDBEventName.destroy], _ =>
+        .once(['test', IDBEventType.destroy], _ =>
           event
-            .once(['test', IDBEventName.disconnect], _ => done())
+            .once(['test', IDBEventType.disconnect], _ => done())
         );
       destroy('test');
     });
 
     describe('ESEventType', () => {
       it('compare', () => {
-        assert(EventTypes[EventTypes.put] === ESEventTypes.put);
-        assert(EventTypes[EventTypes.snapshot] === ESEventTypes.snapshot);
-        assert(EventTypes[EventTypes.delete] === ESEventTypes.delete);
+        assert(EventTypes[EventTypes.put] === ESEventType.put);
+        assert(EventTypes[EventTypes.snapshot] === ESEventType.snapshot);
+        assert(EventTypes[EventTypes.delete] === ESEventType.delete);
       });
 
     });
