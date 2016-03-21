@@ -1,4 +1,4 @@
-/*! localsocket v0.0.6 https://github.com/falsandtru/localsocket | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
+/*! localsocket v0.0.7 https://github.com/falsandtru/localsocket | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
 define = typeof define === 'function' && define.amd
   ? define
   : (function () {
@@ -165,35 +165,141 @@ define('src/layer/infrastructure/indexeddb/model/access', [
     var IDBEventObserver = new arch_stream_3.Observable();
     exports.event = IDBEventObserver;
     exports.ConfigMap = new arch_stream_3.Map();
-    var StateTypes;
-    (function (StateTypes) {
-        StateTypes[StateTypes['open'] = 0] = 'open';
-        StateTypes[StateTypes['close'] = 1] = 'close';
-        StateTypes[StateTypes['destroy'] = 2] = 'destroy';
-    }(StateTypes || (StateTypes = {})));
+    var CommandMap = new arch_stream_3.Map();
+    var CommandTypes;
+    (function (CommandTypes) {
+        CommandTypes[CommandTypes['open'] = 0] = 'open';
+        CommandTypes[CommandTypes['close'] = 1] = 'close';
+        CommandTypes[CommandTypes['destroy'] = 2] = 'destroy';
+    }(CommandTypes || (CommandTypes = {})));
     var StateMap = new arch_stream_3.Map();
+    var States;
+    (function (States) {
+        var State = function () {
+            function State() {
+            }
+            return State;
+        }();
+        var Initial = function (_super) {
+            __extends(Initial, _super);
+            function Initial(database) {
+                _super.call(this);
+                this.database = database;
+                void StateMap.set(database, this);
+            }
+            return Initial;
+        }(State);
+        States.Initial = Initial;
+        var Block = function (_super) {
+            __extends(Block, _super);
+            function Block(database) {
+                _super.call(this);
+                this.database = database;
+                void StateMap.set(database, this);
+            }
+            return Block;
+        }(State);
+        States.Block = Block;
+        var Upgrade = function (_super) {
+            __extends(Upgrade, _super);
+            function Upgrade(database, session) {
+                _super.call(this);
+                this.database = database;
+                this.session = session;
+                void StateMap.set(database, this);
+            }
+            return Upgrade;
+        }(State);
+        States.Upgrade = Upgrade;
+        var Success = function (_super) {
+            __extends(Success, _super);
+            function Success(database, connection) {
+                _super.call(this);
+                this.database = database;
+                this.connection = connection;
+                void StateMap.set(database, this);
+            }
+            return Success;
+        }(State);
+        States.Success = Success;
+        var Error = function (_super) {
+            __extends(Error, _super);
+            function Error(database, error, event) {
+                _super.call(this);
+                this.database = database;
+                this.error = error;
+                this.event = event;
+                void StateMap.set(database, this);
+            }
+            return Error;
+        }(State);
+        States.Error = Error;
+        var Abort = function (_super) {
+            __extends(Abort, _super);
+            function Abort(database, error, event) {
+                _super.call(this);
+                this.database = database;
+                this.error = error;
+                this.event = event;
+                void StateMap.set(database, this);
+            }
+            return Abort;
+        }(State);
+        States.Abort = Abort;
+        var Crash = function (_super) {
+            __extends(Crash, _super);
+            function Crash(database, error) {
+                _super.call(this);
+                this.database = database;
+                this.error = error;
+                void StateMap.set(database, this);
+            }
+            return Crash;
+        }(State);
+        States.Crash = Crash;
+        var Destroy = function (_super) {
+            __extends(Destroy, _super);
+            function Destroy(database) {
+                _super.call(this);
+                this.database = database;
+                void StateMap.set(database, this);
+            }
+            return Destroy;
+        }(State);
+        States.Destroy = Destroy;
+        var End = function (_super) {
+            __extends(End, _super);
+            function End(database) {
+                _super.call(this);
+                this.database = database;
+                void StateMap.set(database, this);
+            }
+            return End;
+        }(State);
+        States.End = End;
+    }(States || (States = {})));
     var RequestQueueSet = new arch_stream_3.Set();
-    var ConnectionStateSet = new arch_stream_3.Set();
-    var ConnectionHandleSet = new arch_stream_3.Set();
     function open(name, config) {
-        void StateMap.set(name, 0);
+        void CommandMap.set(name, 0);
         void exports.ConfigMap.set(name, config);
-        if (ConnectionStateSet.has(name))
+        if (StateMap.has(name))
             return;
-        void ConnectionStateSet.add(name, void 0);
-        void handleFromInitialState(name);
+        void handleFromInitialState(new States.Initial(name));
     }
     exports.open = open;
     function listen(name) {
         return function (req) {
             var queue = RequestQueueSet.get(name) || RequestQueueSet.add(name, []);
             void queue.push(req);
-            void drain(name);
+            var state = StateMap.get(name);
+            if (state instanceof States.Success) {
+                void drain(state.database, state.connection);
+            }
         };
     }
     exports.listen = listen;
     function close(name) {
-        void StateMap.set(name, 1);
+        void CommandMap.set(name, 1);
         void exports.ConfigMap.set(name, {
             make: function () {
                 return false;
@@ -205,16 +311,15 @@ define('src/layer/infrastructure/indexeddb/model/access', [
                 return false;
             }
         });
-        if (ConnectionHandleSet.has(name))
-            return ConnectionHandleSet.get(name).end();
-        if (ConnectionStateSet.has(name))
+        if (StateMap.get(name) instanceof States.Success)
+            return StateMap.get(name).connection.end();
+        if (StateMap.has(name))
             return;
-        void ConnectionStateSet.add(name, void 0);
-        void handleFromInitialState(name);
+        void handleFromInitialState(new States.Initial(name));
     }
     exports.close = close;
     function destroy(name) {
-        void StateMap.set(name, 2);
+        void CommandMap.set(name, 2);
         void exports.ConfigMap.set(name, {
             make: function () {
                 return false;
@@ -226,213 +331,210 @@ define('src/layer/infrastructure/indexeddb/model/access', [
                 return true;
             }
         });
-        if (ConnectionHandleSet.has(name))
-            return ConnectionHandleSet.get(name).destroy();
-        if (ConnectionStateSet.has(name))
+        if (StateMap.get(name) instanceof States.Success)
+            return StateMap.get(name).connection.destroy();
+        if (StateMap.has(name))
             return;
-        void ConnectionStateSet.add(name, void 0);
-        void handleFromInitialState(name);
+        void handleFromInitialState(new States.Initial(name));
     }
     exports.destroy = destroy;
-    function drain(name) {
+    function drain(name, connection) {
         if (!api_1.supportWebStorage)
             return void RequestQueueSet.delete(name);
-        if (!ConnectionHandleSet.has(name) || !exports.ConfigMap.has(name))
+        if (CommandMap.get(name) !== 0)
             return;
-        var db = ConnectionHandleSet.get(name);
+        if (!StateMap.has(name))
+            return void open(name, exports.ConfigMap.get(name));
         var reqs = RequestQueueSet.get(name) || [];
         try {
-            while (db && reqs.length > 0 && StateMap.get(name) === 0) {
-                void reqs[0](db);
+            while (reqs.length > 0 && CommandMap.get(name) === 0) {
+                void reqs[0](connection);
                 void reqs.shift();
             }
         } catch (err) {
-            if (err instanceof Error) {
-                void console.error(err, err + '', err.stack);
-            } else {
-                void console.error(err);
-            }
-            void handleFromCrashState(name, err);
+            void console.error(err);
+            void handleFromCrashState(new States.Crash(name, err));
         }
     }
-    function handleFromInitialState(name, version) {
+    function handleFromInitialState(_a, version) {
+        var database = _a.database;
         if (version === void 0) {
             version = 0;
         }
-        var config = exports.ConfigMap.get(name);
+        var config = exports.ConfigMap.get(database);
         try {
-            var openRequest_1 = version ? global_3.indexedDB.open(name, version) : global_3.indexedDB.open(name);
+            var openRequest_1 = version ? global_3.indexedDB.open(database, version) : global_3.indexedDB.open(database);
             openRequest_1.onupgradeneeded = function (event) {
-                return void handleFromUpgradeState(name, openRequest_1);
+                return void handleFromUpgradeState(new States.Upgrade(database, openRequest_1));
             };
             openRequest_1.onsuccess = function (_) {
-                return void handleFromSuccessState(name, openRequest_1.result);
+                return void handleFromSuccessState(new States.Success(database, openRequest_1.result));
             };
             openRequest_1.onblocked = function (_) {
-                return void handleFromBlockedState(name, openRequest_1);
+                return void handleFromBlockedState(new States.Block(database));
             };
             openRequest_1.onerror = function (event) {
-                return void handleFromErrorState(name, openRequest_1.error, event);
+                return void handleFromErrorState(new States.Error(database, openRequest_1.error, event));
             };
         } catch (err) {
-            void handleFromCrashState(name, err);
+            void handleFromCrashState(new States.Crash(database, err));
         }
     }
-    function handleFromBlockedState(name, openRequest) {
+    function handleFromBlockedState(_a) {
+        var database = _a.database;
         void IDBEventObserver.emit([
-            name,
+            database,
             event_2.IDBEvenTypes[event_2.IDBEvenTypes.block]
-        ], new event_2.IDBEvent(event_2.IDBEvenTypes.block, name));
+        ], new event_2.IDBEvent(event_2.IDBEvenTypes.block, database));
     }
-    function handleFromUpgradeState(name, openRequest) {
-        var db = openRequest.result;
-        var _a = exports.ConfigMap.get(name), make = _a.make, destroy = _a.destroy;
+    function handleFromUpgradeState(_a) {
+        var database = _a.database, session = _a.session;
+        var db = session.transaction.db;
+        var _b = exports.ConfigMap.get(database), make = _b.make, destroy = _b.destroy;
         try {
             if (make(db)) {
-                openRequest.onsuccess = function (_) {
-                    return void handleFromSuccessState(name, db);
+                session.onsuccess = function (_) {
+                    return void handleFromSuccessState(new States.Success(database, db));
                 };
-                openRequest.onerror = function (event) {
-                    return void handleFromErrorState(name, openRequest.error, event);
+                session.onerror = function (event) {
+                    return void handleFromErrorState(new States.Error(database, session.error, event));
                 };
             } else {
-                openRequest.onsuccess = openRequest.onerror = function (event) {
+                session.onsuccess = session.onerror = function (event) {
                     void db.close();
-                    destroy(openRequest.error, event) ? void handleFromDestroyState(name) : void handleFromEndState(name);
+                    destroy(session.error, event) ? void handleFromDestroyState(new States.Destroy(database)) : void handleFromEndState(new States.End(database));
                 };
             }
         } catch (err) {
-            void handleFromCrashState(name, err);
+            void handleFromCrashState(new States.Crash(database, err));
         }
     }
-    function handleFromSuccessState(name, db) {
-        db.onversionchange = function (_) {
-            return void db.close();
+    function handleFromSuccessState(_a) {
+        var database = _a.database, connection = _a.connection;
+        connection.end = function () {
+            void connection.close();
+            void handleFromEndState(new States.End(database));
         };
-        db.end = function () {
-            void ConnectionHandleSet.delete(name);
-            void db.close();
-            void handleFromEndState(name);
+        connection.destroy = function () {
+            void connection.close();
+            void handleFromDestroyState(new States.Destroy(database));
         };
-        db.destroy = function () {
-            void ConnectionHandleSet.delete(name);
-            void db.close();
-            void handleFromDestroyState(name);
+        connection.onversionchange = function () {
+            void connection.close();
+            void handleFromEndState(new States.End(database));
         };
-        db.onerror = function (event) {
-            void ConnectionHandleSet.delete(name);
-            void handleFromErrorState(name, event.target.error, event);
+        connection.onerror = function (event) {
+            void handleFromErrorState(new States.Error(database, event.target.error, event));
         };
-        db.onabort = function (event) {
-            void ConnectionHandleSet.delete(name);
-            void handleFromAbortState(name, event.target.error, event);
+        connection.onabort = function (event) {
+            void handleFromAbortState(new States.Abort(database, event.target.error, event));
         };
-        switch (StateMap.get(name)) {
+        switch (CommandMap.get(database)) {
         case 0: {
-                var verify = exports.ConfigMap.get(name).verify;
+                var verify = exports.ConfigMap.get(database).verify;
                 try {
-                    if (!verify(db))
-                        return void handleFromEndState(name, +db.version + 1);
+                    if (!verify(connection))
+                        return void handleFromEndState(new States.End(database), connection.version + 1);
                 } catch (err) {
-                    return void handleFromCrashState(name, err);
+                    return void handleFromCrashState(new States.Crash(database, err));
                 }
                 void IDBEventObserver.emit([
-                    name,
+                    database,
                     event_2.IDBEvenTypes[event_2.IDBEvenTypes.connect]
-                ], new event_2.IDBEvent(event_2.IDBEvenTypes.connect, name));
-                void ConnectionHandleSet.add(name, db);
-                return void drain(name);
+                ], new event_2.IDBEvent(event_2.IDBEvenTypes.connect, database));
+                return void drain(database, connection);
             }
         case 1: {
-                return void db.end();
+                return void connection.end();
             }
         case 2: {
-                return void db.destroy();
+                return void connection.destroy();
             }
         }
-        throw new TypeError('LocalSocket: Invalid command ' + StateMap.get(name) + '.');
+        throw new TypeError('LocalSocket: Invalid command ' + CommandMap.get(database) + '.');
     }
-    function handleFromErrorState(name, error, event) {
+    function handleFromErrorState(_a) {
+        var database = _a.database, error = _a.error, event = _a.event;
         void event.preventDefault();
-        void ConnectionHandleSet.delete(name);
         void IDBEventObserver.emit([
-            name,
+            database,
             event_2.IDBEvenTypes[event_2.IDBEvenTypes.error]
-        ], new event_2.IDBEvent(event_2.IDBEvenTypes.error, name));
-        var destroy = exports.ConfigMap.get(name).destroy;
+        ], new event_2.IDBEvent(event_2.IDBEvenTypes.error, database));
+        var destroy = exports.ConfigMap.get(database).destroy;
         if (destroy(error, event)) {
-            return void handleFromDestroyState(name);
+            return void handleFromDestroyState(new States.Destroy(database));
         } else {
-            return void handleFromEndState(name);
+            return void handleFromEndState(new States.End(database));
         }
     }
-    function handleFromAbortState(name, error, event) {
+    function handleFromAbortState(_a) {
+        var database = _a.database, error = _a.error, event = _a.event;
         void event.preventDefault();
-        void ConnectionHandleSet.delete(name);
         void IDBEventObserver.emit([
-            name,
+            database,
             event_2.IDBEvenTypes[event_2.IDBEvenTypes.abort]
-        ], new event_2.IDBEvent(event_2.IDBEvenTypes.abort, name));
-        var destroy = exports.ConfigMap.get(name).destroy;
+        ], new event_2.IDBEvent(event_2.IDBEvenTypes.abort, database));
+        var destroy = exports.ConfigMap.get(database).destroy;
         if (destroy(error, event)) {
-            return void handleFromDestroyState(name);
+            return void handleFromDestroyState(new States.Destroy(database));
         } else {
-            return void handleFromEndState(name);
+            return void handleFromEndState(new States.End(database));
         }
     }
-    function handleFromCrashState(name, error) {
-        void ConnectionHandleSet.delete(name);
+    function handleFromCrashState(_a) {
+        var database = _a.database, error = _a.error;
         void IDBEventObserver.emit([
-            name,
+            database,
             event_2.IDBEvenTypes[event_2.IDBEvenTypes.crash]
-        ], new event_2.IDBEvent(event_2.IDBEvenTypes.crash, name));
-        var destroy = exports.ConfigMap.get(name).destroy;
+        ], new event_2.IDBEvent(event_2.IDBEvenTypes.crash, database));
+        var destroy = exports.ConfigMap.get(database).destroy;
         if (destroy(error, null)) {
-            return void handleFromDestroyState(name);
+            return void handleFromDestroyState(new States.Destroy(database));
         } else {
-            return void handleFromEndState(name);
+            return void handleFromEndState(new States.End(database));
         }
     }
-    function handleFromDestroyState(name) {
-        void ConnectionHandleSet.delete(name);
-        var deleteRequest = global_3.indexedDB.deleteDatabase(name);
+    function handleFromDestroyState(_a) {
+        var database = _a.database;
+        var deleteRequest = global_3.indexedDB.deleteDatabase(database);
         deleteRequest.onsuccess = function (_) {
-            void RequestQueueSet.delete(name);
+            void RequestQueueSet.delete(database);
             void IDBEventObserver.emit([
-                name,
+                database,
                 event_2.IDBEvenTypes[event_2.IDBEvenTypes.destroy]
-            ], new event_2.IDBEvent(event_2.IDBEvenTypes.destroy, name));
-            return void handleFromEndState(name);
+            ], new event_2.IDBEvent(event_2.IDBEvenTypes.destroy, database));
+            void handleFromEndState(new States.End(database));
         };
         deleteRequest.onerror = function (event) {
-            void handleFromErrorState(name, deleteRequest.error, event);
+            void handleFromErrorState(new States.Error(database, deleteRequest.error, event));
         };
     }
-    function handleFromEndState(name, version) {
+    function handleFromEndState(_a, version) {
+        var database = _a.database;
         if (version === void 0) {
             version = 0;
         }
-        void ConnectionHandleSet.delete(name);
-        void IDBEventObserver.emit([
-            name,
-            event_2.IDBEvenTypes[event_2.IDBEvenTypes.disconnect]
-        ], new event_2.IDBEvent(event_2.IDBEvenTypes.disconnect, name));
-        switch (StateMap.get(name)) {
+        void StateMap.delete(database);
+        switch (CommandMap.get(database)) {
         case 0: {
-                return void handleFromInitialState(name, version);
+                return void handleFromInitialState(new States.Initial(database), version);
             }
         case 1: {
-                void exports.ConfigMap.delete(name);
-                void ConnectionStateSet.delete(name);
-                return void 0;
+                void exports.ConfigMap.delete(database);
+                return void IDBEventObserver.emit([
+                    database,
+                    event_2.IDBEvenTypes[event_2.IDBEvenTypes.disconnect]
+                ], new event_2.IDBEvent(event_2.IDBEvenTypes.disconnect, database));
             }
         case 2: {
-                void exports.ConfigMap.delete(name);
-                void ConnectionStateSet.delete(name);
-                return void 0;
+                void exports.ConfigMap.delete(database);
+                return void IDBEventObserver.emit([
+                    database,
+                    event_2.IDBEvenTypes[event_2.IDBEvenTypes.disconnect]
+                ], new event_2.IDBEvent(event_2.IDBEvenTypes.disconnect, database));
             }
         }
-        throw new TypeError('LocalSocket: Invalid command ' + StateMap.get(name) + '.');
+        throw new TypeError('LocalSocket: Invalid command ' + CommandMap.get(database) + '.');
     }
 });
 define('src/layer/infrastructure/indexeddb/api', [
