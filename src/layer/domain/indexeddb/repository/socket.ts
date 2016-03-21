@@ -3,7 +3,7 @@ import {Observable, IObservableObserver, Set, Map, concat} from 'arch-stream';
 import {build, SCHEMA, isValidPropertyName, isValidPropertyValue} from '../../dao/api';
 import {SocketStore, SocketRecord, SocketValue, ESEventTypes} from '../model/schema/socket';
 import {localStorage} from '../../../infrastructure/webstorage/api';
-import {repository as portRepository, PortEvent, PortEventTypes} from '../../webstorage/repository/port';
+import {repository as port, PortEvent, PortEventTypes} from '../../webstorage/repository/port';
 import {KeyString} from '../model/types';
 import {assign} from '../../lib/assign';
 
@@ -109,7 +109,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
       });
     void Object.freeze(this);
   }
-  private proxy = portRepository(this.name, localStorage, () => new Port());
+  private proxy = port(this.name, localStorage, () => new Port());
   private port = this.proxy.link();
   private links = new Set<string, T>();
   private sources = new Set<string, T>();
