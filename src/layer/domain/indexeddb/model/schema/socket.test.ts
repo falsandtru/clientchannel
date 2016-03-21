@@ -95,7 +95,7 @@ describe('Unit: layers/domain/indexeddb/model/schema/socket', function () {
     });
 
     it('expiry', done => {
-      const socket = new SocketStore<CustomSocketValue>('test', _ => false, 500);
+      const socket = new SocketStore<CustomSocketValue>('test', _ => false, 700);
 
       socket.expire('a');
       socket.add(new SocketRecord(KeyString('a'), new CustomSocketValue(0)));
@@ -104,7 +104,7 @@ describe('Unit: layers/domain/indexeddb/model/schema/socket', function () {
         assert.deepEqual(keys, ['a']);
         assert(socket.has('a') === true);
         setTimeout(() => {
-          socket.expire('b', 500);
+          socket.expire('b', 300);
           socket.add(new SocketRecord(KeyString('b'), new CustomSocketValue(0)));
           socket.recent(Infinity, keys => {
             assert.deepEqual(keys, ['b']);
@@ -119,7 +119,7 @@ describe('Unit: layers/domain/indexeddb/model/schema/socket', function () {
               });
             }, 500);
           });
-        }, 500);
+        }, 900);
       });
 
     });
