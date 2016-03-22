@@ -1,6 +1,6 @@
 import {LocalSocketObjectMetaData} from 'localsocket';
-import {IObservableObserver, Set, Map} from 'arch-stream';
-import {open, listen, destroy, Config, Access, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../../../infrastructure/indexeddb/api';
+import {Observable, Set, Map, uuid} from 'arch-stream';
+import {open, destroy, event, IDBEventType, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../../../infrastructure/indexeddb/api';
 import {IdNumber, KeyString} from '../types';
 import {UnsavedEventRecord, SavedEventRecord, ESEvent, ESEventType} from '../store/event';
 import {DataStore, DataValue as SocketValue} from './socket/data';
@@ -16,11 +16,11 @@ export {
 
 export class SocketStore<T extends SocketValue> {
   constructor(
-    public name: string,
+    public database: string,
     destroy: (err: DOMError, event: Event) => boolean,
     public expiry = Infinity
   ) {
-    void open(name, {
+    void open(database, {
       make(db) {
         return DataStore.configure().make(db)
             && AccessStore.configure().make(db)
@@ -38,14 +38,15 @@ export class SocketStore<T extends SocketValue> {
             && destroy(err, ev);
       }
     });
-    this.schema = new Schema<T>(listen(name), this.expiries);
-    this.events = this.schema.data.events;
+    this.schema = new Schema<T>(this, this.expiries);
+    void event.on([database, IDBEventType.destroy, this.uuid], () => void this.schema.bind());
   }
+  private uuid = uuid();
   protected schema: Schema<T>;
-  public events: {
-    load: IObservableObserver<[string] | [string, string] | [string, string, string], ESEvent, void>,
-    save: IObservableObserver<[string] | [string, string] | [string, string, string], ESEvent, void>,
-    loss: IObservableObserver<[string] | [string, string] | [string, string, string], ESEvent, void>
+  public events = {
+    load: new Observable<[string] | [string, string] | [string, string, string], ESEvent, void>(),
+    save: new Observable<[string] | [string, string] | [string, string, string], ESEvent, void>(),
+    loss: new Observable<[string] | [string, string] | [string, string, string], ESEvent, void>()
   };
   public sync(keys: KeyString[], cb: (errs?: DOMError[]) => any = noop): void {
     return this.schema.data.sync(keys, cb);
@@ -87,19 +88,28 @@ export class SocketStore<T extends SocketValue> {
     );
   }
   public destroy(): void {
-    return destroy(this.name);
+    void event.off([this.database, IDBEventType.destroy, this.uuid]);
+    return destroy(this.database);
   }
 }
 
 class Schema<T extends SocketValue> {
   constructor(
-    access: Access,
-    expiries: Map<string, number>
+    private store_: SocketStore<T>,
+    private expiries_: Map<string, number>
   ) {
-    this.data = new DataStore<KeyString, T>(access);
-    this.access = new AccessStore(access, this.data.events.access);
-    this.expire = new ExpiryStore(access, this.data, expiries);
-    void Object.freeze(this);
+    void this.bind();
+  }
+  public bind(): void {
+    const keys = this.data ? this.data.keys() : [];
+    this.data = new DataStore<KeyString, T>(this.store_.database);
+    this.data.events.load.monitor(<any>[], ev => this.store_.events.load.emit([ev.key, ev.attr, ev.type], ev));
+    this.data.events.save.monitor(<any>[], ev => this.store_.events.save.emit([ev.key, ev.attr, ev.type], ev));
+    this.data.events.loss.monitor(<any>[], ev => this.store_.events.loss.emit([ev.key, ev.attr, ev.type], ev));
+    this.access = new AccessStore(this.store_.database, this.data.events.access);
+    this.expire = new ExpiryStore(this.store_.database, this.store_, this.data, this.expiries_);
+
+    void this.data.sync(keys);
   }
   public data: DataStore<KeyString, T>;
   public access: AccessStore;

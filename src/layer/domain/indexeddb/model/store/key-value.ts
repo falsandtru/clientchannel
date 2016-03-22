@@ -1,5 +1,5 @@
 import {Observable, Map} from 'arch-stream';
-import {open, Config, Access, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../../../infrastructure/indexeddb/api';
+import {listen, Config, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../../../infrastructure/indexeddb/api';
 import {IDBValue} from '../types';
 import {noop} from '../../../../../lib/noop';
 
@@ -24,8 +24,8 @@ export abstract class AbstractKeyValueStore<K extends string, V extends IDBValue
     };
   }
   constructor(
-    protected access: Access,
-    public name: string,
+    protected database: string,
+    protected name: string,
     protected index: string
   ) {
     if (typeof index !== 'string') throw new TypeError();
@@ -36,7 +36,7 @@ export abstract class AbstractKeyValueStore<K extends string, V extends IDBValue
   };
   public get(key: K, cb: (value: V, error: DOMError) => any = noop): V {
     void this.events.access.emit([key], [[key], EventTypes.get]);
-    void this.access(db => {
+    void listen(this.database)(db => {
       const tx = db.transaction(this.name, IDBTransaction.readonly);
       const req = this.index
         ? tx
@@ -62,7 +62,7 @@ export abstract class AbstractKeyValueStore<K extends string, V extends IDBValue
   protected put(value: V, key: K, cb: (key: K, error: DOMError) => any = noop): V {
     void this.cache.set(key, value);
     void this.events.access.emit([key], [[key], EventTypes.put]);
-    void this.access(db => {
+    void listen(this.database)(db => {
       if (!this.cache.has(key)) return;
       const tx = db.transaction(this.name, IDBTransaction.readwrite);
       const req = this.index
@@ -79,7 +79,7 @@ export abstract class AbstractKeyValueStore<K extends string, V extends IDBValue
   public delete(key: K, cb: (error: DOMError) => any = noop): void {
     void this.cache.delete(key);
     void this.events.access.emit([key], [[key], EventTypes.delete]);
-    void this.access(db => {
+    void listen(this.database)(db => {
       const tx = db.transaction(this.name, IDBTransaction.readwrite);
       const req = tx
         .objectStore(this.name)
@@ -88,7 +88,7 @@ export abstract class AbstractKeyValueStore<K extends string, V extends IDBValue
     });
   }
   public cursor(query: any, index: string, direction: string, mode: string, cb: (cursor: IDBCursorWithValue, error: DOMError) => any): void {
-    void this.access(db => {
+    void listen(this.database)(db => {
       const tx = db
         .transaction(this.name, mode);
       const req = index

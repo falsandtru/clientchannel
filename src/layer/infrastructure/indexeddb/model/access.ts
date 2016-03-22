@@ -1,4 +1,4 @@
-import {Observable, IObservableObserver, Set, Map, Timer} from 'arch-stream';
+import {Observable, IObservableObserver, Set, Map} from 'arch-stream';
 import {indexedDB} from '../module/global';
 import {IDBEvent, IDBEventType} from './event';
 import {supportWebStorage as status} from '../../webstorage/api';
@@ -20,88 +20,88 @@ const enum CommandType {
   destroy
 }
 
-const StateSet = new Set<string, States.type>((o, n) => {
+const StateSet = new Set<string, State.Type>((o, n) => {
   switch (o.constructor) {
-    case States.Initial:
+    case State.Initial:
       switch (n.constructor) {
-        case States.Block:
-        case States.Upgrade:
-        case States.Success:
-        case States.Error:
-        case States.Abort:
-        case States.Crash:
+        case State.Block:
+        case State.Upgrade:
+        case State.Success:
+        case State.Error:
+        case State.Abort:
+        case State.Crash:
           return n;
       }
       break;
-    case States.Block:
+    case State.Block:
       switch (n.constructor) {
-        case States.Upgrade:
-        case States.Success:
-        case States.Error:
-        case States.Abort:
+        case State.Upgrade:
+        case State.Success:
+        case State.Error:
+        case State.Abort:
           return n;
       }
       break;
-    case States.Upgrade:
+    case State.Upgrade:
       switch (n.constructor) {
-        case States.Success:
-        case States.Error:
-        case States.Abort:
-        case States.Crash:
-        case States.Destroy:
-        case States.End:
+        case State.Success:
+        case State.Error:
+        case State.Abort:
+        case State.Crash:
+        case State.Destroy:
+        case State.End:
           return n;
       }
       break;
-    case States.Success:
+    case State.Success:
       switch (n.constructor) {
-        case States.Error:
-        case States.Abort:
-        case States.Crash:
-        case States.Destroy:
-        case States.End:
+        case State.Error:
+        case State.Abort:
+        case State.Crash:
+        case State.Destroy:
+        case State.End:
           return n;
       }
       break;
-    case States.Error:
+    case State.Error:
       switch (n.constructor) {
-        case States.Destroy:
-        case States.End:
+        case State.Destroy:
+        case State.End:
           return n;
       }
       break;
-    case States.Abort:
+    case State.Abort:
       switch (n.constructor) {
-        case States.Destroy:
-        case States.End:
+        case State.Destroy:
+        case State.End:
           return n;
       }
       break;
-    case States.Crash:
+    case State.Crash:
       switch (n.constructor) {
-        case States.Destroy:
-        case States.End:
+        case State.Destroy:
+        case State.End:
           return n;
       }
       break;
-    case States.Destroy:
+    case State.Destroy:
       switch (n.constructor) {
-        case States.Error:
-        case States.End:
+        case State.Error:
+        case State.End:
           return n;
       }
       break;
-    case States.End:
+    case State.End:
       switch (n.constructor) {
-        case States.Initial:
+        case State.Initial:
           return n;
       }
       break;
   }
   throw new Error(`LocalSocket: Invalid mutation: ${o.constructor.toString().match(/\w+/g)[1]} to ${n.constructor.toString().match(/\w+/g)[1]}`);
 });
-namespace States {
-  export type type
+namespace State {
+  export type Type
     = Initial
     | Block
     | Upgrade
@@ -198,21 +198,19 @@ namespace States {
 type Request = (db: IDBDatabase) => any;
 const RequestQueueSet = new Set<string, Request[]>();
 
-export type Access = (req: Request) => any;
-
 export function open(name: string, config: Config): void {
   assert(config);
   void CommandMap.set(name, CommandType.open);
   void ConfigMap.set(name, config);
   if (StateSet.has(name)) return;
-  void handleFromInitialState(new States.Initial(name));
+  void handleFromInitialState(new State.Initial(name));
 }
-export function listen(name: string): Access {
+export function listen(name: string): (req: Request) => any {
   return (req: Request) => {
     const queue = RequestQueueSet.get(name) || RequestQueueSet.add(name, []);
     void queue.push(req);
     const state = StateSet.get(name);
-    if (state instanceof States.Success) {
+    if (state instanceof State.Success) {
       void state.drain();
     }
   };
@@ -230,9 +228,9 @@ export function close(name: string): void {
       return false;
     }
   });
-  if (StateSet.get(name) instanceof States.Success) return (<States.Success>StateSet.get(name)).end();
+  if (StateSet.get(name) instanceof State.Success) return (<State.Success>StateSet.get(name)).end();
   if (StateSet.has(name)) return;
-  void handleFromInitialState(new States.Initial(name));
+  void handleFromInitialState(new State.Initial(name));
 }
 export function destroy(name: string): void {
   void CommandMap.set(name, CommandType.destroy);
@@ -247,12 +245,12 @@ export function destroy(name: string): void {
       return true;
     }
   });
-  if (StateSet.get(name) instanceof States.Success) return (<States.Success>StateSet.get(name)).destroy();
+  if (StateSet.get(name) instanceof State.Success) return (<State.Success>StateSet.get(name)).destroy();
   if (StateSet.has(name)) return;
-  void handleFromInitialState(new States.Initial(name));
+  void handleFromInitialState(new State.Initial(name));
 }
 
-function handleFromInitialState({database}: States.Initial, version: number = 0): void {
+function handleFromInitialState({database}: State.Initial, version: number = 0): void {
   assert(version >= 0);
   const config = ConfigMap.get(database);
   assert(config);
@@ -267,55 +265,55 @@ function handleFromInitialState({database}: States.Initial, version: number = 0)
       openRequest.onerror = void 0;
     };
     openRequest.onblocked = _ =>
-      void handleFromBlockedState(new States.Block(database));
+      void handleFromBlockedState(new State.Block(database));
     openRequest.onupgradeneeded = event => {
       void clear();
-      void handleFromUpgradeState(new States.Upgrade(database, openRequest));
+      void handleFromUpgradeState(new State.Upgrade(database, openRequest));
     };
     openRequest.onsuccess = _ => {
       void clear();
-      void handleFromSuccessState(new States.Success(database, <IDBDatabase>openRequest.result));
+      void handleFromSuccessState(new State.Success(database, <IDBDatabase>openRequest.result));
     };
     openRequest.onerror = event => {
       void clear();
-      void handleFromErrorState(new States.Error(database, openRequest.error, event));
+      void handleFromErrorState(new State.Error(database, openRequest.error, event));
     };
   }
   catch (err) {
-    void handleFromCrashState(new States.Crash(database, err));
+    void handleFromCrashState(new State.Crash(database, err));
   }
   return;
 
-  function handleFromBlockedState({database}: States.Block): void {
+  function handleFromBlockedState({database}: State.Block): void {
     void IDBEventObserver.emit([database, IDBEventType.block], new IDBEvent(IDBEventType.block, database));
   }
 
-  function handleFromUpgradeState({database, session}: States.Upgrade): void {
+  function handleFromUpgradeState({database, session}: State.Upgrade): void {
     const db: IDBDatabase = session.transaction.db;
     assert(db);
     const {make, destroy} = ConfigMap.get(database);
     try {
       if (make(db)) {
         session.onsuccess = _ =>
-          void handleFromSuccessState(new States.Success(database, db));
+          void handleFromSuccessState(new State.Success(database, db));
         session.onerror = event =>
-          void handleFromErrorState(new States.Error(database, session.error, event));
+          void handleFromErrorState(new State.Error(database, session.error, event));
       }
       else {
         session.onsuccess = session.onerror = event => {
           void db.close();
           destroy(session.error, event)
-            ? void handleFromDestroyState(new States.Destroy(database))
-            : void handleFromEndState(new States.End(database));
+            ? void handleFromDestroyState(new State.Destroy(database))
+            : void handleFromEndState(new State.End(database));
         }
       }
     }
     catch (err) {
-      void handleFromCrashState(new States.Crash(database, err));
+      void handleFromCrashState(new State.Crash(database, err));
     }
   }
 
-  function handleFromSuccessState(state: States.Success): void {
+  function handleFromSuccessState(state: State.Success): void {
     const {database, connection} = state;
     const clear = () => {
       connection.onversionchange = () => void connection.close();
@@ -329,25 +327,26 @@ function handleFromInitialState({database}: States.Initial, version: number = 0)
         void RequestQueueSet.delete(database);
         void IDBEventObserver.emit([database, IDBEventType.destroy], new IDBEvent(IDBEventType.destroy, database));
       }
-      void handleFromEndState(new States.End(database));
+      if (StateSet.get(database) !== state) return;
+      void handleFromEndState(new State.End(database));
     };
     connection.onerror = event => {
       void clear();
-      void handleFromErrorState(new States.Error(database, (<any>event.target).error, event));
+      void handleFromErrorState(new State.Error(database, (<any>event.target).error, event));
     };
     connection.onabort = event => {
       void clear();
-      void handleFromAbortState(new States.Abort(database, (<any>event.target).error, event));
+      void handleFromAbortState(new State.Abort(database, (<any>event.target).error, event));
     };
     state.destroy = () => {
       void clear();
       void connection.close();
-      void handleFromDestroyState(new States.Destroy(database));
+      void handleFromDestroyState(new State.Destroy(database));
     };
     state.end = () => {
       void clear();
       void connection.close();
-      void handleFromEndState(new States.End(database));
+      void handleFromEndState(new State.End(database));
     };
     state.drain = () => {
       const reqs = RequestQueueSet.get(database) || [];
@@ -358,8 +357,9 @@ function handleFromInitialState({database}: States.Initial, version: number = 0)
         }
       }
       catch (err) {
-        void console.error(err);
-        void handleFromCrashState(new States.Crash(database, err));
+        void console.warn(err);
+        void clear();
+        void handleFromCrashState(new State.Crash(database, err));
       }
     };
 
@@ -368,10 +368,10 @@ function handleFromInitialState({database}: States.Initial, version: number = 0)
       case CommandType.open: {
         const {verify} = ConfigMap.get(database);
         try {
-          if (!verify(connection)) return void handleFromEndState(new States.End(database), connection.version + 1);
+          if (!verify(connection)) return void handleFromEndState(new State.End(database), connection.version + 1);
         }
         catch (err) {
-          return void handleFromCrashState(new States.Crash(database, err));
+          return void handleFromCrashState(new State.Crash(database, err));
         }
         void IDBEventObserver.emit([database, IDBEventType.connect], new IDBEvent(IDBEventType.connect, database));
         return void state.drain();
@@ -386,58 +386,58 @@ function handleFromInitialState({database}: States.Initial, version: number = 0)
     throw new TypeError(`LocalSocket: Invalid command ${CommandMap.get(database)}.`);
   }
 
-  function handleFromErrorState({database, error, event}: States.Error): void {
+  function handleFromErrorState({database, error, event}: State.Error): void {
     void event.preventDefault();
     void IDBEventObserver.emit([database, IDBEventType.error], new IDBEvent(IDBEventType.error, database));
     const {destroy} = ConfigMap.get(database);
     if (destroy(error, event)) {
-      return void handleFromDestroyState(new States.Destroy(database));
+      return void handleFromDestroyState(new State.Destroy(database));
     }
     else {
-      return void handleFromEndState(new States.End(database));
+      return void handleFromEndState(new State.End(database));
     }
   }
 
-  function handleFromAbortState({database, error, event}: States.Abort): void {
+  function handleFromAbortState({database, error, event}: State.Abort): void {
     void event.preventDefault();
     void IDBEventObserver.emit([database, IDBEventType.abort], new IDBEvent(IDBEventType.abort, database));
     const {destroy} = ConfigMap.get(database);
     if (destroy(error, event)) {
-      return void handleFromDestroyState(new States.Destroy(database));
+      return void handleFromDestroyState(new State.Destroy(database));
     }
     else {
-      return void handleFromEndState(new States.End(database));
+      return void handleFromEndState(new State.End(database));
     }
   }
 
-  function handleFromCrashState({database, error}: States.Crash): void {
+  function handleFromCrashState({database, error}: State.Crash): void {
     void IDBEventObserver.emit([database, IDBEventType.crash], new IDBEvent(IDBEventType.crash, database));
     const {destroy} = ConfigMap.get(database);
     if (destroy(error, null)) {
-      return void handleFromDestroyState(new States.Destroy(database));
+      return void handleFromDestroyState(new State.Destroy(database));
     }
     else {
-      return void handleFromEndState(new States.End(database));
+      return void handleFromEndState(new State.End(database));
     }
   }
 
-  function handleFromDestroyState({database}: States.Destroy): void {
+  function handleFromDestroyState({database}: State.Destroy): void {
     const deleteRequest = indexedDB.deleteDatabase(database);
     deleteRequest.onsuccess = _ => {
       void RequestQueueSet.delete(database);
       void IDBEventObserver.emit([database, IDBEventType.destroy], new IDBEvent(IDBEventType.destroy, database));
-      void handleFromEndState(new States.End(database));
+      void handleFromEndState(new State.End(database));
     };
     deleteRequest.onerror = event => {
-      void handleFromErrorState(new States.Error(database, deleteRequest.error, event));
+      void handleFromErrorState(new State.Error(database, deleteRequest.error, event));
     };
   }
 
-  function handleFromEndState({database}: States.End, version = 0): void {
+  function handleFromEndState({database}: State.End, version = 0): void {
     void StateSet.delete(database);
     switch (CommandMap.get(database)) {
       case CommandType.open: {
-        return void handleFromInitialState(new States.Initial(database), version);
+        return void handleFromInitialState(new State.Initial(database), version);
       }
       case CommandType.close: {
         void CommandMap.delete(database);

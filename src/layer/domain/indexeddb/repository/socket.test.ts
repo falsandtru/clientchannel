@@ -51,24 +51,6 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function () {
       done();
     });
 
-    it('reopen', done => {
-      socket('test', () => new Value(0, ''), () => true).close();
-      const sock = socket('test', () => new Value(0, ''), () => true);
-      const dao = sock.link('a');
-
-      assert(dao.n === 0);
-      dao.n = 1;
-      assert(dao === sock.link('a'));
-      assert(dao.__id === 0);
-      assert(dao.__key === 'a');
-      assert(dao.__date > 0);
-      assert(dao.n === 1);
-      assert(dao.s === '');
-
-      sock.destroy();
-      done();
-    });
-
     it('send', done => {
       const sock = socket('test', () => new Value(0, ''), () => true);
       const dao = sock.link('a');

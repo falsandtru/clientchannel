@@ -114,12 +114,9 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
       }
     }
   }
-  public close(): void {
+  public destroy(): void {
     void this.eventSource.off([this.name, this.uuid]);
     void this.cache.delete(this.name);
-  }
-  public destroy(): void {
-    void this.close();
     void this.storage.removeItem(this.name);
     void this.log.delete(this.name);
   }

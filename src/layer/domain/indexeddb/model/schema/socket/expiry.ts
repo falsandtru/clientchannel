@@ -1,5 +1,5 @@
 import {Observable, Map} from 'arch-stream';
-import {Config, Access, IDBCursorDirection, IDBTransaction} from '../../../../../infrastructure/indexeddb/api';
+import {event, IDBEventType, Config, IDBCursorDirection, IDBTransaction} from '../../../../../infrastructure/indexeddb/api';
 import {KeyString} from '../../types';
 import {AbstractKeyValueStore} from '../../store/key-value';
 import {ESEvent, ESEventType} from '../../store/event';
@@ -50,11 +50,14 @@ export class ExpiryStore extends AbstractKeyValueStore<string, ExpiryRecord> {
     };
   }
   constructor(
-    access: Access,
+    database: string,
+    store: {
+      delete(key: KeyString): void;
+    },
     data: DataStore<KeyString, any>,
     expiries: Map<string, number>
   ) {
-    super(access, STORE_NAME, STORE_FIELDS.key);
+    super(database, STORE_NAME, STORE_FIELDS.key);
     void Object.freeze(this);
 
     let timer = 0;
@@ -73,18 +76,19 @@ export class ExpiryStore extends AbstractKeyValueStore<string, ExpiryRecord> {
             void schedule(record.expiry);
           }
           else {
-            void data.delete(record.key);
+            void store.delete(record.key);
             void cursor.continue();
           }
         });
       }, date - Date.now());
+      void event.once([database, IDBEventType.destroy], () => void clearTimeout(timer));
     };
 
     void schedule(Date.now());
     void data.events.access
       .monitor(<any>[], ({key, type}) => {
         if (type === ESEventType.delete) {
-          void this.delete(key)
+          void this.delete(key);
         }
         else {
           if (!expiries.has(key)) return;

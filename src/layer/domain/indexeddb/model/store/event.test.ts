@@ -1,5 +1,5 @@
 import {compose, AbstractEventStore, UnsavedEventRecord, EventValue, SavedEventRecord, EventTypes, ESEventType} from './event';
-import {open, listen, destroy, event, Config, Access, IDBEventType} from '../../../../infrastructure/indexeddb/api';
+import {open, destroy, event, Config, IDBEventType} from '../../../../infrastructure/indexeddb/api';
 import {KeyString} from '../types';
 
 describe('Unit: layers/domain/indexeddb/model/store/event', function () {
@@ -14,8 +14,8 @@ describe('Unit: layers/domain/indexeddb/model/store/event', function () {
       }
     }
     class EventStore<T extends EventValue> extends AbstractEventStore<T> {
-      constructor(access: Access, name: string) {
-        super(access, name);
+      constructor(database: string, name: string) {
+        super(database, name);
       }
     }
     function stringify<T extends EventValue>(e: UnsavedEventRecord<T> | SavedEventRecord<T>): string {
@@ -298,7 +298,7 @@ describe('Unit: layers/domain/indexeddb/model/store/event', function () {
 
     it('CRUD', done => {
       open('test', EventStore.configure('test'));
-      const es = new EventStore<Value>(listen('test'), 'test');
+      const es = new EventStore<Value>('test', 'test');
 
       assert(es.meta(KeyString('a')).id === 0);
       assert(es.has(KeyString('a')) === false);
@@ -328,7 +328,7 @@ describe('Unit: layers/domain/indexeddb/model/store/event', function () {
 
     it('sync', done => {
       open('test', EventStore.configure('test'));
-      const es = new EventStore<Value>(listen('test'), 'test');
+      const es = new EventStore<Value>('test', 'test');
 
       let cnt = 0;
       es.sync([KeyString('')], err => {
@@ -348,7 +348,7 @@ describe('Unit: layers/domain/indexeddb/model/store/event', function () {
 
     it('clean', done => {
       open('test', EventStore.configure('test'));
-      const es = new EventStore<Value>(listen('test'), 'test');
+      const es = new EventStore<Value>('test', 'test');
 
       es.add(new UnsavedEventRecord(KeyString('a'), new Value(0)));
       es.add(new UnsavedEventRecord(KeyString('b'), new Value(0)));
@@ -376,7 +376,7 @@ describe('Unit: layers/domain/indexeddb/model/store/event', function () {
 
     it('snapshot', done => {
       open('test', EventStore.configure('test'));
-      const es = new EventStore<Value>(listen('test'), 'test');
+      const es = new EventStore<Value>('test', 'test');
 
       for (let i = 0; i < 11; ++i) {
         es.add(new UnsavedEventRecord(KeyString('a'), new Value(i + 1)));

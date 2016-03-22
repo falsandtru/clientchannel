@@ -1,6 +1,6 @@
 import {LocalSocketObjectMetaData, LocalSocketEvent, LocalSocketEventType} from 'localsocket';
 import {Supervisor, Observable, Set, Map, Msg, sqid, concat} from 'arch-stream';
-import {open, Config, Access, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../../../infrastructure/indexeddb/api';
+import {listen, Config, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../../../infrastructure/indexeddb/api';
 import {IdNumber, KeyString, IDBValue, EventValue as IEventValue} from '../types';
 import {assign} from '../../../lib/assign';
 import {noop} from '../../../../../lib/noop';
@@ -173,8 +173,8 @@ export abstract class AbstractEventStore<T extends EventValue> {
     };
   }
   constructor(
-    protected access: Access,
-    public name: string
+    protected database: string,
+    protected name: string
   ) {
     const lastNotifiedIdSet = new Set<KeyString, IdNumber>((o, n) => n > o ? n : o);
     const lastUpdatedDateSet = new Set<KeyString, number>((o, n) => n > o ? n : o);
@@ -297,6 +297,11 @@ export abstract class AbstractEventStore<T extends EventValue> {
       )
     );
   }
+  public keys(): KeyString[] {
+    return this.cache.cast(<any>[], void 0)
+      .reduce((keys, e) => keys.length === 0 || keys[keys.length - 1] !== e.key ? concat(keys, [e.key]) : keys, <KeyString[]>[])
+      .sort();
+  }
   public has(key: KeyString): boolean {
     return compose(this.cache.cast([key], void 0))
       .reduce(e => e).type !== EventTypes[EventTypes.delete];
@@ -320,7 +325,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
     // update max date
     void this.cache
       .cast([event.key, event.attr, sqid(0), id], void 0);
-    return void this.access(db => {
+    return void listen(this.database)(db => {
       if (this.cache.refs([event.key, event.attr, sqid(0)]).length === 0) return;
       const tx = db.transaction(this.name, IDBTransaction.readwrite);
       const req = tx
@@ -362,7 +367,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
   protected snapshot(key: KeyString): void {
     if (this.snapshotJobState.get(key)) return;
     void this.snapshotJobState.set(key, true);
-    return void this.access(db => {
+    return void listen(this.database)(db => {
       const tx = db.transaction(this.name, IDBTransaction.readwrite);
       const store = tx.objectStore(this.name);
       const req = store
@@ -452,7 +457,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
     );
   }
   public cursor(query: any, index: string, direction: string, mode: string, cb: (cursor: IDBCursorWithValue, error: DOMError) => any): void {
-    return void this.access(db => {
+    return void listen(this.database)(db => {
       const tx = db
         .transaction(this.name, mode);
       const req = index

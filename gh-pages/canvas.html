@@ -35,6 +35,9 @@
           title: '',
           content: null
         };
+      },
+      destroy(err) {
+        return err.name !== 'InvalidStateError';
       }
     });
     // create data binding object

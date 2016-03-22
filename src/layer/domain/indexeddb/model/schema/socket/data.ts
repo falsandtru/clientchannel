@@ -1,4 +1,4 @@
-import {Config, Access, IDBTransaction, IDBCursorDirection} from '../../../../../infrastructure/indexeddb/api';
+import {Config, IDBTransaction, IDBCursorDirection} from '../../../../../infrastructure/indexeddb/api';
 import {AbstractEventStore, UnsavedEventRecord, EventValue} from '../../store/event';
 
 export const STORE_NAME = 'data';
@@ -14,9 +14,9 @@ export class DataStore<K extends string, V extends DataValue> extends AbstractEv
     return AbstractEventStore.configure(STORE_NAME);
   }
   constructor(
-    access: Access
+    database: string
   ) {
-    super(access, STORE_NAME);
+    super(database, STORE_NAME);
     void Object.freeze(this);
   }
 }

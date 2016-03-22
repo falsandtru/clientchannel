@@ -47,14 +47,14 @@ class Port {
 
 class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> implements LocalSocket<T> {
   constructor(
-    name: string,
+    database: string,
     private factory: () => T,
     expiry: number,
     destroy: (err: DOMError, ev: Event) => boolean
   ) {
-    super(name, destroy, expiry);
+    super(database, destroy, expiry);
     void this.port.__event
-      .on([PortEventTypes.recv, 'msgs'], ({newValue}) => {
+      .on([PortEventTypes.recv, 'msgs'], () => {
         void this.port.recv()
           .reduce((_, msg) => void this.schema.data.update(msg.key), void 0);
       });
@@ -109,7 +109,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
       });
     void Object.freeze(this);
   }
-  private proxy = port(this.name, localStorage, () => new Port());
+  private proxy = port(this.database, localStorage, () => new Port());
   private port = this.proxy.link();
   private links = new Set<string, T>();
   private sources = new Set<string, T>();
@@ -151,11 +151,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
       })
     );
   }
-  public close(): void {
-    void this.proxy.close();
-  }
   public destroy(): void {
-    void this.close();
     void this.proxy.destroy();
     void super.destroy();
   }

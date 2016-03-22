@@ -57,6 +57,7 @@ describe('Unit: layers/domain/indexeddb/model/schema/socket', function () {
                         socket.recent(Infinity, (keys, err) => {
                           assert(!err);
                           assert.deepEqual(keys, ['b', 'a']);
+                          socket.destroy();
                           done();
                         });
                       }, 100);
@@ -88,6 +89,7 @@ describe('Unit: layers/domain/indexeddb/model/schema/socket', function () {
             assert.deepEqual(keys, []);
             assert(socket.has('a') === false);
             assert(socket.has('b') === false);
+            socket.destroy();
             done();
           });
         });
@@ -115,6 +117,7 @@ describe('Unit: layers/domain/indexeddb/model/schema/socket', function () {
                 assert.deepEqual(keys, []);
                 assert(socket.has('a') === false);
                 assert(socket.has('b') === false);
+                socket.destroy();
                 done();
               });
             }, 500);

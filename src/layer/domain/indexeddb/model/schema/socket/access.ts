@@ -1,5 +1,5 @@
 import {Observable} from 'arch-stream';
-import {Config, Access} from '../../../../../infrastructure/indexeddb/api';
+import {Config} from '../../../../../infrastructure/indexeddb/api';
 import {KeyString} from '../../types';
 import {AbstractKeyValueStore} from '../../store/key-value';
 import {ESEvent, ESEventType} from '../../store/event';
@@ -49,10 +49,10 @@ export class AccessStore extends AbstractKeyValueStore<string, AccessRecord> {
     };
   }
   constructor(
-    access: Access,
+    database: string,
     event: Observable<[KeyString] | [KeyString, string] | [KeyString, string, string], ESEvent, void>
   ) {
-    super(access, STORE_NAME, STORE_FIELDS.key);
+    super(database, STORE_NAME, STORE_FIELDS.key);
     void Object.freeze(this);
 
     void event
