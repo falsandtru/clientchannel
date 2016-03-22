@@ -37,7 +37,6 @@ export function build<V>(source: V, factory: () => V, update: (attr: string, new
         source[prop] = iniVal;
       }
       map[prop] = {
-        configurable: false,
         enumerable: true,
         get: () => source[prop] === void 0 ? iniVal : source[prop],
         set: newVal => {

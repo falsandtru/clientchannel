@@ -69,18 +69,14 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
         [SCHEMA.KEY.NAME]: this.name,
         [SCHEMA.EVENT.NAME]: new Observable<[LocalPortEventType] | [LocalPortEventType, string], PortEvent, void>()
       },
-      parse<T>(this.storage.getItem(this.name) || '{}')
+      parse<T>(this.storage.getItem(this.name))
     );
     const dao: T = build(source, this.factory, (attr, newValue, oldValue) => {
       void this.log.update(this.name);
-      void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, attr) =>
-        Object.defineProperty(acc, attr, {
-          value: source[attr],
-          enumerable: true,
-          writable: true,
-          configurable: true
-        })
-        , {})));
+      void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, attr) => {
+        acc[attr] = source[attr];
+        return acc;
+      }, {})));
       const event = new PortEvent(PortEventTypes.send, this.name, attr, newValue, oldValue);
       void (<Observable<[LocalPortEventType, string], PortEvent, any>>source.__event).emit([event.type, event.attr], event);
       void this.events.send.emit([event.attr], event);
