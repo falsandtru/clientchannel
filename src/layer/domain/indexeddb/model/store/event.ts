@@ -5,11 +5,15 @@ import {IdNumber, KeyString, IDBValue, EventValue as IEventValue} from '../types
 import {assign} from '../../../lib/assign';
 import {noop} from '../../../../../lib/noop';
 
-export enum EventTypes {
-  put,
-  delete,
-  snapshot
-}
+export const EventType = {
+  put: <'put'>'put',
+  delete: <'delete'>'delete',
+  snapshot: <'snapshot'>'snapshot'
+};
+export type EventType
+  = typeof EventType.put
+  | typeof EventType.delete
+  | typeof EventType.snapshot;
 
 export class EventValue {
 }
@@ -20,11 +24,11 @@ abstract class EventRecord<T extends EventValue> {
     key: KeyString,
     value: T,
     date: number,
-    type: EventTypes
+    type: EventType
   ) {
     if (typeof this.id === 'number' && this.id > 0 === false || this.id !== void 0) throw new TypeError(`LocalSocket: EventRecord: Invalid event id: ${this.id}`);
-    this.type = <'put' | 'snapshot' | 'delete'>EventTypes[type];
-    if (typeof this.type !== 'string' || EventTypes[this.type] === void 0) throw new TypeError(`LocalSocket: EventRecord: Invalid event type: ${this.type}`);
+    this.type = type;
+    if (typeof this.type !== 'string') throw new TypeError(`LocalSocket: EventRecord: Invalid event type: ${this.type}`);
     this.key = key;
     if (typeof this.key !== 'string') throw new TypeError(`LocalSocket: EventRecord: Invalid event key: ${this.key}`);
     this.value = value;
@@ -32,25 +36,25 @@ abstract class EventRecord<T extends EventValue> {
     this.date = date;
     if (typeof this.date !== 'number' || this.date >= 0 === false) throw new TypeError(`LocalSocket: EventRecord: Invalid event date: ${this.date}`);
     // put -> string, delete or snapshot -> empty string
-    this.attr = this.type === EventTypes[EventTypes.put]
+    this.attr = this.type === EventType.put
       ? Object.keys(value).reduce((r, p) => p.length > 0 && p[0] !== '_' && p[p.length - 1] !== '_' ? p : r, '')
       : '';
     if (typeof this.attr !== 'string') throw new TypeError(`LocalSocket: EventRecord: Invalid event attr: ${this.key}`);
-    if (this.type === EventTypes[EventTypes.put] && this.attr.length === 0) throw new TypeError(`LocalSocket: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
-    if (this.type !== EventTypes[EventTypes.put] && this.attr.length !== 0) throw new TypeError(`LocalSocket: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
+    if (this.type === EventType.put && this.attr.length === 0) throw new TypeError(`LocalSocket: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
+    if (this.type !== EventType.put && this.attr.length !== 0) throw new TypeError(`LocalSocket: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
 
     switch (type) {
-      case EventTypes.put: {
+      case EventType.put: {
         this.value = value = <T>assign(new EventValue(), <EventValue>{ [this.attr]: value[this.attr] });
         void Object.freeze(this.value);
         return;
       }
-      case EventTypes.snapshot: {
+      case EventType.snapshot: {
         this.value = value = <T>assign(new EventValue(), value);
         void Object.freeze(this.value);
         return;
       }
-      case EventTypes.delete:
+      case EventType.delete:
       default: {
         this.value = value = <T>new EventValue();
         void Object.freeze(this.value);
@@ -71,7 +75,7 @@ export class UnsavedEventRecord<T extends EventValue> extends EventRecord<T> {
   constructor(
     key: KeyString,
     value: T,
-    type: EventTypes = EventTypes.put,
+    type: EventType = EventType.put,
     date: number = Date.now()
   ) {
     super(void 0, key, value, date, type);
@@ -86,7 +90,7 @@ export class SavedEventRecord<T extends EventValue> extends EventRecord<T> {
     public id: IdNumber,
     key: KeyString,
     value: T,
-    type: EventTypes,
+    type: EventType,
     date: number
   ) {
     super(id, key, value, date, type);
@@ -242,7 +246,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
     return void this.cursor(key, STORE_FIELDS.key, IDBCursorDirection.prev, IDBTransaction.readonly, (cursor, err) => {
       if (err) return void this.syncWaits.emit([key], err);
       if (!cursor || (<SavedEventRecord<T>>cursor.value).id <= latest.id) {
-        if (compose(savedEvents).reduce(e => e).type === EventTypes[EventTypes.delete]) {
+        if (compose(savedEvents).reduce(e => e).type === EventType.delete) {
           void this.clean(Infinity, key);
         }
         else {
@@ -251,8 +255,8 @@ export abstract class AbstractEventStore<T extends EventValue> {
             // remove overridable event
             .reduceRight<SavedEventRecord<T>[]>((acc, e) => acc.some(({attr}) => attr === e.attr) ? acc : concat([e], acc), [])
             .reduce<SavedEventRecord<T>[]>((acc, e) => {
-              switch (EventTypes[e.type]) {
-                case EventTypes.put: {
+              switch (e.type) {
+                case EventType.put: {
                   return concat([e], acc);
                 }
                 default: {
@@ -277,8 +281,8 @@ export abstract class AbstractEventStore<T extends EventValue> {
       }
       const event: SavedEventRecord<T> = cursor.value;
       if (this.cache.refs([event.key, event.attr, sqid(event.id)]).length > 0) return;
-      void savedEvents.unshift(new SavedEventRecord(event.id, event.key, event.value, EventTypes[event.type], event.date));
-      if (event.type !== EventTypes[EventTypes.put]) return;
+      void savedEvents.unshift(new SavedEventRecord(event.id, event.key, event.value, event.type, event.date));
+      if (event.type !== EventType.put) return;
       void cursor.continue();
     });
   }
@@ -304,7 +308,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
   }
   public has(key: KeyString): boolean {
     return compose(this.cache.cast([key], void 0))
-      .reduce(e => e).type !== EventTypes[EventTypes.delete];
+      .reduce(e => e).type !== EventType.delete;
   }
   public get(key: KeyString): T {
     void this.sync([key]);
@@ -333,7 +337,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
         .add(event);
       tx.oncomplete = _ => {
         assert(req.result > 0);
-        const savedEvent = new SavedEventRecord(IdNumber(<number>req.result), event.key, event.value, EventTypes[event.type], event.date);
+        const savedEvent = new SavedEventRecord(IdNumber(<number>req.result), event.key, event.value, event.type, event.date);
         void this.cache
           .terminate([savedEvent.key, savedEvent.attr, sqid(0), id]);
         void this.cache
@@ -346,7 +350,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
         if (this.cache.refs([event.key]).filter(([, sub]) => sub(void 0) instanceof SavedEventRecord).length > this.snapshotCycle) {
           void this.snapshot(event.key);
         }
-        else if (savedEvent.type === EventTypes[EventTypes.delete]) {
+        else if (savedEvent.type === EventType.delete) {
           void this.clean(Infinity, savedEvent.key);
         }
       };
@@ -359,7 +363,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
     });
   }
   public delete(key: KeyString): void {
-    return void this.add(new UnsavedEventRecord(key, <T>new EventValue(), EventTypes.delete));
+    return void this.add(new UnsavedEventRecord(key, <T>new EventValue(), EventType.delete));
   }
   protected snapshotCycle = 10;
   //protected snapshotLimit = 1;
@@ -378,27 +382,27 @@ export abstract class AbstractEventStore<T extends EventValue> {
         const cursor: IDBCursorWithValue = req.result;
         if (cursor) {
           const event: SavedEventRecord<T> = cursor.value;
-          void savedEvents.unshift(new SavedEventRecord(event.id, event.key, event.value, EventTypes[event.type], event.date));
+          void savedEvents.unshift(new SavedEventRecord(event.id, event.key, event.value, event.type, event.date));
         }
-        if (!cursor || EventTypes[(<EventRecord<T>>cursor.value).type] !== EventTypes.put) {
+        if (!cursor || (<EventRecord<T>>cursor.value).type !== EventType.put) {
           assert(this.snapshotCycle > 0);
           if (savedEvents.length < this.snapshotCycle) return;
           void this.clean(Infinity, key);
           const composedEvent = compose(savedEvents).reduce(e => e);
           if (composedEvent instanceof SavedEventRecord) return;
           switch (composedEvent.type) {
-            case EventTypes[EventTypes.snapshot]: {
+            case EventType.snapshot: {
               // snapshot's date must not be after unsaved event's date.
               return void store.add(
                 new UnsavedEventRecord(
                   composedEvent.key,
                   composedEvent.value,
-                  EventTypes[composedEvent.type],
+                  composedEvent.type,
                   savedEvents.reduce((date, e) => e.date > date ? e.date : date, 0)
                 )
               );
             }
-            case EventTypes[EventTypes.delete]: {
+            case EventType.delete: {
               return void 0;
             }
           }
@@ -427,11 +431,11 @@ export abstract class AbstractEventStore<T extends EventValue> {
         if (!cursor) return void removedEvents.reduce((_, event) => void this.cache.terminate([event.key, event.attr, sqid(event.id)]), void 0);
         const event: SavedEventRecord<T> = cursor.value;
         switch (event.type) {
-          case EventTypes[EventTypes.put]: {
+          case EventType.put: {
             void cleanStateMap.set(event.key, cleanStateMap.get(event.key) || false);
             break;
           }
-          case EventTypes[EventTypes.snapshot]: {
+          case EventType.snapshot: {
             if (!cleanStateMap.get(event.key)) {
               void cleanStateMap.set(event.key, true);
               void cursor.continue();
@@ -439,7 +443,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
             }
             break;
           }
-          case EventTypes[EventTypes.delete]: {
+          case EventType.delete: {
             void cleanStateMap.set(event.key, true);
             break;
           }
@@ -479,7 +483,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
 export function compose<T extends EventValue>(events: (UnsavedEventRecord<T> | SavedEventRecord<T>)[]): (UnsavedEventRecord<T> | SavedEventRecord<T>)[] {
   type E = UnsavedEventRecord<T> | SavedEventRecord<T>;
   return group(events)
-    .map(events => events.reduceRight(compose, new UnsavedEventRecord(KeyString(''), <T>new EventValue(), EventTypes.delete, 0)));
+    .map(events => events.reduceRight(compose, new UnsavedEventRecord(KeyString(''), <T>new EventValue(), EventType.delete, 0)));
 
   function group(events: E[]): E[][] {
     return events
@@ -498,9 +502,9 @@ export function compose<T extends EventValue>(events: (UnsavedEventRecord<T> | S
     assert(target instanceof UnsavedEventRecord || target instanceof SavedEventRecord);
     assert(source instanceof UnsavedEventRecord || source instanceof SavedEventRecord);
     switch (source.type) {
-      case EventTypes[EventTypes.put]: {
+      case EventType.put: {
         return source.value[source.attr] !== void 0
-          ? new UnsavedEventRecord(source.key, assign(new EventValue(), target.value, source.value), EventTypes.snapshot)
+          ? new UnsavedEventRecord(source.key, assign(new EventValue(), target.value, source.value), EventType.snapshot)
           : new UnsavedEventRecord(
             source.key,
             Object.keys(target.value)
@@ -509,13 +513,13 @@ export function compose<T extends EventValue>(events: (UnsavedEventRecord<T> | S
                 value[prop] = target[prop];
                 return value;
               }, <T>new EventValue())
-            , EventTypes.snapshot
+            , EventType.snapshot
           );
       }
-      case EventTypes[EventTypes.snapshot]: {
+      case EventType.snapshot: {
         return source;
       }
-      case EventTypes[EventTypes.delete]: {
+      case EventType.delete: {
         return source;
       }
     }

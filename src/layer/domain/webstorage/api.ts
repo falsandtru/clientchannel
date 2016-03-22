@@ -5,6 +5,7 @@ import {localStorage, supportWebStorage} from '../../infrastructure/webstorage/a
 
 export {localStorage, sessionStorage, supportWebStorage} from '../../infrastructure/webstorage/api';
 export {events} from './service/event';
+export {PortEvent as WebStorageEvent, PortEventType as WebStorageEventType} from './repository/port';
 export function webstorage<T>(name: string, storage: Storage, factory: () => T, expiry_: number) {
   void expiry.add(name, expiry_);
   return repository(name, storage, factory, storage === localStorage ? log : void 0);

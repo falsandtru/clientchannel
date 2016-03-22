@@ -3,7 +3,7 @@ import {Observable, IObservableObserver, Set, Map, concat} from 'arch-stream';
 import {build, SCHEMA, isValidPropertyName, isValidPropertyValue} from '../../dao/api';
 import {SocketStore, SocketRecord, SocketValue, ESEventType} from '../model/schema/socket';
 import {localStorage} from '../../../infrastructure/webstorage/api';
-import {repository as port, PortEvent, PortEventTypes} from '../../webstorage/repository/port';
+import {webstorage, WebStorageEvent, WebStorageEventType} from '../../webstorage/api';
 import {KeyString} from '../model/types';
 import {assign} from '../../lib/assign';
 
@@ -54,7 +54,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
   ) {
     super(database, destroy, expiry);
     void this.port.__event
-      .on([PortEventTypes.recv, 'msgs'], () => {
+      .on([WebStorageEventType.recv, 'msgs'], () => {
         void this.port.recv()
           .reduce((_, msg) => void this.schema.data.update(msg.key), void 0);
       });
@@ -72,7 +72,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
             const newVal = this.get(key)[attr];
             source[attr] = newVal;
             void (<Observable<[LocalPortEventType] | [LocalPortEventType, string], LocalPortEvent, any>>source.__event)
-              .emit([PortEventTypes.recv, attr], new PortEvent(PortEventTypes.recv, key, attr, newVal, oldVal));
+              .emit([WebStorageEventType.recv, attr], new WebStorageEvent(WebStorageEventType.recv, key, attr, newVal, oldVal));
             return;
           }
           case ESEventType.delete: {
@@ -86,7 +86,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
                 const newVal = <void>void 0;
                 source[attr] = newVal;
                 void (<Observable<[LocalPortEventType] | [LocalPortEventType, string], LocalPortEvent, any>>source.__event)
-                  .emit([PortEventTypes.recv, attr], new PortEvent(PortEventTypes.recv, key, attr, newVal, oldVal));
+                  .emit([WebStorageEventType.recv, attr], new WebStorageEvent(WebStorageEventType.recv, key, attr, newVal, oldVal));
               }, void 0);
             return;
           }
@@ -101,7 +101,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
                 const newVal = cache[attr];
                 source[attr] = newVal;
                 void (<Observable<[LocalPortEventType] | [LocalPortEventType, string], LocalPortEvent, any>>source.__event)
-                  .emit([PortEventTypes.recv, attr], new PortEvent(PortEventTypes.recv, key, attr, newVal, oldVal));
+                  .emit([WebStorageEventType.recv, attr], new WebStorageEvent(WebStorageEventType.recv, key, attr, newVal, oldVal));
               }, void 0);
             return;
           }
@@ -109,7 +109,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
       });
     void Object.freeze(this);
   }
-  private proxy = port(this.database, localStorage, () => new Port());
+  private proxy = webstorage(this.database, localStorage, () => new Port(), 10 * 24 * 60 * 60 * 1e3);
   private port = this.proxy.link();
   private links = new Set<string, T>();
   private sources = new Set<string, T>();
@@ -147,7 +147,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
       (attr, newValue, oldValue) => {
         void this.add(new SocketRecord(KeyString(key), <T>{ [attr]: newValue }));
         void (<Observable<[LocalPortEventType, string], LocalPortEvent, void>>this.sources.get(key).__event)
-          .emit([PortEventTypes.send, attr], new PortEvent(PortEventTypes.send, key, attr, newValue, oldValue));
+          .emit([WebStorageEventType.send, attr], new WebStorageEvent(WebStorageEventType.send, key, attr, newValue, oldValue));
       })
     );
   }

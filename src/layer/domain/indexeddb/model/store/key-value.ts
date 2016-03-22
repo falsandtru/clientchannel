@@ -3,11 +3,15 @@ import {listen, Config, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '.
 import {IDBValue} from '../types';
 import {noop} from '../../../../../lib/noop';
 
-export enum EventTypes {
-  get,
-  put,
-  delete
-}
+export const EventType = {
+  get: <'get'>'get',
+  put: <'put'>'put',
+  delete: <'delete'>'delete'
+};
+export type EventType
+  = typeof EventType.get
+  | typeof EventType.put
+  | typeof EventType.delete;
 
 export abstract class AbstractKeyValueStore<K extends string, V extends IDBValue> {
   public static configure(): Config {
@@ -32,10 +36,10 @@ export abstract class AbstractKeyValueStore<K extends string, V extends IDBValue
   }
   protected cache = new Map<K, V>();
   public events = {
-    access: new Observable<[K], [[K], EventTypes], void>()
+    access: new Observable<[K], [[K], EventType], void>()
   };
   public get(key: K, cb: (value: V, error: DOMError) => any = noop): V {
-    void this.events.access.emit([key], [[key], EventTypes.get]);
+    void this.events.access.emit([key], [[key], EventType.get]);
     void listen(this.database)(db => {
       const tx = db.transaction(this.name, IDBTransaction.readonly);
       const req = this.index
@@ -61,7 +65,7 @@ export abstract class AbstractKeyValueStore<K extends string, V extends IDBValue
   }
   protected put(value: V, key: K, cb: (key: K, error: DOMError) => any = noop): V {
     void this.cache.set(key, value);
-    void this.events.access.emit([key], [[key], EventTypes.put]);
+    void this.events.access.emit([key], [[key], EventType.put]);
     void listen(this.database)(db => {
       if (!this.cache.has(key)) return;
       const tx = db.transaction(this.name, IDBTransaction.readwrite);
@@ -78,7 +82,7 @@ export abstract class AbstractKeyValueStore<K extends string, V extends IDBValue
   }
   public delete(key: K, cb: (error: DOMError) => any = noop): void {
     void this.cache.delete(key);
-    void this.events.access.emit([key], [[key], EventTypes.delete]);
+    void this.events.access.emit([key], [[key], EventType.delete]);
     void listen(this.database)(db => {
       const tx = db.transaction(this.name, IDBTransaction.readwrite);
       const req = tx

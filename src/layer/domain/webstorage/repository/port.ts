@@ -12,7 +12,10 @@ const LocalStorageSubscriber = new Set<string, (event: StorageEvent) => any>();
 const SessionStorageObjectCache = new Set<string, LocalPortObject>();
 const SessionStorageSubscriber = new Set<string, (event: StorageEvent) => any>();
 
-export namespace PortEventTypes {
+export type PortEventType
+  = typeof PortEventType.send
+  | typeof PortEventType.recv;
+export namespace PortEventType {
   export const send: 'send' = 'send';
   export const recv: 'recv' = 'recv';
 }
@@ -77,7 +80,7 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
         acc[attr] = source[attr];
         return acc;
       }, {})));
-      const event = new PortEvent(PortEventTypes.send, this.name, attr, newValue, oldValue);
+      const event = new PortEvent(PortEventType.send, this.name, attr, newValue, oldValue);
       void (<Observable<[LocalPortEventType, string], PortEvent, any>>source.__event).emit([event.type, event.attr], event);
       void this.events.send.emit([event.attr], event);
     });
@@ -91,7 +94,7 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
           const newVal = item[attr];
           if (newVal === oldVal) return;
           source[attr] = newVal;
-          const event = new PortEvent(PortEventTypes.recv, this.name, attr, newVal, oldVal);
+          const event = new PortEvent(PortEventType.recv, this.name, attr, newVal, oldVal);
           void (<Observable<[LocalPortEventType, string], PortEvent, any>>source.__event).emit([event.type, event.attr], event);
           void this.events.recv.emit([event.attr], event);
         }, void 0);
