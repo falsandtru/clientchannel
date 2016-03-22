@@ -319,6 +319,7 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
       connection.onversionchange = () => void connection.close();
       connection.onerror = void 0;
       connection.onabort = void 0;
+      connection.onclose = void 0;
     };
     connection.onversionchange = ({newVersion}) => {
       void clear();
@@ -337,6 +338,12 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
     connection.onabort = event => {
       void clear();
       void handleFromAbortState(new State.Abort(database, (<any>event.target).error, event));
+    };
+    connection.onclose = event => {
+      void clear();
+      void IDBEventObserver.emit([database, IDBEventType.destroy], new IDBEvent(IDBEventType.destroy, database));
+      if (StateSet.get(database) !== state) return;
+      void handleFromEndState(new State.End(database));
     };
     state.destroy = () => {
       void clear();
