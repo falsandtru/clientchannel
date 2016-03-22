@@ -1,4 +1,4 @@
-/*! localsocket v0.0.8 https://github.com/falsandtru/localsocket | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
+/*! localsocket v0.0.9 https://github.com/falsandtru/localsocket | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
 define = typeof define === 'function' && define.amd
   ? define
   : (function () {
@@ -585,6 +585,7 @@ define('src/layer/infrastructure/indexeddb/model/access', [
                 };
                 connection.onerror = void 0;
                 connection.onabort = void 0;
+                connection.onclose = void 0;
             };
             connection.onversionchange = function (_a) {
                 var newVersion = _a.newVersion;
@@ -609,6 +610,16 @@ define('src/layer/infrastructure/indexeddb/model/access', [
                 void clear();
                 void handleFromAbortState(new State.Abort(database, event.target.error, event));
             };
+            connection.onclose = function (event) {
+                void clear();
+                void IDBEventObserver.emit([
+                    database,
+                    event_2.IDBEventType.destroy
+                ], new event_2.IDBEvent(event_2.IDBEventType.destroy, database));
+                if (StateSet.get(database) !== state)
+                    return;
+                void handleFromEndState(new State.End(database));
+            };
             state.destroy = function () {
                 void clear();
                 void connection.close();
@@ -627,7 +638,11 @@ define('src/layer/infrastructure/indexeddb/model/access', [
                         void reqs.shift();
                     }
                 } catch (err) {
-                    void console.warn(err);
+                    if (err instanceof DOMError || err instanceof DOMException) {
+                        void console.warn(err);
+                    } else {
+                        void console.error(err);
+                    }
                     void clear();
                     void handleFromCrashState(new State.Crash(database, err));
                 }
