@@ -364,7 +364,12 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
         }
       }
       catch (err) {
-        void console.warn(err);
+        if (err instanceof DOMError || err instanceof DOMException) {
+          void console.warn(err);
+        }
+        else {
+          void console.error(err);
+        }
         void clear();
         void handleFromCrashState(new State.Crash(database, err));
       }
