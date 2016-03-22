@@ -109,7 +109,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
       });
     void Object.freeze(this);
   }
-  private proxy = webstorage(this.database, localStorage, () => new Port(), 10 * 24 * 60 * 60 * 1e3);
+  private proxy = webstorage(this.database, localStorage, () => new Port());
   private port = this.proxy.link();
   private links = new Set<string, T>();
   private sources = new Set<string, T>();

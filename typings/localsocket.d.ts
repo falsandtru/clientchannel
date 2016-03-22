@@ -58,7 +58,6 @@
   }
   export interface LocalPortConfig<T extends LocalPortObject> {
     schema(): T;
-    expiry?: number;
     destroy?(error: DOMError, event: Event): boolean;
   }
   export interface LocalPortObject {

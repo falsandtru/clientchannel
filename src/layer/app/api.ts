@@ -31,13 +31,12 @@ export function socket<T extends LocalSocketObject>(name: string, config: LocalS
 
 export function port<T extends LocalPortObject>(name: string, config: LocalPortConfig<T>): LocalPort<T> {
   config = configure(config);
-  return webstorage(name, localStorage, config.schema, config.expiry);
+  return webstorage(name, localStorage, config.schema);
 
   function configure<T>(config: LocalPortConfig<T>): LocalPortConfig<T> {
     class Config<T> implements LocalPortConfig<T> {
       constructor(
         public schema: () => T,
-        public expire: number = 30 * 24 * 60 * 60 * 1e3,
         public destroy: (err: DOMError, event: Event) => boolean = () => true
       ) {
         void Object.freeze(this);
@@ -45,7 +44,6 @@ export function port<T extends LocalPortObject>(name: string, config: LocalPortC
     }
     return new Config(
       config.schema,
-      config.expiry,
       config.destroy
     );
   }
