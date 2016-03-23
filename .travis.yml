@@ -46,13 +46,11 @@ after_deploy:
 - cp -rf ./gh-pages ../
 - cp -rf ./dist/* ../gh-pages/assets/js
 - cat package.json | json version
-- new_version=`cat package.json | json version | awk -F. '{printf("%d%05d%06d", ++$1,
-  $2, $3)}'`
+- new_version=`cat package.json | json version | awk -F. '{printf("%d%05d%06d", ++$1, $2, $3)}'`
 - git reset --hard HEAD~
 - cat package.json | json version
 - cat package.json | json version | awk -F. '{printf("%d%05d%06d", ++$1, $2, $3)}'
-- old_version=`cat package.json | json version | awk -F. '{printf("%d%05d%06d", ++$1,
-  $2, $3)}'`
+- old_version=`cat package.json | json version | awk -F. '{printf("%d%05d%06d", ++$1, $2, $3)}'`
 - git reset --hard ORIG_HEAD
 - if [ $new_version -le $old_version ]; then exit 0; fi
 - git fetch origin gh-pages:gh-pages
