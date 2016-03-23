@@ -91,12 +91,6 @@ const StateSet = new Set<string, State.Type>((o, n) => {
           return n;
       }
       break;
-    case State.End:
-      switch (n.constructor) {
-        case State.Initial:
-          return n;
-      }
-      break;
   }
   throw new Error(`LocalSocket: Invalid mutation: ${o.constructor.toString().match(/\w+/g)[1]} to ${n.constructor.toString().match(/\w+/g)[1]}`);
 });
@@ -116,6 +110,7 @@ namespace State {
     constructor(
       public database: string
     ) {
+      assert(!StateSet.has(database));
       void StateSet.add(database, this);
     }
   }
