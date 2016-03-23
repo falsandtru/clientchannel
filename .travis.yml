@@ -52,7 +52,7 @@ after_deploy:
 - cat package.json | json version | awk -F. '{printf("%d%05d%06d", ++$1, $2, $3)}'
 - old_version=`cat package.json | json version | awk -F. '{printf("%d%05d%06d", ++$1, $2, $3)}'`
 - git reset --hard ORIG_HEAD
-- if [ $new_version -lt $old_version ]; then exit 0; fi
+- if [ $new_version -le $old_version ]; then exit 0; fi
 - git fetch origin gh-pages:gh-pages
 - git checkout --orphan gh-pages
 - git checkout -m gh-pages
