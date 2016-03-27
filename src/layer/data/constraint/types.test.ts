@@ -1,6 +1,6 @@
 import {IdNumber} from './types';
 
-describe('Unit: layers/domain/indexeddb/model/types', () => {
+describe('Unit: layers/data/constraint/types', () => {
   describe('spec', () => {
     it('Cast', () => {
       const id: IdNumber = IdNumber(0);

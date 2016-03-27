@@ -1,8 +1,8 @@
 import {SocketStore, SocketValue, SocketRecord} from './socket';
-import {KeyString, IDBKey, IDBValue} from '../types';
-import {open, destroy, event, Config, IDBEventType} from '../../../../infrastructure/indexeddb/api';
+import {KeyString, IDBKey, IDBValue} from '../../../data/constraint/types';
+import {open, destroy, event, Config, IDBEventType} from '../../../infrastructure/indexeddb/api';
 
-describe('Unit: layers/domain/indexeddb/model/schema/socket', function () {
+describe('Unit: layers/domain/indexeddb/model/socket', function () {
   this.timeout(5 * 1e3);
 
   describe('spec', () => {

@@ -1,8 +1,8 @@
 import {Observable, Map} from 'arch-stream';
-import {event, IDBEventType, Config, IDBCursorDirection, IDBTransaction} from '../../../../../infrastructure/indexeddb/api';
-import {KeyString} from '../../types';
-import {AbstractKeyValueStore} from '../../store/key-value';
-import {ESEvent, ESEventType} from '../../store/event';
+import {event, IDBEventType, Config, IDBCursorDirection, IDBTransaction} from '../../../../infrastructure/indexeddb/api';
+import {KeyString} from '../../../../data/constraint/types';
+import {AbstractKeyValueStore} from '../../../../data/store/key-value';
+import {ESEvent, ESEventType} from '../../../../data/store/event';
 import {DataStore} from './data';
 
 export const STORE_NAME = 'expiry';

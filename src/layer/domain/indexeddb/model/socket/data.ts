@@ -1,5 +1,5 @@
-import {Config, IDBTransaction, IDBCursorDirection} from '../../../../../infrastructure/indexeddb/api';
-import {AbstractEventStore, UnsavedEventRecord, EventValue} from '../../store/event';
+import {Config, IDBTransaction, IDBCursorDirection} from '../../../../infrastructure/indexeddb/api';
+import {AbstractEventStore, UnsavedEventRecord, EventValue} from '../../../../data/store/event';
 
 export const STORE_NAME = 'data';
 export const STORE_FIELDS = {

@@ -1,7 +1,7 @@
 import {LocalSocketObject} from 'localsocket';
 import {socket} from './socket';
-import {KeyString} from '../model/types';
-import {SocketStore, SocketRecord} from '../model/schema/socket';
+import {KeyString} from '../../../data/constraint/types';
+import {SocketStore, SocketRecord} from '../model/socket';
 import {listen, destroy, event, Config, IDBEventType} from '../../../infrastructure/indexeddb/api';
 
 describe('Unit: layers/domain/indexeddb/repository/socket', function () {

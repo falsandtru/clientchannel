@@ -1,8 +1,8 @@
 import {Observable} from 'arch-stream';
-import {Config} from '../../../../../infrastructure/indexeddb/api';
-import {KeyString} from '../../types';
-import {AbstractKeyValueStore} from '../../store/key-value';
-import {ESEvent, ESEventType} from '../../store/event';
+import {Config} from '../../../../infrastructure/indexeddb/api';
+import {KeyString} from '../../../../data/constraint/types';
+import {AbstractKeyValueStore} from '../../../../data/store/key-value';
+import {ESEvent, ESEventType} from '../../../../data/store/event';
 
 export const STORE_NAME = 'access';
 export const STORE_FIELDS = {

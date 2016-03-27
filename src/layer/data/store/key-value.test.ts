@@ -1,8 +1,8 @@
 import {AbstractKeyValueStore} from './key-value';
-import {IDBKey, IDBValue} from '../types';
-import {open, destroy, event, Config, IDBEventType} from '../../../../infrastructure/indexeddb/api';
+import {IDBKey, IDBValue} from '../constraint/types';
+import {open, destroy, event, Config, IDBEventType} from '../../infrastructure/indexeddb/api';
 
-describe('Unit: layers/domain/indexeddb/model/store/key-value', function () {
+describe('Unit: layers/data/store/key-value', function () {
   this.timeout(5 * 1e3);
 
   describe('spec', () => {

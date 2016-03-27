@@ -1,7 +1,7 @@
 import {Observable, Map} from 'arch-stream';
-import {listen, Config, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../../../infrastructure/indexeddb/api';
-import {IDBValue} from '../types';
-import {noop} from '../../../../../lib/noop';
+import {listen, Config, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../infrastructure/indexeddb/api';
+import {IDBValue} from '../constraint/types';
+import {noop} from '../../../lib/noop';
 
 export const EventType = {
   get: <'get'>'get',

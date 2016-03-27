@@ -1,11 +1,11 @@
 import {LocalSocket, LocalSocketObject, LocalPort, LocalPortObject, LocalPortEvent, LocalPortEventType} from 'localsocket';
 import {Observable, IObservableObserver, Set, Map, concat} from 'arch-stream';
 import {build, SCHEMA, isValidPropertyName, isValidPropertyValue} from '../../dao/api';
-import {SocketStore, SocketRecord, SocketValue, ESEventType} from '../model/schema/socket';
+import {SocketStore, SocketRecord, SocketValue, ESEventType} from '../model/socket';
 import {localStorage} from '../../../infrastructure/webstorage/api';
 import {webstorage, WebStorageEvent, WebStorageEventType} from '../../webstorage/api';
-import {KeyString} from '../model/types';
-import {assign} from '../../lib/assign';
+import {KeyString} from '../../../data/constraint/types';
+import {assign} from '../../../data/lib/assign';
 
 export function socket<T extends SocketValue>(
   name: string,

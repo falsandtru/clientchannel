@@ -1,8 +1,8 @@
 import {compose, AbstractEventStore, UnsavedEventRecord, EventValue, SavedEventRecord, EventType, ESEventType} from './event';
-import {open, destroy, event, Config, IDBEventType} from '../../../../infrastructure/indexeddb/api';
-import {KeyString} from '../types';
+import {open, destroy, event, Config, IDBEventType} from '../../infrastructure/indexeddb/api';
+import {KeyString} from '../constraint/types';
 
-describe('Unit: layers/domain/indexeddb/model/store/event', function () {
+describe('Unit: layers/data/store/event', function () {
   this.timeout(5 * 1e3);
 
   describe('spec', () => {
