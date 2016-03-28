@@ -104,3 +104,10 @@ link.event.on(['recv', 'version'], ({newValue}) => {
 });
 link.version = VERSION;
 ```
+
+## Browser
+
+- Chrome
+- Firefox
+- Edge
+- Safari
