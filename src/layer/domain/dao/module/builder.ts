@@ -1,5 +1,11 @@
 import {assign} from 'arch-stream';
+import {isValidName, isValidValue} from '../../../data/constraint/values';
 import {noop} from '../../../../lib/noop';
+
+export {
+  isValidName as isValidPropertyName,
+  isValidValue as isValidPropertyValue
+}
 
 export const SCHEMA = {
   META: {
@@ -18,6 +24,7 @@ export const SCHEMA = {
     NAME: '__event'
   }
 };
+
 export function build<V>(source: V, factory: () => V, update: (attr: string, newVal: any, oldVal: any) => void = noop): V {
   const dao: V = factory();
   void Object.keys(SCHEMA)
@@ -25,8 +32,8 @@ export function build<V>(source: V, factory: () => V, update: (attr: string, new
     .reduce((_, prop) => { delete dao[prop] }, void 0);
   if (typeof source[SCHEMA.KEY.NAME] !== 'string') throw new TypeError(`LocalSocket: Invalid key: ${source[SCHEMA.KEY.NAME]}`);
   const descmap: PropertyDescriptorMap = assign<PropertyDescriptorMap>(Object.keys(dao)
-    .filter(isValidPropertyName)
-    .filter(isValidPropertyValue(dao))
+    .filter(isValidName)
+    .filter(isValidValue(dao))
     .reduce<PropertyDescriptorMap>((map, prop) => {
       {
         const desc = Object.getOwnPropertyDescriptor(dao, prop)
@@ -41,7 +48,7 @@ export function build<V>(source: V, factory: () => V, update: (attr: string, new
         get: () => source[prop] === void 0 ? iniVal : source[prop],
         set: newVal => {
           const oldVal = source[prop];
-          if (!isValidPropertyValue(source)(prop)) return;
+          if (!isValidValue(source)(prop)) return;
           if (newVal === oldVal && newVal instanceof Object === false) return;
           source[prop] = newVal === void 0 ? iniVal : newVal;
           void update(prop, newVal, oldVal);
@@ -78,29 +85,4 @@ export function build<V>(source: V, factory: () => V, update: (attr: string, new
   void Object.defineProperties(dao, descmap);
   void Object.seal(dao);
   return dao;
-}
-
-const RegVelidPropertyName = /^[A-z_$][0-9A-z_$]*$/
-export function isValidPropertyName(prop: string): boolean {
-  return prop.length > 0
-      && prop[0] !== '_'
-      && prop[prop.length - 1] !== '_'
-      && RegVelidPropertyName.test(prop);
-}
-
-export function isValidPropertyValue(dao: any) {
-  return (prop: string): boolean => {
-    switch (typeof dao[prop]) {
-      case 'undefined':
-      case 'boolean':
-      case 'number':
-      case 'string':
-      case 'object': {
-        return true;
-      }
-      default: {
-        return false;
-      }
-    }
-  }
 }

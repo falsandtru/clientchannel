@@ -1,56 +1,6 @@
 import {isValidPropertyName, isValidPropertyValue, build} from './builder';
 
 describe('Unit: layers/domain/dao/module/build', () => {
-  describe('isValidPropertyName', () => {
-    it('invalid empty', () => {
-      assert(!isValidPropertyName(''));
-    });
-
-    it('invalid prefix', () => {
-      assert(!isValidPropertyName('_p'));
-    });
-
-    it('invalid postfix', () => {
-      assert(!isValidPropertyName('p_'));
-    });
-
-    it('valid', () => {
-      assert(isValidPropertyName('property'));
-    });
-
-  });
-
-  describe('isValidPropertyValue', () => {
-    const dao = <any>{
-      undefined: void 0,
-      boolean: false,
-      number: 0,
-      string: '',
-      object: {}
-    };
-
-    it('invalid undefined', () => {
-      assert(isValidPropertyValue(dao)('undefined') === true);
-    });
-
-    it('invalid boolean', () => {
-      assert(isValidPropertyValue(dao)('boolean') === true);
-    });
-
-    it('invalid number', () => {
-      assert(isValidPropertyValue(dao)('number') === true);
-    });
-
-    it('invalid string', () => {
-      assert(isValidPropertyValue(dao)('string') === true);
-    });
-
-    it('invalid object', () => {
-      assert(isValidPropertyValue(dao)('object') === true);
-    });
-
-  });
-
   describe('build', () => {
     class DAO {
       n = 0;
