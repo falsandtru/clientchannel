@@ -16,7 +16,7 @@ export function assign<T extends Object>(target: T | {}, ...sources: T[]): T {
       if (desc !== undefined && desc.enumerable) {
         const nextValue = nextSource[nextKey];
         const prevValue = to[nextKey];
-        if (isClonable(nextValue)) {
+        if (isCloneable(nextValue)) {
           to[nextKey] = Array.isArray(nextValue)
             ? nextValue.slice()
             : assign({}, nextValue);
@@ -29,18 +29,31 @@ export function assign<T extends Object>(target: T | {}, ...sources: T[]): T {
   }
   return to;
 
-  function isClonable(obj: any): boolean {
+  function isCloneable(obj: any): boolean {
     return !!obj
         && typeof obj === 'object'
         && !isTypedArray(obj)
-        && obj instanceof Blob === false
-        && obj instanceof ImageData === false
-        && obj instanceof ArrayBuffer === false;
+        && !isBlob(obj)
+        && !isImageData(obj)
+        && !isArrayBuffer(obj);
 
     function isTypedArray(obj: any): boolean {
       return obj instanceof Object
-        && obj.constructor['BYTES_PER_ELEMENT'] > 0
-        && obj.buffer instanceof ArrayBuffer;
+          && obj.constructor instanceof Object
+          && obj.constructor['BYTES_PER_ELEMENT'] > 0
+          && isArrayBuffer(obj.buffer);
+    }
+    function isBlob(obj: any): boolean {
+      return type(obj) === 'Blob';
+    }
+    function isImageData(obj: any): boolean {
+      return type(obj) === 'ImageData';
+    }
+    function isArrayBuffer(obj: any): boolean {
+      return type(obj) === 'ArrayBuffer';
+    }
+    function type(target: any): string {
+      return (<string>Object.prototype.toString.call(obj)).split(' ').pop().slice(0, -1);
     }
   }
 }
