@@ -1,5 +1,9 @@
 # Changelog
 
-## 0.0.x
+## 0.1.1
 
-WIP
+Update dependencies.
+
+## 0.1.0
+
+Publish.

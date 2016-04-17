@@ -147,7 +147,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
         }
       });
   }
-  protected cache = new Supervisor<[KeyString] | [KeyString, string] | [KeyString, string, string], void, UnsavedEventRecord<T> | SavedEventRecord<T>>();
+  protected cache = new class extends Supervisor<[KeyString] | [KeyString, string] | [KeyString, string, string], void, UnsavedEventRecord<T> | SavedEventRecord<T>> { }();
   public events = {
     load: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, ESEventType], ESEvent, void>(),
     save: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, ESEventType], ESEvent, void>(),
