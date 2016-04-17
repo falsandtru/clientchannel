@@ -1,4 +1,4 @@
-/*! arch-stream v0.0.89 https://github.com/falsandtru/arch-stream | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
+/*! arch-stream v0.0.90 https://github.com/falsandtru/arch-stream | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
 define = typeof define === 'function' && define.amd
   ? define
   : (function () {
@@ -1096,6 +1096,8 @@ define('src/lib/supervisor', [
                 dependenciesStack: []
             };
             this.queue = [];
+            if (this.constructor === Supervisor)
+                throw new Error('ArchStream: Supervisor: Cannot instantiate abstract classes.');
             this.name = name;
             void dependencies.reduce(function (_, _a) {
                 var namespace = _a[0], deps = _a[1];
@@ -1248,8 +1250,10 @@ define('src/lib/supervisor', [
             var out_i_1;
             var this_1 = this;
             for (var i = 0; i < this.queue.length; ++i) {
-                _loop_1(i);
+                var state_1 = _loop_1(i);
                 i = out_i_1;
+                if (state_1 === 'continue')
+                    continue;
             }
         };
         Supervisor.count = 0;

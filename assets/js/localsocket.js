@@ -1,4 +1,4 @@
-/*! localsocket v0.1.0 https://github.com/falsandtru/localsocket | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
+/*! localsocket v0.1.1 https://github.com/falsandtru/localsocket | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
 define = typeof define === 'function' && define.amd
   ? define
   : (function () {
@@ -991,7 +991,13 @@ define('src/layer/data/store/event', [
             var _this = this;
             this.database = database;
             this.name = name;
-            this.cache = new arch_stream_5.Supervisor();
+            this.cache = new (function (_super) {
+                __extends(class_1, _super);
+                function class_1() {
+                    _super.apply(this, arguments);
+                }
+                return class_1;
+            }(arch_stream_5.Supervisor))();
             this.events = {
                 load: new arch_stream_5.Observable(),
                 save: new arch_stream_5.Observable(),
