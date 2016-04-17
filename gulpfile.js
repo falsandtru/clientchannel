@@ -8,7 +8,6 @@ const $ = require('gulp-load-plugins')({
   //replaceString: /\bgulp[\-.]/
 });
 const Server = require('karma').Server;
-const browserSync = require('browser-sync');
 
 const pkg = require('./package.json');
 const karmaconfig = require('./karma.conf.js');
@@ -18,9 +17,6 @@ const config = {
       typescript: require('typescript')
     }),
     source: {
-      lint: {
-        configuration: require('./tslint.source.json')
-      },
       src: [
         'typings/*.d.ts',
         '*.ts',
@@ -29,9 +25,6 @@ const config = {
       dest: 'dist/'
     },
     dist: {
-      lint: {
-        configuration: require('./tslint.source.json')
-      },
       src: [
         'typings/*.d.ts',
         '*.ts',
@@ -41,9 +34,6 @@ const config = {
       dest: 'dist/'
     },
     test: {
-      lint: {
-        configuration: require('./tslint.test.json')
-      },
       src: [
         'typings/*.d.ts',
         'test/**/*.ts'
@@ -51,9 +41,6 @@ const config = {
       dest: 'test/'
     },
     bench: {
-      lint: {
-        configuration: require('./tslint.test.json')
-      },
       src: [
         'typings/*.d.ts',
         'typings/benchmark/*.d.ts',
@@ -152,31 +139,6 @@ gulp.task('bs', function () {
   });
 });
 */
-gulp.task('lint:source', function () {
-  return gulp.src(config.ts.source.src)
-    .pipe($.cached('lint:source'))
-    .pipe($.tslint(config.ts.source.lint))
-    .pipe($.tslint.report('prose', { emitError: false }));
-});
-
-gulp.task('lint:test', function () {
-  return gulp.src(config.ts.test.src)
-    .pipe($.cached('lint:test'))
-    .pipe($.tslint(config.ts.test.lint))
-    .pipe($.tslint.report('prose', { emitError: false }));
-});
-
-gulp.task('lint:bench', function () {
-  return gulp.src(config.ts.bench.src)
-    .pipe($.cached('lint:bench'))
-    .pipe($.tslint(config.ts.test.lint))
-    .pipe($.tslint.report('prose', { emitError: false }));
-});
-
-gulp.task('lint:watch', function () {
-  gulp.watch(config.ts.source.src, ['lint:source']);
-  gulp.watch(config.ts.test.src, ['lint:test']);
-});
 
 gulp.task('ts:source', function () {
   return gulp.src(config.ts.source.src)
@@ -271,7 +233,6 @@ gulp.task('update', function () {
 
 gulp.task('build', ['clean'], function (done) {
   seq(
-    //['lint:source', 'lint:test'],
     ['ts:source', 'ts:test'],
     done
   );
@@ -279,7 +240,6 @@ gulp.task('build', ['clean'], function (done) {
 
 gulp.task('watch', ['build'], function () {
   seq([
-    //'lint:watch',
     'ts:watch',
     'karma:watch'
   ]);
@@ -297,7 +257,6 @@ gulp.task('test', ['build'], function (done) {
 
 gulp.task('bench', ['dist'], function (done) {
   seq(
-    //'lint:bench',
     'ts:bench',
     'karma:bench',
     done
