@@ -12,13 +12,12 @@ env:
   - GIT_COMMITTER_EMAIL=$(git log -1 --pretty=format:%ae)
   - GIT_COMMIT_ID=$(git rev-parse HEAD)
 before_install:
-- export DISPLAY=:99.0
 - wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-- sudo sh -c 'echo "deb http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
-- sudo sed -i -e 's/deb http/deb [arch=amd64] http/' "/etc/apt/sources.list.d/google-chrome.list"
-- sudo apt-get update
-- sudo apt-get install google-chrome-stable
+- echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee -a /etc/apt/sources.list
+- sudo apt-get update -qq
+- sudo apt-get install -y google-chrome-stable
 - export CHROME_BIN=google-chrome-stable
+- export DISPLAY=:99.0
 - sh -e /etc/init.d/xvfb start
 before_deploy:
 - sed -i 's/"private":\ true/"private":\ false/' package.json
