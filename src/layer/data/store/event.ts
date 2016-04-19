@@ -1,9 +1,8 @@
 import {LocalSocketObjectMetaData, LocalSocketEvent, LocalSocketEventType} from 'localsocket';
-import {Supervisor, Observable, Set, Map, Msg, sqid, concat} from 'arch-stream';
+import {Supervisor, Observable, Set, Map, Message, sqid, clone, concat} from 'arch-stream';
 import {listen, Config, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../infrastructure/indexeddb/api';
 import {IdNumber, KeyString} from '../constraint/types';
 import {EventType, EventValue, EventRecord} from '../schema/event';
-import {assign} from '../lib/assign';
 import {noop} from '../../../lib/noop';
 
 export {
@@ -165,19 +164,19 @@ export abstract class AbstractEventStore<T extends EventValue> {
           }
           case false: {
             if (cb === noop) return msg.then(a => concat(a, [<DOMError>void 0]));
-            const job = Msg<DOMError[]>();
+            const job = new Message<DOMError[]>();
             void this.syncWaits.once([key], err => void job.send([err]));
             return msg.then(a => job.then(b => concat(a, b)));
           }
           default: {
             void this.update(key);
             if (cb === noop) return msg.then(a => concat(a, [<DOMError>void 0]));
-            const job = Msg<DOMError[]>();
+            const job = new Message<DOMError[]>();
             void this.syncWaits.once([key], err => void job.send([err]));
             return msg.then(a => job.then(b => concat(a, b)));
           }
         }
-      }, Msg<DOMError[]>().send([], true))
+      }, new Message<DOMError[]>().send([], true))
       .then(cb);
   }
   public update(key: KeyString): void {
@@ -230,7 +229,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
   public meta(key: KeyString): LocalSocketObjectMetaData {
     const events = this.cache.cast([key], void 0);
     return Object.freeze(
-      assign(
+      clone(
         <LocalSocketObjectMetaData>{
           id: events.reduce((id, e) => e.id > id ? e.id : id, 0),
           date: 0
@@ -445,7 +444,7 @@ export function compose<T extends EventValue>(events: (UnsavedEventRecord<T> | S
     switch (source.type) {
       case EventType.put: {
         return source.value[source.attr] !== void 0
-          ? new UnsavedEventRecord(source.key, assign(new EventValue(), target.value, source.value), EventType.snapshot)
+          ? new UnsavedEventRecord(source.key, clone(new EventValue(), target.value, source.value), EventType.snapshot)
           : new UnsavedEventRecord(
             source.key,
             Object.keys(target.value)

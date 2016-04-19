@@ -1,5 +1,5 @@
+import {clone} from 'arch-stream';
 import {IdNumber, KeyString} from '../constraint/types';
-import {assign} from '../lib/assign';
 
 export const EventType = {
   put: <'put'>'put',
@@ -41,12 +41,12 @@ export abstract class EventRecord<T extends EventValue> {
 
     switch (type) {
       case EventType.put: {
-        this.value = value = <T>assign(new EventValue(), <EventValue>{ [this.attr]: value[this.attr] });
+        this.value = value = <T>clone(new EventValue(), <EventValue>{ [this.attr]: value[this.attr] });
         void Object.freeze(this.value);
         return;
       }
       case EventType.snapshot: {
-        this.value = value = <T>assign(new EventValue(), value);
+        this.value = value = <T>clone(new EventValue(), value);
         void Object.freeze(this.value);
         return;
       }

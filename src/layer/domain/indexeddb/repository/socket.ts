@@ -1,11 +1,10 @@
 import {LocalSocket, LocalSocketObject, LocalPort, LocalPortObject, LocalPortEvent, LocalPortEventType} from 'localsocket';
-import {Observable, IObservableObserver, Set, Map, concat} from 'arch-stream';
+import {Observable, IObservableObserver, Set, Map, clone, concat} from 'arch-stream';
 import {build, SCHEMA, isValidPropertyName, isValidPropertyValue} from '../../dao/api';
 import {SocketStore, SocketRecord, SocketValue, ESEventType} from '../model/socket';
 import {localStorage} from '../../../infrastructure/webstorage/api';
 import {webstorage, WebStorageEvent, WebStorageEventType} from '../../webstorage/api';
 import {KeyString} from '../../../data/constraint/types';
-import {assign} from '../../../data/lib/assign';
 
 export function socket<T extends SocketValue>(
   name: string,
@@ -118,7 +117,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
     if (this.links.has(key)) return this.links.get(key);
     return this.links.add(key, build(
       Object.defineProperties(
-        this.sources.add(key, assign<T>({}, this.get(key))),
+        this.sources.add(key, clone<T>({}, this.get(key))),
         {
           __meta: {
             get: () => this.meta(key)
