@@ -1,4 +1,4 @@
-/*! localsocket v0.1.1 https://github.com/falsandtru/localsocket | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
+/*! localsocket v0.1.2 https://github.com/falsandtru/localsocket | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
 define = typeof define === 'function' && define.amd
   ? define
   : (function () {
@@ -796,67 +796,11 @@ define('src/layer/data/constraint/types', [
     }
     exports.KeyString = KeyString;
 });
-define('src/layer/data/lib/assign', [
-    'require',
-    'exports'
-], function (require, exports) {
-    'use strict';
-    function assign(target) {
-        var sources = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            sources[_i - 1] = arguments[_i];
-        }
-        if (target === undefined || target === null) {
-            throw new TypeError('LocalSocket: assign: Cannot merge objects into ' + target + '.');
-        }
-        var to = Object(target);
-        for (var i = 0; i < sources.length; i++) {
-            var nextSource = sources[i];
-            if (nextSource === undefined || nextSource === null) {
-                continue;
-            }
-            nextSource = Object(nextSource);
-            for (var _a = 0, _b = Object.keys(Object(nextSource)); _a < _b.length; _a++) {
-                var nextKey = _b[_a];
-                var desc = Object.getOwnPropertyDescriptor(nextSource, nextKey);
-                if (desc !== undefined && desc.enumerable) {
-                    var nextValue = nextSource[nextKey];
-                    var prevValue = to[nextKey];
-                    if (isCloneable(nextValue)) {
-                        to[nextKey] = Array.isArray(nextValue) ? nextValue.slice() : assign({}, nextValue);
-                    } else {
-                        to[nextKey] = nextValue;
-                    }
-                }
-            }
-        }
-        return to;
-        function isCloneable(obj) {
-            return !!obj && typeof obj === 'object' && !isTypedArray(obj) && !isBlob(obj) && !isImageData(obj) && !isArrayBuffer(obj);
-            function isTypedArray(obj) {
-                return obj instanceof Object && obj.constructor instanceof Object && obj.constructor['BYTES_PER_ELEMENT'] > 0 && isArrayBuffer(obj.buffer);
-            }
-            function isBlob(obj) {
-                return type(obj) === 'Blob';
-            }
-            function isImageData(obj) {
-                return type(obj) === 'ImageData';
-            }
-            function isArrayBuffer(obj) {
-                return type(obj) === 'ArrayBuffer';
-            }
-            function type(target) {
-                return Object.prototype.toString.call(obj).split(' ').pop().slice(0, -1);
-            }
-        }
-    }
-    exports.assign = assign;
-});
 define('src/layer/data/schema/event', [
     'require',
     'exports',
-    'src/layer/data/lib/assign'
-], function (require, exports, assign_1) {
+    'arch-stream'
+], function (require, exports, arch_stream_5) {
     'use strict';
     exports.EventType = {
         put: 'put',
@@ -896,12 +840,12 @@ define('src/layer/data/schema/event', [
                 throw new TypeError('LocalSocket: EventRecord: Invalid event attr with ' + this.type + ': ' + this.attr);
             switch (type) {
             case exports.EventType.put: {
-                    this.value = value = assign_1.assign(new EventValue(), (_a = {}, _a[this.attr] = value[this.attr], _a));
+                    this.value = value = arch_stream_5.clone(new EventValue(), (_a = {}, _a[this.attr] = value[this.attr], _a));
                     void Object.freeze(this.value);
                     return;
                 }
             case exports.EventType.snapshot: {
-                    this.value = value = assign_1.assign(new EventValue(), value);
+                    this.value = value = arch_stream_5.clone(new EventValue(), value);
                     void Object.freeze(this.value);
                     return;
                 }
@@ -926,9 +870,8 @@ define('src/layer/data/store/event', [
     'src/layer/infrastructure/indexeddb/api',
     'src/layer/data/constraint/types',
     'src/layer/data/schema/event',
-    'src/layer/data/lib/assign',
     'src/lib/noop'
-], function (require, exports, arch_stream_5, api_1, types_1, event_4, assign_2, noop_2) {
+], function (require, exports, arch_stream_6, api_1, types_1, event_4, noop_2) {
     'use strict';
     exports.EventType = event_4.EventType;
     exports.EventValue = event_4.EventValue;
@@ -997,21 +940,21 @@ define('src/layer/data/store/event', [
                     _super.apply(this, arguments);
                 }
                 return class_1;
-            }(arch_stream_5.Supervisor))();
+            }(arch_stream_6.Supervisor))();
             this.events = {
-                load: new arch_stream_5.Observable(),
-                save: new arch_stream_5.Observable(),
-                loss: new arch_stream_5.Observable(),
-                access: new arch_stream_5.Observable()
+                load: new arch_stream_6.Observable(),
+                save: new arch_stream_6.Observable(),
+                loss: new arch_stream_6.Observable(),
+                access: new arch_stream_6.Observable()
             };
-            this.syncState = new arch_stream_5.Map();
-            this.syncWaits = new arch_stream_5.Observable();
+            this.syncState = new arch_stream_6.Map();
+            this.syncWaits = new arch_stream_6.Observable();
             this.snapshotCycle = 10;
-            this.snapshotJobState = new arch_stream_5.Map();
-            var lastNotifiedIdSet = new arch_stream_5.Set(function (o, n) {
+            this.snapshotJobState = new arch_stream_6.Map();
+            var lastNotifiedIdSet = new arch_stream_6.Set(function (o, n) {
                 return n > o ? n : o;
             });
-            var lastUpdatedDateSet = new arch_stream_5.Set(function (o, n) {
+            var lastUpdatedDateSet = new arch_stream_6.Set(function (o, n) {
                 return n > o ? n : o;
             });
             void this.cache.events.exec.monitor([], function (_a) {
@@ -1093,21 +1036,21 @@ define('src/layer/data/store/event', [
                 switch (_this.syncState.get(key)) {
                 case true: {
                         return msg.then(function (a) {
-                            return arch_stream_5.concat(a, [void 0]);
+                            return arch_stream_6.concat(a, [void 0]);
                         });
                     }
                 case false: {
                         if (cb === noop_2.noop)
                             return msg.then(function (a) {
-                                return arch_stream_5.concat(a, [void 0]);
+                                return arch_stream_6.concat(a, [void 0]);
                             });
-                        var job_1 = arch_stream_5.Msg();
+                        var job_1 = new arch_stream_6.Message();
                         void _this.syncWaits.once([key], function (err) {
                             return void job_1.send([err]);
                         });
                         return msg.then(function (a) {
                             return job_1.then(function (b) {
-                                return arch_stream_5.concat(a, b);
+                                return arch_stream_6.concat(a, b);
                             });
                         });
                     }
@@ -1115,20 +1058,20 @@ define('src/layer/data/store/event', [
                         void _this.update(key);
                         if (cb === noop_2.noop)
                             return msg.then(function (a) {
-                                return arch_stream_5.concat(a, [void 0]);
+                                return arch_stream_6.concat(a, [void 0]);
                             });
-                        var job_2 = arch_stream_5.Msg();
+                        var job_2 = new arch_stream_6.Message();
                         void _this.syncWaits.once([key], function (err) {
                             return void job_2.send([err]);
                         });
                         return msg.then(function (a) {
                             return job_2.then(function (b) {
-                                return arch_stream_5.concat(a, b);
+                                return arch_stream_6.concat(a, b);
                             });
                         });
                     }
                 }
-            }, arch_stream_5.Msg().send([], true)).then(cb);
+            }, new arch_stream_6.Message().send([], true)).then(cb);
         };
         AbstractEventStore.prototype.update = function (key) {
             var _this = this;
@@ -1148,11 +1091,11 @@ define('src/layer/data/store/event', [
                             return acc.some(function (_a) {
                                 var attr = _a.attr;
                                 return attr === e.attr;
-                            }) ? acc : arch_stream_5.concat([e], acc);
+                            }) ? acc : arch_stream_6.concat([e], acc);
                         }, []).reduce(function (acc, e) {
                             switch (e.type) {
                             case event_4.EventType.put: {
-                                    return arch_stream_5.concat([e], acc);
+                                    return arch_stream_6.concat([e], acc);
                                 }
                             default: {
                                     return [e];
@@ -1162,12 +1105,12 @@ define('src/layer/data/store/event', [
                             void _this.cache.terminate([
                                 e.key,
                                 e.attr,
-                                arch_stream_5.sqid(e.id)
+                                arch_stream_6.sqid(e.id)
                             ]);
                             void _this.cache.register([
                                 e.key,
                                 e.attr,
-                                arch_stream_5.sqid(e.id)
+                                arch_stream_6.sqid(e.id)
                             ], function (_) {
                                 return e;
                             });
@@ -1185,7 +1128,7 @@ define('src/layer/data/store/event', [
                 if (_this.cache.refs([
                         event.key,
                         event.attr,
-                        arch_stream_5.sqid(event.id)
+                        arch_stream_6.sqid(event.id)
                     ]).length > 0)
                     return;
                 void savedEvents.unshift(new SavedEventRecord(event.id, event.key, event.value, event.type, event.date));
@@ -1196,7 +1139,7 @@ define('src/layer/data/store/event', [
         };
         AbstractEventStore.prototype.meta = function (key) {
             var events = this.cache.cast([key], void 0);
-            return Object.freeze(assign_2.assign({
+            return Object.freeze(arch_stream_6.clone({
                 id: events.reduce(function (id, e) {
                     return e.id > id ? e.id : id;
                 }, 0),
@@ -1207,7 +1150,7 @@ define('src/layer/data/store/event', [
         };
         AbstractEventStore.prototype.keys = function () {
             return this.cache.cast([], void 0).reduce(function (keys, e) {
-                return keys.length === 0 || keys[keys.length - 1] !== e.key ? arch_stream_5.concat(keys, [e.key]) : keys;
+                return keys.length === 0 || keys[keys.length - 1] !== e.key ? arch_stream_6.concat(keys, [e.key]) : keys;
             }, []).sort();
         };
         AbstractEventStore.prototype.has = function (key) {
@@ -1232,11 +1175,11 @@ define('src/layer/data/store/event', [
             if (event instanceof UnsavedEventRecord === false)
                 throw new Error('LocalSocket: Cannot add a saved event: ' + JSON.stringify(event));
             void this.sync([event.key]);
-            var id = arch_stream_5.sqid();
+            var id = arch_stream_6.sqid();
             void this.cache.register([
                 event.key,
                 event.attr,
-                arch_stream_5.sqid(0),
+                arch_stream_6.sqid(0),
                 id
             ], function (_) {
                 return event;
@@ -1244,14 +1187,14 @@ define('src/layer/data/store/event', [
             void this.cache.cast([
                 event.key,
                 event.attr,
-                arch_stream_5.sqid(0),
+                arch_stream_6.sqid(0),
                 id
             ], void 0);
             return void api_1.listen(this.database)(function (db) {
                 if (_this.cache.refs([
                         event.key,
                         event.attr,
-                        arch_stream_5.sqid(0)
+                        arch_stream_6.sqid(0)
                     ]).length === 0)
                     return;
                 var tx = db.transaction(_this.name, api_1.IDBTransaction.readwrite);
@@ -1261,13 +1204,13 @@ define('src/layer/data/store/event', [
                     void _this.cache.terminate([
                         savedEvent.key,
                         savedEvent.attr,
-                        arch_stream_5.sqid(0),
+                        arch_stream_6.sqid(0),
                         id
                     ]);
                     void _this.cache.register([
                         savedEvent.key,
                         savedEvent.attr,
-                        arch_stream_5.sqid(savedEvent.id)
+                        arch_stream_6.sqid(savedEvent.id)
                     ], function (_) {
                         return savedEvent;
                     });
@@ -1279,7 +1222,7 @@ define('src/layer/data/store/event', [
                     void _this.cache.cast([
                         savedEvent.key,
                         savedEvent.attr,
-                        arch_stream_5.sqid(savedEvent.id)
+                        arch_stream_6.sqid(savedEvent.id)
                     ], void 0);
                     if (_this.cache.refs([event.key]).filter(function (_a) {
                             var sub = _a[1];
@@ -1295,7 +1238,7 @@ define('src/layer/data/store/event', [
                         if (_this.cache.refs([
                                 event.key,
                                 event.attr,
-                                arch_stream_5.sqid(0),
+                                arch_stream_6.sqid(0),
                                 id
                             ]).length === 0)
                             return;
@@ -1365,7 +1308,7 @@ define('src/layer/data/store/event', [
                 until = Infinity;
             }
             var removedEvents = [];
-            var cleanStateMap = new arch_stream_5.Map();
+            var cleanStateMap = new arch_stream_6.Map();
             return void this.cursor(key ? api_1.IDBKeyRange.bound([
                 key,
                 0
@@ -1378,7 +1321,7 @@ define('src/layer/data/store/event', [
                         return void _this.cache.terminate([
                             event.key,
                             event.attr,
-                            arch_stream_5.sqid(event.id)
+                            arch_stream_6.sqid(event.id)
                         ]);
                     }, void 0);
                 var event = cursor.value;
@@ -1451,13 +1394,13 @@ define('src/layer/data/store/event', [
                 var prev = head[0];
                 if (!prev)
                     return [[event]];
-                return prev.key === event.key ? arch_stream_5.concat([arch_stream_5.concat([event], head)], tail) : arch_stream_5.concat([[event]], arch_stream_5.concat([head], tail));
+                return prev.key === event.key ? arch_stream_6.concat([arch_stream_6.concat([event], head)], tail) : arch_stream_6.concat([[event]], arch_stream_6.concat([head], tail));
             }, [[]]);
         }
         function compose(target, source) {
             switch (source.type) {
             case event_4.EventType.put: {
-                    return source.value[source.attr] !== void 0 ? new UnsavedEventRecord(source.key, assign_2.assign(new event_4.EventValue(), target.value, source.value), event_4.EventType.snapshot) : new UnsavedEventRecord(source.key, Object.keys(target.value).reduce(function (value, prop) {
+                    return source.value[source.attr] !== void 0 ? new UnsavedEventRecord(source.key, arch_stream_6.clone(new event_4.EventValue(), target.value, source.value), event_4.EventType.snapshot) : new UnsavedEventRecord(source.key, Object.keys(target.value).reduce(function (value, prop) {
                         if (prop === source.attr)
                             return value;
                         value[prop] = target[prop];
@@ -1509,7 +1452,7 @@ define('src/layer/data/store/key-value', [
     'arch-stream',
     'src/layer/infrastructure/indexeddb/api',
     'src/lib/noop'
-], function (require, exports, arch_stream_6, api_2, noop_3) {
+], function (require, exports, arch_stream_7, api_2, noop_3) {
     'use strict';
     exports.EventType = {
         get: 'get',
@@ -1521,8 +1464,8 @@ define('src/layer/data/store/key-value', [
             this.database = database;
             this.name = name;
             this.index = index;
-            this.cache = new arch_stream_6.Map();
-            this.events = { access: new arch_stream_6.Observable() };
+            this.cache = new arch_stream_7.Map();
+            this.events = { access: new arch_stream_7.Observable() };
             if (typeof index !== 'string')
                 throw new TypeError();
         }
@@ -1793,7 +1736,7 @@ define('src/layer/domain/indexeddb/model/socket', [
     'src/layer/domain/indexeddb/model/socket/access',
     'src/layer/domain/indexeddb/model/socket/expiry',
     'src/lib/noop'
-], function (require, exports, arch_stream_7, api_4, types_2, event_9, data_1, access_2, expiry_1, noop_4) {
+], function (require, exports, arch_stream_8, api_4, types_2, event_9, data_1, access_2, expiry_1, noop_4) {
     'use strict';
     exports.SocketRecord = event_9.UnsavedEventRecord;
     exports.ESEventType = event_9.ESEventType;
@@ -1806,13 +1749,13 @@ define('src/layer/domain/indexeddb/model/socket', [
             }
             this.database = database;
             this.expiry = expiry;
-            this.uuid = arch_stream_7.uuid();
+            this.uuid = arch_stream_8.uuid();
             this.events = {
-                load: new arch_stream_7.Observable(),
-                save: new arch_stream_7.Observable(),
-                loss: new arch_stream_7.Observable()
+                load: new arch_stream_8.Observable(),
+                save: new arch_stream_8.Observable(),
+                loss: new arch_stream_8.Observable()
             };
-            this.expiries = new arch_stream_7.Map();
+            this.expiries = new arch_stream_8.Map();
             void api_4.open(database, {
                 make: function (db) {
                     return data_1.DataStore.configure().make(db) && access_2.AccessStore.configure().make(db) && expiry_1.ExpiryStore.configure().make(db);
@@ -1927,14 +1870,14 @@ define('src/layer/domain/webstorage/service/event', [
     'exports',
     'arch-stream',
     'src/layer/infrastructure/webstorage/api'
-], function (require, exports, arch_stream_8, api_5) {
+], function (require, exports, arch_stream_9, api_5) {
     'use strict';
     exports.events = {
         localStorage: subscribe(api_5.events.localStorage),
         sessionStorage: subscribe(api_5.events.sessionStorage)
     };
     function subscribe(source) {
-        var observer = new arch_stream_8.Observable();
+        var observer = new arch_stream_9.Observable();
         void source.on(['storage'], function (event) {
             return void observer.emit([event.key], event);
         });
@@ -1945,11 +1888,11 @@ define('src/layer/domain/webstorage/service/storage', [
     'require',
     'exports',
     'arch-stream'
-], function (require, exports, arch_stream_9) {
+], function (require, exports, arch_stream_10) {
     'use strict';
     var StorageLike = function () {
         function StorageLike() {
-            this.store = new arch_stream_9.Map();
+            this.store = new arch_stream_10.Map();
         }
         Object.defineProperty(StorageLike.prototype, 'length', {
             get: function () {
@@ -1982,12 +1925,12 @@ define('src/layer/domain/webstorage/repository/port', [
     'src/layer/domain/webstorage/service/event',
     'src/layer/infrastructure/webstorage/api',
     'src/layer/domain/webstorage/service/storage'
-], function (require, exports, arch_stream_10, api_6, event_10, api_7, storage_1) {
+], function (require, exports, arch_stream_11, api_6, event_10, api_7, storage_1) {
     'use strict';
-    var LocalStorageObjectCache = new arch_stream_10.Set();
-    var LocalStorageSubscriber = new arch_stream_10.Set();
-    var SessionStorageObjectCache = new arch_stream_10.Set();
-    var SessionStorageSubscriber = new arch_stream_10.Set();
+    var LocalStorageObjectCache = new arch_stream_11.Set();
+    var LocalStorageSubscriber = new arch_stream_11.Set();
+    var SessionStorageObjectCache = new arch_stream_11.Set();
+    var SessionStorageSubscriber = new arch_stream_11.Set();
     var PortEventType;
     (function (PortEventType) {
         PortEventType.send = 'send';
@@ -2035,10 +1978,10 @@ define('src/layer/domain/webstorage/repository/port', [
             this.log = log;
             this.cache = this.storage === api_7.localStorage ? LocalStorageObjectCache : SessionStorageObjectCache;
             this.eventSource = this.storage === api_7.localStorage ? event_10.events.localStorage : event_10.events.sessionStorage;
-            this.uuid = arch_stream_10.uuid();
+            this.uuid = arch_stream_11.uuid();
             this.events = {
-                send: new arch_stream_10.Observable(),
-                recv: new arch_stream_10.Observable()
+                send: new arch_stream_11.Observable(),
+                recv: new arch_stream_11.Observable()
             };
             void Object.freeze(this);
         }
@@ -2046,7 +1989,7 @@ define('src/layer/domain/webstorage/repository/port', [
             var _this = this;
             if (this.cache.has(this.name))
                 return this.cache.get(this.name);
-            var source = arch_stream_10.assign((_a = {}, _a[api_6.SCHEMA.KEY.NAME] = this.name, _a[api_6.SCHEMA.EVENT.NAME] = new arch_stream_10.Observable(), _a), parse(this.storage.getItem(this.name)));
+            var source = arch_stream_11.assign((_a = {}, _a[api_6.SCHEMA.KEY.NAME] = this.name, _a[api_6.SCHEMA.EVENT.NAME] = new arch_stream_11.Observable(), _a), parse(this.storage.getItem(this.name)));
             var dao = api_6.build(source, this.factory, function (attr, newValue, oldValue) {
                 void _this.log.update(_this.name);
                 void _this.storage.setItem(_this.name, JSON.stringify(Object.keys(source).filter(api_6.isValidPropertyName).filter(api_6.isValidPropertyValue(source)).reduce(function (acc, attr) {
@@ -2133,9 +2076,8 @@ define('src/layer/domain/indexeddb/repository/socket', [
     'src/layer/domain/indexeddb/model/socket',
     'src/layer/infrastructure/webstorage/api',
     'src/layer/domain/webstorage/api',
-    'src/layer/data/constraint/types',
-    'src/layer/data/lib/assign'
-], function (require, exports, arch_stream_11, api_9, socket_1, api_10, api_11, types_3, assign_3) {
+    'src/layer/data/constraint/types'
+], function (require, exports, arch_stream_12, api_9, socket_1, api_10, api_11, types_3) {
     'use strict';
     function socket(name, factory, destroy, expiry) {
         if (expiry === void 0) {
@@ -2155,7 +2097,7 @@ define('src/layer/domain/indexeddb/repository/socket', [
     var Port = function () {
         function Port() {
             this.msgs = [];
-            this.msgHeadSet_ = new arch_stream_11.Set(function (o, n) {
+            this.msgHeadSet_ = new arch_stream_12.Set(function (o, n) {
                 return n > o ? n : o;
             });
         }
@@ -2170,7 +2112,7 @@ define('src/layer/domain/indexeddb/repository/socket', [
             });
         };
         Port.prototype.send = function (msg) {
-            this.msgs = arch_stream_11.concat([msg], this.msgs.slice(0, 9));
+            this.msgs = arch_stream_12.concat([msg], this.msgs.slice(0, 9));
         };
         return Port;
     }();
@@ -2184,8 +2126,8 @@ define('src/layer/domain/indexeddb/repository/socket', [
                 return new Port();
             });
             this.port = this.proxy.link();
-            this.links = new arch_stream_11.Set();
-            this.sources = new arch_stream_11.Set();
+            this.links = new arch_stream_12.Set();
+            this.sources = new arch_stream_12.Set();
             void this.port.__event.on([
                 api_11.WebStorageEventType.recv,
                 'msgs'
@@ -2249,7 +2191,7 @@ define('src/layer/domain/indexeddb/repository/socket', [
             void this.expire(key, expiry);
             if (this.links.has(key))
                 return this.links.get(key);
-            return this.links.add(key, api_9.build(Object.defineProperties(this.sources.add(key, assign_3.assign({}, this.get(key))), {
+            return this.links.add(key, api_9.build(Object.defineProperties(this.sources.add(key, arch_stream_12.clone({}, this.get(key))), {
                 __meta: {
                     get: function () {
                         return _this.meta(key);
@@ -2270,7 +2212,7 @@ define('src/layer/domain/indexeddb/repository/socket', [
                         return this.__meta.date;
                     }
                 },
-                __event: { value: new arch_stream_11.Observable() }
+                __event: { value: new arch_stream_12.Observable() }
             }), this.factory, function (attr, newValue, oldValue) {
                 void _this.add(new socket_1.SocketRecord(types_3.KeyString(key), (_a = {}, _a[attr] = newValue, _a)));
                 void _this.sources.get(key).__event.emit([

@@ -1,4 +1,4 @@
-/*! arch-stream v0.0.90 https://github.com/falsandtru/arch-stream | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
+/*! arch-stream v0.0.91 https://github.com/falsandtru/arch-stream | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
 define = typeof define === 'function' && define.amd
   ? define
   : (function () {
@@ -682,7 +682,6 @@ define('src/lib/observable', [
     'src/lib/concat'
 ], function (require, exports, concat_1) {
     'use strict';
-    var CACHE_SIZE = 100;
     var Observable = function () {
         function Observable() {
             this.node_ = {
@@ -1381,7 +1380,7 @@ define('src/lib/supervisor', [
                     ]);
                 }
                 try {
-                    var result = this.process(cmd.data);
+                    var result = (0, this.process)(cmd.data);
                     if (thenable_2.isThenable(result)) {
                         void --this.parallel;
                         void result.then(function (_) {
@@ -1710,83 +1709,57 @@ define('src/lib/assign', [
     'exports'
 ], function (require, exports) {
     'use strict';
-    function assign(target) {
-        var sources = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            sources[_i - 1] = arguments[_i];
+    exports.assign = template(function (key, target, source) {
+        target[key] = source[key];
+    });
+    exports.clone = template(function (key, target, source) {
+        if (source[key] instanceof Object) {
+            target[key] = Array.isArray(source[key]) ? source[key].slice() : type(source[key]) === 'Object' ? exports.clone({}, source[key]) : source[key];
+        } else {
+            target[key] = source[key];
         }
-        if (target === undefined || target === null) {
-            throw new TypeError('ArchStream: assign: Cannot merge objects into ' + target + '.');
+    });
+    exports.extend = template(function (key, target, source) {
+        if (source[key] instanceof Object) {
+            target[key] = Array.isArray(source[key]) ? source[key].slice() : type(source[key]) === 'Object' ? exports.extend(type(target[key]) === 'Object' ? target[key] : {}, source[key]) : source[key];
+        } else {
+            target[key] = source[key];
         }
-        var to = Object(target);
-        for (var i = 0; i < sources.length; i++) {
-            var nextSource = sources[i];
-            if (nextSource === undefined || nextSource === null) {
-                continue;
+    });
+    function template(cb) {
+        return function walk(target) {
+            var sources = [];
+            for (var _i = 1; _i < arguments.length; _i++) {
+                sources[_i - 1] = arguments[_i];
             }
-            nextSource = Object(nextSource);
-            for (var _a = 0, _b = Object.keys(Object(nextSource)); _a < _b.length; _a++) {
-                var nextKey = _b[_a];
-                var desc = Object.getOwnPropertyDescriptor(nextSource, nextKey);
-                if (desc !== undefined && desc.enumerable) {
-                    var nextValue = nextSource[nextKey];
-                    var prevValue = to[nextKey];
-                    if (nextValue && typeof nextValue === 'object') {
-                        to[nextKey] = Array.isArray(nextValue) ? nextValue.slice() : assign({}, nextValue);
-                    } else {
-                        to[nextKey] = nextValue;
+            if (target === undefined || target === null) {
+                throw new TypeError('ArchStream: assign: Cannot walk on ' + target + '.');
+            }
+            for (var _a = 0, sources_1 = sources; _a < sources_1.length; _a++) {
+                var source = sources_1[_a];
+                if (source === undefined || source === null) {
+                    continue;
+                }
+                for (var _b = 0, _c = Object.keys(Object(source)); _b < _c.length; _b++) {
+                    var key = _c[_b];
+                    var desc = Object.getOwnPropertyDescriptor(Object(source), key);
+                    if (desc !== undefined && desc.enumerable) {
+                        void cb(key, Object(target), Object(source));
                     }
                 }
             }
-        }
-        return to;
+            return Object(target);
+        };
     }
-    exports.assign = assign;
-});
-define('src/lib/extend', [
-    'require',
-    'exports'
-], function (require, exports) {
-    'use strict';
-    function extend(target) {
-        var sources = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            sources[_i - 1] = arguments[_i];
-        }
-        if (target === undefined || target === null) {
-            throw new TypeError('ArchStream: extend: Cannot merge objects into ' + target + '.');
-        }
-        var to = Object(target);
-        for (var i = 0; i < sources.length; i++) {
-            var nextSource = sources[i];
-            if (nextSource === undefined || nextSource === null) {
-                continue;
-            }
-            nextSource = Object(nextSource);
-            for (var _a = 0, _b = Object.keys(Object(nextSource)); _a < _b.length; _a++) {
-                var nextKey = _b[_a];
-                var desc = Object.getOwnPropertyDescriptor(nextSource, nextKey);
-                if (desc !== undefined && desc.enumerable) {
-                    var nextValue = nextSource[nextKey];
-                    var prevValue = to[nextKey];
-                    if (nextValue && typeof nextValue === 'object') {
-                        to[nextKey] = Array.isArray(nextValue) ? nextValue.slice() : extend(prevValue && typeof prevValue === 'object' && !Array.isArray(prevValue) ? prevValue : {}, nextValue);
-                    } else {
-                        to[nextKey] = nextValue;
-                    }
-                }
-            }
-        }
-        return to;
+    function type(target) {
+        return Object.prototype.toString.call(target).split(' ').pop().slice(0, -1);
     }
-    exports.extend = extend;
 });
 define('src/export', [
     'require',
     'exports',
     'src/stream/transform',
     'src/lib/message',
-    'src/lib/proxy',
     'src/lib/proxy',
     'src/lib/supervisor',
     'src/lib/observable',
@@ -1800,12 +1773,13 @@ define('src/export', [
     'src/lib/uuid',
     'src/lib/sqid',
     'src/lib/assign',
-    'src/lib/extend',
     'src/lib/concat',
-    './typings/arch-stream.d'
-], function (require, exports, transform_1, message_2, proxy_1, proxy_2, supervisor_1, observable_2, map_2, set_2, tick_4, timer_1, maybe_1, either_1, fingerprint_2, uuid_2, sqid_1, assign_1, extend_1, concat_3) {
+    'src/stream/transform'
+], function (require, exports, transform_1, message_2, proxy_1, supervisor_1, observable_2, map_2, set_2, tick_4, timer_1, maybe_1, either_1, fingerprint_2, uuid_2, sqid_1, assign_1, concat_3, transform_2) {
     'use strict';
-    exports.Proxy = proxy_2.Proxy;
+    exports.ArchStream = transform_1.ArchStream;
+    exports.Message = message_2.Message;
+    exports.Proxy = proxy_1.Proxy;
     exports.Supervisor = supervisor_1.Supervisor;
     exports.Observable = observable_2.Observable;
     exports.Map = map_2.Map;
@@ -1824,26 +1798,14 @@ define('src/export', [
     exports.uuid = uuid_2.v4;
     exports.sqid = sqid_1.sqid;
     exports.assign = assign_1.assign;
-    exports.extend = extend_1.extend;
+    exports.clone = assign_1.clone;
+    exports.extend = assign_1.extend;
     exports.concat = concat_3.concat;
-    var Package = {
-        Msg: Msg,
-        Proxy: proxy_1.Proxy
-    };
     Object.defineProperty(exports, '__esModule', { value: true });
     exports.default = A;
     function A() {
-        return new transform_1.ArchStream();
+        return new transform_2.ArchStream();
     }
-    var A;
-    (function (A) {
-        A.Msg = Package.Msg;
-        A.Proxy = Package.Proxy;
-    }(A || (A = {})));
-    function Msg() {
-        return new message_2.Message();
-    }
-    exports.Msg = Msg;
 });
 define('arch-stream', [
     'require',
