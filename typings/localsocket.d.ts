@@ -44,8 +44,7 @@
   export type LocalSocketEventType
     = 'put'
     | 'delete'
-    | 'snapshot'
-    | 'query';
+    | 'snapshot';
 
   export function port<T extends LocalPortObject>(name: string, config: LocalPortConfig<T>): LocalPort<T>;
   export interface LocalPort<T extends LocalPortObject> {

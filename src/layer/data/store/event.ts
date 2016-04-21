@@ -43,13 +43,29 @@ export type ESEventType = LocalSocketEventType;
 export const ESEventType = {
   put: <'put'>'put',
   delete: <'delete'>'delete',
-  snapshot: <'snapshot'>'snapshot',
-  query: <'query'>'query'
+  snapshot: <'snapshot'>'snapshot'
 }
-
 export class ESEvent implements LocalSocketEvent {
   constructor(
     public type: ESEventType,
+    public id: IdNumber,
+    public key: KeyString,
+    public attr: string
+  ) {
+    void Object.freeze(this);
+  }
+}
+
+type ESInternalEventType = ESEventType | 'query';
+const ESInternalEventType = {
+  put: <'put'>'put',
+  delete: <'delete'>'delete',
+  snapshot: <'snapshot'>'snapshot',
+  query: <'query'>'query'
+}
+class ESInternalEvent {
+  constructor(
+    public type: ESInternalEventType,
     public id: IdNumber,
     public key: KeyString,
     public attr: string
@@ -151,7 +167,9 @@ export abstract class AbstractEventStore<T extends EventValue> {
     load: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, ESEventType], ESEvent, void>(),
     save: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, ESEventType], ESEvent, void>(),
     loss: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, ESEventType], ESEvent, void>(),
-    access: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, ESEventType], ESEvent, void>()
+  };
+  public events_ = {
+    access: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, ESInternalEventType], ESInternalEvent, void>()
   };
   protected syncState = new Map<KeyString, boolean>();
   protected syncWaits = new Observable<[KeyString], DOMError, any>();
@@ -252,15 +270,15 @@ export abstract class AbstractEventStore<T extends EventValue> {
   }
   public get(key: KeyString): T {
     void this.sync([key]);
-    void this.events.access
-      .emit([key], new ESEvent(ESEventType.query, IdNumber(0), key, ''));
+    void this.events_.access
+      .emit([key], new ESInternalEvent(ESInternalEventType.query, IdNumber(0), key, ''));
     return compose(this.cache.cast([key], void 0))
       .reduce(e => e)
       .value;
   }
   public add(event: UnsavedEventRecord<T>): void {
-    void this.events.access
-      .emit([event.key, event.attr, event.type], new ESEvent(event.type, IdNumber(0), event.key, event.attr));
+    void this.events_.access
+      .emit([event.key, event.attr, event.type], new ESInternalEvent(event.type, IdNumber(0), event.key, event.attr));
     if (event instanceof UnsavedEventRecord === false) throw new Error(`LocalSocket: Cannot add a saved event: ${JSON.stringify(event)}`);
     void this.sync([event.key]);
     const id = sqid();

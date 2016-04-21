@@ -85,7 +85,7 @@ export class ExpiryStore extends AbstractKeyValueStore<string, ExpiryRecord> {
     };
 
     void schedule(Date.now());
-    void data.events.access
+    void data.events_.access
       .monitor(<any>[], ({key, type}) => {
         if (type === ESEventType.delete) {
           void this.delete(key);

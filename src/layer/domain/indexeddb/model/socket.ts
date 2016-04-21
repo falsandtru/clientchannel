@@ -106,7 +106,7 @@ class Schema<T extends SocketValue> {
     this.data.events.load.monitor(<any>[], ev => this.store_.events.load.emit([ev.key, ev.attr, ev.type], ev));
     this.data.events.save.monitor(<any>[], ev => this.store_.events.save.emit([ev.key, ev.attr, ev.type], ev));
     this.data.events.loss.monitor(<any>[], ev => this.store_.events.loss.emit([ev.key, ev.attr, ev.type], ev));
-    this.access = new AccessStore(this.store_.database, this.data.events.access);
+    this.access = new AccessStore(this.store_.database, this.data.events_.access);
     this.expire = new ExpiryStore(this.store_.database, this.store_, this.data, this.expiries_);
 
     void this.data.sync(keys);
