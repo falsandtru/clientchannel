@@ -1,4 +1,4 @@
-/*! arch-stream v0.0.91 https://github.com/falsandtru/arch-stream | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
+/*! arch-stream v0.0.95 https://github.com/falsandtru/arch-stream | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
 define = typeof define === 'function' && define.amd
   ? define
   : (function () {
@@ -955,49 +955,35 @@ define('src/lib/map', [
     function serialize(key, multiple) {
         return multiple ? key.length === 0 ? '' : '_' + key.join(UNIQUE_SEPARATOR) : key + '';
     }
-    function deserialize(key, multiple, type) {
-        if (type === void 0) {
-            type = '';
-        }
-        return multiple ? key === '' ? [] : key.slice(1).split(UNIQUE_SEPARATOR).map(function (k) {
-            return type === 'number' ? +k : k;
-        }) : type === 'number' ? +key : key;
-    }
     var Map = function () {
         function Map() {
-            this.map_ = Object.create(null);
-            this.type_ = '';
+            this.store_ = Object.create(null);
             void this.reset_();
         }
         Map.prototype.get = function (key) {
-            return this.map_[serialize(key, this.multiKey_)];
+            return (this.store_[serialize(key, this.multiKey_)] || [])[1];
         };
         Map.prototype.set = function (key, val) {
             if (this.multiKey_ === void 0) {
                 this.multiKey_ = Array.isArray(key);
             }
-            if (!this.type_) {
-                if (!this.multiKey_) {
-                    this.type_ = typeof key;
-                } else if (key.length > 0) {
-                    this.type_ = typeof key[0];
-                }
-            }
             void this.reset_();
-            return this.map_[serialize(key, this.multiKey_)] = val;
+            this.store_[serialize(key, this.multiKey_)] = [
+                key,
+                val
+            ];
+            return val;
         };
         Map.prototype.has = function (key) {
-            return !!this.map_[serialize(key, this.multiKey_)] || serialize(key, this.multiKey_) in this.map_;
+            return !!this.store_[serialize(key, this.multiKey_)];
         };
         Map.prototype.delete = function (key) {
             void this.reset_();
-            delete this.map_[serialize(key, this.multiKey_)];
-            return this;
+            delete this.store_[serialize(key, this.multiKey_)];
         };
         Map.prototype.clear = function () {
             void this.reset_();
-            this.map_ = Object.create(null);
-            return this;
+            this.store_ = Object.create(null);
         };
         Map.prototype.reset_ = function () {
             this.size_ = NaN;
@@ -1005,18 +991,15 @@ define('src/lib/map', [
         };
         Object.defineProperty(Map.prototype, 'size', {
             get: function () {
-                return this.size_ >= 0 ? this.size_ : this.size_ = Object.keys(this.map_).length;
+                return this.size_ >= 0 ? this.size_ : this.size_ = Object.keys(this.store_).length;
             },
             enumerable: true,
             configurable: true
         });
         Map.prototype.entries = function () {
             var _this = this;
-            return this.entries_ ? this.entries_ : this.entries_ = Object.keys(this.map_).map(function (key) {
-                return [
-                    deserialize(key, _this.multiKey_, _this.type_),
-                    _this.get(deserialize(key, _this.multiKey_, _this.type_))
-                ];
+            return this.entries_ ? this.entries_ : this.entries_ = Object.keys(this.store_).map(function (key) {
+                return _this.store_[key];
             });
         };
         return Map;
@@ -1037,21 +1020,42 @@ define('src/lib/set', [
     'src/lib/map'
 ], function (require, exports, map_1) {
     'use strict';
-    var Set = function (_super) {
-        __extends(Set, _super);
+    var Set = function () {
         function Set(replacer_) {
-            _super.call(this);
             this.replacer_ = replacer_;
+            this.map_ = new map_1.Map();
         }
+        Set.prototype.get = function (key) {
+            return this.map_.get(key);
+        };
         Set.prototype.add = function (key, val) {
             if (!this.has(key))
-                return this.set(key, val);
+                return this.map_.set(key, val);
             if (!this.replacer_)
-                throw new Error('Cannot overwrite value of set without replacer.');
-            return this.set(key, this.replacer_(this.get(key), val));
+                throw new Error('ArchStream: Set: Cannot overwrite value of set without replacer.');
+            return this.map_.set(key, this.replacer_(this.get(key), val));
+        };
+        Set.prototype.has = function (key) {
+            return this.map_.has(key);
+        };
+        Set.prototype.delete = function (key) {
+            void this.map_.delete(key);
+        };
+        Set.prototype.clear = function () {
+            return void this.map_.clear();
+        };
+        Object.defineProperty(Set.prototype, 'size', {
+            get: function () {
+                return this.map_.size;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Set.prototype.entries = function () {
+            return this.map_.entries();
         };
         return Set;
-    }(map_1.Map);
+    }();
     exports.Set = Set;
     var MultiSet = function (_super) {
         __extends(MultiSet, _super);
@@ -1076,7 +1080,7 @@ define('src/lib/supervisor', [
     var Supervisor = function () {
         function Supervisor(_a) {
             var _this = this;
-            var _b = _a === void 0 ? {} : _a, _c = _b.name, name = _c === void 0 ? 'anonymous' : _c, _d = _b.dependencies, dependencies = _d === void 0 ? [] : _d, _e = _b.retry, retry = _e === void 0 ? false : _e, _f = _b.timeout, timeout = _f === void 0 ? 0 : _f, _g = _b.destructor, destructor = _g === void 0 ? noop_4.noop : _g;
+            var _b = _a === void 0 ? {} : _a, _c = _b.name, name = _c === void 0 ? '' : _c, _d = _b.dependencies, dependencies = _d === void 0 ? [] : _d, _e = _b.retry, retry = _e === void 0 ? false : _e, _f = _b.timeout, timeout = _f === void 0 ? 0 : _f, _g = _b.destructor, destructor = _g === void 0 ? noop_4.noop : _g;
             this.deps = new set_1.MultiSet();
             this.events = {
                 exec: new observable_1.Observable(),
@@ -1100,7 +1104,7 @@ define('src/lib/supervisor', [
             this.name = name;
             void dependencies.reduce(function (_, _a) {
                 var namespace = _a[0], deps = _a[1];
-                return void _this.deps.set(namespace, deps);
+                return void _this.deps.add(namespace, deps);
             }, void 0);
             this.retry = retry;
             this.timeout = timeout;
@@ -1156,7 +1160,9 @@ define('src/lib/supervisor', [
             void this.queue.push([
                 namespace,
                 data,
-                callback,
+                function (data, results) {
+                    return void callback(results, data);
+                },
                 timeout,
                 Date.now()
             ]);
@@ -1421,6 +1427,69 @@ define('src/lib/supervisor', [
         }
         return true;
     }
+});
+define('src/lib/weakmap', [
+    'require',
+    'exports',
+    'src/lib/uuid'
+], function (require, exports, uuid_2) {
+    'use strict';
+    var WeakMap = function () {
+        function WeakMap() {
+            this.uuid = uuid_2.v4();
+        }
+        WeakMap.prototype.get = function (key) {
+            return (key[this.uuid] || [])[0];
+        };
+        WeakMap.prototype.set = function (key, val) {
+            void Object.defineProperty(key, this.uuid, {
+                value: [val],
+                enumerable: false,
+                writable: false,
+                configurable: true
+            });
+            return this.get(key);
+        };
+        WeakMap.prototype.has = function (key) {
+            return !!key[this.uuid];
+        };
+        WeakMap.prototype.delete = function (key) {
+            delete key[this.uuid];
+        };
+        return WeakMap;
+    }();
+    exports.WeakMap = WeakMap;
+});
+define('src/lib/weakset', [
+    'require',
+    'exports',
+    'src/lib/weakmap'
+], function (require, exports, weakmap_1) {
+    'use strict';
+    var WeakSet = function () {
+        function WeakSet(replacer_) {
+            this.replacer_ = replacer_;
+            this.map_ = new weakmap_1.WeakMap();
+        }
+        WeakSet.prototype.get = function (key) {
+            return this.map_.get(key);
+        };
+        WeakSet.prototype.add = function (key, val) {
+            if (!this.has(key))
+                return this.map_.set(key, val);
+            if (!this.replacer_)
+                throw new Error('ArchStream: WeakSet: Cannot overwrite value of set without replacer.');
+            return this.map_.set(key, this.replacer_(this.get(key), val));
+        };
+        WeakSet.prototype.has = function (key) {
+            return this.map_.has(key);
+        };
+        WeakSet.prototype.delete = function (key) {
+            void this.map_.delete(key);
+        };
+        return WeakSet;
+    }();
+    exports.WeakSet = WeakSet;
 });
 define('src/lib/timer', [
     'require',
@@ -1710,20 +1779,42 @@ define('src/lib/assign', [
 ], function (require, exports) {
     'use strict';
     exports.assign = template(function (key, target, source) {
-        target[key] = source[key];
+        return target[key] = source[key];
     });
     exports.clone = template(function (key, target, source) {
-        if (source[key] instanceof Object) {
-            target[key] = Array.isArray(source[key]) ? source[key].slice() : type(source[key]) === 'Object' ? exports.clone({}, source[key]) : source[key];
-        } else {
-            target[key] = source[key];
+        switch (type(source[key])) {
+        case 'Array': {
+                return target[key] = exports.clone([], source[key]);
+            }
+        case 'Function':
+        case 'Object': {
+                return target[key] = exports.clone({}, source[key]);
+            }
+        default: {
+                return target[key] = source[key];
+            }
         }
     });
     exports.extend = template(function (key, target, source) {
-        if (source[key] instanceof Object) {
-            target[key] = Array.isArray(source[key]) ? source[key].slice() : type(source[key]) === 'Object' ? exports.extend(type(target[key]) === 'Object' ? target[key] : {}, source[key]) : source[key];
-        } else {
-            target[key] = source[key];
+        switch (type(source[key])) {
+        case 'Array': {
+                return target[key] = exports.extend([], source[key]);
+            }
+        case 'Function':
+        case 'Object': {
+                switch (type(target[key])) {
+                case 'Function':
+                case 'Object': {
+                        return target[key] = exports.extend(target[key], source[key]);
+                    }
+                default: {
+                        return target[key] = exports.extend({}, source[key]);
+                    }
+                }
+            }
+        default: {
+                return target[key] = source[key];
+            }
         }
     });
     function template(cb) {
@@ -1763,7 +1854,9 @@ define('src/export', [
     'src/lib/proxy',
     'src/lib/supervisor',
     'src/lib/observable',
+    'src/lib/weakmap',
     'src/lib/map',
+    'src/lib/weakset',
     'src/lib/set',
     'src/lib/tick',
     'src/lib/timer',
@@ -1775,15 +1868,17 @@ define('src/export', [
     'src/lib/assign',
     'src/lib/concat',
     'src/stream/transform'
-], function (require, exports, transform_1, message_2, proxy_1, supervisor_1, observable_2, map_2, set_2, tick_4, timer_1, maybe_1, either_1, fingerprint_2, uuid_2, sqid_1, assign_1, concat_3, transform_2) {
+], function (require, exports, transform_1, message_2, proxy_1, supervisor_1, observable_2, weakmap_2, map_2, weakset_1, set_2, tick_4, timer_1, maybe_1, either_1, fingerprint_2, uuid_3, sqid_1, assign_1, concat_3, transform_2) {
     'use strict';
     exports.ArchStream = transform_1.ArchStream;
     exports.Message = message_2.Message;
     exports.Proxy = proxy_1.Proxy;
     exports.Supervisor = supervisor_1.Supervisor;
     exports.Observable = observable_2.Observable;
+    exports.WeakMap = weakmap_2.WeakMap;
     exports.Map = map_2.Map;
     exports.MultiMap = map_2.MultiMap;
+    exports.WeakSet = weakset_1.WeakSet;
     exports.Set = set_2.Set;
     exports.MultiSet = set_2.MultiSet;
     exports.Tick = tick_4.Tick;
@@ -1795,7 +1890,7 @@ define('src/export', [
     exports.Left = either_1.Left;
     exports.Right = either_1.Right;
     exports.FINGERPRINT = fingerprint_2.FINGERPRINT;
-    exports.uuid = uuid_2.v4;
+    exports.uuid = uuid_3.v4;
     exports.sqid = sqid_1.sqid;
     exports.assign = assign_1.assign;
     exports.clone = assign_1.clone;

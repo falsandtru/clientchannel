@@ -1,4 +1,4 @@
-/*! localsocket v0.1.2 https://github.com/falsandtru/localsocket | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
+/*! localsocket v0.1.3 https://github.com/falsandtru/localsocket | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
 define = typeof define === 'function' && define.amd
   ? define
   : (function () {
@@ -906,8 +906,7 @@ define('src/layer/data/store/event', [
     exports.ESEventType = {
         put: 'put',
         delete: 'delete',
-        snapshot: 'snapshot',
-        query: 'query'
+        snapshot: 'snapshot'
     };
     var ESEvent = function () {
         function ESEvent(type, id, key, attr) {
@@ -920,6 +919,22 @@ define('src/layer/data/store/event', [
         return ESEvent;
     }();
     exports.ESEvent = ESEvent;
+    var ESInternalEventType = {
+        put: 'put',
+        delete: 'delete',
+        snapshot: 'snapshot',
+        query: 'query'
+    };
+    var ESInternalEvent = function () {
+        function ESInternalEvent(type, id, key, attr) {
+            this.type = type;
+            this.id = id;
+            this.key = key;
+            this.attr = attr;
+            void Object.freeze(this);
+        }
+        return ESInternalEvent;
+    }();
     var STORE_FIELDS = {
         id: 'id',
         key: 'key',
@@ -944,9 +959,9 @@ define('src/layer/data/store/event', [
             this.events = {
                 load: new arch_stream_6.Observable(),
                 save: new arch_stream_6.Observable(),
-                loss: new arch_stream_6.Observable(),
-                access: new arch_stream_6.Observable()
+                loss: new arch_stream_6.Observable()
             };
+            this.events_ = { access: new arch_stream_6.Observable() };
             this.syncState = new arch_stream_6.Map();
             this.syncWaits = new arch_stream_6.Observable();
             this.snapshotCycle = 10;
@@ -1160,18 +1175,18 @@ define('src/layer/data/store/event', [
         };
         AbstractEventStore.prototype.get = function (key) {
             void this.sync([key]);
-            void this.events.access.emit([key], new ESEvent(exports.ESEventType.query, types_1.IdNumber(0), key, ''));
+            void this.events_.access.emit([key], new ESInternalEvent(ESInternalEventType.query, types_1.IdNumber(0), key, ''));
             return compose(this.cache.cast([key], void 0)).reduce(function (e) {
                 return e;
             }).value;
         };
         AbstractEventStore.prototype.add = function (event) {
             var _this = this;
-            void this.events.access.emit([
+            void this.events_.access.emit([
                 event.key,
                 event.attr,
                 event.type
-            ], new ESEvent(event.type, types_1.IdNumber(0), event.key, event.attr));
+            ], new ESInternalEvent(event.type, types_1.IdNumber(0), event.key, event.attr));
             if (event instanceof UnsavedEventRecord === false)
                 throw new Error('LocalSocket: Cannot add a saved event: ' + JSON.stringify(event));
             void this.sync([event.key]);
@@ -1400,7 +1415,7 @@ define('src/layer/data/store/event', [
         function compose(target, source) {
             switch (source.type) {
             case event_4.EventType.put: {
-                    return source.value[source.attr] !== void 0 ? new UnsavedEventRecord(source.key, arch_stream_6.clone(new event_4.EventValue(), target.value, source.value), event_4.EventType.snapshot) : new UnsavedEventRecord(source.key, Object.keys(target.value).reduce(function (value, prop) {
+                    return source.value[source.attr] !== void 0 ? new UnsavedEventRecord(source.key, arch_stream_6.assign(new event_4.EventValue(), target.value, source.value), event_4.EventType.snapshot) : new UnsavedEventRecord(source.key, Object.keys(target.value).reduce(function (value, prop) {
                         if (prop === source.attr)
                             return value;
                         value[prop] = target[prop];
@@ -1685,7 +1700,7 @@ define('src/layer/domain/indexeddb/model/socket/expiry', [
                 });
             };
             void schedule(Date.now());
-            void data.events.access.monitor([], function (_a) {
+            void data.events_.access.monitor([], function (_a) {
                 var key = _a.key, type = _a.type;
                 if (type === event_8.ESEventType.delete) {
                     void _this.delete(key);
@@ -1858,7 +1873,7 @@ define('src/layer/domain/indexeddb/model/socket', [
                     ev.type
                 ], ev);
             });
-            this.access = new access_2.AccessStore(this.store_.database, this.data.events.access);
+            this.access = new access_2.AccessStore(this.store_.database, this.data.events_.access);
             this.expire = new expiry_1.ExpiryStore(this.store_.database, this.store_, this.data, this.expiries_);
             void this.data.sync(keys);
         };
