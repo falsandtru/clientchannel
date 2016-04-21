@@ -1,5 +1,5 @@
 import {LocalSocket, LocalSocketObject, LocalPort, LocalPortObject, LocalPortEvent, LocalPortEventType} from 'localsocket';
-import {Observable, IObservableObserver, Set, Map, clone, concat} from 'arch-stream';
+import {Observable, Observer, Set, Map, clone, concat} from 'arch-stream';
 import {build, SCHEMA, isValidPropertyName, isValidPropertyValue} from '../../dao/api';
 import {SocketStore, SocketRecord, SocketValue, ESEventType} from '../model/socket';
 import {localStorage} from '../../../infrastructure/webstorage/api';

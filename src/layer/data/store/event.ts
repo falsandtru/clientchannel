@@ -1,5 +1,5 @@
 import {LocalSocketObjectMetaData, LocalSocketEvent, LocalSocketEventType} from 'localsocket';
-import {Supervisor, Observable, Set, Map, Message, sqid, clone, concat} from 'arch-stream';
+import {Supervisor, Observable, Set, Map, Message, sqid, assign, clone, concat} from 'arch-stream';
 import {listen, Config, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../infrastructure/indexeddb/api';
 import {IdNumber, KeyString} from '../constraint/types';
 import {EventType, EventValue, EventRecord} from '../schema/event';
@@ -444,7 +444,7 @@ export function compose<T extends EventValue>(events: (UnsavedEventRecord<T> | S
     switch (source.type) {
       case EventType.put: {
         return source.value[source.attr] !== void 0
-          ? new UnsavedEventRecord(source.key, clone(new EventValue(), target.value, source.value), EventType.snapshot)
+          ? new UnsavedEventRecord(source.key, assign(new EventValue(), target.value, source.value), EventType.snapshot)
           : new UnsavedEventRecord(
             source.key,
             Object.keys(target.value)

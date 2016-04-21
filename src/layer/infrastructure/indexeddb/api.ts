@@ -1,4 +1,4 @@
-import {IObservableObserver} from 'arch-stream';
+import {Observer} from 'arch-stream';
 
 export {indexedDB, IDBKeyRange, IDBTransaction, IDBCursorDirection} from './module/global';
 export {open, listen, close, destroy, event, Config} from './model/access';

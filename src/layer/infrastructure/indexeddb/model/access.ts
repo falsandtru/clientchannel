@@ -1,10 +1,10 @@
-import {Observable, IObservableObserver, Set, Map} from 'arch-stream';
+import {Observable, Observer, Set, Map} from 'arch-stream';
 import {indexedDB} from '../module/global';
 import {IDBEvent, IDBEventType} from './event';
 import {supportWebStorage as status} from '../../webstorage/api';
 
 const IDBEventObserver = new Observable<[string] | [string, IDBEventType], IDBEvent, void>();
-export const event: IObservableObserver<[string] | [string, IDBEventType], IDBEvent, void> = IDBEventObserver;
+export const event: Observer<[string] | [string, IDBEventType], IDBEvent, void> = IDBEventObserver;
 
 export const ConfigMap = new Map<string, Config>();
 export type Config = {

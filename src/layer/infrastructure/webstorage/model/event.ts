@@ -1,4 +1,4 @@
-import {Observable, IObservableObserver} from 'arch-stream';
+import {Observable, Observer} from 'arch-stream';
 import {localStorage, sessionStorage} from '../module/global';
 
 const storageEvents = {
@@ -6,8 +6,8 @@ const storageEvents = {
   sessionStorage: new Observable<['storage'], StorageEvent, void>()
 };
 export const events: {
-  localStorage: IObservableObserver<['storage'], StorageEvent, void>;
-  sessionStorage: IObservableObserver<['storage'], StorageEvent, void>;
+  localStorage: Observer<['storage'], StorageEvent, void>;
+  sessionStorage: Observer<['storage'], StorageEvent, void>;
 } = storageEvents;
 
 void window.addEventListener('storage', event => {
