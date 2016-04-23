@@ -187,31 +187,19 @@ gulp.task('ts:watch', function () {
 });
 
 gulp.task('karma:watch', function (done) {
-  new Server(config.karma.watch, function(exitCode) {
-    console.log('Karma has exited with ' + exitCode);
-    done();
-  }).start();
+  new Server(config.karma.watch, done).start();
 });
 
 gulp.task('karma:test', function (done) {
-  new Server(config.karma.test, function(exitCode) {
-    console.log('Karma has exited with ' + exitCode);
-    done();
-  }).start();
+  new Server(config.karma.test, done).start();
 });
 
 gulp.task('karma:bench', function (done) {
-  new Server(config.karma.bench, function(exitCode) {
-    console.log('Karma has exited with ' + exitCode);
-    done();
-  }).start();
+  new Server(config.karma.bench, done).start();
 });
 
 gulp.task('karma:server', function (done) {
-  new Server(config.karma.server, function(exitCode) {
-    console.log('Karma has exited with ' + exitCode);
-    done();
-  }).start();
+  new Server(config.karma.server, done).start();
 });
 
 gulp.task('clean', function () {
