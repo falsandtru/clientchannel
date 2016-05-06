@@ -333,14 +333,14 @@ describe('Unit: layers/data/store/event', function () {
       let cnt = 0;
       es.sync([KeyString('')], err => {
         assert(++cnt === 1);
-        assert.deepEqual(err, [void 0]);
+        assert.deepStrictEqual(err, [void 0]);
       });
       es.sync([KeyString('')], err => {
         assert(++cnt === 2);
-        assert.deepEqual(err, [void 0]);
+        assert.deepStrictEqual(err, [void 0]);
         es.sync([KeyString('')], err => {
           assert(++cnt === 3);
-          assert.deepEqual(err, [void 0]);
+          assert.deepStrictEqual(err, [void 0]);
           done();
         });
       });

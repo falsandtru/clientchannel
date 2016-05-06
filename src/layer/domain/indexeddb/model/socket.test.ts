@@ -37,26 +37,26 @@ describe('Unit: layers/domain/indexeddb/model/socket', function () {
 
       socket.recent(Infinity, (keys, err) => {
         assert(!err);
-        assert.deepEqual(keys, []);
+        assert.deepStrictEqual(keys, []);
         socket.recent(Infinity, (keys, err) => {
           socket.add(new SocketRecord(KeyString('a'), new CustomSocketValue(0)));
           setTimeout(() => {
             socket.recent(Infinity, (keys, err) => {
               assert(!err);
-              assert.deepEqual(keys, ['a']);
+              assert.deepStrictEqual(keys, ['a']);
               setTimeout(() => {
                 socket.recent(0, (keys, err) => {
                   assert(!err);
-                  assert.deepEqual(keys, []);
+                  assert.deepStrictEqual(keys, []);
                   setTimeout(() => {
                     socket.recent(Infinity, (keys, err) => {
                       assert(!err);
-                      assert.deepEqual(keys, ['a']);
+                      assert.deepStrictEqual(keys, ['a']);
                       socket.add(new SocketRecord(KeyString('b'), new CustomSocketValue(0)));
                       setTimeout(() => {
                         socket.recent(Infinity, (keys, err) => {
                           assert(!err);
-                          assert.deepEqual(keys, ['b', 'a']);
+                          assert.deepStrictEqual(keys, ['b', 'a']);
                           socket.destroy();
                           done();
                         });
@@ -76,17 +76,17 @@ describe('Unit: layers/domain/indexeddb/model/socket', function () {
 
       socket.add(new SocketRecord(KeyString('a'), new CustomSocketValue(0)));
       socket.recent(Infinity, keys => {
-        assert.deepEqual(keys, ['a']);
+        assert.deepStrictEqual(keys, ['a']);
         assert(socket.has('a') === true);
         socket.delete('a');
         socket.add(new SocketRecord(KeyString('b'), new CustomSocketValue(0)));
         socket.recent(Infinity, keys => {
-          assert.deepEqual(keys, ['b']);
+          assert.deepStrictEqual(keys, ['b']);
           assert(socket.has('a') === false);
           assert(socket.has('b') === true);
           socket.delete('b');
           socket.recent(Infinity, keys => {
-            assert.deepEqual(keys, []);
+            assert.deepStrictEqual(keys, []);
             assert(socket.has('a') === false);
             assert(socket.has('b') === false);
             socket.destroy();
@@ -103,18 +103,18 @@ describe('Unit: layers/domain/indexeddb/model/socket', function () {
       socket.add(new SocketRecord(KeyString('a'), new CustomSocketValue(0)));
       assert(socket.get('a').val === 0);
       socket.recent(Infinity, keys => {
-        assert.deepEqual(keys, ['a']);
+        assert.deepStrictEqual(keys, ['a']);
         assert(socket.has('a') === true);
         setTimeout(() => {
           socket.expire('b', 300);
           socket.add(new SocketRecord(KeyString('b'), new CustomSocketValue(0)));
           socket.recent(Infinity, keys => {
-            assert.deepEqual(keys, ['b']);
+            assert.deepStrictEqual(keys, ['b']);
             assert(socket.has('a') === false);
             assert(socket.has('b') === true);
             setTimeout(() => {
               socket.recent(Infinity, keys => {
-                assert.deepEqual(keys, []);
+                assert.deepStrictEqual(keys, []);
                 assert(socket.has('a') === false);
                 assert(socket.has('b') === false);
                 socket.destroy();
