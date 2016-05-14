@@ -110,12 +110,12 @@ const config = {
       singleRun: true
     }),
     bench: extend({}, require('./karma.conf.js'), {
-      browsers: ['Chromium', 'Firefox'],
+      browsers: ['Chrome', 'Firefox'],
       reporters: ['dots'],
       singleRun: true
     }),
     server: extend({}, require('./karma.conf.js'), {
-      browsers: ['Chromium', 'Firefox'],
+      browsers: ['Chrome', 'Firefox'],
       reporters: ['dots', 'coverage', 'coveralls'],
       preprocessors: {
         'dist/*.js': ['coverage', 'espower'],

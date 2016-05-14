@@ -4,34 +4,6 @@ module.exports = {
   basePath: '',
 
 
-  customLaunchers: {
-    Chromium: {
-      base: 'Chrome',
-      flags: ['--no-sandbox']
-    },
-    IE11: {
-      base: 'IE',
-      'x-ua-compatible': 'IE=EmulateIE11'
-    },
-    IE10: {
-      base: 'IE',
-      'x-ua-compatible': 'IE=EmulateIE10'
-    },
-    IE9: {
-      base: 'IE',
-      'x-ua-compatible': 'IE=EmulateIE9'
-    },
-    IE8: {
-      base: 'IE',
-      'x-ua-compatible': 'IE=EmulateIE8'
-    },
-    PhantomJSB: {
-      base: 'PhantomJS',
-      flags: ['--remote-debugger-port=9000']
-    }
-  },
-
-
   // frameworks to use
   // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
   frameworks: ['mocha'],
