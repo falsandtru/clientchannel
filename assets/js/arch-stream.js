@@ -1,4 +1,4 @@
-/*! arch-stream v0.0.95 https://github.com/falsandtru/arch-stream | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
+/*! arch-stream v0.0.102 https://github.com/falsandtru/arch-stream | (c) 2015, falsandtru | MIT License (https://opensource.org/licenses/MIT) */
 define = typeof define === 'function' && define.amd
   ? define
   : (function () {
@@ -215,7 +215,7 @@ define('src/lib/message', [
                             listeners.shift().send(data);
                         }
                     } catch (err) {
-                        void console.error(err, err + '');
+                        void console.error(err);
                         void resolve();
                     }
                 }());
@@ -789,7 +789,7 @@ define('src/lib/observable', [
                     }
                 } catch (err) {
                     if (err !== void 0 && err !== null) {
-                        void console.error(err, err + '');
+                        void console.error(err + '');
                     }
                 }
             }, void 0);
@@ -801,7 +801,7 @@ define('src/lib/observable', [
                     void subscriber(data);
                 } catch (err) {
                     if (err !== void 0 && err !== null) {
-                        void console.error(err, err + '');
+                        void console.error(err);
                     }
                 }
             }, void 0);
@@ -809,7 +809,7 @@ define('src/lib/observable', [
                 try {
                     void tracker(data, results);
                 } catch (err) {
-                    void console.error(err, err + '');
+                    void console.error(err);
                 }
             }
         };
@@ -833,7 +833,7 @@ define('src/lib/observable', [
                 var below = this.refsBelow_(childrenMap[name_1]);
                 registers = concat_1.concat(registers, below);
                 if (below.length === 0) {
-                    delete childrenMap[name_1];
+                    void delete childrenMap[name_1];
                     void childrenList.splice(childrenList.indexOf(name_1), 1);
                     void --i;
                 }
@@ -929,159 +929,149 @@ define('src/lib/uuid', [
     var SEED = fingerprint_1.FINGERPRINT * Date.now() % 1000000000000000;
     if (!SEED || typeof SEED !== 'number' || SEED < 100 || 1000000000000000 < SEED)
         throw new Error('ArchStream: uuid: Invalid uuid static seed.\n\t' + fingerprint_1.FINGERPRINT);
-    var FORMAT_V4 = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.split('');
+    var FORMAT_V4 = Object.freeze('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.split(''));
     var seed = SEED;
     function v4() {
         var k = seed = seed * Date.now() % 1000000000000000;
         if (k < 16 || 1000000000000000 < k)
             throw new Error('ArchStream: uuid: Invalid uuid dynamic seed.');
-        return FORMAT_V4.map(function (c) {
-            if (c !== 'x' && c !== 'y')
-                return c;
-            var r = Math.random() * k % 16 | 0;
-            var v = c == 'x' ? r : r & 3 | 8;
-            return v.toString(16);
-        }).join('').toLowerCase();
+        var acc = '';
+        for (var _i = 0, FORMAT_V4_1 = FORMAT_V4; _i < FORMAT_V4_1.length; _i++) {
+            var c = FORMAT_V4_1[_i];
+            if (c === 'x' || c === 'y') {
+                var r = Math.random() * k % 16 | 0;
+                var v = c == 'x' ? r : r & 3 | 8;
+                acc += v.toString(16);
+            } else {
+                acc += c;
+            }
+        }
+        return acc.toLowerCase();
     }
     exports.v4 = v4;
 });
-define('src/lib/map', [
+define('src/lib/dict/datamap', [
     'require',
     'exports',
     'src/lib/uuid'
 ], function (require, exports, uuid_1) {
     'use strict';
-    var UNIQUE_SEPARATOR = '' + uuid_1.v4();
-    function serialize(key, multiple) {
-        return multiple ? key.length === 0 ? '' : '_' + key.join(UNIQUE_SEPARATOR) : key + '';
+    var UNIQUE_SEPARATOR = '\uDFFF' + uuid_1.v4().slice(-4) + '\uDBFF';
+    function serialize(key) {
+        var acc = '';
+        for (var _i = 0, key_1 = key; _i < key_1.length; _i++) {
+            var k = key_1[_i];
+            acc += k + UNIQUE_SEPARATOR;
+        }
+        return acc;
     }
-    var Map = function () {
-        function Map() {
-            this.store_ = Object.create(null);
+    var DataMap = function () {
+        function DataMap() {
+            this.store = Object.create(null);
             void this.reset_();
         }
-        Map.prototype.get = function (key) {
-            return (this.store_[serialize(key, this.multiKey_)] || [])[1];
+        DataMap.prototype.get = function (key) {
+            return (this.store[serialize(key)] || [])[1];
         };
-        Map.prototype.set = function (key, val) {
-            if (this.multiKey_ === void 0) {
-                this.multiKey_ = Array.isArray(key);
-            }
+        DataMap.prototype.set = function (key, val) {
             void this.reset_();
-            this.store_[serialize(key, this.multiKey_)] = [
+            return (this.store[serialize(key)] = [
                 key,
                 val
-            ];
-            return val;
+            ])[1];
         };
-        Map.prototype.has = function (key) {
-            return !!this.store_[serialize(key, this.multiKey_)];
+        DataMap.prototype.has = function (key) {
+            return !!this.store[serialize(key)];
         };
-        Map.prototype.delete = function (key) {
+        DataMap.prototype.delete = function (key) {
             void this.reset_();
-            delete this.store_[serialize(key, this.multiKey_)];
+            return void delete this.store[serialize(key)];
         };
-        Map.prototype.clear = function () {
+        DataMap.prototype.clear = function () {
             void this.reset_();
-            this.store_ = Object.create(null);
+            this.store = Object.create(null);
         };
-        Map.prototype.reset_ = function () {
+        DataMap.prototype.reset_ = function () {
             this.size_ = NaN;
             this.entries_ = void 0;
         };
-        Object.defineProperty(Map.prototype, 'size', {
+        Object.defineProperty(DataMap.prototype, 'size', {
             get: function () {
-                return this.size_ >= 0 ? this.size_ : this.size_ = Object.keys(this.store_).length;
+                return this.size_ >= 0 ? this.size_ : this.size_ = Object.keys(this.store).length;
             },
             enumerable: true,
             configurable: true
         });
-        Map.prototype.entries = function () {
+        DataMap.prototype.entries = function () {
             var _this = this;
-            return this.entries_ ? this.entries_ : this.entries_ = Object.keys(this.store_).map(function (key) {
-                return _this.store_[key];
+            return this.entries_ ? this.entries_ : this.entries_ = Object.keys(this.store).map(function (key) {
+                return _this.store[key];
             });
         };
-        return Map;
+        return DataMap;
     }();
-    exports.Map = Map;
-    var MultiMap = function (_super) {
-        __extends(MultiMap, _super);
-        function MultiMap() {
-            _super.apply(this, arguments);
-        }
-        return MultiMap;
-    }(Map);
-    exports.MultiMap = MultiMap;
+    exports.DataMap = DataMap;
 });
-define('src/lib/set', [
+define('src/lib/dict/dataset', [
     'require',
     'exports',
-    'src/lib/map'
-], function (require, exports, map_1) {
+    'src/lib/dict/datamap'
+], function (require, exports, datamap_1) {
     'use strict';
-    var Set = function () {
-        function Set(replacer_) {
-            this.replacer_ = replacer_;
-            this.map_ = new map_1.Map();
+    var DataSet = function () {
+        function DataSet(replacer) {
+            this.replacer = replacer;
+            this.store = new datamap_1.DataMap();
         }
-        Set.prototype.get = function (key) {
-            return this.map_.get(key);
+        DataSet.prototype.get = function (key) {
+            return this.store.get(key);
         };
-        Set.prototype.add = function (key, val) {
+        DataSet.prototype.add = function (key, val) {
             if (!this.has(key))
-                return this.map_.set(key, val);
-            if (!this.replacer_)
+                return this.store.set(key, val);
+            if (!this.replacer)
                 throw new Error('ArchStream: Set: Cannot overwrite value of set without replacer.');
-            return this.map_.set(key, this.replacer_(this.get(key), val));
+            return this.store.set(key, this.replacer(this.get(key), val));
         };
-        Set.prototype.has = function (key) {
-            return this.map_.has(key);
+        DataSet.prototype.has = function (key) {
+            return this.store.has(key);
         };
-        Set.prototype.delete = function (key) {
-            void this.map_.delete(key);
+        DataSet.prototype.delete = function (key) {
+            return void this.store.delete(key);
         };
-        Set.prototype.clear = function () {
-            return void this.map_.clear();
+        DataSet.prototype.clear = function () {
+            return void this.store.clear();
         };
-        Object.defineProperty(Set.prototype, 'size', {
+        Object.defineProperty(DataSet.prototype, 'size', {
             get: function () {
-                return this.map_.size;
+                return this.store.size;
             },
             enumerable: true,
             configurable: true
         });
-        Set.prototype.entries = function () {
-            return this.map_.entries();
+        DataSet.prototype.entries = function () {
+            return this.store.entries();
         };
-        return Set;
+        return DataSet;
     }();
-    exports.Set = Set;
-    var MultiSet = function (_super) {
-        __extends(MultiSet, _super);
-        function MultiSet() {
-            _super.apply(this, arguments);
-        }
-        return MultiSet;
-    }(Set);
-    exports.MultiSet = MultiSet;
+    exports.DataSet = DataSet;
 });
 define('src/lib/supervisor', [
     'require',
     'exports',
     'src/lib/observable',
-    'src/lib/set',
+    'src/lib/dict/dataset',
     'src/lib/tick',
     'src/lib/thenable',
     'src/lib/concat',
     'src/lib/noop'
-], function (require, exports, observable_1, set_1, tick_3, thenable_2, concat_2, noop_4) {
+], function (require, exports, observable_1, dataset_1, tick_3, thenable_2, concat_2, noop_4) {
     'use strict';
     var Supervisor = function () {
         function Supervisor(_a) {
             var _this = this;
             var _b = _a === void 0 ? {} : _a, _c = _b.name, name = _c === void 0 ? '' : _c, _d = _b.dependencies, dependencies = _d === void 0 ? [] : _d, _e = _b.retry, retry = _e === void 0 ? false : _e, _f = _b.timeout, timeout = _f === void 0 ? 0 : _f, _g = _b.destructor, destructor = _g === void 0 ? noop_4.noop : _g;
-            this.deps = new set_1.MultiSet();
+            this.deps = new dataset_1.DataSet();
             this.events = {
                 exec: new observable_1.Observable(),
                 fail: new observable_1.Observable(),
@@ -1094,8 +1084,6 @@ define('src/lib/supervisor', [
             this.scheduled = false;
             this.workerSharedResource = {
                 procs: this.procs,
-                resolvedDependencies: [],
-                rejectedDependencies: [],
                 dependenciesStack: []
             };
             this.queue = [];
@@ -1125,13 +1113,15 @@ define('src/lib/supervisor', [
             try {
                 void this.destructor_(reason);
             } catch (err) {
-                void console.error(err, err + '');
+                void console.error(err);
             }
             void --this.constructor.count;
             void Object.freeze(this);
         };
         Supervisor.prototype.schedule = function () {
             var _this = this;
+            if (!this.alive)
+                return;
             if (this.scheduled)
                 return;
             void tick_3.Tick(function (_) {
@@ -1142,18 +1132,21 @@ define('src/lib/supervisor', [
             });
             this.scheduled = true;
         };
-        Supervisor.prototype.register = function (namespace, process, parallel) {
+        Supervisor.prototype.register = function (namespace, process) {
             void this.checkState();
             if (!this.registerable)
                 throw new Error('ArchStream: Supervisor: Supervisor ' + this.name + ' cannot register process during the exiting.');
             namespace = concat_2.concat([], namespace);
             void this.schedule();
-            return new Worker(this, this.workerSharedResource, namespace, process, parallel, this.deps.get(namespace) || []).terminate;
+            return new Worker(this, this.workerSharedResource, namespace, process, this.deps.get(namespace) || []).terminate;
         };
         Supervisor.prototype.call = function (namespace, data, timeout, callback) {
             var _this = this;
             if (timeout === void 0) {
                 timeout = this.timeout;
+            }
+            if (callback === void 0) {
+                callback = noop_4.noop;
             }
             void this.checkState();
             namespace = concat_2.concat([], namespace);
@@ -1167,16 +1160,17 @@ define('src/lib/supervisor', [
                 Date.now()
             ]);
             void this.schedule();
-            if (timeout > 0) {
-                void setTimeout(function () {
-                    return _this.drain(namespace);
-                }, timeout + 9);
-            }
+            if (timeout > 0 === false)
+                return;
+            void setTimeout(function () {
+                return _this.drain(namespace);
+            }, timeout);
         };
         Supervisor.prototype.cast = function (namespace, data, retry) {
             if (retry === void 0) {
                 retry = this.retry;
             }
+            void this.checkState();
             var results = this.procs.reflect(namespace, new WorkerCommand_$Call(data));
             if (results.length === 0) {
                 void this.events.fail.emit(namespace, [
@@ -1188,6 +1182,7 @@ define('src/lib/supervisor', [
             return results.length > 0 || !retry ? results : this.cast(namespace, data, false);
         };
         Supervisor.prototype.refs = function (namespace) {
+            void this.checkState();
             return this.procs.refs(namespace).map(function (_a) {
                 var namespace = _a[0], recv = _a[1];
                 var worker = recv(void 0);
@@ -1217,8 +1212,6 @@ define('src/lib/supervisor', [
             if (target === void 0) {
                 target = [];
             }
-            if (!this.alive)
-                return;
             var now = Date.now();
             var _loop_1 = function (i) {
                 var _a = this_1.queue[i], namespace = _a[0], data = _a[1], callback = _a[2], timeout = _a[3], since = _a[4];
@@ -1248,7 +1241,7 @@ define('src/lib/supervisor', [
                 try {
                     void callback(data, results);
                 } catch (err) {
-                    void console.error(err, err + '');
+                    void console.error(err);
                 }
                 out_i_1 = i;
             };
@@ -1296,16 +1289,16 @@ define('src/lib/supervisor', [
         return WorkerCommand_$Exit;
     }(AbstractWorkerCommand);
     var Worker = function () {
-        function Worker(sv, sharedResource, namespace, process, parallel, dependencies) {
+        function Worker(sv, sharedResource, namespace, process, dependencies) {
             var _this = this;
             this.sv = sv;
             this.sharedResource = sharedResource;
             this.namespace = namespace;
             this.process = process;
-            this.parallel = parallel;
             this.dependencies = dependencies;
             this.alive = true;
             this.called = false;
+            this.concurrency = 1;
             this.receive = function (cmd) {
                 return Worker.prototype.receive.call(_this, cmd);
             };
@@ -1313,7 +1306,6 @@ define('src/lib/supervisor', [
                 return Worker.prototype.terminate.call(_this, reason);
             };
             this.sharedResource.allRefsCache = void 0;
-            this.sharedResource.rejectedDependencies = [];
             void ++this.sv.constructor.procs;
             void this.sharedResource.procs.on(namespace, this.receive);
         }
@@ -1323,7 +1315,6 @@ define('src/lib/supervisor', [
             this.alive = false;
             void --this.sv.constructor.procs;
             this.sharedResource.allRefsCache = void 0;
-            this.sharedResource.resolvedDependencies = [];
             void Object.freeze(this);
             void this.sv.events.exit.emit(this.namespace, [
                 this.namespace,
@@ -1333,11 +1324,9 @@ define('src/lib/supervisor', [
         };
         Worker.prototype.tryDependencyResolving = function (cmd) {
             if (this.receive(new WorkerCommand_$Deps(this.namespace))) {
-                this.sharedResource.resolvedDependencies = concat_2.concat(this.sharedResource.resolvedDependencies, this.sharedResource.dependenciesStack);
                 this.sharedResource.dependenciesStack = [];
                 return;
             } else {
-                this.sharedResource.rejectedDependencies = concat_2.concat(this.sharedResource.rejectedDependencies, this.sharedResource.dependenciesStack);
                 this.sharedResource.dependenciesStack = [];
                 throw void 0;
             }
@@ -1351,18 +1340,10 @@ define('src/lib/supervisor', [
             if (cmd instanceof WorkerCommand_$Deps) {
                 if (cmd.namespace.length !== this.namespace.length)
                     return false;
-                for (var _i = 0, _a = this.sharedResource.resolvedDependencies; _i < _a.length; _i++) {
-                    var resolved = _a[_i];
-                    if (equal(this.namespace, resolved))
-                        return true;
-                }
-                for (var _b = 0, _c = this.sharedResource.rejectedDependencies; _b < _c.length; _b++) {
-                    var rejected = _c[_b];
-                    if (equal(this.namespace, rejected))
-                        return false;
-                }
-                for (var _d = 0, _e = this.sharedResource.dependenciesStack; _d < _e.length; _d++) {
-                    var stacked = _e[_d];
+                if (this.concurrency === 0)
+                    return false;
+                for (var _i = 0, _a = this.sharedResource.dependenciesStack; _i < _a.length; _i++) {
+                    var stacked = _a[_i];
                     if (equal(this.namespace, stacked))
                         return true;
                 }
@@ -1375,7 +1356,7 @@ define('src/lib/supervisor', [
                 });
             }
             if (cmd instanceof WorkerCommand_$Call) {
-                if (this.parallel < 0)
+                if (this.concurrency === 0)
                     throw void 0;
                 void this.tryDependencyResolving(cmd);
                 if (!this.called) {
@@ -1386,14 +1367,23 @@ define('src/lib/supervisor', [
                     ]);
                 }
                 try {
+                    void --this.concurrency;
                     var result = (0, this.process)(cmd.data);
                     if (thenable_2.isThenable(result)) {
-                        void --this.parallel;
                         void result.then(function (_) {
-                            return _this.alive ? void ++_this.parallel : void 0;
+                            void _this.sv.schedule();
+                            if (!_this.alive)
+                                return;
+                            void ++_this.concurrency;
                         }, function (reason) {
-                            return _this.alive && _this.terminate(reason);
+                            void _this.sv.schedule();
+                            if (!_this.alive)
+                                return;
+                            void ++_this.concurrency;
+                            void _this.terminate(reason);
                         });
+                    } else {
+                        void ++this.concurrency;
                     }
                     return result;
                 } catch (reason) {
@@ -1428,121 +1418,7 @@ define('src/lib/supervisor', [
         return true;
     }
 });
-define('src/lib/weakmap', [
-    'require',
-    'exports',
-    'src/lib/uuid'
-], function (require, exports, uuid_2) {
-    'use strict';
-    var WeakMap = function () {
-        function WeakMap() {
-            this.uuid = uuid_2.v4();
-        }
-        WeakMap.prototype.get = function (key) {
-            return (key[this.uuid] || [])[0];
-        };
-        WeakMap.prototype.set = function (key, val) {
-            void Object.defineProperty(key, this.uuid, {
-                value: [val],
-                enumerable: false,
-                writable: false,
-                configurable: true
-            });
-            return this.get(key);
-        };
-        WeakMap.prototype.has = function (key) {
-            return !!key[this.uuid];
-        };
-        WeakMap.prototype.delete = function (key) {
-            delete key[this.uuid];
-        };
-        return WeakMap;
-    }();
-    exports.WeakMap = WeakMap;
-});
-define('src/lib/weakset', [
-    'require',
-    'exports',
-    'src/lib/weakmap'
-], function (require, exports, weakmap_1) {
-    'use strict';
-    var WeakSet = function () {
-        function WeakSet(replacer_) {
-            this.replacer_ = replacer_;
-            this.map_ = new weakmap_1.WeakMap();
-        }
-        WeakSet.prototype.get = function (key) {
-            return this.map_.get(key);
-        };
-        WeakSet.prototype.add = function (key, val) {
-            if (!this.has(key))
-                return this.map_.set(key, val);
-            if (!this.replacer_)
-                throw new Error('ArchStream: WeakSet: Cannot overwrite value of set without replacer.');
-            return this.map_.set(key, this.replacer_(this.get(key), val));
-        };
-        WeakSet.prototype.has = function (key) {
-            return this.map_.has(key);
-        };
-        WeakSet.prototype.delete = function (key) {
-            void this.map_.delete(key);
-        };
-        return WeakSet;
-    }();
-    exports.WeakSet = WeakSet;
-});
-define('src/lib/timer', [
-    'require',
-    'exports'
-], function (require, exports) {
-    'use strict';
-    function Timer(_a) {
-        var _b = _a.begin, begin = _b === void 0 ? 0 : _b, _c = _a.end, end = _c === void 0 ? 1000 * 3600 * 24 : _c, _d = _a.step, step = _d === void 0 ? function (prev) {
-                return (prev || 1) * 3;
-            } : _d, _e = _a.precond, precond = _e === void 0 ? function () {
-                return true;
-            } : _e, _f = _a.task, task = _f === void 0 ? function () {
-                return void 0;
-            } : _f, _g = _a.postcond, postcond = _g === void 0 ? function () {
-                return true;
-            } : _g, _h = _a.complete, complete = _h === void 0 ? function () {
-                return 0;
-            } : _h, _j = _a.error, error = _j === void 0 ? function () {
-                return 0;
-            } : _j, _k = _a.timeout, timeout = _k === void 0 ? function () {
-                return 0;
-            } : _k, _l = _a.since, since = _l === void 0 ? Date.now() : _l;
-        begin = begin < 0 ? 0 : begin;
-        void setTimeout(function () {
-            try {
-                if (precond()) {
-                    var result = task();
-                    if (postcond())
-                        return void complete(result);
-                }
-            } catch (err) {
-                return void error(err);
-            }
-            var now = Date.now();
-            var next = step(now - since);
-            if (end - (now - since) <= 0)
-                return void timeout();
-            void Timer({
-                precond: precond,
-                task: task,
-                postcond: postcond,
-                complete: complete,
-                timeout: timeout,
-                begin: begin + next,
-                end: end,
-                step: step,
-                since: since
-            });
-        }, begin);
-    }
-    exports.Timer = Timer;
-});
-define('src/lib/monad', [
+define('src/lib/monad/monad', [
     'require',
     'exports'
 ], function (require, exports) {
@@ -1564,10 +1440,10 @@ define('src/lib/monad', [
     }();
     exports.Monad = Monad;
 });
-define('src/lib/maybe.impl', [
+define('src/lib/monad/maybe.impl', [
     'require',
     'exports',
-    'src/lib/monad'
+    'src/lib/monad/monad'
 ], function (require, exports, monad_1) {
     'use strict';
     var Maybe = function (_super) {
@@ -1642,10 +1518,10 @@ define('src/lib/maybe.impl', [
     }(Maybe);
     exports.Nothing = Nothing;
 });
-define('src/lib/maybe', [
+define('src/lib/monad/maybe', [
     'require',
     'exports',
-    'src/lib/maybe.impl'
+    'src/lib/monad/maybe.impl'
 ], function (require, exports, maybe_impl_1) {
     'use strict';
     var Maybe;
@@ -1661,10 +1537,10 @@ define('src/lib/maybe', [
     exports.Nothing = Maybe.Nothing;
     exports.Return = exports.Just;
 });
-define('src/lib/either.impl', [
+define('src/lib/monad/either.impl', [
     'require',
     'exports',
-    'src/lib/monad'
+    'src/lib/monad/monad'
 ], function (require, exports, monad_2) {
     'use strict';
     var Either = function (_super) {
@@ -1740,10 +1616,10 @@ define('src/lib/either.impl', [
     }(Either);
     exports.Right = Right;
 });
-define('src/lib/either', [
+define('src/lib/monad/either', [
     'require',
     'exports',
-    'src/lib/either.impl'
+    'src/lib/monad/either.impl'
 ], function (require, exports, either_impl_1) {
     'use strict';
     var Either;
@@ -1772,6 +1648,379 @@ define('src/lib/sqid', [
         return id === void 0 ? (1000000000000000 + ++cnt + '').slice(1) : (1000000000000000 + id + '').slice(1);
     }
     exports.sqid = sqid;
+});
+define('src/lib/dict/weakmap', [
+    'require',
+    'exports',
+    'src/lib/uuid',
+    'src/lib/sqid'
+], function (require, exports, uuid_2, sqid_1) {
+    'use strict';
+    var UNIQUE_ATTRIBUTE = '' + uuid_2.v4();
+    function store(obj) {
+        return obj[UNIQUE_ATTRIBUTE] ? obj[UNIQUE_ATTRIBUTE] : Object.defineProperty(obj, UNIQUE_ATTRIBUTE, {
+            value: Object.create(null),
+            enumerable: false,
+            writable: false,
+            configurable: true
+        })[UNIQUE_ATTRIBUTE];
+    }
+    var WeakMap = function () {
+        function WeakMap() {
+            this.id = +sqid_1.sqid();
+        }
+        WeakMap.prototype.get = function (key) {
+            return (store(key)[this.id] || [])[0];
+        };
+        WeakMap.prototype.set = function (key, val) {
+            return (store(key)[this.id] = [val])[0];
+        };
+        WeakMap.prototype.has = function (key) {
+            return !!store(key)[this.id];
+        };
+        WeakMap.prototype.delete = function (key) {
+            void delete store(key)[this.id];
+        };
+        return WeakMap;
+    }();
+    exports.WeakMap = WeakMap;
+});
+define('src/lib/dict/map', [
+    'require',
+    'exports',
+    'src/lib/dict/weakmap',
+    'src/lib/concat',
+    'src/lib/sqid'
+], function (require, exports, weakmap_1, concat_3, sqid_2) {
+    'use strict';
+    var PrimitiveTypes = (_a = {}, _a[typeof void 0] = true, _a[typeof true] = true, _a[typeof 0] = true, _a[typeof ''] = true, _a);
+    function isPrimitive(target) {
+        return PrimitiveTypes[typeof target] || target instanceof Object === false;
+    }
+    var Map = function () {
+        function Map() {
+            this.pstore = Object.create(null);
+            this.ostore = Object.create(null);
+            this.weakstore = new weakmap_1.WeakMap();
+            void this.reset_();
+        }
+        Map.prototype.get = function (key) {
+            return isPrimitive(key) ? (this.pstore[typeof key + key] || [])[1] : (this.weakstore.get(key) || [])[1];
+        };
+        Map.prototype.set = function (key, val) {
+            void this.reset_();
+            if (isPrimitive(key)) {
+                this.pstore[typeof key + key] = [
+                    key,
+                    val
+                ];
+            } else {
+                var id = +sqid_2.sqid();
+                void this.weakstore.set(key, [
+                    id,
+                    val
+                ])[1];
+                this.ostore[id] = [
+                    key,
+                    val,
+                    id
+                ];
+            }
+            return val;
+        };
+        Map.prototype.has = function (key) {
+            return isPrimitive(key) ? !!this.pstore[typeof key + key] : this.weakstore.has(key);
+        };
+        Map.prototype.delete = function (key) {
+            void this.reset_();
+            if (isPrimitive(key)) {
+                void delete this.pstore[typeof key + key];
+            } else {
+                void delete this.ostore[(this.weakstore.get(key) || [])[0]];
+                void this.weakstore.delete(key);
+            }
+        };
+        Map.prototype.clear = function () {
+            var _this = this;
+            void this.reset_();
+            void Object.keys(this.ostore).forEach(function (id) {
+                return void _this.delete(_this.ostore[id][0]);
+            });
+            this.weakstore = new weakmap_1.WeakMap();
+            this.pstore = Object.create(null);
+            this.ostore = Object.create(null);
+        };
+        Map.prototype.reset_ = function () {
+            this.size_ = NaN;
+            this.entries_ = void 0;
+        };
+        Object.defineProperty(Map.prototype, 'size', {
+            get: function () {
+                return this.size_ >= 0 ? this.size_ : this.size_ = Object.keys(this.pstore).length + Object.keys(this.ostore).length;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Map.prototype.entries = function () {
+            var _this = this;
+            return this.entries_ ? this.entries_ : this.entries_ = concat_3.concat(Object.keys(this.pstore).map(function (key) {
+                return [
+                    _this.pstore[key][0],
+                    _this.pstore[key][1]
+                ];
+            }), Object.keys(this.ostore).map(function (key) {
+                return [
+                    _this.ostore[key][0],
+                    _this.ostore[key][1]
+                ];
+            }));
+        };
+        return Map;
+    }();
+    exports.Map = Map;
+    var _a;
+});
+define('src/lib/dict/attrmap', [
+    'require',
+    'exports',
+    'src/lib/dict/map',
+    'src/lib/dict/weakmap'
+], function (require, exports, map_1, weakmap_2) {
+    'use strict';
+    var AttrMap = function () {
+        function AttrMap() {
+            this.store = new weakmap_2.WeakMap();
+        }
+        AttrMap.prototype.get = function (obj, key) {
+            return this.store.get(obj) && this.store.get(obj).get(key);
+        };
+        AttrMap.prototype.set = function (obj, key, val) {
+            return (this.store.get(obj) || this.store.set(obj, new map_1.Map())).set(key, val);
+        };
+        AttrMap.prototype.has = function (obj, key) {
+            return this.store.has(obj) && this.store.get(obj).has(key);
+        };
+        AttrMap.prototype.delete = function (obj, key) {
+            return key === void 0 ? this.store.delete(obj) : this.store.get(obj) && this.store.get(obj).delete(key);
+        };
+        return AttrMap;
+    }();
+    exports.AttrMap = AttrMap;
+    var _a;
+});
+define('src/lib/dict/relationmap', [
+    'require',
+    'exports',
+    'src/lib/dict/weakmap'
+], function (require, exports, weakmap_3) {
+    'use strict';
+    var RelationMap = function () {
+        function RelationMap() {
+            this.store = new weakmap_3.WeakMap();
+        }
+        RelationMap.prototype.get = function (source, target) {
+            return this.store.get(source) && this.store.get(source).get(target);
+        };
+        RelationMap.prototype.set = function (source, target, val) {
+            return (this.store.get(source) || this.store.set(source, new weakmap_3.WeakMap())).set(target, val);
+        };
+        RelationMap.prototype.has = function (source, target) {
+            return this.store.has(source) && this.store.get(source).has(target);
+        };
+        RelationMap.prototype.delete = function (source, target) {
+            return target === void 0 ? this.store.delete(source) : this.store.get(source) && this.store.get(source).delete(target);
+        };
+        return RelationMap;
+    }();
+    exports.RelationMap = RelationMap;
+    var _a;
+});
+define('src/lib/dict/set', [
+    'require',
+    'exports',
+    'src/lib/dict/map'
+], function (require, exports, map_2) {
+    'use strict';
+    var Set = function () {
+        function Set(replacer) {
+            this.replacer = replacer;
+            this.store = new map_2.Map();
+        }
+        Set.prototype.get = function (key) {
+            return this.store.get(key);
+        };
+        Set.prototype.add = function (key, val) {
+            if (!this.has(key))
+                return this.store.set(key, val);
+            if (!this.replacer)
+                throw new Error('ArchStream: Set: Cannot overwrite value of set without replacer.');
+            return this.store.set(key, this.replacer(this.get(key), val));
+        };
+        Set.prototype.has = function (key) {
+            return this.store.has(key);
+        };
+        Set.prototype.delete = function (key) {
+            return void this.store.delete(key);
+        };
+        Set.prototype.clear = function () {
+            return void this.store.clear();
+        };
+        Object.defineProperty(Set.prototype, 'size', {
+            get: function () {
+                return this.store.size;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Set.prototype.entries = function () {
+            return this.store.entries();
+        };
+        return Set;
+    }();
+    exports.Set = Set;
+    var _a;
+});
+define('src/lib/dict/weakset', [
+    'require',
+    'exports',
+    'src/lib/dict/weakmap'
+], function (require, exports, weakmap_4) {
+    'use strict';
+    var WeakSet = function () {
+        function WeakSet(replacer) {
+            this.replacer = replacer;
+            this.store = new weakmap_4.WeakMap();
+        }
+        WeakSet.prototype.get = function (key) {
+            return this.store.get(key);
+        };
+        WeakSet.prototype.add = function (key, val) {
+            if (!this.has(key))
+                return this.store.set(key, val);
+            if (!this.replacer)
+                throw new Error('ArchStream: WeakSet: Cannot overwrite value of set without replacer.');
+            return this.store.set(key, this.replacer(this.get(key), val));
+        };
+        WeakSet.prototype.has = function (key) {
+            return this.store.has(key);
+        };
+        WeakSet.prototype.delete = function (key) {
+            void this.store.delete(key);
+        };
+        return WeakSet;
+    }();
+    exports.WeakSet = WeakSet;
+    var _a;
+});
+define('src/lib/dict/attrset', [
+    'require',
+    'exports',
+    'src/lib/dict/set',
+    'src/lib/dict/weakmap'
+], function (require, exports, set_1, weakmap_5) {
+    'use strict';
+    var AttrSet = function () {
+        function AttrSet(replacer) {
+            this.replacer = replacer;
+            this.store = new weakmap_5.WeakMap();
+        }
+        AttrSet.prototype.get = function (obj, key) {
+            return this.store.get(obj) && this.store.get(obj).get(key);
+        };
+        AttrSet.prototype.add = function (obj, key, val) {
+            return (this.store.get(obj) || this.store.set(obj, new set_1.Set(this.replacer))).add(key, val);
+        };
+        AttrSet.prototype.has = function (obj, key) {
+            return this.store.has(obj) && this.store.get(obj).has(key);
+        };
+        AttrSet.prototype.delete = function (obj, key) {
+            return key === void 0 ? this.store.delete(obj) : this.store.get(obj) && this.store.get(obj).delete(key);
+        };
+        return AttrSet;
+    }();
+    exports.AttrSet = AttrSet;
+    var _a;
+});
+define('src/lib/dict/relationset', [
+    'require',
+    'exports',
+    'src/lib/dict/weakset',
+    'src/lib/dict/weakmap'
+], function (require, exports, weakset_1, weakmap_6) {
+    'use strict';
+    var RelationSet = function () {
+        function RelationSet(replacer) {
+            this.replacer = replacer;
+            this.store = new weakmap_6.WeakMap();
+        }
+        RelationSet.prototype.get = function (source, target) {
+            return this.store.get(source) && this.store.get(source).get(target);
+        };
+        RelationSet.prototype.add = function (source, target, val) {
+            return (this.store.get(source) || this.store.set(source, new weakset_1.WeakSet(this.replacer))).add(target, val);
+        };
+        RelationSet.prototype.has = function (source, target) {
+            return this.store.has(source) && this.store.get(source).has(target);
+        };
+        RelationSet.prototype.delete = function (source, target) {
+            return target === void 0 ? this.store.delete(source) : this.store.get(source) && this.store.get(source).delete(target);
+        };
+        return RelationSet;
+    }();
+    exports.RelationSet = RelationSet;
+    var _a;
+});
+define('src/lib/timer', [
+    'require',
+    'exports'
+], function (require, exports) {
+    'use strict';
+    function Timer(_a) {
+        var _b = _a.begin, begin = _b === void 0 ? 0 : _b, _c = _a.end, end = _c === void 0 ? 1000 * 3600 * 24 : _c, _d = _a.step, step = _d === void 0 ? function (prev) {
+                return (prev || 1) * 3;
+            } : _d, _e = _a.precond, precond = _e === void 0 ? function () {
+                return true;
+            } : _e, _f = _a.task, task = _f === void 0 ? function () {
+                return void 0;
+            } : _f, _g = _a.postcond, postcond = _g === void 0 ? function () {
+                return true;
+            } : _g, _h = _a.complete, complete = _h === void 0 ? function () {
+                return 0;
+            } : _h, _j = _a.error, error = _j === void 0 ? function () {
+                return 0;
+            } : _j, _k = _a.timeout, timeout = _k === void 0 ? function () {
+                return 0;
+            } : _k, _l = _a.since, since = _l === void 0 ? Date.now() : _l;
+        begin = begin < 0 ? 0 : begin;
+        void setTimeout(function () {
+            try {
+                if (precond()) {
+                    var result = task();
+                    if (postcond())
+                        return void complete(result);
+                }
+            } catch (err) {
+                return void error(err);
+            }
+            var now = Date.now();
+            var next = step(now - since);
+            if (end - (now - since) <= 0)
+                return void timeout();
+            void Timer({
+                precond: precond,
+                task: task,
+                postcond: postcond,
+                complete: complete,
+                timeout: timeout,
+                begin: begin + next,
+                end: end,
+                step: step,
+                since: since
+            });
+        }, begin);
+    }
+    exports.Timer = Timer;
+    var _a;
 });
 define('src/lib/assign', [
     'require',
@@ -1845,6 +2094,7 @@ define('src/lib/assign', [
     function type(target) {
         return Object.prototype.toString.call(target).split(' ').pop().slice(0, -1);
     }
+    var _a;
 });
 define('src/export', [
     'require',
@@ -1854,53 +2104,64 @@ define('src/export', [
     'src/lib/proxy',
     'src/lib/supervisor',
     'src/lib/observable',
-    'src/lib/weakmap',
-    'src/lib/map',
-    'src/lib/weakset',
-    'src/lib/set',
+    'src/lib/monad/maybe',
+    'src/lib/monad/either',
+    'src/lib/dict/map',
+    'src/lib/dict/datamap',
+    'src/lib/dict/weakmap',
+    'src/lib/dict/attrmap',
+    'src/lib/dict/relationmap',
+    'src/lib/dict/set',
+    'src/lib/dict/dataset',
+    'src/lib/dict/weakset',
+    'src/lib/dict/attrset',
+    'src/lib/dict/relationset',
     'src/lib/tick',
     'src/lib/timer',
-    'src/lib/maybe',
-    'src/lib/either',
     'src/lib/fingerprint',
     'src/lib/uuid',
     'src/lib/sqid',
     'src/lib/assign',
     'src/lib/concat',
     'src/stream/transform'
-], function (require, exports, transform_1, message_2, proxy_1, supervisor_1, observable_2, weakmap_2, map_2, weakset_1, set_2, tick_4, timer_1, maybe_1, either_1, fingerprint_2, uuid_3, sqid_1, assign_1, concat_3, transform_2) {
+], function (require, exports, transform_1, message_2, proxy_1, supervisor_1, observable_2, maybe_1, either_1, map_3, datamap_2, weakmap_7, attrmap_1, relationmap_1, set_2, dataset_2, weakset_2, attrset_1, relationset_1, tick_4, timer_1, fingerprint_2, uuid_3, sqid_3, assign_1, concat_4, transform_2) {
     'use strict';
     exports.ArchStream = transform_1.ArchStream;
     exports.Message = message_2.Message;
     exports.Proxy = proxy_1.Proxy;
     exports.Supervisor = supervisor_1.Supervisor;
     exports.Observable = observable_2.Observable;
-    exports.WeakMap = weakmap_2.WeakMap;
-    exports.Map = map_2.Map;
-    exports.MultiMap = map_2.MultiMap;
-    exports.WeakSet = weakset_1.WeakSet;
-    exports.Set = set_2.Set;
-    exports.MultiSet = set_2.MultiSet;
-    exports.Tick = tick_4.Tick;
-    exports.Timer = timer_1.Timer;
     exports.Maybe = maybe_1.Maybe;
     exports.Just = maybe_1.Just;
     exports.Nothing = maybe_1.Nothing;
     exports.Either = either_1.Either;
     exports.Left = either_1.Left;
     exports.Right = either_1.Right;
+    exports.Map = map_3.Map;
+    exports.DataMap = datamap_2.DataMap;
+    exports.WeakMap = weakmap_7.WeakMap;
+    exports.AttrMap = attrmap_1.AttrMap;
+    exports.RelationMap = relationmap_1.RelationMap;
+    exports.Set = set_2.Set;
+    exports.DataSet = dataset_2.DataSet;
+    exports.WeakSet = weakset_2.WeakSet;
+    exports.AttrSet = attrset_1.AttrSet;
+    exports.RelationSet = relationset_1.RelationSet;
+    exports.Tick = tick_4.Tick;
+    exports.Timer = timer_1.Timer;
     exports.FINGERPRINT = fingerprint_2.FINGERPRINT;
     exports.uuid = uuid_3.v4;
-    exports.sqid = sqid_1.sqid;
+    exports.sqid = sqid_3.sqid;
     exports.assign = assign_1.assign;
     exports.clone = assign_1.clone;
     exports.extend = assign_1.extend;
-    exports.concat = concat_3.concat;
+    exports.concat = concat_4.concat;
     Object.defineProperty(exports, '__esModule', { value: true });
     exports.default = A;
     function A() {
         return new transform_2.ArchStream();
     }
+    var _a;
 });
 define('arch-stream', [
     'require',
@@ -1916,4 +2177,5 @@ define('arch-stream', [
     }
     __export(export_1);
     exports.default = export_2.default;
+    var _a;
 });
