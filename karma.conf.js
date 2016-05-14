@@ -46,7 +46,8 @@ module.exports = {
     options: {
       // emit espowerified code.
       // default: false (in-memory)
-      emitActualCode: false
+      emitActualCode: false,
+      ignoreUpstreamSourceMap: true
     }
   },
 
