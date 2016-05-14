@@ -126,20 +126,6 @@ const config = {
   }
 };
 
-/*
-gulp.task('bs', function () {
-  browserSync.init({
-    server: {
-      // baseDir: ,
-      // directory: true,
-      // index: "index.html"
-    },
-    notify: true,
-    xip: false
-  });
-});
-*/
-
 gulp.task('ts:source', function () {
   return gulp.src(config.ts.source.src)
     .pipe($.typescript(Object.assign({
