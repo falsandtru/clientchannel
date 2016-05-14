@@ -30,8 +30,8 @@ Schemas are defined by property names that made by factory function.
 A property name that has `_` prefix or postfix to be ignored.
 It means you can define the dynamic value object.
 
-Data that assigned to the property of Linked object will save to the storage.
-When data was updated on others threads(tabs), own property value will update automatically.
+Data that assigned to the property of Linked object will be saved in the storage.
+When data was updated on others threads(tabs), own property value will be updated automatically.
 
 ```ts
 import {socket, LocalSocketObject} from 'localsocket';
@@ -39,23 +39,23 @@ import {socket, LocalSocketObject} from 'localsocket';
 interface Schema extends LocalSocketObject {
 }
 class Schema {
-	// getter/setter will exclude in schema.
+	// getter/setter will be excluded in schema.
 	get key() {
 		return this.__key;
 	}
-	// property names that has underscore prefix or postfix will exclude in schema.
+	// property names that has underscore prefix or postfix will be excluded in schema.
 	private _separator = ' ';
-	// basic property names will include in schema.
+	// basic property names will be included in schema.
 	firstName = '';
 	lastName = '';
-	// invalid value types will exclude in schema.
+	// invalid value types will be excluded in schema.
 	name() {
 		return this.firstName + this._separator + this.lastName;
 	}
 }
 
 const sock = socket('domain', {
-	// delete linked record 3 days later from last access.
+	// delete linked record 3 days later since last access.
 	expiry: 3 * 24 * 60 * 60 * 1e3,
 	schema() {
 		return new Schema();
@@ -71,8 +71,8 @@ link.lastName = 'smith';
 ### Communicate and Synchronize
 
 Linked object provedes send/recv event.
-`send` event will emit when linked object was updated by own thread(tab).
-`recv` event will emit when linked object was updated by other threads(tabs).
+`send` event will be emitted when linked object was updated by own thread(tab).
+`recv` event will be emitted when linked object was updated by other threads(tabs).
 
 ```ts
 import {port, LocalPortObject} from 'localsocket';
