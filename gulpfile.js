@@ -1,56 +1,37 @@
 const gulp = require('gulp');
-const shell = cmd => require('child_process').execSync(cmd, {stdio:[0,1,2]});
+const shell = cmd => require('child_process').execSync(cmd, { stdio: [0, 1, 2] });
 const del = require('del');
 const extend = require('extend');
 const seq = require('run-sequence');
-const $ = require('gulp-load-plugins')({
-  //pattern: ['gulp-*', 'gulp.*'],
-  //replaceString: /\bgulp[\-.]/
-});
+const $ = require('gulp-load-plugins')();
 const Server = require('karma').Server;
 
 const pkg = require('./package.json');
-const karmaconfig = require('./karma.conf.js');
 const config = {
   ts: {
     options: extend(require('./tsconfig.json').compilerOptions, {
-      typescript: require('typescript')
+      typescript: require('typescript'),
+      outFile: `${pkg.name}.js`
     }),
-    source: {
-      src: [
-        'typings/*.d.ts',
-        '*.ts',
-        'src/**/*.ts'
-      ],
-      dest: 'dist/'
-    },
     dist: {
       src: [
         'typings/*.d.ts',
-        '*.ts',
-        'src/**/*.d.ts',
-        'src/**/+([!.]).ts'
+        '*.ts'
       ],
-      dest: 'dist/'
+      dest: 'dist'
     },
     test: {
       src: [
         'typings/*.d.ts',
+        '*.ts',
+        'src/**/*.ts',
         'test/**/*.ts'
       ],
-      dest: 'test/'
-    },
-    bench: {
-      src: [
-        'typings/*.d.ts',
-        'typings/benchmark/*.d.ts',
-        'benchmark/**/*.ts'
-      ],
-      dest: 'dist/'
+      dest: 'dist'
     }
   },
   banner: [
-    `/*! ${pkg.name} v${pkg.version} ${pkg.repository.url} | (c) 2015, ${pkg.author} | ${pkg.license.type} License (${pkg.license.url}) */`,
+    `/*! ${pkg.name} v${pkg.version} ${pkg.repository.url} | (c) 2016, ${pkg.author} | ${pkg.license.type} License (${pkg.license.url}) */`,
     ''
   ].join('\n'),
   exporter:
@@ -85,61 +66,24 @@ const config = {
   })();
 `,
   clean: {
-    src: 'src/**/*.js',
-    dist: 'dist',
-    test: 'test/**/*.js',
-    bench: 'benchmark/**/*.js',
-    cov: 'coverage'
-  },
-  karma: {
-    watch: extend({}, require('./karma.conf.js'), {
-      browsers: ['Chrome', 'Firefox'],
-      preprocessors: {
-        'dist/*.js': ['espower'],
-        'test/**/*.js': ['espower']
-      },
-      singleRun: false
-    }),
-    test: extend({}, require('./karma.conf.js'), {
-      browsers: ['Chrome', 'Firefox'],
-      reporters: ['dots', 'coverage'],
-      preprocessors: {
-        'dist/*.js': ['coverage', 'espower'],
-        'test/**/*.js': ['espower']
-      },
-      singleRun: true
-    }),
-    bench: extend({}, require('./karma.conf.js'), {
-      browsers: ['Chrome', 'Firefox'],
-      reporters: ['dots'],
-      singleRun: true
-    }),
-    server: extend({}, require('./karma.conf.js'), {
-      browsers: ['Chrome', 'Firefox'],
-      reporters: ['dots', 'coverage', 'coveralls'],
-      preprocessors: {
-        'dist/*.js': ['coverage', 'espower'],
-        'test/**/*.js': ['espower']
-      },
-      singleRun: true
-    })
+    dist: 'dist'
   }
 };
 
-gulp.task('ts:source', function () {
-  return gulp.src(config.ts.source.src)
-    .pipe($.typescript(Object.assign({
-      outFile: `${pkg.name}.js`
-    }, config.ts.options)))
+gulp.task('ts:watch', function () {
+  gulp.watch(config.ts.test.src, ['ts:test']);
+});
+
+gulp.task('ts:test', function () {
+  return gulp.src(config.ts.test.src)
+    .pipe($.typescript(config.ts.options))
     .pipe($.header(config.exporter))
-    .pipe(gulp.dest(config.ts.source.dest));
+    .pipe(gulp.dest(config.ts.test.dest));
 });
 
 gulp.task('ts:dist', function () {
   return gulp.src(config.ts.dist.src)
-    .pipe($.typescript(Object.assign({
-      outFile: `${pkg.name}.js`
-    }, config.ts.options)))
+    .pipe($.typescript(config.ts.options))
     .once("error", function () {
       this.once("finish", () => process.exit(1));
     })
@@ -152,118 +96,88 @@ gulp.task('ts:dist', function () {
     .pipe(gulp.dest(config.ts.dist.dest));
 });
 
-gulp.task('ts:test', function () {
-  return gulp.src(config.ts.test.src)
-    .pipe($.typescript(Object.assign({
-    }, config.ts.options)))
-    .pipe(gulp.dest(config.ts.test.dest));
-});
-
-gulp.task('ts:bench', function () {
-  return gulp.src(config.ts.bench.src)
-    .pipe($.typescript(Object.assign({
-      outFile: `${pkg.name}.js`
-    }, config.ts.options)))
-    .pipe(gulp.dest(config.ts.bench.dest));
-});
-
-gulp.task('ts:watch', function () {
-  gulp.watch(config.ts.source.src, ['ts:source']);
-  gulp.watch(config.ts.test.src, ['ts:test']);
-});
-
 gulp.task('karma:watch', function (done) {
-  new Server(config.karma.watch, done).start();
+  new Server({
+    configFile: __dirname + '/karma.conf.js',
+    browsers: ['Chrome', 'Firefox'],
+    preprocessors: {
+      'dist/*.js': ['espower']
+    },
+  }, done).start();
 });
 
 gulp.task('karma:test', function (done) {
-  new Server(config.karma.test, done).start();
-});
-
-gulp.task('karma:bench', function (done) {
-  new Server(config.karma.bench, done).start();
+  new Server({
+    configFile: __dirname + '/karma.conf.js',
+    browsers: ['Chrome', 'Firefox'],
+    reporters: ['dots', 'coverage'],
+    preprocessors: {
+      'dist/*.js': ['coverage', 'espower']
+    },
+    singleRun: true
+  }, done).start();
 });
 
 gulp.task('karma:server', function (done) {
-  new Server(config.karma.server, done).start();
+  new Server({
+    configFile: __dirname + '/karma.conf.js',
+    browsers: ['Chrome', 'Firefox'],
+    reporters: ['dots', 'coverage', 'coveralls'],
+    preprocessors: {
+      'dist/*.js': ['coverage', 'espower']
+    },
+    singleRun: true
+  }, done).start();
 });
 
 gulp.task('clean', function () {
-  return del([config.clean.src, config.clean.test, config.clean.dist]);
+  return del([config.clean.dist]);
 });
 
 gulp.task('install', function () {
-  shell('bundle install');
   shell('npm i');
   shell('tsd install --save --overwrite');
 });
 
 gulp.task('update', function () {
-  shell('bundle update');
   shell('npm-check-updates -u');
   shell('npm i');
   //shell('tsd update --save --overwrite');
 });
 
-gulp.task('build', ['clean'], function (done) {
+gulp.task('watch', ['clean'], function () {
   seq(
-    ['ts:source', 'ts:test'],
-    done
+    'ts:test',
+    [
+      'ts:watch',
+      'karma:watch'
+    ]
   );
 });
 
-gulp.task('watch', ['build'], function () {
-  seq([
-    'ts:watch',
-    'karma:watch'
-  ]);
-});
-
-gulp.task('test', ['build'], function (done) {
+gulp.task('test', ['clean'], function (done) {
   seq(
+    'ts:test',
     'karma:test',
     function () {
-      shell('cat coverage/summary.txt && echo;');
       done();
     }
   );
 });
 
-gulp.task('bench', ['dist'], function (done) {
-  seq(
-    'ts:bench',
-    'karma:bench',
-    done
-  );
-});
-
-gulp.task('site', function () {
-  return gulp.src([
-    'node_modules/arch-stream/dist/arch-stream.js',
-    'dist/localsocket.js'
-  ])
-    .pipe(gulp.dest('./gh-pages/assets/js'));
-});
-
 gulp.task('dist', ['clean'], function (done) {
   seq(
     'ts:dist',
-    'site',
     done
   );
 });
 
-gulp.task('view', ['dist'], function () {
-  shell('bundle exec jekyll serve -s ./gh-pages -d ./gh-pages/_site --incremental');
-});
-
-gulp.task('server', function (done) {
+gulp.task('server', ['clean'], function (done) {
   seq(
-    'build',
+    'ts:test',
     'karma:server',
     'dist',
     function () {
-      shell('cat coverage/summary.txt && echo;');
       done();
     }
   );
