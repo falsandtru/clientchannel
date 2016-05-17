@@ -59,9 +59,9 @@
     "karma-mocha": "^1.0.1",
     "lodash": "^4.12.0",
     "mocha": "^2.4.5",
-    "npm-check-updates": "^2.6.4",
+    "npm-check-updates": "^2.6.5",
     "power-assert": "^1.4.1",
-    "run-sequence": "^1.1.5",
+    "run-sequence": "^1.2.0",
     "tsd": "^0.6.5",
     "typescript": "^1.8.10"
   },
