@@ -1,6 +1,4 @@
 ﻿declare module 'localsocket' {
-  import {Observer} from 'arch-stream';
-
   export default socket;
 
   export const status: boolean;
@@ -73,5 +71,30 @@
   export type LocalPortEventType
     = 'send'
     | 'recv';
+
+  // arch-stream@0.0.105
+  class Observable<T extends Array<string | number>, D, R>
+    implements Observer<T, D, R>, Publisher<T, D, R> {
+    monitor(type: T, subscriber: Subscriber<D, R>): () => void;
+    on(type: T, subscriber: Subscriber<D, R>): () => void;
+    off(type: T, subscriber?: Subscriber<D, R>): void;
+    once(type: T, subscriber: Subscriber<D, R>): () => void;
+    emit(type: T, data: D, tracker?: (data: D, results: R[]) => any): void;
+    reflect(type: T, data: D): R[];
+    refs(type: T): [T, Subscriber<D, R>, boolean][];
+  }
+  interface Observer<T extends Array<string | number>, D, R> {
+    monitor(type: T, subscriber: Subscriber<D, R>): () => void;
+    on(type: T, subscriber: Subscriber<D, R>): () => void;
+    off(type: T, subscriber?: Subscriber<D, R>): void;
+    once(type: T, subscriber: Subscriber<D, R>): () => void;
+  }
+  interface Publisher<T extends Array<string | number>, D, R> {
+    emit(type: T, data: D, tracker?: (data: D, results: any[]) => any): void;
+    reflect(type: T, data: D): R[];
+  }
+  interface Subscriber<D, R> {
+    (data: D): R;
+  }
 
 }
