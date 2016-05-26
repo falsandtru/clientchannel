@@ -172,11 +172,20 @@ gulp.task('dist', ['clean'], function (done) {
   );
 });
 
+gulp.task('site', function () {
+  return gulp.src([
+    'node_modules/arch-stream/dist/arch-stream.js',
+    'dist/localsocket.js'
+  ])
+    .pipe(gulp.dest('./gh-pages/assets/js'));
+});
+
 gulp.task('server', ['clean'], function (done) {
   seq(
     'ts:test',
     'karma:server',
     'dist',
+    'site',
     function () {
       done();
     }
