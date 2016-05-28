@@ -72,7 +72,7 @@
     = 'send'
     | 'recv';
 
-  // arch-stream@0.0.105
+  // spica@0.0.0
   class Observable<T extends Array<string | number>, D, R>
     implements Observer<T, D, R>, Publisher<T, D, R> {
     monitor(type: T, subscriber: Subscriber<D, R>): () => void;

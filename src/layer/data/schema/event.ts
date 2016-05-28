@@ -1,4 +1,4 @@
-import {clone} from 'arch-stream';
+import {clone} from 'spica';
 import {IdNumber, KeyString} from '../constraint/types';
 
 export const EventType = {

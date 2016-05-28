@@ -1,4 +1,4 @@
-import {Observer} from 'arch-stream';
+import {Observer} from 'spica';
 
 export {indexedDB, IDBKeyRange, IDBTransaction, IDBCursorDirection} from './module/global';
 export {open, listen, close, destroy, event, Config} from './model/access';

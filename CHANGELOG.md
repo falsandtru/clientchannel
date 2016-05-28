@@ -2,6 +2,7 @@
 
 ## 0.2.0
 
+- Use spica.
 - Refine `sync` method.
 
 ## 0.1.7

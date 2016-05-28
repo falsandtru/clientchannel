@@ -1,5 +1,5 @@
 import {LocalSocketObjectMetaData, LocalSocketEvent, LocalSocketEventType} from 'localsocket';
-import {Supervisor, Observable, Set, Map, sqid, assign, clone, concat} from 'arch-stream';
+import {Supervisor, Observable, Set, Map, sqid, assign, clone, concat} from 'spica';
 import {listen, Config, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../infrastructure/indexeddb/api';
 import {IdNumber, KeyString} from '../constraint/types';
 import {EventType, EventValue, EventRecord} from '../schema/event';

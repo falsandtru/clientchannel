@@ -1,4 +1,4 @@
-import {Observable, Observer} from 'arch-stream';
+import {Observable, Observer} from 'spica';
 import {events as sources} from '../../../infrastructure/webstorage/api';
 
 export const events = {

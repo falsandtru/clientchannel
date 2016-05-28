@@ -1,5 +1,5 @@
 import {LocalPort, LocalPortObject, LocalPortEvent, LocalPortEventType} from 'localsocket';
-import {Observable, Set, assign, uuid} from 'arch-stream';
+import {Observable, Set, assign, uuid} from 'spica';
 import {SCHEMA, build, isValidPropertyName, isValidPropertyValue} from '../../dao/api';
 import {events} from '../service/event';
 import {localStorage, sessionStorage} from '../../../infrastructure/webstorage/api';

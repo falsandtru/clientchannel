@@ -1,4 +1,4 @@
-import {Observable} from 'arch-stream';
+import {Observable} from 'spica';
 import {Config} from '../../../../infrastructure/indexeddb/api';
 import {KeyString} from '../../../../data/constraint/types';
 import {AbstractKeyValueStore} from '../../../../data/store/key-value';

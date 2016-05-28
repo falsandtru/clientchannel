@@ -1,4 +1,4 @@
-import {Observable, Observer, Set, Map} from 'arch-stream';
+import {Observable, Observer, Set, Map} from 'spica';
 import {indexedDB} from '../module/global';
 import {IDBEvent, IDBEventType} from './event';
 import {supportWebStorage as status} from '../../webstorage/api';

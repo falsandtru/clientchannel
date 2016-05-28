@@ -1,4 +1,4 @@
-import {assign} from 'arch-stream';
+import {assign} from 'spica';
 import {isValidName, isValidValue} from '../../../data/constraint/values';
 import {noop} from '../../../../lib/noop';
 

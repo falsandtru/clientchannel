@@ -1,4 +1,4 @@
-import {Observable, Observer} from 'arch-stream';
+import {Observable, Observer} from 'spica';
 import {localStorage, sessionStorage} from '../module/global';
 
 const storageEvents = {

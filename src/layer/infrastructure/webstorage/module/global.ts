@@ -1,4 +1,4 @@
-import {uuid} from 'arch-stream';
+import {uuid} from 'spica';
 let webStorage: {
   localStorage: Storage,
   sessionStorage: Storage

@@ -3,8 +3,9 @@ module.exports = function (config) {
     basePath: '',
     frameworks: ['mocha'],
     files: [
+      { pattern: 'https://cdn.polyfill.io/v2/polyfill.min.js', watched: false, served: false, included: true },
       { pattern: 'node_modules/power-assert/build/power-assert.js', watched: true, served: true, included: true },
-      { pattern: 'node_modules/arch-stream/dist/arch-stream.js', watched: true, served: true, included: true },
+      { pattern: 'node_modules/spica/dist/spica.js', watched: true, served: true, included: true },
       { pattern: 'dist/*.js', watched: true, served: true, included: true }
     ],
     exclude: [

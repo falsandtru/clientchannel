@@ -1,4 +1,4 @@
-import {Map} from 'arch-stream';
+import {Map} from 'spica';
 
 interface StorageLike extends Storage {
 }
