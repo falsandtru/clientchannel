@@ -1,5 +1,5 @@
 import {LocalSocketObjectMetaData, LocalSocketEvent, LocalSocketEventType} from 'localsocket';
-import {Supervisor, Observable, Set, Map, Message, sqid, assign, clone, concat} from 'arch-stream';
+import {Supervisor, Observable, Set, Map, sqid, assign, clone, concat} from 'arch-stream';
 import {listen, Config, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../infrastructure/indexeddb/api';
 import {IdNumber, KeyString} from '../constraint/types';
 import {EventType, EventValue, EventRecord} from '../schema/event';
@@ -173,29 +173,32 @@ export abstract class AbstractEventStore<T extends EventValue> {
   };
   protected syncState = new Map<KeyString, boolean>();
   protected syncWaits = new Observable<[KeyString], DOMError, any>();
-  public sync(keys: KeyString[], cb: (errs?: DOMError[]) => any = noop): void {
+  public sync(keys: KeyString[], cb: (errs: [KeyString, DOMError | Error][]) => any = noop, timeout = 0): void {
     return void keys
-      .reduce<PromiseLike<DOMError[]>>((msg, key) => {
+      .map<Promise<[KeyString, DOMError | Error]>>(key => {
         switch (this.syncState.get(key)) {
           case true: {
-            return msg.then(a => concat(a, [<DOMError>void 0]));
+            return new Promise<[KeyString, DOMError | Error]>(resolve => void resolve([key, null]));
           }
           case false: {
-            if (cb === noop) return msg.then(a => concat(a, [<DOMError>void 0]));
-            const job = new Message<DOMError[]>();
-            void this.syncWaits.once([key], err => void job.send([err]));
-            return msg.then(a => job.then(b => concat(a, b)));
+            return cb === noop
+              ? new Promise<[KeyString, DOMError | Error]>(resolve => void resolve([key, null]))
+              : new Promise<[KeyString, DOMError | Error]>(resolve => void (
+                timeout > 0 ? void (void this.get(key), void setTimeout(() => resolve([key, new Error()]))) : void 0,
+                void this.syncWaits.once([key], err => void resolve([key, err]))));
           }
           default: {
             void this.update(key);
-            if (cb === noop) return msg.then(a => concat(a, [<DOMError>void 0]));
-            const job = new Message<DOMError[]>();
-            void this.syncWaits.once([key], err => void job.send([err]));
-            return msg.then(a => job.then(b => concat(a, b)));
+            return cb === noop
+              ? new Promise<[KeyString, DOMError | Error]>(resolve => void resolve([key, null]))
+              : new Promise<[KeyString, DOMError | Error]>(resolve => void (
+                timeout > 0 ? void (void this.get(key), void setTimeout(() => resolve([key, new Error()]))) : void 0,
+                void this.syncWaits.once([key], err => void resolve([key, err]))));
           }
         }
-      }, new Message<DOMError[]>().send([], true))
-      .then(cb);
+      })
+      .reduce<Promise<[KeyString, DOMError | Error][]>>((ps, p) => ps.then(es => p.then(e => es.concat([e]))), new Promise<[KeyString, DOMError][]>(resolve => void resolve([])))
+      .then(es => void cb(es.filter(e => !!e[1])));
   }
   public update(key: KeyString): void {
     const latest = this.meta(key);

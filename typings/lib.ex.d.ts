@@ -10,6 +10,13 @@ interface PromiseLike<T> {
   _?: T;
 }
 
+declare const Promise: PromiseConstructorLike & {
+  all<T>(ps: (T | Promise<T>)[]): Promise<T[]>;
+  race<T>(ps: (T | Promise<T>)[]): Promise<T>;
+};
+interface Promise<T> extends PromiseLike<T> {
+}
+
 interface IDBDatabase {
   onversionchange: (ev: IDBVersionChangeEvent) => any;
   onclose: (ev: Event) => any;

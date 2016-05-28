@@ -10,7 +10,7 @@
       save: Observer<[string] | [string, string] | [string, string, LocalSocketEventType], LocalSocketEvent, void>,
       loss: Observer<[string] | [string, string] | [string, string, LocalSocketEventType], LocalSocketEvent, void>
     };
-    sync(keys: string[], cb?: (errs: DOMError[]) => any): void;
+    sync(keys: string[], cb?: (errs: [string, DOMError | Error][]) => any, timeout?: number): void;
     link(key: string, expiry?: number): T;
     delete(key: string): void;
     recent(limit: number, cb: (keys: string[], error: DOMError) => any): void;

@@ -48,8 +48,8 @@ export class SocketStore<T extends SocketValue> {
     save: new Observable<[string] | [string, string] | [string, string, string], ESEvent, void>(),
     loss: new Observable<[string] | [string, string] | [string, string, string], ESEvent, void>()
   };
-  public sync(keys: KeyString[], cb: (errs?: DOMError[]) => any = noop): void {
-    return this.schema.data.sync(keys, cb);
+  public sync(keys: KeyString[], cb: (errs: [KeyString, DOMError | Error][]) => any = noop, timeout?: number): void {
+    return this.schema.data.sync(keys, cb, timeout);
   }
   public meta(key: string): LocalSocketObjectMetaData {
     return this.schema.data.meta(KeyString(key));
