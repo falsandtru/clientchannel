@@ -50,14 +50,14 @@ export abstract class EventRecord<T extends EventValue> {
         void Object.freeze(this.value);
         return;
       }
-      case EventType.delete:
-      default: {
+      case EventType.delete: {
         this.value = value = <T>new EventValue();
         void Object.freeze(this.value);
         return;
       }
+      default:
+        throw new TypeError(`LocalSocket: Invalid event type: ${type}`);
     }
-    throw new TypeError(`LocalSocket: Invalid event type: ${type}`);
   }
   public id: IdNumber;
   public type: 'put' | 'snapshot' | 'delete';
