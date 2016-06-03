@@ -140,6 +140,7 @@ gulp.task('install', function () {
 });
 
 gulp.task('update', function () {
+  shell('bundle update');
   shell('npm-check-updates -u');
   shell('npm i');
   //shell('tsd update --save --overwrite');
@@ -165,6 +166,10 @@ gulp.task('test', ['clean'], function (done) {
   );
 });
 
+gulp.task('view', ['site'], function () {
+  shell('bundle exec jekyll serve -s ./gh-pages -d ./gh-pages/_site --incremental');
+});
+
 gulp.task('dist', ['clean'], function (done) {
   seq(
     'ts:dist',
@@ -172,7 +177,7 @@ gulp.task('dist', ['clean'], function (done) {
   );
 });
 
-gulp.task('site', function () {
+gulp.task('site', ['dist'], function () {
   return gulp.src([
     'node_modules/spica/dist/spica.js',
     'dist/localsocket.js'
