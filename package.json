@@ -28,7 +28,7 @@
     "LICENSE"
   ],
   "dependencies": {
-    "spica": "^0.0.3"
+    "spica": "^0.0.4"
   },
   "devDependencies": {
     "del": "^2.2.0",
