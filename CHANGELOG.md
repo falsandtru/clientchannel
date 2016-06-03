@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2
+
+- Update deploy contents.
+
 ## 0.2.1
 
 - Fix deploy configs.
