@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- Fix deploy configs.
+
 ## 0.2.0
 
 - Use spica.

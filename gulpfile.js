@@ -174,7 +174,7 @@ gulp.task('dist', ['clean'], function (done) {
 
 gulp.task('site', function () {
   return gulp.src([
-    'node_modules/arch-stream/dist/arch-stream.js',
+    'node_modules/spica/dist/spica.js',
     'dist/localsocket.js'
   ])
     .pipe(gulp.dest('./gh-pages/assets/js'));
