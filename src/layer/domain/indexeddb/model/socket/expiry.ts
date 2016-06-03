@@ -1,4 +1,4 @@
-import {Observable, Map} from 'spica';
+import {Observable} from 'spica';
 import {event, IDBEventType, Config, IDBCursorDirection, IDBTransaction} from '../../../../infrastructure/indexeddb/api';
 import {KeyString} from '../../../../data/constraint/types';
 import {AbstractKeyValueStore} from '../../../../data/store/key-value';

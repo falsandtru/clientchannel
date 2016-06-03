@@ -1,5 +1,3 @@
-import {Map} from 'spica';
-
 interface StorageLike extends Storage {
 }
 class StorageLike {

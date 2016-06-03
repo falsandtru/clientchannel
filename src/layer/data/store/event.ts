@@ -1,5 +1,5 @@
 import {LocalSocketObjectMetaData, LocalSocketEvent, LocalSocketEventType} from 'localsocket';
-import {Supervisor, Observable, Set, Map, sqid, assign, clone, concat} from 'spica';
+import {Supervisor, Observable, sqid, assign, clone, concat} from 'spica';
 import {listen, Config, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../infrastructure/indexeddb/api';
 import {IdNumber, KeyString} from '../constraint/types';
 import {EventType, EventValue, EventRecord} from '../schema/event';
@@ -136,13 +136,13 @@ export abstract class AbstractEventStore<T extends EventValue> {
     protected database: string,
     protected name: string
   ) {
-    const lastNotifiedIdSet = new Set<KeyString, IdNumber>((o, n) => n > o ? n : o);
-    const lastUpdatedDateSet = new Set<KeyString, number>((o, n) => n > o ? n : o);
+    const lastNotifiedIdSet = new Map<KeyString, IdNumber>();
+    const lastUpdatedDateSet = new Map<KeyString, number>();
     void this.cache.events.exec
-      .monitor(<any>[], ([_, sub]) => {
+      .monitor(<any>[], ([, sub]) => {
         const event = sub(void 0);
         assert(event instanceof UnsavedEventRecord || event instanceof SavedEventRecord);
-        if (event instanceof SavedEventRecord === false) return void lastUpdatedDateSet.add(event.key, event.date);
+        if (event instanceof SavedEventRecord === false) return void 0;
         const isNewMaxId = (): boolean =>
           !lastNotifiedIdSet.has(event.key)
           || event.id > lastNotifiedIdSet.get(event.key);
@@ -152,13 +152,19 @@ export abstract class AbstractEventStore<T extends EventValue> {
           // must not overwrite unsaved new event by saved old event
           && event.date > this.cache.cast([event.key], void 0).filter(e => e !== event).reduce((date, e) => e.date > date ? e.date : date, 0);
         if (isNewMaxId() && isNewMaxDate()) {
-          void lastNotifiedIdSet.add(event.key, event.id);
-          void lastUpdatedDateSet.add(event.key, event.date);
+          void lastNotifiedIdSet.set(event.key, event.id);
+          void lastUpdatedDateSet.set(event.key, event.date);
           void this.events.load.emit([event.key, event.attr, event.type], new ESEvent(event.type, event.id, event.key, event.attr));
         }
-        else {
-          void lastNotifiedIdSet.add(event.key, event.id);
-          void lastUpdatedDateSet.add(event.key, event.date);
+      });
+    void this.cache.events.exec
+      .monitor(<any>[], ([, sub]) => {
+        const event = sub(void 0);
+        if (!lastNotifiedIdSet.has(event.key) || lastNotifiedIdSet.get(event.key) < event.id) {
+          void lastNotifiedIdSet.set(event.key, event.id);
+        }
+        if (!lastUpdatedDateSet.has(event.key) || lastUpdatedDateSet.get(event.key) < event.date) {
+          void lastUpdatedDateSet.set(event.key, event.date);
         }
       });
   }

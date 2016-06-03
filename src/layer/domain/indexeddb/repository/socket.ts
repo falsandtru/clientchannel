@@ -1,5 +1,5 @@
 import {LocalSocket, LocalSocketObject, LocalPort, LocalPortObject, LocalPortEvent, LocalPortEventType} from 'localsocket';
-import {Observable, Observer, Set, Map, clone, concat} from 'spica';
+import {Observable, Observer, clone, concat} from 'spica';
 import {build, SCHEMA, isValidPropertyName, isValidPropertyValue} from '../../dao/api';
 import {SocketStore, SocketRecord, SocketValue, ESEventType} from '../model/socket';
 import {localStorage} from '../../../infrastructure/webstorage/api';
@@ -31,12 +31,12 @@ interface Port extends LocalPortObject {
 }
 class Port {
   public msgs: Message[] = [];
-  private msgHeadSet_ = new Set<string, number>((o, n) => n > o ? n : o);
+  private msgHeadSet_ = new Map<string, number>();
   public recv(): Message[] {
     return this.msgs
       .map(msg => new Message(msg.key, msg.attr, msg.date))
       .filter(msg => !this.msgHeadSet_.has(msg.key) || msg.date > this.msgHeadSet_.get(msg.key))
-      .filter(msg => !void this.msgHeadSet_.add(msg.key, msg.date));
+      .filter(msg => !void this.msgHeadSet_.set(msg.key, msg.date));
   }
   public send(msg: Message): void {
     assert(msg instanceof Message);
@@ -110,45 +110,48 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
   }
   private proxy = webstorage(this.database, localStorage, () => new Port());
   private port = this.proxy.link();
-  private links = new Set<string, T>();
-  private sources = new Set<string, T>();
+  private links = new Map<string, T>();
+  private sources = new Map<string, T>();
   public link(key: string, expiry?: number): T {
-    void this.expire(key, expiry);
-    if (this.links.has(key)) return this.links.get(key);
-    return this.links.add(key, build(
-      Object.defineProperties(
-        this.sources.add(key, clone<T>({}, this.get(key))),
-        {
-          __meta: {
-            get: () => this.meta(key)
-          },
-          __id: {
-            get(): number {
-              return (<LocalSocketObject>this).__meta.id;
-            }
-          },
-          __key: {
-            get(): string {
-              return (<LocalSocketObject>this).__meta.key;
-            }
-          },
-          __date: {
-            get(): number {
-              return (<LocalSocketObject>this).__meta.date;
-            }
-          },
-          __event: {
-            value: new Observable<[LocalPortEventType], LocalPortEvent, any>()
-          }
-        }
-      ),
-      this.factory,
-      (attr, newValue, oldValue) => {
-        void this.add(new SocketRecord(KeyString(key), <T>{ [attr]: newValue }));
-        void (<Observable<[LocalPortEventType, string], LocalPortEvent, void>>this.sources.get(key).__event)
-          .emit([WebStorageEventType.send, attr], new WebStorageEvent(WebStorageEventType.send, key, attr, newValue, oldValue));
-      })
-    );
+    return (
+      void this.expire(key, expiry),
+      this.links.has(key)
+        ? this.links.get(key)
+        : this.links
+          .set(key, build(
+            Object.defineProperties(
+              (void this.sources.set(key, clone<T>({}, this.get(key))), this.sources.get(key)),
+              {
+                __meta: {
+                  get: () => this.meta(key)
+                },
+                __id: {
+                  get(): number {
+                    return (<LocalSocketObject>this).__meta.id;
+                  }
+                },
+                __key: {
+                  get(): string {
+                    return (<LocalSocketObject>this).__meta.key;
+                  }
+                },
+                __date: {
+                  get(): number {
+                    return (<LocalSocketObject>this).__meta.date;
+                  }
+                },
+                __event: {
+                  value: new Observable<[LocalPortEventType], LocalPortEvent, any>()
+                }
+              }
+            ),
+            this.factory,
+            (attr, newValue, oldValue) => {
+              void this.add(new SocketRecord(KeyString(key), <T>{ [attr]: newValue }));
+              void (<Observable<[LocalPortEventType, string], LocalPortEvent, void>>this.sources.get(key).__event)
+                .emit([WebStorageEventType.send, attr], new WebStorageEvent(WebStorageEventType.send, key, attr, newValue, oldValue));
+            }))
+          .get(key));
   }
   public destroy(): void {
     void this.proxy.destroy();

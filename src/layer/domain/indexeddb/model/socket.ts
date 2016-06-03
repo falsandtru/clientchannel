@@ -1,5 +1,5 @@
 import {LocalSocketObjectMetaData} from 'localsocket';
-import {Observable, Set, Map, uuid} from 'spica';
+import {Observable, uuid} from 'spica';
 import {open, destroy, event, IDBEventType, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../../infrastructure/indexeddb/api';
 import {IdNumber, KeyString} from '../../../data/constraint/types';
 import {UnsavedEventRecord, SavedEventRecord, ESEvent, ESEventType} from '../../../data/store/event';

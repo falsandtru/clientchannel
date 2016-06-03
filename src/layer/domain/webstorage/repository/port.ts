@@ -1,16 +1,16 @@
 import {LocalPort, LocalPortObject, LocalPortEvent, LocalPortEventType} from 'localsocket';
-import {Observable, Set, assign, uuid} from 'spica';
+import {Observable, assign, uuid} from 'spica';
 import {SCHEMA, build, isValidPropertyName, isValidPropertyValue} from '../../dao/api';
 import {events} from '../service/event';
 import {localStorage, sessionStorage} from '../../../infrastructure/webstorage/api';
 import {fakeStorage} from '../service/storage';
 import {noop} from '../../../../lib/noop';
 
-const LocalStorageObjectCache = new Set<string, LocalPortObject>();
-const LocalStorageSubscriber = new Set<string, (event: StorageEvent) => any>();
+const LocalStorageObjectCache = new Map<string, LocalPortObject>();
+const LocalStorageSubscriber = new Map<string, (event: StorageEvent) => any>();
 
-const SessionStorageObjectCache = new Set<string, LocalPortObject>();
-const SessionStorageSubscriber = new Set<string, (event: StorageEvent) => any>();
+const SessionStorageObjectCache = new Map<string, LocalPortObject>();
+const SessionStorageSubscriber = new Map<string, (event: StorageEvent) => any>();
 
 export type PortEventType
   = typeof PortEventType.send
@@ -100,7 +100,7 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
         }, void 0);
     };
     void this.eventSource.on([this.name, this.uuid], subscriber);
-    void this.cache.add(this.name, dao);
+    void this.cache.set(this.name, dao);
     void this.log.update(this.name);
     return dao;
 

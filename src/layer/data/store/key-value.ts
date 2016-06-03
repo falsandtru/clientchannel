@@ -1,4 +1,4 @@
-import {Observable, Map} from 'spica';
+import {Observable} from 'spica';
 import {listen, Config, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../infrastructure/indexeddb/api';
 import {IDBValue} from '../constraint/types';
 import {noop} from '../../../lib/noop';

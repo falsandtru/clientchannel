@@ -1,4 +1,4 @@
-import {Observable, Observer, Set, Map} from 'spica';
+import {Observable, Observer} from 'spica';
 import {indexedDB} from '../module/global';
 import {IDBEvent, IDBEventType} from './event';
 import {supportWebStorage as status} from '../../webstorage/api';
@@ -20,98 +20,25 @@ const enum CommandType {
   destroy
 }
 
-const StateSet = new Set<string, State.Type>((o, n) => {
-  switch (o.constructor) {
-    case State.Initial:
-      switch (n.constructor) {
-        case State.Block:
-        case State.Upgrade:
-        case State.Success:
-        case State.Error:
-        case State.Abort:
-        case State.Crash:
-          return n;
-      }
-      break;
-    case State.Block:
-      switch (n.constructor) {
-        case State.Upgrade:
-        case State.Success:
-        case State.Error:
-        case State.Abort:
-          return n;
-      }
-      break;
-    case State.Upgrade:
-      switch (n.constructor) {
-        case State.Success:
-        case State.Error:
-        case State.Abort:
-        case State.Crash:
-        case State.Destroy:
-        case State.End:
-          return n;
-      }
-      break;
-    case State.Success:
-      switch (n.constructor) {
-        case State.Error:
-        case State.Abort:
-        case State.Crash:
-        case State.Destroy:
-        case State.End:
-          return n;
-      }
-      break;
-    case State.Error:
-      switch (n.constructor) {
-        case State.Destroy:
-        case State.End:
-          return n;
-      }
-      break;
-    case State.Abort:
-      switch (n.constructor) {
-        case State.Destroy:
-        case State.End:
-          return n;
-      }
-      break;
-    case State.Crash:
-      switch (n.constructor) {
-        case State.Destroy:
-        case State.End:
-          return n;
-      }
-      break;
-    case State.Destroy:
-      switch (n.constructor) {
-        case State.Error:
-        case State.End:
-          return n;
-      }
-      break;
-  }
-  throw new Error(`LocalSocket: Invalid mutation: ${o.constructor.toString().match(/\w+/g)[1]} to ${n.constructor.toString().match(/\w+/g)[1]}`);
-});
+const StateMap = new Map<string, State>();
+type State
+  = State.Initial
+  | State.Block
+  | State.Upgrade
+  | State.Success
+  | State.Error
+  | State.Abort
+  | State.Crash
+  | State.Destroy
+  | State.End;
 namespace State {
-  export type Type
-    = Initial
-    | Block
-    | Upgrade
-    | Success
-    | Error
-    | Abort
-    | Crash
-    | Destroy
-    | End;
   export class Initial {
     private STATE: this;
     constructor(
       public database: string
     ) {
-      assert(!StateSet.has(database));
-      void StateSet.add(database, this);
+      assert(!StateMap.has(database));
+      void StateMap.set(database, this);
     }
   }
   export class Block {
@@ -119,7 +46,7 @@ namespace State {
     constructor(
       public database: string
     ) {
-      void StateSet.add(database, this);
+      void StateMap.set(database, this);
     }
   }
   export class Upgrade {
@@ -128,7 +55,7 @@ namespace State {
       public database: string,
       public session: IDBOpenDBRequest
     ) {
-      void StateSet.add(database, this);
+      void StateMap.set(database, this);
     }
   }
   export class Success {
@@ -137,7 +64,7 @@ namespace State {
       public database: string,
       public connection: IDBDatabase
     ) {
-      void StateSet.add(database, this);
+      void StateMap.set(database, this);
     }
     public drain: () => void;
     public destroy: () => void;
@@ -150,7 +77,7 @@ namespace State {
       public error: DOMError,
       public event: Event
     ) {
-      void StateSet.add(database, this);
+      void StateMap.set(database, this);
     }
   }
   export class Abort {
@@ -160,7 +87,7 @@ namespace State {
       public error: DOMError,
       public event: Event
     ) {
-      void StateSet.add(database, this);
+      void StateMap.set(database, this);
     }
   }
   export class Crash {
@@ -169,7 +96,7 @@ namespace State {
       public database: string,
       public error: DOMError
     ) {
-      void StateSet.add(database, this);
+      void StateMap.set(database, this);
     }
   }
   export class Destroy {
@@ -177,7 +104,7 @@ namespace State {
     constructor(
       public database: string
     ) {
-      void StateSet.add(database, this);
+      void StateMap.set(database, this);
     }
   }
   export class End {
@@ -185,26 +112,26 @@ namespace State {
     constructor(
       public database: string
     ) {
-      void StateSet.add(database, this);
+      void StateMap.set(database, this);
     }
   }
 }
 
 type Request = (db: IDBDatabase) => any;
-const RequestQueueSet = new Set<string, Request[]>();
+const requests = new Map<string, Request[]>();
 
 export function open(name: string, config: Config): void {
   assert(config);
   void CommandMap.set(name, CommandType.open);
   void ConfigMap.set(name, config);
-  if (StateSet.has(name)) return;
+  if (StateMap.has(name)) return;
   void handleFromInitialState(new State.Initial(name));
 }
 export function listen(name: string): (req: Request) => any {
   return (req: Request) => {
-    const queue = RequestQueueSet.get(name) || RequestQueueSet.add(name, []);
+    const queue = requests.get(name) || requests.set(name, []).get(name);
     void queue.push(req);
-    const state = StateSet.get(name);
+    const state = StateMap.get(name);
     if (state instanceof State.Success) {
       void state.drain();
     }
@@ -223,8 +150,8 @@ export function close(name: string): void {
       return false;
     }
   });
-  if (StateSet.get(name) instanceof State.Success) return (<State.Success>StateSet.get(name)).end();
-  if (StateSet.has(name)) return;
+  if (StateMap.get(name) instanceof State.Success) return (<State.Success>StateMap.get(name)).end();
+  if (StateMap.has(name)) return;
   void handleFromInitialState(new State.Initial(name));
 }
 export function destroy(name: string): void {
@@ -240,8 +167,8 @@ export function destroy(name: string): void {
       return true;
     }
   });
-  if (StateSet.get(name) instanceof State.Success) return (<State.Success>StateSet.get(name)).destroy();
-  if (StateSet.has(name)) return;
+  if (StateMap.get(name) instanceof State.Success) return (<State.Success>StateMap.get(name)).destroy();
+  if (StateMap.has(name)) return;
   void handleFromInitialState(new State.Initial(name));
 }
 
@@ -320,10 +247,10 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
       void clear();
       void connection.close();
       if (!newVersion) {
-        void RequestQueueSet.delete(database);
+        void requests.delete(database);
         void IDBEventObserver.emit([database, IDBEventType.destroy], new IDBEvent(IDBEventType.destroy, database));
       }
-      if (StateSet.get(database) !== state) return;
+      if (StateMap.get(database) !== state) return;
       void handleFromEndState(new State.End(database));
     };
     connection.onerror = event => {
@@ -337,7 +264,7 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
     connection.onclose = event => {
       void clear();
       void IDBEventObserver.emit([database, IDBEventType.destroy], new IDBEvent(IDBEventType.destroy, database));
-      if (StateSet.get(database) !== state) return;
+      if (StateMap.get(database) !== state) return;
       void handleFromEndState(new State.End(database));
     };
     state.destroy = () => {
@@ -351,7 +278,7 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
       void handleFromEndState(new State.End(database));
     };
     state.drain = () => {
-      const reqs = RequestQueueSet.get(database) || [];
+      const reqs = requests.get(database) || [];
       try {
         while (reqs.length > 0 && CommandMap.get(database) === CommandType.open) {
           void reqs[0](connection);
@@ -433,7 +360,7 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
   function handleFromDestroyState({database}: State.Destroy): void {
     const deleteRequest = indexedDB.deleteDatabase(database);
     deleteRequest.onsuccess = _ => {
-      void RequestQueueSet.delete(database);
+      void requests.delete(database);
       void IDBEventObserver.emit([database, IDBEventType.destroy], new IDBEvent(IDBEventType.destroy, database));
       void handleFromEndState(new State.End(database));
     };
@@ -443,7 +370,7 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
   }
 
   function handleFromEndState({database}: State.End, version = 0): void {
-    void StateSet.delete(database);
+    void StateMap.delete(database);
     switch (CommandMap.get(database)) {
       case CommandType.open: {
         return void handleFromInitialState(new State.Initial(database), version);
