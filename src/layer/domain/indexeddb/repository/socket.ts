@@ -113,45 +113,44 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
   private links = new Map<string, T>();
   private sources = new Map<string, T>();
   public link(key: string, expiry?: number): T {
-    return (
-      void this.expire(key, expiry),
-      this.links.has(key)
-        ? this.links.get(key)
-        : this.links
-          .set(key, build(
-            Object.defineProperties(
-              (void this.sources.set(key, clone<T>({}, this.get(key))), this.sources.get(key)),
-              {
-                __meta: {
-                  get: () => this.meta(key)
-                },
-                __id: {
-                  get(): number {
-                    return (<LocalSocketObject>this).__meta.id;
-                  }
-                },
-                __key: {
-                  get(): string {
-                    return (<LocalSocketObject>this).__meta.key;
-                  }
-                },
-                __date: {
-                  get(): number {
-                    return (<LocalSocketObject>this).__meta.date;
-                  }
-                },
-                __event: {
-                  value: new Observable<[LocalPortEventType], LocalPortEvent, any>()
+    void this.expire(key, expiry);
+    return this.links.has(key)
+      ? this.links.get(key)
+      : this.links
+        .set(key, build(
+          Object.defineProperties(
+            (void this.sources.set(key, clone<T>({}, this.get(key))), this.sources.get(key)),
+            {
+              __meta: {
+                get: () => this.meta(key)
+              },
+              __id: {
+                get(): number {
+                  return (<LocalSocketObject>this).__meta.id;
                 }
+              },
+              __key: {
+                get(): string {
+                  return (<LocalSocketObject>this).__meta.key;
+                }
+              },
+              __date: {
+                get(): number {
+                  return (<LocalSocketObject>this).__meta.date;
+                }
+              },
+              __event: {
+                value: new Observable<[LocalPortEventType], LocalPortEvent, any>()
               }
-            ),
-            this.factory,
-            (attr, newValue, oldValue) => {
-              void this.add(new SocketRecord(KeyString(key), <T>{ [attr]: newValue }));
-              void (<Observable<[LocalPortEventType, string], LocalPortEvent, void>>this.sources.get(key).__event)
-                .emit([WebStorageEventType.send, attr], new WebStorageEvent(WebStorageEventType.send, key, attr, newValue, oldValue));
-            }))
-          .get(key));
+            }
+          ),
+          this.factory,
+          (attr, newValue, oldValue) => {
+            void this.add(new SocketRecord(KeyString(key), <T>{ [attr]: newValue }));
+            void (<Observable<[LocalPortEventType, string], LocalPortEvent, void>>this.sources.get(key).__event)
+              .emit([WebStorageEventType.send, attr], new WebStorageEvent(WebStorageEventType.send, key, attr, newValue, oldValue));
+          }))
+        .get(key);
   }
   public destroy(): void {
     void this.proxy.destroy();
