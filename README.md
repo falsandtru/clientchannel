@@ -27,11 +27,11 @@ https://falsandtru.github.io/localsocket/
 ### Persistence
 
 Schemas are defined by property names that made by factory function.
-A property name that has `_` prefix or postfix to be ignored.
+A property name that has underscore(`_`) prefix or postfix be ignored.
 It means you can define the dynamic value object.
 
 Data that assigned to the property of Linked object will be saved in the storage.
-When data was updated on others threads(tabs), own property value will be updated automatically.
+When data was updated on other threads(tabs), own thread's property value will be updated automatically.
 
 ```ts
 import {socket, LocalSocketObject} from 'localsocket';
@@ -48,14 +48,14 @@ class Schema {
 	// basic property names will be included in schema.
 	firstName = '';
 	lastName = '';
-	// invalid value types will be excluded in schema.
+	// property names that has unpersistable values will be excluded in schema.
 	name() {
 		return this.firstName + this._separator + this.lastName;
 	}
 }
 
 const sock = socket('domain', {
-	// delete linked record 3 days later since last access.
+	// delete linked records 3 days later since last access.
 	expiry: 3 * 24 * 60 * 60 * 1e3,
 	schema() {
 		return new Schema();
