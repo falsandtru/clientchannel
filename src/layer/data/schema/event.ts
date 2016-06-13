@@ -1,20 +1,17 @@
 import {clone} from 'spica';
 import {IdNumber, KeyString} from '../constraint/types';
 
-export const EventType = {
-  put: <'put'>'put',
-  delete: <'delete'>'delete',
-  snapshot: <'snapshot'>'snapshot'
-};
-export type EventType
-  = typeof EventType.put
-  | typeof EventType.delete
-  | typeof EventType.snapshot;
-
-export class EventValue {
+export namespace EventRecordFields {
+  export const id: 'id' = 'id';
+  export const key: 'key' = 'key';
+  export const type: 'type' = 'type';
+  export const attr: 'attr' = 'attr';
+  export const value: 'value' = 'value';
+  export const date: 'date' = 'date';
+  export const surrogateKeyDateField: 'key+date' = 'key+date';
 }
 
-export abstract class EventRecord<T extends EventValue> {
+abstract class EventRecord<T extends EventValue> {
   constructor(
     id: IdNumber,
     key: KeyString,
@@ -60,9 +57,50 @@ export abstract class EventRecord<T extends EventValue> {
     }
   }
   public id: IdNumber;
-  public type: 'put' | 'snapshot' | 'delete';
+  public type: EventType;
   public key: KeyString;
   public attr: string;
   public value: T;
   public date: number;
+}
+export class UnsavedEventRecord<T extends EventValue> extends EventRecord<T> {
+  private EVENT_RECORD: T;
+  constructor(
+    key: KeyString,
+    value: T,
+    type: EventType = EventType.put,
+    date: number = Date.now()
+  ) {
+    super(void 0, key, value, date, type);
+    // must not have id property
+    if (this.id !== void 0 || 'id' in this) throw new TypeError(`LocalSocket: UnsavedEventRecord: Invalid event id: ${this.id}`);
+    //void Object.freeze(this);
+  }
+}
+export class SavedEventRecord<T extends EventValue> extends EventRecord<T> {
+  private EVENT_RECORD: T;
+  constructor(
+    public id: IdNumber,
+    key: KeyString,
+    value: T,
+    type: EventType,
+    date: number
+  ) {
+    super(id, key, value, date, type);
+    if (this.id > 0 === false) throw new TypeError(`LocalSocket: SavedEventRecord: Invalid event id: ${this.id}`);
+    void Object.freeze(this);
+  }
+}
+
+export const EventType = {
+  put: <'put'>'put',
+  delete: <'delete'>'delete',
+  snapshot: <'snapshot'>'snapshot'
+};
+export type EventType
+  = typeof EventType.put
+  | typeof EventType.delete
+  | typeof EventType.snapshot;
+
+export class EventValue {
 }

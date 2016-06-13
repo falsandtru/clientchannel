@@ -1,47 +1,39 @@
 import {Observable} from 'spica';
 import {Config} from '../../../../infrastructure/indexeddb/api';
 import {KeyString} from '../../../../data/constraint/types';
-import {AbstractKeyValueStore} from '../../../../data/store/key-value';
-import {ESEvent, ESEventType} from '../../../../data/store/event';
+import {KeyValueStore} from '../../../../data/store/key-value';
+import {EventStore} from '../../../../data/store/event';
 
 export const STORE_NAME = 'access';
-export const STORE_FIELDS = {
-  key: 'key',
-  date: 'date'
-};
 
-class AccessRecord {
-  constructor(
-    public key: KeyString,
-    public date: number
-  ) {
-  }
-}
-
-export class AccessStore extends AbstractKeyValueStore<string, AccessRecord> {
+export class AccessStore extends KeyValueStore<string, AccessRecord> {
+  public static fields = Object.freeze({
+    key: <'key'>'key',
+    date: <'date'>'date'
+  });
   public static configure(): Config {
     return {
       make(db) {
         const store = db.objectStoreNames.contains(STORE_NAME)
           ? db.transaction(STORE_NAME).objectStore(STORE_NAME)
           : db.createObjectStore(STORE_NAME, {
-            keyPath: STORE_FIELDS.key,
+            keyPath: AccessStore.fields.key,
             autoIncrement: false
           });
-        if (!store.indexNames.contains(STORE_FIELDS.key)) {
-          void store.createIndex(STORE_FIELDS.key, STORE_FIELDS.key, {
+        if (!store.indexNames.contains(AccessStore.fields.key)) {
+          void store.createIndex(AccessStore.fields.key, AccessStore.fields.key, {
             unique: true
           });
         }
-        if (!store.indexNames.contains(STORE_FIELDS.date)) {
-          void store.createIndex(STORE_FIELDS.date, STORE_FIELDS.date);
+        if (!store.indexNames.contains(AccessStore.fields.date)) {
+          void store.createIndex(AccessStore.fields.date, AccessStore.fields.date);
         }
         return true;
       },
       verify(db) {
         return db.objectStoreNames.contains(STORE_NAME)
-            && db.transaction(STORE_NAME).objectStore(STORE_NAME).indexNames.contains(STORE_FIELDS.key)
-            && db.transaction(STORE_NAME).objectStore(STORE_NAME).indexNames.contains(STORE_FIELDS.date);
+            && db.transaction(STORE_NAME).objectStore(STORE_NAME).indexNames.contains(AccessStore.fields.key)
+            && db.transaction(STORE_NAME).objectStore(STORE_NAME).indexNames.contains(AccessStore.fields.date);
       },
       destroy() {
         return true;
@@ -50,16 +42,24 @@ export class AccessStore extends AbstractKeyValueStore<string, AccessRecord> {
   }
   constructor(
     database: string,
-    event: Observable<[KeyString] | [KeyString, string] | [KeyString, string, string], ESEvent, void>
+    event: Observable<[KeyString] | [KeyString, string] | [KeyString, string, string], EventStore.Event, void>
   ) {
-    super(database, STORE_NAME, STORE_FIELDS.key);
+    super(database, STORE_NAME, AccessStore.fields.key);
     void Object.freeze(this);
 
     void event
       .monitor(<any>[], ({key, type}) =>
-        type === ESEventType.delete
+        type === EventStore.EventType.delete
           ? void this.delete(key)
           : void this.set(key, new AccessRecord(key, Date.now()))
       );
+  }
+}
+
+class AccessRecord {
+  constructor(
+    public key: KeyString,
+    public date: number
+  ) {
   }
 }

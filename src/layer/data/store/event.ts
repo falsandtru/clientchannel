@@ -1,131 +1,53 @@
-import {LocalSocketObjectMetaData, LocalSocketEvent, LocalSocketEventType} from 'localsocket';
 import {Supervisor, Observable, sqid, assign, clone, concat} from 'spica';
 import {listen, Config, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../infrastructure/indexeddb/api';
 import {IdNumber, KeyString} from '../constraint/types';
-import {EventType, EventValue, EventRecord} from '../schema/event';
+import {EventRecordFields, UnsavedEventRecord, SavedEventRecord} from '../schema/event';
+import * as Schema from '../schema/event';
 import {noop} from '../../../lib/noop';
 
-export {
-  EventType,
-  EventValue
-}
-
-export class UnsavedEventRecord<T extends EventValue> extends EventRecord<T> {
-  private EVENT_RECORD: T;
-  constructor(
-    key: KeyString,
-    value: T,
-    type: EventType = EventType.put,
-    date: number = Date.now()
-  ) {
-    super(void 0, key, value, date, type);
-    // must not have id property
-    if (this.id !== void 0 || 'id' in this) throw new TypeError(`LocalSocket: UnsavedEventRecord: Invalid event id: ${this.id}`);
-    //void Object.freeze(this);
-  }
-}
-export class SavedEventRecord<T extends EventValue> extends EventRecord<T> {
-  private EVENT_RECORD: T;
-  constructor(
-    public id: IdNumber,
-    key: KeyString,
-    value: T,
-    type: EventType,
-    date: number
-  ) {
-    super(id, key, value, date, type);
-    if (this.id > 0 === false) throw new TypeError(`LocalSocket: SavedEventRecord: Invalid event id: ${this.id}`);
-    void Object.freeze(this);
-  }
-}
-
-export type ESEventType = LocalSocketEventType;
-export const ESEventType = {
-  put: <'put'>'put',
-  delete: <'delete'>'delete',
-  snapshot: <'snapshot'>'snapshot'
-}
-export class ESEvent implements LocalSocketEvent {
-  constructor(
-    public type: ESEventType,
-    public id: IdNumber,
-    public key: KeyString,
-    public attr: string
-  ) {
-    void Object.freeze(this);
-  }
-}
-
-type ESInternalEventType = ESEventType | 'query';
-const ESInternalEventType = {
-  put: <'put'>'put',
-  delete: <'delete'>'delete',
-  snapshot: <'snapshot'>'snapshot',
-  query: <'query'>'query'
-}
-class ESInternalEvent {
-  constructor(
-    public type: ESInternalEventType,
-    public id: IdNumber,
-    public key: KeyString,
-    public attr: string
-  ) {
-    void Object.freeze(this);
-  }
-}
-
-const STORE_FIELDS = {
-  id: 'id',
-  key: 'key',
-  type: 'type',
-  attr: 'attr',
-  value: 'value',
-  date: 'date',
-  surrogateKeyDateField: 'key+date'
-};
-
-export abstract class AbstractEventStore<T extends EventValue> {
+export abstract class EventStore<T extends EventStore.Value> {
+  public static fields = Object.freeze(EventRecordFields);
   public static configure(name: string): Config {
     return {
       make(db) {
         const store = db.objectStoreNames.contains(name)
           ? db.transaction(name).objectStore(name)
           : db.createObjectStore(name, {
-            keyPath: STORE_FIELDS.id,
+            keyPath: EventRecordFields.id,
             autoIncrement: true
           });
-        if (!store.indexNames.contains(STORE_FIELDS.id)) {
-          void store.createIndex(STORE_FIELDS.id, STORE_FIELDS.id, { unique: true });
+        if (!store.indexNames.contains(EventRecordFields.id)) {
+          void store.createIndex(EventRecordFields.id, EventRecordFields.id, { unique: true });
         }
-        if (!store.indexNames.contains(STORE_FIELDS.key)) {
-          void store.createIndex(STORE_FIELDS.key, STORE_FIELDS.key);
+        if (!store.indexNames.contains(EventRecordFields.key)) {
+          void store.createIndex(EventRecordFields.key, EventRecordFields.key);
         }
-        if (!store.indexNames.contains(STORE_FIELDS.type)) {
-          void store.createIndex(STORE_FIELDS.type, STORE_FIELDS.type);
+        if (!store.indexNames.contains(EventRecordFields.type)) {
+          void store.createIndex(EventRecordFields.type, EventRecordFields.type);
         }
-        if (!store.indexNames.contains(STORE_FIELDS.attr)) {
-          void store.createIndex(STORE_FIELDS.attr, STORE_FIELDS.attr);
+        if (!store.indexNames.contains(EventRecordFields.attr)) {
+          void store.createIndex(EventRecordFields.attr, EventRecordFields.attr);
         }
-        if (!store.indexNames.contains(STORE_FIELDS.value)) {
-          void store.createIndex(STORE_FIELDS.value, STORE_FIELDS.value);
+        if (!store.indexNames.contains(EventRecordFields.value)) {
+          void store.createIndex(EventRecordFields.value, EventRecordFields.value);
         }
-        if (!store.indexNames.contains(STORE_FIELDS.date)) {
-          void store.createIndex(STORE_FIELDS.date, STORE_FIELDS.date);
+        if (!store.indexNames.contains(EventRecordFields.date)) {
+          void store.createIndex(EventRecordFields.date, EventRecordFields.date);
         }
-        if (!store.indexNames.contains(STORE_FIELDS.surrogateKeyDateField)) {
-          void store.createIndex(STORE_FIELDS.surrogateKeyDateField, [STORE_FIELDS.key, STORE_FIELDS.date]);
+        if (!store.indexNames.contains(EventRecordFields.surrogateKeyDateField)) {
+          void store.createIndex(EventRecordFields.surrogateKeyDateField, [EventRecordFields.key, EventRecordFields.date]);
         }
         return true;
       },
       verify(db) {
         return db.objectStoreNames.contains(name)
-            && db.transaction(name).objectStore(name).indexNames.contains(STORE_FIELDS.id)
-            && db.transaction(name).objectStore(name).indexNames.contains(STORE_FIELDS.key)
-            && db.transaction(name).objectStore(name).indexNames.contains(STORE_FIELDS.type)
-            && db.transaction(name).objectStore(name).indexNames.contains(STORE_FIELDS.attr)
-            && db.transaction(name).objectStore(name).indexNames.contains(STORE_FIELDS.value)
-            && db.transaction(name).objectStore(name).indexNames.contains(STORE_FIELDS.date)
-            && db.transaction(name).objectStore(name).indexNames.contains(STORE_FIELDS.surrogateKeyDateField);
+            && db.transaction(name).objectStore(name).indexNames.contains(EventRecordFields.id)
+            && db.transaction(name).objectStore(name).indexNames.contains(EventRecordFields.key)
+            && db.transaction(name).objectStore(name).indexNames.contains(EventRecordFields.type)
+            && db.transaction(name).objectStore(name).indexNames.contains(EventRecordFields.attr)
+            && db.transaction(name).objectStore(name).indexNames.contains(EventRecordFields.value)
+            && db.transaction(name).objectStore(name).indexNames.contains(EventRecordFields.date)
+            && db.transaction(name).objectStore(name).indexNames.contains(EventRecordFields.surrogateKeyDateField);
       },
       destroy() {
         return true;
@@ -154,7 +76,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
         if (isNewMaxId() && isNewMaxDate()) {
           void lastNotifiedIdSet.set(event.key, event.id);
           void lastUpdatedDateSet.set(event.key, event.date);
-          void this.events.load.emit([event.key, event.attr, event.type], new ESEvent(event.type, event.id, event.key, event.attr));
+          void this.events.load.emit([event.key, event.attr, event.type], new EventStore.Event(event.type, event.id, event.key, event.attr));
         }
       });
     void this.cache.events.exec
@@ -170,12 +92,12 @@ export abstract class AbstractEventStore<T extends EventValue> {
   }
   protected cache = new class extends Supervisor<[KeyString] | [KeyString, string] | [KeyString, string, string], void, UnsavedEventRecord<T> | SavedEventRecord<T>> { }();
   public events = {
-    load: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, ESEventType], ESEvent, void>(),
-    save: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, ESEventType], ESEvent, void>(),
-    loss: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, ESEventType], ESEvent, void>(),
+    load: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, EventStore.EventType], EventStore.Event, void>(),
+    save: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, EventStore.EventType], EventStore.Event, void>(),
+    loss: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, EventStore.EventType], EventStore.Event, void>(),
   };
   public events_ = {
-    access: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, ESInternalEventType], ESInternalEvent, void>()
+    access: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, InternalEventType], InternalEvent, void>()
   };
   protected syncState = new Map<KeyString, boolean>();
   protected syncWaits = new Observable<[KeyString], DOMError, any>();
@@ -210,10 +132,10 @@ export abstract class AbstractEventStore<T extends EventValue> {
     const latest = this.meta(key);
     const savedEvents: SavedEventRecord<T>[] = [];
     void this.syncState.set(key, this.syncState.get(key) === true);
-    return void this.cursor(key, STORE_FIELDS.key, IDBCursorDirection.prev, IDBTransaction.readonly, (cursor, err) => {
+    return void this.cursor(key, EventRecordFields.key, IDBCursorDirection.prev, IDBTransaction.readonly, (cursor, err) => {
       if (err) return void this.syncWaits.emit([key], err);
       if (!cursor || (<SavedEventRecord<T>>cursor.value).id <= latest.id) {
-        if (compose(savedEvents).reduce(e => e).type === EventType.delete) {
+        if (compose(savedEvents).reduce(e => e).type === EventStore.EventType.delete) {
           void this.clean(Infinity, key);
         }
         else {
@@ -223,7 +145,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
             .reduceRight<SavedEventRecord<T>[]>((acc, e) => acc.some(({attr}) => attr === e.attr) ? acc : concat([e], acc), [])
             .reduce<SavedEventRecord<T>[]>((acc, e) => {
               switch (e.type) {
-                case EventType.put: {
+                case EventStore.EventType.put: {
                   return concat([e], acc);
                 }
                 default: {
@@ -249,20 +171,20 @@ export abstract class AbstractEventStore<T extends EventValue> {
       const event: SavedEventRecord<T> = cursor.value;
       if (this.cache.refs([event.key, event.attr, sqid(event.id)]).length > 0) return;
       void savedEvents.unshift(new SavedEventRecord(event.id, event.key, event.value, event.type, event.date));
-      if (event.type !== EventType.put) return;
+      if (event.type !== EventStore.EventType.put) return;
       void cursor.continue();
     });
   }
-  public meta(key: KeyString): LocalSocketObjectMetaData {
+  public meta(key: KeyString): MetaData {
     const events = this.cache.cast([key], void 0);
     return Object.freeze(
       clone(
-        <LocalSocketObjectMetaData>{
+        <MetaData>{
           id: events.reduce((id, e) => e.id > id ? e.id : id, 0),
           date: 0
         },
         compose(events).reduce(e => e),
-        <LocalSocketObjectMetaData>{
+        <MetaData>{
           key: <string>key
         }
       )
@@ -275,19 +197,19 @@ export abstract class AbstractEventStore<T extends EventValue> {
   }
   public has(key: KeyString): boolean {
     return compose(this.cache.cast([key], void 0))
-      .reduce(e => e).type !== EventType.delete;
+      .reduce(e => e).type !== EventStore.EventType.delete;
   }
   public get(key: KeyString): T {
     void this.sync([key]);
     void this.events_.access
-      .emit([key], new ESInternalEvent(ESInternalEventType.query, IdNumber(0), key, ''));
+      .emit([key], new InternalEvent(InternalEventType.query, IdNumber(0), key, ''));
     return compose(this.cache.cast([key], void 0))
       .reduce(e => e)
       .value;
   }
   public add(event: UnsavedEventRecord<T>): void {
     void this.events_.access
-      .emit([event.key, event.attr, event.type], new ESInternalEvent(event.type, IdNumber(0), event.key, event.attr));
+      .emit([event.key, event.attr, event.type], new InternalEvent(event.type, IdNumber(0), event.key, event.attr));
     if (event instanceof UnsavedEventRecord === false) throw new Error(`LocalSocket: Cannot add a saved event: ${JSON.stringify(event)}`);
     void this.sync([event.key]);
     const id = sqid();
@@ -310,27 +232,27 @@ export abstract class AbstractEventStore<T extends EventValue> {
         void this.cache
           .register([savedEvent.key, savedEvent.attr, sqid(savedEvent.id)], _ => savedEvent);
         void this.events.save
-          .emit([savedEvent.key, savedEvent.attr, savedEvent.type], new ESEvent(savedEvent.type, savedEvent.id, savedEvent.key, savedEvent.attr));
+          .emit([savedEvent.key, savedEvent.attr, savedEvent.type], new EventStore.Event(savedEvent.type, savedEvent.id, savedEvent.key, savedEvent.attr));
         // emit update event
         void this.cache
           .cast([savedEvent.key, savedEvent.attr, sqid(savedEvent.id)], void 0);
         if (this.cache.refs([event.key]).filter(([, sub]) => sub(void 0) instanceof SavedEventRecord).length > this.snapshotCycle) {
           void this.snapshot(event.key);
         }
-        else if (savedEvent.type === EventType.delete) {
+        else if (savedEvent.type === EventStore.EventType.delete) {
           void this.clean(Infinity, savedEvent.key);
         }
       };
       tx.onerror = tx.onabort = _ => {
         void setTimeout(() => {
           if (this.cache.refs([event.key, event.attr, sqid(0), id]).length === 0) return;
-          void this.events.loss.emit([event.key, event.attr, event.type], new ESEvent(event.type, event.id, event.key, event.attr));
+          void this.events.loss.emit([event.key, event.attr, event.type], new EventStore.Event(event.type, event.id, event.key, event.attr));
         }, 1e3);
       };
     });
   }
   public delete(key: KeyString): void {
-    return void this.add(new UnsavedEventRecord(key, <T>new EventValue(), EventType.delete));
+    return void this.add(new UnsavedEventRecord(key, <T>new EventStore.Value(), EventStore.EventType.delete));
   }
   protected snapshotCycle = 10;
   //protected snapshotLimit = 1;
@@ -342,7 +264,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
       const tx = db.transaction(this.name, IDBTransaction.readwrite);
       const store = tx.objectStore(this.name);
       const req = store
-        .index(STORE_FIELDS.key)
+        .index(EventRecordFields.key)
         .openCursor(<any>key, IDBCursorDirection.prev);
       const savedEvents: SavedEventRecord<T>[] = [];
       req.onsuccess = _ => {
@@ -351,14 +273,14 @@ export abstract class AbstractEventStore<T extends EventValue> {
           const event: SavedEventRecord<T> = cursor.value;
           void savedEvents.unshift(new SavedEventRecord(event.id, event.key, event.value, event.type, event.date));
         }
-        if (!cursor || (<EventRecord<T>>cursor.value).type !== EventType.put) {
+        if (!cursor || (<SavedEventRecord<T>>cursor.value).type !== EventStore.EventType.put) {
           assert(this.snapshotCycle > 0);
           if (savedEvents.length < this.snapshotCycle) return;
           void this.clean(Infinity, key);
           const composedEvent = compose(savedEvents).reduce(e => e);
           if (composedEvent instanceof SavedEventRecord) return;
           switch (composedEvent.type) {
-            case EventType.snapshot: {
+            case EventStore.EventType.snapshot: {
               // snapshot's date must not be after unsaved event's date.
               return void store.add(
                 new UnsavedEventRecord(
@@ -369,7 +291,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
                 )
               );
             }
-            case EventType.delete: {
+            case EventStore.EventType.delete: {
               return void 0;
             }
           }
@@ -391,18 +313,18 @@ export abstract class AbstractEventStore<T extends EventValue> {
     const cleanStateMap = new Map<KeyString, boolean>();
     return void this.cursor(
       key ? IDBKeyRange.bound([key, 0], [key, until]) : IDBKeyRange.upperBound(until),
-      key ? STORE_FIELDS.surrogateKeyDateField : STORE_FIELDS.date,
+      key ? EventRecordFields.surrogateKeyDateField : EventRecordFields.date,
       IDBCursorDirection.prev,
       IDBTransaction.readwrite,
       (cursor, err) => {
         if (!cursor) return void removedEvents.reduce((_, event) => void this.cache.terminate([event.key, event.attr, sqid(event.id)]), void 0);
         const event: SavedEventRecord<T> = cursor.value;
         switch (event.type) {
-          case EventType.put: {
+          case EventStore.EventType.put: {
             void cleanStateMap.set(event.key, cleanStateMap.get(event.key) || false);
             break;
           }
-          case EventType.snapshot: {
+          case EventStore.EventType.snapshot: {
             if (!cleanStateMap.get(event.key)) {
               void cleanStateMap.set(event.key, true);
               void cursor.continue();
@@ -410,7 +332,7 @@ export abstract class AbstractEventStore<T extends EventValue> {
             }
             break;
           }
-          case EventType.delete: {
+          case EventStore.EventType.delete: {
             void cleanStateMap.set(event.key, true);
             break;
           }
@@ -445,12 +367,57 @@ export abstract class AbstractEventStore<T extends EventValue> {
     });
   }
 }
+export namespace EventStore {
+  export type EventType = Schema.EventType;
+  export const EventType = Schema.EventType;
+  export class Event {
+    constructor(
+      public type: EventType,
+      public id: IdNumber,
+      public key: KeyString,
+      public attr: string
+    ) {
+      void Object.freeze(this);
+    }
+  }
+  export class Record<T extends Value> extends UnsavedEventRecord<T> { }
+  export class Value extends Schema.EventValue {
+  }
+}
+export {
+  UnsavedEventRecord,
+  SavedEventRecord
+}
+
+type InternalEventType = EventStore.EventType | 'query';
+const InternalEventType = {
+  put: <'put'>'put',
+  delete: <'delete'>'delete',
+  snapshot: <'snapshot'>'snapshot',
+  query: <'query'>'query'
+};
+class InternalEvent {
+  constructor(
+    public type: InternalEventType,
+    public id: IdNumber,
+    public key: KeyString,
+    public attr: string
+  ) {
+    void Object.freeze(this);
+  }
+}
+
+interface MetaData {
+  id: number;
+  key: string;
+  date: number;
+}
 
 // input order must be asc
-export function compose<T extends EventValue>(events: (UnsavedEventRecord<T> | SavedEventRecord<T>)[]): (UnsavedEventRecord<T> | SavedEventRecord<T>)[] {
+export function compose<T extends EventStore.Value>(events: (UnsavedEventRecord<T> | SavedEventRecord<T>)[]): (UnsavedEventRecord<T> | SavedEventRecord<T>)[] {
   type E = UnsavedEventRecord<T> | SavedEventRecord<T>;
   return group(events)
-    .map(events => events.reduceRight(compose, new UnsavedEventRecord(KeyString(''), <T>new EventValue(), EventType.delete, 0)));
+    .map(events => events.reduceRight(compose, new UnsavedEventRecord(KeyString(''), <T>new EventStore.Value(), EventStore.EventType.delete, 0)));
 
   function group(events: E[]): E[][] {
     return events
@@ -469,9 +436,9 @@ export function compose<T extends EventValue>(events: (UnsavedEventRecord<T> | S
     assert(target instanceof UnsavedEventRecord || target instanceof SavedEventRecord);
     assert(source instanceof UnsavedEventRecord || source instanceof SavedEventRecord);
     switch (source.type) {
-      case EventType.put: {
+      case EventStore.EventType.put: {
         return source.value[source.attr] !== void 0
-          ? new UnsavedEventRecord(source.key, assign(new EventValue(), target.value, source.value), EventType.snapshot)
+          ? new UnsavedEventRecord(source.key, assign(new EventStore.Value(), target.value, source.value), EventStore.EventType.snapshot)
           : new UnsavedEventRecord(
             source.key,
             Object.keys(target.value)
@@ -479,14 +446,14 @@ export function compose<T extends EventValue>(events: (UnsavedEventRecord<T> | S
                 if (prop === source.attr) return value;
                 value[prop] = target[prop];
                 return value;
-              }, <T>new EventValue())
-            , EventType.snapshot
+              }, <T>new EventStore.Value())
+            , EventStore.EventType.snapshot
           );
       }
-      case EventType.snapshot: {
+      case EventStore.EventType.snapshot: {
         return source;
       }
-      case EventType.delete: {
+      case EventStore.EventType.delete: {
         return source;
       }
     }

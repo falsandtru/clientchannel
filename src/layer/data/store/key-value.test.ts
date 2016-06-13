@@ -1,4 +1,4 @@
-import {AbstractKeyValueStore} from './key-value';
+import {KeyValueStore} from './key-value';
 import {IDBKey, IDBValue} from '../constraint/types';
 import {open, destroy, event, Config, IDBEventType} from '../../infrastructure/indexeddb/api';
 
@@ -6,7 +6,7 @@ describe('Unit: layers/data/store/key-value', function () {
   this.timeout(5 * 1e3);
 
   describe('spec', () => {
-    class KeyValueStore<K extends string, V extends IDBValue> extends AbstractKeyValueStore<K, V> {
+    class Store<K extends string, V extends IDBValue> extends KeyValueStore<K, V> {
       public static configure(): Config {
         return {
           make(db) {
@@ -47,8 +47,8 @@ describe('Unit: layers/data/store/key-value', function () {
     });
 
     it('CRUD', done => {
-      open('test', KeyValueStore.configure());
-      const kvs = new KeyValueStore<string, number>('test', 'test', '');
+      open('test', Store.configure());
+      const kvs = new Store<string, number>('test', 'test', '');
 
       kvs.set('a', 0, (key, err) => {
         assert(key === 'a');

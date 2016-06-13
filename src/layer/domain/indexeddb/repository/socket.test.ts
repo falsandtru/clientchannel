@@ -1,7 +1,7 @@
 import {LocalSocketObject} from 'localsocket';
 import {socket} from './socket';
 import {KeyString} from '../../../data/constraint/types';
-import {SocketStore, SocketRecord} from '../model/socket';
+import {SocketStore} from '../model/socket';
 import {listen, destroy, event, Config, IDBEventType} from '../../../infrastructure/indexeddb/api';
 
 describe('Unit: layers/domain/indexeddb/repository/socket', function () {
@@ -90,7 +90,7 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function () {
 
       assert(dao.n === 0);
       listen('test')(db => {
-        db.transaction('data', 'readwrite').objectStore('data').put(new SocketRecord(KeyString('a'), { n: 1 })).onsuccess = _ => {
+        db.transaction('data', 'readwrite').objectStore('data').put(new SocketStore.Record(KeyString('a'), { n: 1 })).onsuccess = _ => {
           sock['schema'].data.update(KeyString('a'));
           dao.__event.once(['recv', 'n'], ev => {
             assert(dao.__id === 1);

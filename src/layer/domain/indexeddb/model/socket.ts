@@ -1,20 +1,13 @@
-import {LocalSocketObjectMetaData} from 'localsocket';
+import {LocalSocketObject, LocalSocketObjectMetaData, LocalSocketEvent, LocalSocketEventType} from 'localsocket';
 import {Observable, uuid} from 'spica';
 import {open, destroy, event, IDBEventType, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../../infrastructure/indexeddb/api';
 import {IdNumber, KeyString} from '../../../data/constraint/types';
-import {UnsavedEventRecord, SavedEventRecord, ESEvent, ESEventType} from '../../../data/store/event';
-import {DataStore, DataValue as SocketValue} from './socket/data';
-import {AccessStore, STORE_FIELDS as AccessStoreFields} from './socket/access';
-import {ExpiryStore, STORE_FIELDS as ExpireStoreFields} from './socket/expiry';
+import {DataStore} from './socket/data';
+import {AccessStore} from './socket/access';
+import {ExpiryStore} from './socket/expiry';
 import {noop} from '../../../../lib/noop';
 
-export {
-  UnsavedEventRecord as SocketRecord,
-  SocketValue,
-  ESEventType
-}
-
-export class SocketStore<T extends SocketValue> {
+export class SocketStore<T extends SocketStore.Value> {
   constructor(
     public database: string,
     destroy: (err: DOMError, event: Event) => boolean,
@@ -44,9 +37,9 @@ export class SocketStore<T extends SocketValue> {
   private uuid = uuid();
   protected schema: Schema<T>;
   public events = {
-    load: new Observable<[string] | [string, string] | [string, string, string], ESEvent, void>(),
-    save: new Observable<[string] | [string, string] | [string, string, string], ESEvent, void>(),
-    loss: new Observable<[string] | [string, string] | [string, string, string], ESEvent, void>()
+    load: new Observable<[string] | [string, string] | [string, string, string], SocketStore.Event, void>(),
+    save: new Observable<[string] | [string, string] | [string, string, string], SocketStore.Event, void>(),
+    loss: new Observable<[string] | [string, string] | [string, string, string], SocketStore.Event, void>()
   };
   public sync(keys: KeyString[], cb: (errs: [KeyString, DOMError | Error][]) => any = noop, timeout?: number): void {
     return this.schema.data.sync(keys, cb, timeout);
@@ -60,7 +53,7 @@ export class SocketStore<T extends SocketValue> {
   public get(key: string): T {
     return this.schema.data.get(KeyString(key));
   }
-  public add(record: UnsavedEventRecord<T>): void {
+  public add(record: DataStore.Record<T>): void {
     return this.schema.data.add(record);
   }
   public delete(key: string): void {
@@ -76,7 +69,7 @@ export class SocketStore<T extends SocketValue> {
     const keys: string[] = [];
     return void this.schema.access.cursor(
       null,
-      AccessStoreFields.date,
+      AccessStore.fields.date,
       IDBCursorDirection.prevunique,
       IDBTransaction.readonly,
       (cursor, err) => {
@@ -92,8 +85,17 @@ export class SocketStore<T extends SocketValue> {
     return destroy(this.database);
   }
 }
+export namespace SocketStore {
+  export type EventType = LocalSocketEventType;
+  export const EventType = DataStore.EventType;
+  export class Event extends DataStore.Event implements LocalSocketEvent { }
+  export class Record<T> extends DataStore.Record<T> { }
+  export interface Value extends LocalSocketObject { }
+  export class Value extends DataStore.Value implements LocalSocketObject {
+  }
+}
 
-class Schema<T extends SocketValue> {
+class Schema<T extends SocketStore.Value> {
   constructor(
     private store_: SocketStore<T>,
     private expiries_: Map<string, number>

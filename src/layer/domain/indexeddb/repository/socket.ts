@@ -1,12 +1,12 @@
 import {LocalSocket, LocalSocketObject, LocalPort, LocalPortObject, LocalPortEvent, LocalPortEventType} from 'localsocket';
 import {Observable, Observer, clone, concat} from 'spica';
 import {build, SCHEMA, isValidPropertyName, isValidPropertyValue} from '../../dao/api';
-import {SocketStore, SocketRecord, SocketValue, ESEventType} from '../model/socket';
+import {SocketStore} from '../model/socket';
 import {localStorage} from '../../../infrastructure/webstorage/api';
 import {webstorage, WebStorageEvent, WebStorageEventType} from '../../webstorage/api';
 import {KeyString} from '../../../data/constraint/types';
 
-export function socket<T extends SocketValue>(
+export function socket<T extends SocketStore.Value>(
   name: string,
   factory: () => T,
   destroy: (err: DOMError, event: Event) => boolean,
@@ -44,7 +44,7 @@ class Port {
   }
 }
 
-class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> implements LocalSocket<T> {
+class Socket<T extends SocketStore.Value> extends SocketStore<T> implements LocalSocket<T> {
   constructor(
     database: string,
     private factory: () => T,
@@ -66,7 +66,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
         const source: T & LocalSocketObject = this.sources.get(key);
         if (!source) return;
         switch (type) {
-          case ESEventType.put: {
+          case SocketStore.EventType.put: {
             const oldVal = source[attr];
             const newVal = this.get(key)[attr];
             source[attr] = newVal;
@@ -74,7 +74,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
               .emit([WebStorageEventType.recv, attr], new WebStorageEvent(WebStorageEventType.recv, key, attr, newVal, oldVal));
             return;
           }
-          case ESEventType.delete: {
+          case SocketStore.EventType.delete: {
             const cache = this.get(key);
             void Object.keys(cache)
               .filter(isValidPropertyName)
@@ -89,7 +89,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
               }, void 0);
             return;
           }
-          case ESEventType.snapshot: {
+          case SocketStore.EventType.snapshot: {
             const cache = this.get(key);
             void Object.keys(cache)
               .filter(isValidPropertyName)
@@ -146,7 +146,7 @@ class Socket<T extends SocketValue & LocalSocketObject> extends SocketStore<T> i
           ),
           this.factory,
           (attr, newValue, oldValue) => {
-            void this.add(new SocketRecord(KeyString(key), <T>{ [attr]: newValue }));
+            void this.add(new SocketStore.Record(KeyString(key), <T>{ [attr]: newValue }));
             void (<Observable<[LocalPortEventType, string], LocalPortEvent, void>>this.sources.get(key).__event)
               .emit([WebStorageEventType.send, attr], new WebStorageEvent(WebStorageEventType.send, key, attr, newValue, oldValue));
           }))
