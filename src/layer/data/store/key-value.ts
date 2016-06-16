@@ -81,7 +81,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValue> {
       tx.oncomplete = tx.onerror = tx.onabort = _ => void cb(tx.error);
     });
   }
-  public cursor(query: any, index: string, direction: string, mode: string, cb: (cursor: IDBCursorWithValue, error: DOMError) => any): void {
+  public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransaction, cb: (cursor: IDBCursorWithValue, error: DOMError) => any): void {
     void listen(this.database)(db => {
       const tx = db
         .transaction(this.name, mode);

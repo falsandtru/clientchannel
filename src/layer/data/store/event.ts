@@ -349,7 +349,7 @@ export abstract class EventStore<T extends EventStore.Value> {
       }
     );
   }
-  public cursor(query: any, index: string, direction: string, mode: string, cb: (cursor: IDBCursorWithValue, error: DOMError) => any): void {
+  public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransaction, cb: (cursor: IDBCursorWithValue, error: DOMError) => any): void {
     return void listen(this.database)(db => {
       const tx = db
         .transaction(this.name, mode);
