@@ -1,14 +1,5 @@
-declare const self: Window & {
-  webkitIndexedDB?: IDBFactory;
-  mozIndexedDB?: IDBFactory;
-  IDBKeyRange: typeof IDBKeyRange;
-  webkitIDBKeyRange: typeof IDBKeyRange;
-  mozIDBKeyRange: typeof IDBKeyRange;
-  msIDBKeyRange: typeof IDBKeyRange;
-}
-export const indexedDB: IDBFactory = self.indexedDB || self.webkitIndexedDB || self.mozIndexedDB || self.msIndexedDB;
-const IDBKeyRange_ = self.IDBKeyRange || self.webkitIDBKeyRange || self.mozIDBKeyRange || self.msIDBKeyRange;;
-export {IDBKeyRange_ as IDBKeyRange}
+export const indexedDB = self.indexedDB;
+export const IDBKeyRange = self.IDBKeyRange;
 
 export type IDBTransaction
   = typeof IDBTransaction.readonly

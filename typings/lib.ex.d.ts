@@ -50,6 +50,10 @@ interface WeakMapConstructor {
 }
 declare var WeakMap: WeakMapConstructor;
 
+interface Window {
+  IDBKeyRange: typeof IDBKeyRange;
+}
+
 interface IDBDatabase {
   onversionchange: (ev: IDBVersionChangeEvent) => any;
   onclose: (ev: Event) => any;
