@@ -48,12 +48,12 @@ after_deploy:
 - cp -rf ./gh-pages ../
 - cp -rf ./dist/* ../gh-pages/assets/js
 - cat package.json | json version
-- export new_version=$(cat package.json | json version)
+- new_version=$(cat package.json | json version)
 - git reset --hard HEAD~
 - cat package.json | json version
-- export old_version=$(cat package.json | json version)
+- old_version=$(cat package.json | json version)
 - git reset --hard ORIG_HEAD
-- node -e 'if (!require("semver").gt(process.env.new_version, process.env.old_version)) process.exit(1)' || exit 0
+- node -e 'if (!require("semver").gt(process.argv[1], process.argv[2])) process.exit(1)' $new_version $old_version || exit 0
 - git fetch origin gh-pages:gh-pages
 - git checkout --orphan gh-pages
 - git checkout -m gh-pages
