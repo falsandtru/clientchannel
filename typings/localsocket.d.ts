@@ -13,7 +13,7 @@
     sync(keys: K[], cb?: (errs: [K, DOMError | Error][]) => any, timeout?: number): void;
     link(key: K, expiry?: number): V;
     delete(key: K): void;
-    recent(limit: number, cb: (keys: K[], error: DOMError) => any): void;
+    recent(limit: number, cb?: (keys: K[], error: DOMError) => any): void;
     destroy(): void;
   }
   export interface LocalSocketConfig<K extends string, V extends LocalSocketObject<K>> {

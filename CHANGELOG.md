@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- Enhance LocalSocket.recent method.
+
 ## 0.3.0
 
 - Refine typings.
