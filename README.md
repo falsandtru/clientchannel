@@ -36,7 +36,7 @@ When data was updated on other threads(tabs), own thread's property value will b
 ```ts
 import {socket, LocalSocketObject} from 'localsocket';
 
-interface Schema extends LocalSocketObject {
+interface Schema extends LocalSocketObject<string> {
 }
 class Schema {
 	// getter/setter will be excluded in schema.
