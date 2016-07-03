@@ -1,4 +1,4 @@
-/*! localsocket v0.3.0 https://github.com/falsandtru/localsocket | (c) 2016, falsandtru | undefined License (undefined) */
+/*! localsocket v0.3.1 https://github.com/falsandtru/localsocket | (c) 2016, falsandtru | undefined License (undefined) */
 define = typeof define === 'function' && define.amd
   ? define
   : (function () {
@@ -1804,6 +1804,11 @@ define('src/layer/domain/indexeddb/model/socket', [
             return void this.expiries.set(key, expiry);
         };
         SocketStore.prototype.recent = function (limit, cb) {
+            if (cb === void 0) {
+                cb = function () {
+                    return void 0;
+                };
+            }
             var keys = [];
             return void this.schema.access.cursor(null, access_2.AccessStore.fields.date, api_4.IDBCursorDirection.prevunique, api_4.IDBTransaction.readonly, function (cursor, err) {
                 if (!cursor)
