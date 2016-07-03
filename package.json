@@ -1,6 +1,6 @@
 {
   "name": "localsocket",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Communicate between other tabs via IndexedDB and LocalStorage.",
   "private": true,
   "homepage": "https://github.com/falsandtru/localsocket",
