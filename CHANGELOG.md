@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0
+
+- Refine typings.
+
 ## 0.2.2
 
 - Update deploy contents.

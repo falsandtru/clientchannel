@@ -3,40 +3,40 @@
 
   export const status: boolean;
 
-  export function socket<T extends LocalSocketObject>(name: string, config: LocalSocketConfig<T>): LocalSocket<T>;
-  export interface LocalSocket<T extends LocalSocketObject> {
+  export function socket<K extends string, V extends LocalSocketObject<K>>(name: string, config: LocalSocketConfig<K, V>): LocalSocket<K, V>;
+  export interface LocalSocket<K extends string, V extends LocalSocketObject<K>> {
     events: {
-      load: Observer<[string] | [string, string] | [string, string, LocalSocketEventType], LocalSocketEvent, void>,
-      save: Observer<[string] | [string, string] | [string, string, LocalSocketEventType], LocalSocketEvent, void>,
-      loss: Observer<[string] | [string, string] | [string, string, LocalSocketEventType], LocalSocketEvent, void>
+      load: Observer<[K] | [K, string] | [K, string, LocalSocketEventType], LocalSocketEvent<K>, void>,
+      save: Observer<[K] | [K, string] | [K, string, LocalSocketEventType], LocalSocketEvent<K>, void>,
+      loss: Observer<[K] | [K, string] | [K, string, LocalSocketEventType], LocalSocketEvent<K>, void>
     };
-    sync(keys: string[], cb?: (errs: [string, DOMError | Error][]) => any, timeout?: number): void;
-    link(key: string, expiry?: number): T;
-    delete(key: string): void;
-    recent(limit: number, cb: (keys: string[], error: DOMError) => any): void;
+    sync(keys: K[], cb?: (errs: [K, DOMError | Error][]) => any, timeout?: number): void;
+    link(key: K, expiry?: number): V;
+    delete(key: K): void;
+    recent(limit: number, cb: (keys: K[], error: DOMError) => any): void;
     destroy(): void;
   }
-  export interface LocalSocketConfig<T extends LocalSocketObject> {
-    schema(): T;
+  export interface LocalSocketConfig<K extends string, V extends LocalSocketObject<K>> {
+    schema(): V;
     expiry?: number;
     destroy?(error: DOMError, event: Event): boolean;
   }
-  export interface LocalSocketObject {
-    __meta?: LocalSocketObjectMetaData;
+  export interface LocalSocketObject<K extends string> {
+    __meta?: LocalSocketObjectMetaData<K>;
     __id?: number;
-    __key?: string;
+    __key?: K;
     __date?: number;
     __event?: Observer<[LocalPortEventType] | [LocalPortEventType, string], LocalPortEvent, any>;
   }
-  export interface LocalSocketObjectMetaData {
+  export interface LocalSocketObjectMetaData<K extends string> {
     id: number;
-    key: string;
+    key: K;
     date: number;
   }
-  export interface LocalSocketEvent {
+  export interface LocalSocketEvent<K extends string> {
     type: LocalSocketEventType;
     id: number;
-    key: string;
+    key: K;
     attr: string;
   }
   export type LocalSocketEventType
@@ -44,17 +44,17 @@
     | 'delete'
     | 'snapshot';
 
-  export function port<T extends LocalPortObject>(name: string, config: LocalPortConfig<T>): LocalPort<T>;
-  export interface LocalPort<T extends LocalPortObject> {
+  export function port<V extends LocalPortObject>(name: string, config: LocalPortConfig<V>): LocalPort<V>;
+  export interface LocalPort<V extends LocalPortObject> {
     events: {
       send: Observer<[string], LocalPortEvent, void>;
       recv: Observer<[string], LocalPortEvent, void>;
     };
-    link(): T;
+    link(): V;
     destroy(): void;
   }
-  export interface LocalPortConfig<T extends LocalPortObject> {
-    schema(): T;
+  export interface LocalPortConfig<V extends LocalPortObject> {
+    schema(): V;
     destroy?(error: DOMError, event: Event): boolean;
   }
   export interface LocalPortObject {

@@ -1,5 +1,5 @@
 import {SocketStore} from './socket';
-import {KeyString, IDBKey, IDBValue} from '../../../data/constraint/types';
+import {IDBKey, IDBValue} from '../../../data/constraint/types';
 import {open, destroy, event, Config, IDBEventType} from '../../../infrastructure/indexeddb/api';
 
 describe('Unit: layers/domain/indexeddb/model/socket', function () {
@@ -24,7 +24,7 @@ describe('Unit: layers/domain/indexeddb/model/socket', function () {
       destroy('test');
     });
 
-    class CustomSocketValue extends SocketStore.Value {
+    class CustomSocketValue extends SocketStore.Value<string> {
       constructor(
         public val: number
       ) {
@@ -33,13 +33,13 @@ describe('Unit: layers/domain/indexeddb/model/socket', function () {
     }
 
     it('recent', done => {
-      const socket = new SocketStore<CustomSocketValue>('test', _ => false);
+      const socket = new SocketStore<string, CustomSocketValue>('test', _ => false);
 
       socket.recent(Infinity, (keys, err) => {
         assert(!err);
         assert.deepStrictEqual(keys, []);
         socket.recent(Infinity, (keys, err) => {
-          socket.add(new SocketStore.Record(KeyString('a'), new CustomSocketValue(0)));
+          socket.add(new SocketStore.Record('a', new CustomSocketValue(0)));
           setTimeout(() => {
             socket.recent(Infinity, (keys, err) => {
               assert(!err);
@@ -52,7 +52,7 @@ describe('Unit: layers/domain/indexeddb/model/socket', function () {
                     socket.recent(Infinity, (keys, err) => {
                       assert(!err);
                       assert.deepStrictEqual(keys, ['a']);
-                      socket.add(new SocketStore.Record(KeyString('b'), new CustomSocketValue(0)));
+                      socket.add(new SocketStore.Record('b', new CustomSocketValue(0)));
                       setTimeout(() => {
                         socket.recent(Infinity, (keys, err) => {
                           assert(!err);
@@ -72,14 +72,14 @@ describe('Unit: layers/domain/indexeddb/model/socket', function () {
     });
 
     it('clean', done => {
-      const socket = new SocketStore<CustomSocketValue>('test', _ => false);
+      const socket = new SocketStore<string, CustomSocketValue>('test', _ => false);
 
-      socket.add(new SocketStore.Record(KeyString('a'), new CustomSocketValue(0)));
+      socket.add(new SocketStore.Record('a', new CustomSocketValue(0)));
       socket.recent(Infinity, keys => {
         assert.deepStrictEqual(keys, ['a']);
         assert(socket.has('a') === true);
         socket.delete('a');
-        socket.add(new SocketStore.Record(KeyString('b'), new CustomSocketValue(0)));
+        socket.add(new SocketStore.Record('b', new CustomSocketValue(0)));
         socket.recent(Infinity, keys => {
           assert.deepStrictEqual(keys, ['b']);
           assert(socket.has('a') === false);
@@ -97,17 +97,17 @@ describe('Unit: layers/domain/indexeddb/model/socket', function () {
     });
 
     it('expiry', done => {
-      const socket = new SocketStore<CustomSocketValue>('test', _ => false, 700);
+      const socket = new SocketStore<string, CustomSocketValue>('test', _ => false, 700);
 
       socket.expire('a');
-      socket.add(new SocketStore.Record(KeyString('a'), new CustomSocketValue(0)));
+      socket.add(new SocketStore.Record('a', new CustomSocketValue(0)));
       assert(socket.get('a').val === 0);
       socket.recent(Infinity, keys => {
         assert.deepStrictEqual(keys, ['a']);
         assert(socket.has('a') === true);
         setTimeout(() => {
           socket.expire('b', 300);
-          socket.add(new SocketStore.Record(KeyString('b'), new CustomSocketValue(0)));
+          socket.add(new SocketStore.Record('b', new CustomSocketValue(0)));
           socket.recent(Infinity, keys => {
             assert.deepStrictEqual(keys, ['b']);
             assert(socket.has('a') === false);

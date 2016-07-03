@@ -1,12 +1,11 @@
 import {Observable} from 'spica';
 import {Config} from '../../../../infrastructure/indexeddb/api';
-import {KeyString} from '../../../../data/constraint/types';
 import {KeyValueStore} from '../../../../data/store/key-value';
 import {EventStore} from '../../../../data/store/event';
 
 export const STORE_NAME = 'access';
 
-export class AccessStore extends KeyValueStore<string, AccessRecord> {
+export class AccessStore<K extends string> extends KeyValueStore<K, AccessRecord<K>> {
   public static fields = Object.freeze({
     key: <'key'>'key',
     date: <'date'>'date'
@@ -42,7 +41,7 @@ export class AccessStore extends KeyValueStore<string, AccessRecord> {
   }
   constructor(
     database: string,
-    event: Observable<[KeyString] | [KeyString, string] | [KeyString, string, string], EventStore.Event, void>
+    event: Observable<[K] | [K, string] | [K, string, string], EventStore.Event<K>, void>
   ) {
     super(database, STORE_NAME, AccessStore.fields.key);
     void Object.freeze(this);
@@ -56,9 +55,9 @@ export class AccessStore extends KeyValueStore<string, AccessRecord> {
   }
 }
 
-class AccessRecord {
+class AccessRecord<K extends string> {
   constructor(
-    public key: KeyString,
+    public key: K,
     public date: number
   ) {
   }

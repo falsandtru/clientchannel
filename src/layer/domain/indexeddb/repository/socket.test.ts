@@ -1,6 +1,5 @@
 import {LocalSocketObject} from 'localsocket';
 import {socket} from './socket';
-import {KeyString} from '../../../data/constraint/types';
 import {SocketStore} from '../model/socket';
 import {listen, destroy, event, Config, IDBEventType} from '../../../infrastructure/indexeddb/api';
 
@@ -26,7 +25,7 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function () {
       destroy('test');
     });
 
-    interface Value extends LocalSocketObject {
+    interface Value extends LocalSocketObject<string> {
     }
     class Value {
       constructor(
@@ -90,8 +89,8 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function () {
 
       assert(dao.n === 0);
       listen('test')(db => {
-        db.transaction('data', 'readwrite').objectStore('data').put(new SocketStore.Record(KeyString('a'), { n: 1 })).onsuccess = _ => {
-          sock['schema'].data.update(KeyString('a'));
+        db.transaction('data', 'readwrite').objectStore('data').put(new SocketStore.Record('a', { n: 1 })).onsuccess = _ => {
+          sock['schema'].data.update('a');
           dao.__event.once(['recv', 'n'], ev => {
             assert(dao.__id === 1);
             assert(dao.__key === 'a');

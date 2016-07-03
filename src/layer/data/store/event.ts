@@ -1,11 +1,11 @@
 import {Supervisor, Observable, sqid, assign, clone, concat} from 'spica';
 import {listen, Config, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../infrastructure/indexeddb/api';
-import {IdNumber, KeyString} from '../constraint/types';
+import {IdNumber} from '../constraint/types';
 import {EventRecordFields, UnsavedEventRecord, SavedEventRecord} from '../schema/event';
 import * as Schema from '../schema/event';
 import {noop} from '../../../lib/noop';
 
-export abstract class EventStore<T extends EventStore.Value> {
+export abstract class EventStore<K extends string, V extends EventStore.Value> {
   public static fields = Object.freeze(EventRecordFields);
   public static configure(name: string): Config {
     return {
@@ -58,8 +58,8 @@ export abstract class EventStore<T extends EventStore.Value> {
     protected database: string,
     protected name: string
   ) {
-    const lastNotifiedIdSet = new Map<KeyString, IdNumber>();
-    const lastUpdatedDateSet = new Map<KeyString, number>();
+    const lastNotifiedIdSet = new Map<K, IdNumber>();
+    const lastUpdatedDateSet = new Map<K, number>();
     void this.cache.events.exec
       .monitor(<any>[], ([, sub]) => {
         const event = sub(void 0);
@@ -90,51 +90,51 @@ export abstract class EventStore<T extends EventStore.Value> {
         }
       });
   }
-  protected cache = new class extends Supervisor<[KeyString] | [KeyString, string] | [KeyString, string, string], void, UnsavedEventRecord<T> | SavedEventRecord<T>> { }();
+  protected cache = new class extends Supervisor<[K] | [K, string] | [K, string, string], void, UnsavedEventRecord<K, V> | SavedEventRecord<K, V>> { }();
   public events = {
-    load: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, EventStore.EventType], EventStore.Event, void>(),
-    save: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, EventStore.EventType], EventStore.Event, void>(),
-    loss: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, EventStore.EventType], EventStore.Event, void>(),
+    load: new Observable<[K] | [K, string] | [K, string, EventStore.EventType], EventStore.Event<K>, void>(),
+    save: new Observable<[K] | [K, string] | [K, string, EventStore.EventType], EventStore.Event<K>, void>(),
+    loss: new Observable<[K] | [K, string] | [K, string, EventStore.EventType], EventStore.Event<K>, void>(),
   };
   public events_ = {
-    access: new Observable<[KeyString] | [KeyString, string] | [KeyString, string, InternalEventType], InternalEvent, void>()
+    access: new Observable<[K] | [K, string] | [K, string, InternalEventType], InternalEvent<K>, void>()
   };
-  protected syncState = new Map<KeyString, boolean>();
-  protected syncWaits = new Observable<[KeyString], DOMError, any>();
-  public sync(keys: KeyString[], cb: (errs: [KeyString, DOMError | Error][]) => any = noop, timeout = 0): void {
+  protected syncState = new Map<K, boolean>();
+  protected syncWaits = new Observable<[K], DOMError, any>();
+  public sync(keys: K[], cb: (errs: [K, DOMError | Error][]) => any = noop, timeout = 0): void {
     return void keys
-      .map<Promise<[KeyString, DOMError | Error]>>(key => {
+      .map<Promise<[K, DOMError | Error]>>(key => {
         switch (this.syncState.get(key)) {
           case true: {
-            return new Promise<[KeyString, DOMError | Error]>(resolve => void resolve([key, null]));
+            return new Promise<[K, DOMError | Error]>(resolve => void resolve([key, null]));
           }
           case false: {
             return cb === noop
-              ? new Promise<[KeyString, DOMError | Error]>(resolve => void resolve([key, null]))
-              : new Promise<[KeyString, DOMError | Error]>(resolve => void (
+              ? new Promise<[K, DOMError | Error]>(resolve => void resolve([key, null]))
+              : new Promise<[K, DOMError | Error]>(resolve => void (
                 timeout > 0 ? void (void this.get(key), void setTimeout(() => resolve([key, new Error()]))) : void 0,
                 void this.syncWaits.once([key], err => void resolve([key, err]))));
           }
           default: {
             void this.update(key);
             return cb === noop
-              ? new Promise<[KeyString, DOMError | Error]>(resolve => void resolve([key, null]))
-              : new Promise<[KeyString, DOMError | Error]>(resolve => void (
+              ? new Promise<[K, DOMError | Error]>(resolve => void resolve([key, null]))
+              : new Promise<[K, DOMError | Error]>(resolve => void (
                 timeout > 0 ? void (void this.get(key), void setTimeout(() => resolve([key, new Error()]))) : void 0,
                 void this.syncWaits.once([key], err => void resolve([key, err]))));
           }
         }
       })
-      .reduce<Promise<[KeyString, DOMError | Error][]>>((ps, p) => ps.then(es => p.then(e => es.concat([e]))), new Promise<[KeyString, DOMError][]>(resolve => void resolve([])))
+      .reduce<Promise<[K, DOMError | Error][]>>((ps, p) => ps.then(es => p.then(e => es.concat([e]))), new Promise<[K, DOMError][]>(resolve => void resolve([])))
       .then(es => void cb(es.filter(e => !!e[1])));
   }
-  public update(key: KeyString): void {
+  public update(key: K): void {
     const latest = this.meta(key);
-    const savedEvents: SavedEventRecord<T>[] = [];
+    const savedEvents: SavedEventRecord<K, V>[] = [];
     void this.syncState.set(key, this.syncState.get(key) === true);
     return void this.cursor(key, EventRecordFields.key, IDBCursorDirection.prev, IDBTransaction.readonly, (cursor, err) => {
       if (err) return void this.syncWaits.emit([key], err);
-      if (!cursor || (<SavedEventRecord<T>>cursor.value).id <= latest.id) {
+      if (!cursor || (<SavedEventRecord<K, V>>cursor.value).id <= latest.id) {
         if (compose(savedEvents).reduce(e => e).type === EventStore.EventType.delete) {
           void this.clean(Infinity, key);
         }
@@ -142,8 +142,8 @@ export abstract class EventStore<T extends EventStore.Value> {
           // register latest events
           void savedEvents
             // remove overridable event
-            .reduceRight<SavedEventRecord<T>[]>((acc, e) => acc.some(({attr}) => attr === e.attr) ? acc : concat([e], acc), [])
-            .reduce<SavedEventRecord<T>[]>((acc, e) => {
+            .reduceRight<SavedEventRecord<K, V>[]>((acc, e) => acc.some(({attr}) => attr === e.attr) ? acc : concat([e], acc), [])
+            .reduce<SavedEventRecord<K, V>[]>((acc, e) => {
               switch (e.type) {
                 case EventStore.EventType.put: {
                   return concat([e], acc);
@@ -168,38 +168,38 @@ export abstract class EventStore<T extends EventStore.Value> {
         }
         return;
       }
-      const event: SavedEventRecord<T> = cursor.value;
+      const event: SavedEventRecord<K, V> = cursor.value;
       if (this.cache.refs([event.key, event.attr, sqid(event.id)]).length > 0) return;
       void savedEvents.unshift(new SavedEventRecord(event.id, event.key, event.value, event.type, event.date));
       if (event.type !== EventStore.EventType.put) return;
       void cursor.continue();
     });
   }
-  public meta(key: KeyString): MetaData {
+  public meta(key: K): MetaData<K> {
     const events = this.cache.cast([key], void 0);
     return Object.freeze(
       clone(
-        <MetaData>{
+        <MetaData<K>>{
           id: events.reduce((id, e) => e.id > id ? e.id : id, 0),
           date: 0
         },
         compose(events).reduce(e => e),
-        <MetaData>{
+        <MetaData<K>>{
           key: <string>key
         }
       )
     );
   }
-  public keys(): KeyString[] {
+  public keys(): K[] {
     return this.cache.cast(<any>[], void 0)
-      .reduce((keys, e) => keys.length === 0 || keys[keys.length - 1] !== e.key ? concat(keys, [e.key]) : keys, <KeyString[]>[])
+      .reduce((keys, e) => keys.length === 0 || keys[keys.length - 1] !== e.key ? concat(keys, [e.key]) : keys, <K[]>[])
       .sort();
   }
-  public has(key: KeyString): boolean {
+  public has(key: K): boolean {
     return compose(this.cache.cast([key], void 0))
       .reduce(e => e).type !== EventStore.EventType.delete;
   }
-  public get(key: KeyString): T {
+  public get(key: K): V {
     void this.sync([key]);
     void this.events_.access
       .emit([key], new InternalEvent(InternalEventType.query, IdNumber(0), key, ''));
@@ -207,7 +207,7 @@ export abstract class EventStore<T extends EventStore.Value> {
       .reduce(e => e)
       .value;
   }
-  public add(event: UnsavedEventRecord<T>): void {
+  public add(event: UnsavedEventRecord<K, V>): void {
     void this.events_.access
       .emit([event.key, event.attr, event.type], new InternalEvent(event.type, IdNumber(0), event.key, event.attr));
     if (event instanceof UnsavedEventRecord === false) throw new Error(`LocalSocket: Cannot add a saved event: ${JSON.stringify(event)}`);
@@ -251,13 +251,13 @@ export abstract class EventStore<T extends EventStore.Value> {
       };
     });
   }
-  public delete(key: KeyString): void {
-    return void this.add(new UnsavedEventRecord(key, <T>new EventStore.Value(), EventStore.EventType.delete));
+  public delete(key: K): void {
+    return void this.add(new UnsavedEventRecord(key, <V>new EventStore.Value(), EventStore.EventType.delete));
   }
   protected snapshotCycle = 10;
   //protected snapshotLimit = 1;
-  protected snapshotJobState = new Map<KeyString, boolean>();
-  protected snapshot(key: KeyString): void {
+  protected snapshotJobState = new Map<K, boolean>();
+  protected snapshot(key: K): void {
     if (this.snapshotJobState.get(key)) return;
     void this.snapshotJobState.set(key, true);
     return void listen(this.database)(db => {
@@ -266,14 +266,14 @@ export abstract class EventStore<T extends EventStore.Value> {
       const req = store
         .index(EventRecordFields.key)
         .openCursor(<any>key, IDBCursorDirection.prev);
-      const savedEvents: SavedEventRecord<T>[] = [];
+      const savedEvents: SavedEventRecord<K, V>[] = [];
       req.onsuccess = _ => {
         const cursor: IDBCursorWithValue = req.result;
         if (cursor) {
-          const event: SavedEventRecord<T> = cursor.value;
+          const event: SavedEventRecord<K, V> = cursor.value;
           void savedEvents.unshift(new SavedEventRecord(event.id, event.key, event.value, event.type, event.date));
         }
-        if (!cursor || (<SavedEventRecord<T>>cursor.value).type !== EventStore.EventType.put) {
+        if (!cursor || (<SavedEventRecord<K, V>>cursor.value).type !== EventStore.EventType.put) {
           assert(this.snapshotCycle > 0);
           if (savedEvents.length < this.snapshotCycle) return;
           void this.clean(Infinity, key);
@@ -308,9 +308,9 @@ export abstract class EventStore<T extends EventStore.Value> {
       };
     });
   }
-  protected clean(until: number = Infinity, key?: KeyString): void {
-    const removedEvents: SavedEventRecord<T>[] = [];
-    const cleanStateMap = new Map<KeyString, boolean>();
+  protected clean(until: number = Infinity, key?: K): void {
+    const removedEvents: SavedEventRecord<K, V>[] = [];
+    const cleanStateMap = new Map<K, boolean>();
     return void this.cursor(
       key ? IDBKeyRange.bound([key, 0], [key, until]) : IDBKeyRange.upperBound(until),
       key ? EventRecordFields.surrogateKeyDateField : EventRecordFields.date,
@@ -318,7 +318,7 @@ export abstract class EventStore<T extends EventStore.Value> {
       IDBTransaction.readwrite,
       (cursor, err) => {
         if (!cursor) return void removedEvents.reduce((_, event) => void this.cache.terminate([event.key, event.attr, sqid(event.id)]), void 0);
-        const event: SavedEventRecord<T> = cursor.value;
+        const event: SavedEventRecord<K, V> = cursor.value;
         switch (event.type) {
           case EventStore.EventType.put: {
             void cleanStateMap.set(event.key, cleanStateMap.get(event.key) || false);
@@ -333,10 +333,6 @@ export abstract class EventStore<T extends EventStore.Value> {
             break;
           }
           case EventStore.EventType.delete: {
-            void cleanStateMap.set(event.key, true);
-            break;
-          }
-          default: {
             void cleanStateMap.set(event.key, true);
             break;
           }
@@ -370,17 +366,17 @@ export abstract class EventStore<T extends EventStore.Value> {
 export namespace EventStore {
   export type EventType = Schema.EventType;
   export const EventType = Schema.EventType;
-  export class Event {
+  export class Event<K extends string> {
     constructor(
       public type: EventType,
       public id: IdNumber,
-      public key: KeyString,
+      public key: K,
       public attr: string
     ) {
       void Object.freeze(this);
     }
   }
-  export class Record<T extends Value> extends UnsavedEventRecord<T> { }
+  export class Record<K extends string, V extends Value> extends UnsavedEventRecord<K, V> { }
   export class Value extends Schema.EventValue {
   }
 }
@@ -396,28 +392,28 @@ const InternalEventType = {
   snapshot: <'snapshot'>'snapshot',
   query: <'query'>'query'
 };
-class InternalEvent {
+class InternalEvent<K extends string> {
   constructor(
     public type: InternalEventType,
     public id: IdNumber,
-    public key: KeyString,
+    public key: K,
     public attr: string
   ) {
     void Object.freeze(this);
   }
 }
 
-interface MetaData {
+interface MetaData<K extends string> {
   id: number;
-  key: string;
+  key: K;
   date: number;
 }
 
 // input order must be asc
-export function compose<T extends EventStore.Value>(events: (UnsavedEventRecord<T> | SavedEventRecord<T>)[]): (UnsavedEventRecord<T> | SavedEventRecord<T>)[] {
-  type E = UnsavedEventRecord<T> | SavedEventRecord<T>;
+export function compose<K extends string, V extends EventStore.Value>(events: (UnsavedEventRecord<K, V> | SavedEventRecord<K, V>)[]): (UnsavedEventRecord<K, V> | SavedEventRecord<K, V>)[] {
+  type E = UnsavedEventRecord<K, V> | SavedEventRecord<K, V>;
   return group(events)
-    .map(events => events.reduceRight(compose, new UnsavedEventRecord(KeyString(''), <T>new EventStore.Value(), EventStore.EventType.delete, 0)));
+    .map(events => events.reduceRight(compose, new UnsavedEventRecord(<K>'', <V>new EventStore.Value(), EventStore.EventType.delete, 0)));
 
   function group(events: E[]): E[][] {
     return events
@@ -446,7 +442,7 @@ export function compose<T extends EventStore.Value>(events: (UnsavedEventRecord<
                 if (prop === source.attr) return value;
                 value[prop] = target[prop];
                 return value;
-              }, <T>new EventStore.Value())
+              }, <V>new EventStore.Value())
             , EventStore.EventType.snapshot
           );
       }
@@ -457,6 +453,6 @@ export function compose<T extends EventStore.Value>(events: (UnsavedEventRecord<
         return source;
       }
     }
-    throw new TypeError(`LocalSocket: Invalid event type: ${source.type}`);
+    throw new TypeError(`LocalSocket: Invalid event type: ${source}`);
   }
 }

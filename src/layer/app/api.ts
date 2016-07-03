@@ -7,14 +7,14 @@ import {events as WebStorageEventStreams} from '../domain/webstorage/api';
 
 export {supportWebStorage as status} from '../domain/webstorage/api';
 
-export function socket<T extends LocalSocketObject>(name: string, config: LocalSocketConfig<T>): LocalSocket<T> {
+export function socket<K extends string, V extends LocalSocketObject<K>>(name: string, config: LocalSocketConfig<K, V>): LocalSocket<K, V> {
   config = configure(config);
-  return indexeddb(name, config.schema, config.destroy, config.expiry);
+  return indexeddb<K, V>(name, config.schema, config.destroy, config.expiry);
 
-  function configure<T>(config: LocalSocketConfig<T>): LocalSocketConfig<T> {
-    class Config<T> implements LocalSocketConfig<T> {
+  function configure<K extends string, V>(config: LocalSocketConfig<K, V>): LocalSocketConfig<K, V> {
+    class Config implements LocalSocketConfig<K, V> {
       constructor(
-        public schema: () => T,
+        public schema: () => V,
         public expiry: number = Infinity,
         public destroy: (err: DOMError, event: Event) => boolean = () => true
       ) {
@@ -29,14 +29,14 @@ export function socket<T extends LocalSocketObject>(name: string, config: LocalS
   }
 }
 
-export function port<T extends LocalPortObject>(name: string, config: LocalPortConfig<T>): LocalPort<T> {
+export function port<V extends LocalPortObject>(name: string, config: LocalPortConfig<V>): LocalPort<V> {
   config = configure(config);
   return webstorage(name, localStorage, config.schema);
 
-  function configure<T>(config: LocalPortConfig<T>): LocalPortConfig<T> {
-    class Config<T> implements LocalPortConfig<T> {
+  function configure<V>(config: LocalPortConfig<V>): LocalPortConfig<V> {
+    class Config<V> implements LocalPortConfig<V> {
       constructor(
-        public schema: () => T,
+        public schema: () => V,
         public destroy: (err: DOMError, event: Event) => boolean = () => true
       ) {
         void Object.freeze(this);

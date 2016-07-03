@@ -4,20 +4,19 @@ import {build, SCHEMA, isValidPropertyName, isValidPropertyValue} from '../../da
 import {SocketStore} from '../model/socket';
 import {localStorage} from '../../../infrastructure/webstorage/api';
 import {webstorage, WebStorageEvent, WebStorageEventType} from '../../webstorage/api';
-import {KeyString} from '../../../data/constraint/types';
 
-export function socket<T extends SocketStore.Value>(
+export function socket<K extends string, V extends SocketStore.Value<K>>(
   name: string,
-  factory: () => T,
+  factory: () => V,
   destroy: (err: DOMError, event: Event) => boolean,
   expiry = Infinity
-) {
-  return new Socket<T>(name, factory, expiry, destroy);
+): Socket<K, V> {
+  return new Socket<K, V>(name, factory, expiry, destroy);
 }
 
-class Message {
+class Message<K extends string> {
   constructor(
-    public key: KeyString,
+    public key: K,
     public attr: string,
     public date: number
   ) {
@@ -27,27 +26,27 @@ class Message {
   }
 }
 
-interface Port extends LocalPortObject {
+interface Port<K extends string> extends LocalPortObject {
 }
-class Port {
-  public msgs: Message[] = [];
+class Port<K extends string> {
+  public msgs: Message<K>[] = [];
   private msgHeadSet_ = new Map<string, number>();
-  public recv(): Message[] {
+  public recv(): Message<K>[] {
     return this.msgs
       .map(msg => new Message(msg.key, msg.attr, msg.date))
       .filter(msg => !this.msgHeadSet_.has(msg.key) || msg.date > this.msgHeadSet_.get(msg.key))
       .filter(msg => !void this.msgHeadSet_.set(msg.key, msg.date));
   }
-  public send(msg: Message): void {
+  public send(msg: Message<K>): void {
     assert(msg instanceof Message);
     this.msgs = concat([msg], this.msgs.slice(0, 9));
   }
 }
 
-class Socket<T extends SocketStore.Value> extends SocketStore<T> implements LocalSocket<T> {
+class Socket<K extends string, V extends SocketStore.Value<K>> extends SocketStore<K, V> implements LocalSocket<K, V> {
   constructor(
     database: string,
-    private factory: () => T,
+    private factory: () => V,
     expiry: number,
     destroy: (err: DOMError, ev: Event) => boolean
   ) {
@@ -63,7 +62,7 @@ class Socket<T extends SocketStore.Value> extends SocketStore<T> implements Loca
       });
     void this.events.load
       .monitor(<any>[], ({id, key, attr, type}) => {
-        const source: T & LocalSocketObject = this.sources.get(key);
+        const source: V & LocalSocketObject<K> = this.sources.get(key);
         if (!source) return;
         switch (type) {
           case SocketStore.EventType.put: {
@@ -108,35 +107,35 @@ class Socket<T extends SocketStore.Value> extends SocketStore<T> implements Loca
       });
     void Object.freeze(this);
   }
-  private proxy = webstorage(this.database, localStorage, () => new Port());
+  private proxy = webstorage(this.database, localStorage, () => new Port<K>());
   private port = this.proxy.link();
-  private links = new Map<string, T>();
-  private sources = new Map<string, T>();
-  public link(key: string, expiry?: number): T {
+  private links = new Map<K, V>();
+  private sources = new Map<K, V>();
+  public link(key: K, expiry?: number): V {
     void this.expire(key, expiry);
     return this.links.has(key)
       ? this.links.get(key)
       : this.links
         .set(key, build(
           Object.defineProperties(
-            (void this.sources.set(key, clone<T>({}, this.get(key))), this.sources.get(key)),
+            (void this.sources.set(key, clone<V>({}, this.get(key))), this.sources.get(key)),
             {
               __meta: {
                 get: () => this.meta(key)
               },
               __id: {
                 get(): number {
-                  return (<LocalSocketObject>this).__meta.id;
+                  return (<LocalSocketObject<K>>this).__meta.id;
                 }
               },
               __key: {
                 get(): string {
-                  return (<LocalSocketObject>this).__meta.key;
+                  return (<LocalSocketObject<K>>this).__meta.key;
                 }
               },
               __date: {
                 get(): number {
-                  return (<LocalSocketObject>this).__meta.date;
+                  return (<LocalSocketObject<K>>this).__meta.date;
                 }
               },
               __event: {
@@ -146,7 +145,7 @@ class Socket<T extends SocketStore.Value> extends SocketStore<T> implements Loca
           ),
           this.factory,
           (attr, newValue, oldValue) => {
-            void this.add(new SocketStore.Record(KeyString(key), <T>{ [attr]: newValue }));
+            void this.add(new SocketStore.Record(<K>key, <V>{ [attr]: newValue }));
             void (<Observable<[LocalPortEventType, string], LocalPortEvent, void>>this.sources.get(key).__event)
               .emit([WebStorageEventType.send, attr], new WebStorageEvent(WebStorageEventType.send, key, attr, newValue, oldValue));
           }))

@@ -3,7 +3,7 @@ import {EventStore} from '../../../../data/store/event';
 
 export const STORE_NAME = 'data';
 
-export class DataStore<K extends string, V extends DataStore.Value> extends EventStore<V> {
+export class DataStore<K extends string, V extends DataStore.Value> extends EventStore<K, V> {
   public static configure(): Config {
     return EventStore.configure(STORE_NAME);
   }
@@ -17,8 +17,8 @@ export class DataStore<K extends string, V extends DataStore.Value> extends Even
 export namespace DataStore {
   export type EventType = EventStore.EventType;
   export const EventType = EventStore.EventType;
-  export class Event extends EventStore.Event { }
-  export class Record<T extends Value> extends EventStore.Record<T> { }
+  export class Event<K extends string> extends EventStore.Event<K> { }
+  export class Record<K extends string, V extends Value> extends EventStore.Record<K, V> { }
   export class Value extends EventStore.Value {
   }
 }

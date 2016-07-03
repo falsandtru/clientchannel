@@ -1,5 +1,5 @@
 import {clone} from 'spica';
-import {IdNumber, KeyString} from '../constraint/types';
+import {IdNumber} from '../constraint/types';
 
 export namespace EventRecordFields {
   export const id: 'id' = 'id';
@@ -11,11 +11,11 @@ export namespace EventRecordFields {
   export const surrogateKeyDateField: 'key+date' = 'key+date';
 }
 
-abstract class EventRecord<T extends EventValue> {
+abstract class EventRecord<K extends string, V extends EventValue> {
   constructor(
     id: IdNumber,
-    key: KeyString,
-    value: T,
+    key: K,
+    value: V,
     date: number,
     type: EventType
   ) {
@@ -38,17 +38,17 @@ abstract class EventRecord<T extends EventValue> {
 
     switch (type) {
       case EventType.put: {
-        this.value = value = <T>clone(new EventValue(), <EventValue>{ [this.attr]: value[this.attr] });
+        this.value = value = <V>clone(new EventValue(), <EventValue>{ [this.attr]: value[this.attr] });
         void Object.freeze(this.value);
         return;
       }
       case EventType.snapshot: {
-        this.value = value = <T>clone(new EventValue(), value);
+        this.value = value = <V>clone(new EventValue(), value);
         void Object.freeze(this.value);
         return;
       }
       case EventType.delete: {
-        this.value = value = <T>new EventValue();
+        this.value = value = <V>new EventValue();
         void Object.freeze(this.value);
         return;
       }
@@ -58,16 +58,16 @@ abstract class EventRecord<T extends EventValue> {
   }
   public id: IdNumber;
   public type: EventType;
-  public key: KeyString;
+  public key: K;
   public attr: string;
-  public value: T;
+  public value: V;
   public date: number;
 }
-export class UnsavedEventRecord<T extends EventValue> extends EventRecord<T> {
-  private EVENT_RECORD: T;
+export class UnsavedEventRecord<K extends string, V extends EventValue> extends EventRecord<K, V> {
+  private EVENT_RECORD: V;
   constructor(
-    key: KeyString,
-    value: T,
+    key: K,
+    value: V,
     type: EventType = EventType.put,
     date: number = Date.now()
   ) {
@@ -77,12 +77,12 @@ export class UnsavedEventRecord<T extends EventValue> extends EventRecord<T> {
     //void Object.freeze(this);
   }
 }
-export class SavedEventRecord<T extends EventValue> extends EventRecord<T> {
-  private EVENT_RECORD: T;
+export class SavedEventRecord<K extends string, V extends EventValue> extends EventRecord<K, V> {
+  private EVENT_RECORD: V;
   constructor(
     public id: IdNumber,
-    key: KeyString,
-    value: T,
+    key: K,
+    value: V,
     type: EventType,
     date: number
   ) {

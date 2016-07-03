@@ -1,13 +1,13 @@
 import {LocalSocketObject, LocalSocketObjectMetaData, LocalSocketEvent, LocalSocketEventType} from 'localsocket';
 import {Observable, uuid} from 'spica';
 import {open, destroy, event, IDBEventType, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../../infrastructure/indexeddb/api';
-import {IdNumber, KeyString} from '../../../data/constraint/types';
+import {IdNumber} from '../../../data/constraint/types';
 import {DataStore} from './socket/data';
 import {AccessStore} from './socket/access';
 import {ExpiryStore} from './socket/expiry';
 import {noop} from '../../../../lib/noop';
 
-export class SocketStore<T extends SocketStore.Value> {
+export class SocketStore<K extends string, V extends SocketStore.Value<K>> {
   constructor(
     public database: string,
     destroy: (err: DOMError, event: Event) => boolean,
@@ -31,42 +31,42 @@ export class SocketStore<T extends SocketStore.Value> {
             && destroy(err, ev);
       }
     });
-    this.schema = new Schema<T>(this, this.expiries);
+    this.schema = new Schema<K, V>(this, this.expiries);
     void event.on([database, IDBEventType.destroy, this.uuid], () => void this.schema.bind());
   }
   private uuid = uuid();
-  protected schema: Schema<T>;
+  protected schema: Schema<K, V>;
   public events = {
-    load: new Observable<[string] | [string, string] | [string, string, string], SocketStore.Event, void>(),
-    save: new Observable<[string] | [string, string] | [string, string, string], SocketStore.Event, void>(),
-    loss: new Observable<[string] | [string, string] | [string, string, string], SocketStore.Event, void>()
+    load: new Observable<[K] | [K, string] | [K, string, SocketStore.EventType], SocketStore.Event<K>, void>(),
+    save: new Observable<[K] | [K, string] | [K, string, SocketStore.EventType], SocketStore.Event<K>, void>(),
+    loss: new Observable<[K] | [K, string] | [K, string, SocketStore.EventType], SocketStore.Event<K>, void>()
   };
-  public sync(keys: KeyString[], cb: (errs: [KeyString, DOMError | Error][]) => any = noop, timeout?: number): void {
+  public sync(keys: K[], cb: (errs: [K, DOMError | Error][]) => any = noop, timeout?: number): void {
     return this.schema.data.sync(keys, cb, timeout);
   }
-  public meta(key: string): LocalSocketObjectMetaData {
-    return this.schema.data.meta(KeyString(key));
+  public meta(key: K): LocalSocketObjectMetaData<K> {
+    return this.schema.data.meta(key);
   }
-  public has(key: string): boolean {
-    return this.schema.data.has(KeyString(key));
+  public has(key: K): boolean {
+    return this.schema.data.has(key);
   }
-  public get(key: string): T {
-    return this.schema.data.get(KeyString(key));
+  public get(key: K): V {
+    return this.schema.data.get(key);
   }
-  public add(record: DataStore.Record<T>): void {
+  public add(record: DataStore.Record<K, V>): void {
     return this.schema.data.add(record);
   }
-  public delete(key: string): void {
-    return this.schema.data.delete(KeyString(key));
+  public delete(key: K): void {
+    return this.schema.data.delete(key);
   }
-  private expiries = new Map<string, number>();
-  public expire(key: string, expiry: number = this.expiry): void {
+  private expiries = new Map<K, number>();
+  public expire(key: K, expiry: number = this.expiry): void {
     assert(expiry > 0);
     if (expiry === Infinity) return;
     return void this.expiries.set(key, expiry);
   }
-  public recent(limit: number, cb: (keys: string[], error: DOMError) => any): void {
-    const keys: string[] = [];
+  public recent(limit: number, cb: (keys: K[], error: DOMError) => any): void {
+    const keys: K[] = [];
     return void this.schema.access.cursor(
       null,
       AccessStore.fields.date,
@@ -88,32 +88,32 @@ export class SocketStore<T extends SocketStore.Value> {
 export namespace SocketStore {
   export type EventType = LocalSocketEventType;
   export const EventType = DataStore.EventType;
-  export class Event extends DataStore.Event implements LocalSocketEvent { }
-  export class Record<T> extends DataStore.Record<T> { }
-  export interface Value extends LocalSocketObject { }
-  export class Value extends DataStore.Value implements LocalSocketObject {
+  export class Event<K extends string> extends DataStore.Event<K> implements LocalSocketEvent<K> { }
+  export class Record<K extends string, V> extends DataStore.Record<K, V> { }
+  export interface Value<K extends string> extends LocalSocketObject<K> { }
+  export class Value<K extends string> extends DataStore.Value implements LocalSocketObject<K> {
   }
 }
 
-class Schema<T extends SocketStore.Value> {
+class Schema<K extends string, V extends SocketStore.Value<K>> {
   constructor(
-    private store_: SocketStore<T>,
-    private expiries_: Map<string, number>
+    private store_: SocketStore<K, V>,
+    private expiries_: Map<K, number>
   ) {
     void this.bind();
   }
   public bind(): void {
     const keys = this.data ? this.data.keys() : [];
-    this.data = new DataStore<KeyString, T>(this.store_.database);
+    this.data = new DataStore<K, V>(this.store_.database);
     this.data.events.load.monitor(<any>[], ev => this.store_.events.load.emit([ev.key, ev.attr, ev.type], ev));
     this.data.events.save.monitor(<any>[], ev => this.store_.events.save.emit([ev.key, ev.attr, ev.type], ev));
     this.data.events.loss.monitor(<any>[], ev => this.store_.events.loss.emit([ev.key, ev.attr, ev.type], ev));
-    this.access = new AccessStore(this.store_.database, this.data.events_.access);
-    this.expire = new ExpiryStore(this.store_.database, this.store_, this.data, this.expiries_);
+    this.access = new AccessStore<K>(this.store_.database, this.data.events_.access);
+    this.expire = new ExpiryStore<K>(this.store_.database, this.store_, this.data, this.expiries_);
 
     void this.data.sync(keys);
   }
-  public data: DataStore<KeyString, T>;
-  public access: AccessStore;
-  public expire: ExpiryStore;
+  public data: DataStore<K, V>;
+  public access: AccessStore<K>;
+  public expire: ExpiryStore<K>;
 }

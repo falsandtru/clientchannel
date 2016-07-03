@@ -33,23 +33,23 @@ export class PortEvent implements LocalPortEvent {
   }
 }
 
-export function repository<T extends LocalPortObject>(
+export function port<V extends LocalPortObject>(
   name: string,
   storage: Storage = sessionStorage || fakeStorage,
-  factory: () => T,
+  factory: () => V,
   log = {
     update(name: string) { },
     delete(name: string) { }
   }
-): Port<T> {
+): Port<V> {
   return new Port(name, storage, factory, log);
 }
 
-class Port<T extends LocalPortObject> implements LocalPort<T> {
+class Port<V extends LocalPortObject> implements LocalPort<V> {
   constructor(
     public name: string,
     private storage: Storage,
-    private factory: () => T,
+    private factory: () => V,
     private log = {
       update(name: string) { },
       delete(name: string) { }
@@ -64,17 +64,17 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
     send: new Observable<[string], PortEvent, void>(),
     recv: new Observable<[string], PortEvent, void>()
   };
-  public link(): T {
-    if (this.cache.has(this.name)) return <T>this.cache.get(this.name);
+  public link(): V {
+    if (this.cache.has(this.name)) return <V>this.cache.get(this.name);
 
-    const source: T = assign<T>(
-      <T><any>{
+    const source: V = assign<V>(
+      <V><any>{
         [SCHEMA.KEY.NAME]: this.name,
         [SCHEMA.EVENT.NAME]: new Observable<[LocalPortEventType] | [LocalPortEventType, string], PortEvent, void>()
       },
-      parse<T>(this.storage.getItem(this.name))
+      parse<V>(this.storage.getItem(this.name))
     );
-    const dao: T = build(source, this.factory, (attr, newValue, oldValue) => {
+    const dao: V = build(source, this.factory, (attr, newValue, oldValue) => {
       void this.log.update(this.name);
       void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, attr) => {
         acc[attr] = source[attr];
@@ -85,7 +85,7 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
       void this.events.send.emit([event.attr], event);
     });
     const subscriber = ({newValue}: StorageEvent): void => {
-      const item: T = parse<T>(newValue);
+      const item: V = parse<V>(newValue);
       void Object.keys(item)
         .filter(isValidPropertyName)
         .filter(isValidPropertyValue(item))
@@ -104,12 +104,12 @@ class Port<T extends LocalPortObject> implements LocalPort<T> {
     void this.log.update(this.name);
     return dao;
 
-    function parse<T>(item: string): T {
+    function parse<V>(item: string): V {
       try {
-        return JSON.parse(item) || <T>{};
+        return JSON.parse(item) || <V>{};
       }
       catch (_) {
-        return <T>{};
+        return <V>{};
       }
     }
   }

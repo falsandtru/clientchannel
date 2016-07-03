@@ -1,13 +1,12 @@
 import {Observable} from 'spica';
 import {event, IDBEventType, Config, IDBCursorDirection, IDBTransaction} from '../../../../infrastructure/indexeddb/api';
-import {KeyString} from '../../../../data/constraint/types';
 import {KeyValueStore} from '../../../../data/store/key-value';
 import {EventStore} from '../../../../data/store/event';
 import {DataStore} from './data';
 
 export const STORE_NAME = 'expiry';
 
-export class ExpiryStore extends KeyValueStore<string, ExpiryRecord> {
+export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord<K>> {
   public static fields = Object.freeze({
     key: <'key'>'key',
     expiry: <'expiry'>'expiry'
@@ -44,10 +43,10 @@ export class ExpiryStore extends KeyValueStore<string, ExpiryRecord> {
   constructor(
     database: string,
     store: {
-      delete(key: KeyString): void;
+      delete(key: K): void;
     },
-    data: DataStore<KeyString, any>,
-    expiries: Map<string, number>
+    data: DataStore<K, any>,
+    expiries: Map<K, number>
   ) {
     super(database, STORE_NAME, ExpiryStore.fields.key);
     void Object.freeze(this);
@@ -63,7 +62,7 @@ export class ExpiryStore extends KeyValueStore<string, ExpiryRecord> {
         scheduled = Infinity;
         void this.cursor(null, ExpiryStore.fields.expiry, IDBCursorDirection.next, IDBTransaction.readonly, cursor => {
           if (!cursor) return;
-          const record: ExpiryRecord = cursor.value;
+          const record: ExpiryRecord<K> = cursor.value;
           if (record.expiry > Date.now()) {
             void schedule(record.expiry);
           }
@@ -93,9 +92,9 @@ export class ExpiryStore extends KeyValueStore<string, ExpiryRecord> {
   }
 }
 
-class ExpiryRecord {
+class ExpiryRecord<K extends string> {
   constructor(
-    public key: KeyString,
+    public key: K,
     public expiry: number
   ) {
   }

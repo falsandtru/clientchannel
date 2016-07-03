@@ -4,7 +4,7 @@ import {port, LocalPortObject} from 'localsocket';
 describe('Integration: Package', function () {
   describe('usage', function () {
     it('persistence', () => {
-      interface Schema extends LocalSocketObject {
+      interface Schema extends LocalSocketObject<string> {
       }
       class Schema {
         // getter/setter will be excluded in schema.

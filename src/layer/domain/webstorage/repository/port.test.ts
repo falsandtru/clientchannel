@@ -1,5 +1,5 @@
 import {LocalPortObject} from 'localsocket';
-import {repository} from './port';
+import {port} from './port';
 
 describe('Unit: layers/domain/webstorage/repository/port', () => {
   describe('repository', () => {
@@ -22,7 +22,7 @@ describe('Unit: layers/domain/webstorage/repository/port', () => {
 
     it('make/destroy', () => {
       assert(sessionStorage.getItem('test') === null);
-      const repo = repository('test', sessionStorage, factory);
+      const repo = port('test', sessionStorage, factory);
       const dao = repo.link();
       assert(dao.__key === 'test');
       assert(dao.n === 0);
@@ -40,15 +40,15 @@ describe('Unit: layers/domain/webstorage/repository/port', () => {
     it('remake', () => {
       assert(sessionStorage.getItem('test') === null);
       assert.equal(
-        repository('test', sessionStorage, factory).link(),
-        repository('test', sessionStorage, factory).link()
+        port('test', sessionStorage, factory).link(),
+        port('test', sessionStorage, factory).link()
       );
-      repository('test', sessionStorage, factory).destroy();
+      port('test', sessionStorage, factory).destroy();
       assert(sessionStorage.getItem('test') === null);
     });
 
     it('update', () => {
-      const repo = repository('test', sessionStorage, factory);
+      const repo = port('test', sessionStorage, factory);
       const dao = repo.link();
       assert(dao.n === 0);
       dao.n = 1;
