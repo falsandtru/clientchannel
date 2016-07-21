@@ -90,7 +90,7 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function (this: Moch
       assert(dao.n === 0);
       listen('test')(db => {
         db.transaction('data', 'readwrite').objectStore('data').put(Object.assign({}, new SocketStore.Record('a', { n: 1 }))).onsuccess = () => {
-          sock['schema'].data.update('a');
+          sock['schema'].data.fetch('a');
           dao.__event.once(['recv', 'n'], () => {
             assert(dao.__id === 1);
             assert(dao.__key === 'a');

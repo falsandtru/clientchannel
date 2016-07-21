@@ -58,7 +58,7 @@ class Socket<K extends string, V extends SocketStore.Value<K>> extends SocketSto
     void this.port.__event
       .on([WebStorageEventType.recv, 'msgs'], () =>
         void this.port.recv()
-          .reduce<void>((_, key) => void this.schema.data.update(key), void 0));
+          .reduce<void>((_, key) => void this.schema.data.fetch(key), void 0));
     void this.events.save
       .monitor([], ({key, attr}) =>
         void this.port.send(new Message(key, attr, Date.now())));
