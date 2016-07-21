@@ -369,11 +369,15 @@ describe('Unit: layers/data/store/event', function (this: Mocha) {
       for (let i = 0; i < 11; ++i) {
         es.add(new UnsavedEventRecord('a', new Value(i + 1)));
       }
-      setTimeout(() => {
+      es.events.save.on(['a', '', 'snapshot'], ev => {
+        assert(ev.id === 12);
+        assert(ev.key === 'a');
+        assert(ev.attr === '');
+        assert(ev.type === 'snapshot');
         assert(es.meta('a').id === 12);
         assert(es.get('a').value === 11);
         done();
-      }, 1000);
+      });
     });
 
   });

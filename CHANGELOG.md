@@ -3,6 +3,7 @@
 ## 0.4.0
 
 - Upgrade TypeScript to 2.0.
+- Fix the snapshot processing.
 
 ## 0.3.1
 

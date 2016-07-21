@@ -207,7 +207,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       .reduce(e => e)
       .value;
   }
-  public add(event: UnsavedEventRecord<K, V>): void {
+  public add(event: UnsavedEventRecord<K, V>, tx?: IDBTransaction): void {
+    assert(event.type === EventStore.EventType.snapshot ? tx : true);
     void this.events_.access
       .emit([event.key, event.attr, event.type], new InternalEvent(event.type, IdNumber(0), event.key, event.attr));
     if (event instanceof UnsavedEventRecord === false) throw new Error(`LocalSocket: Cannot add a saved event: ${JSON.stringify(event)}`);
@@ -218,9 +219,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     // update max date
     void this.cache
       .cast([event.key, event.attr, sqid(0), id], void 0);
-    return void listen(this.database)(db => {
-      if (this.cache.refs([event.key, event.attr, sqid(0)]).length === 0) return;
-      const tx = db.transaction(this.name, IDBTransactionMode.readwrite);
+    const resolve = (tx: IDBTransaction) => {
+      if (!this.cache.refs([event.key, event.attr, sqid(0)]).some(([, s]) => s(void 0) === event)) return;
       const req = tx
         .objectStore(this.name)
         .add(Object.assign({}, event));
@@ -248,17 +248,18 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           if (this.cache.refs([event.key, event.attr, sqid(0), id]).length === 0) return;
           void this.events.loss.emit([event.key, event.attr, event.type], new EventStore.Event(event.type, IdNumber(0), event.key, event.attr));
         }, 1e3);
-    });
+    };
+    return tx
+      ? void resolve(tx)
+      : void listen(this.database)
+        (db =>
+          void resolve(db.transaction(this.name, IDBTransactionMode.readwrite)));
   }
   public delete(key: K): void {
     return void this.add(new UnsavedEventRecord(key, <V>new EventStore.Value(), EventStore.EventType.delete));
   }
-  protected readonly snapshotCycle = 10;
-  //protected readonly snapshotLimit = 1;
-  protected readonly snapshotJobState = new Map<K, boolean>();
-  protected snapshot(key: K): void {
-    if (this.snapshotJobState.get(key)) return;
-    void this.snapshotJobState.set(key, true);
+  private readonly snapshotCycle = 9;
+  private snapshot(key: K): void {
     return void listen(this.database)(db => {
       const tx = db.transaction(this.name, IDBTransactionMode.readwrite);
       const store = tx.objectStore(this.name);
@@ -280,13 +281,14 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           if (composedEvent instanceof SavedEventRecord) return;
           switch (composedEvent.type) {
             case EventStore.EventType.snapshot:
-              // snapshot's date must not be after unsaved event's date.
-              return void store.add(
+              // snapshot's date must not be later than unsaved event's date.
+              return void this.add(
                 new UnsavedEventRecord(
                   composedEvent.key,
                   composedEvent.value,
                   composedEvent.type,
-                  savedEvents.reduce((date, e) => e.date > date ? e.date : date, 0)));
+                  savedEvents.reduce((date, e) => e.date > date ? e.date : date, 0)),
+                tx);
             case EventStore.EventType.delete:
               return void 0;
           }
@@ -294,11 +296,6 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         }
         void cursor.continue();
       };
-      tx.oncomplete = () => (
-        void this.snapshotJobState.set(key, false),
-        void this.update(key));
-      tx.onerror = tx.onabort = () =>
-        void this.snapshotJobState.set(key, false);
     });
   }
   protected clean(until: number = Infinity, key?: K): void {
