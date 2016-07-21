@@ -31,12 +31,15 @@ interface Port<K extends string> extends LocalPortObject {
 }
 class Port<K extends string> {
   public msgs: Message<K>[] = [];
-  private readonly msgHeadSet_ = new Map<string, number>();
-  public recv(): Message<K>[] {
+  private readonly msgLatestUpdates_ = new Map<string, number>();
+  public recv(): K[] {
     return this.msgs
-      .map(msg => new Message(msg.key, msg.attr, msg.date))
-      .filter(msg => !this.msgHeadSet_.has(msg.key) || msg.date > this.msgHeadSet_.get(msg.key))
-      .filter(msg => !void this.msgHeadSet_.set(msg.key, msg.date));
+      .filter(msg => {
+        const received: boolean = msg.date <= this.msgLatestUpdates_.get(msg.key);
+        void this.msgLatestUpdates_.set(msg.key, msg.date);
+        return !received;
+      })
+      .map(msg => msg.key);
   }
   public send(msg: Message<K>): void {
     assert(msg instanceof Message);
@@ -55,7 +58,7 @@ class Socket<K extends string, V extends SocketStore.Value<K>> extends SocketSto
     void this.port.__event
       .on([WebStorageEventType.recv, 'msgs'], () =>
         void this.port.recv()
-          .reduce<void>((_, msg) => void this.schema.data.update(msg.key), void 0));
+          .reduce<void>((_, key) => void this.schema.data.update(key), void 0));
     void this.events.save
       .monitor([], ({key, attr}) =>
         void this.port.send(new Message(key, attr, Date.now())));
