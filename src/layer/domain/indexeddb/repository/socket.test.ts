@@ -1,26 +1,26 @@
-import {LocalSocketObject} from 'localsocket';
-import {socket} from './socket';
-import {SocketStore} from '../model/socket';
-import {listen, destroy, event, Config, IDBEventType} from '../../../infrastructure/indexeddb/api';
+import { LocalSocketObject } from 'localsocket';
+import { socket } from './socket';
+import { SocketStore } from '../model/socket';
+import { listen, destroy, event, IDBEventType } from '../../../infrastructure/indexeddb/api';
 
-describe('Unit: layers/domain/indexeddb/repository/socket', function () {
+describe('Unit: layers/domain/indexeddb/repository/socket', function (this: Mocha) {
   this.timeout(5 * 1e3);
 
   describe('spec', () => {
     before(done => {
       event
-        .once(['test', IDBEventType.destroy], _ =>
+        .once(['test', IDBEventType.destroy], () =>
           event
-            .once(['test', IDBEventType.disconnect], _ => done())
+            .once(['test', IDBEventType.disconnect], () => done())
         );
       destroy('test');
     });
 
     afterEach(done => {
       event
-        .once(['test', IDBEventType.destroy], _ =>
+        .once(['test', IDBEventType.destroy], () =>
           event
-            .once(['test', IDBEventType.disconnect], _ => done())
+            .once(['test', IDBEventType.disconnect], () => done())
         );
       destroy('test');
     });
@@ -62,7 +62,7 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function () {
           newValue: 1,
           oldValue: 0
         });
-        sock.events.save.once(['a', 'n', 'put'], ev => {
+        sock.events.save.once(['a', 'n', 'put'], () => {
           assert(dao.__id === 1);
           assert(dao.__key === 'a');
           assert(dao.__date > 0);
@@ -89,9 +89,9 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function () {
 
       assert(dao.n === 0);
       listen('test')(db => {
-        db.transaction('data', 'readwrite').objectStore('data').put(new SocketStore.Record('a', { n: 1 })).onsuccess = _ => {
+        db.transaction('data', 'readwrite').objectStore('data').put(Object.assign({}, new SocketStore.Record('a', { n: 1 }))).onsuccess = () => {
           sock['schema'].data.update('a');
-          dao.__event.once(['recv', 'n'], ev => {
+          dao.__event.once(['recv', 'n'], () => {
             assert(dao.__id === 1);
             assert(dao.__key === 'a');
             assert(dao.__date > 0);

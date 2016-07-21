@@ -1,5 +1,5 @@
-import {LocalPortObject} from 'localsocket';
-import {port} from './port';
+import { LocalPortObject } from 'localsocket';
+import { port } from './port';
 
 describe('Unit: layers/domain/webstorage/repository/port', () => {
   describe('repository', () => {

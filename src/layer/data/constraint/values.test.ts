@@ -1,4 +1,4 @@
-import {isValidName, isValidValue} from './values';
+import { isValidName, isValidValue } from './values';
 
 describe('Unit: layers/data/constraint/values', () => {
   describe('isValidNameValue', () => {

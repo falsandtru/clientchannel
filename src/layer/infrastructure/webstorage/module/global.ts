@@ -1,8 +1,4 @@
-import {uuid} from 'spica';
-let webStorage: {
-  localStorage: Storage,
-  sessionStorage: Storage
-} = <any>{};
+import { uuid } from 'spica';
 
 export const supportWebStorage: boolean = (() => {
   try {
@@ -17,5 +13,5 @@ export const supportWebStorage: boolean = (() => {
   }
 })();
 
-export const localStorage: Storage = supportWebStorage ? self.localStorage : void 0;
-export const sessionStorage: Storage = supportWebStorage ? self.sessionStorage : void 0;
+export const localStorage: Storage | undefined = supportWebStorage ? self.localStorage : void 0;
+export const sessionStorage: Storage | undefined = supportWebStorage ? self.sessionStorage : void 0;

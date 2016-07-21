@@ -16,12 +16,10 @@ export function isValidValue(dao: any) {
       case 'boolean':
       case 'number':
       case 'string':
-      case 'object': {
+      case 'object':
         return true;
-      }
-      default: {
+      default:
         return false;
-      }
     }
   }
 }

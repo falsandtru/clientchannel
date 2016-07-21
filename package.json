@@ -28,9 +28,11 @@
     "LICENSE"
   ],
   "dependencies": {
-    "spica": "0.0.14"
+    "spica": "0.0.22"
   },
   "devDependencies": {
+    "@types/mocha": "^2.2.28",
+    "@types/power-assert": "0.0.27",
     "del": "^2.2.1",
     "extend": "^3.0.0",
     "gulp": "^3.9.1",
@@ -43,21 +45,20 @@
     "gulp-uglify": "^1.5.4",
     "gulp-unassert": "^1.0.0",
     "json": "^9.0.4",
-    "karma": "0.13.22",
+    "karma": "1.1.2",
     "karma-chrome-launcher": "^1.0.1",
-    "karma-coverage": "^1.0.0",
+    "karma-coverage": "^1.1.1",
     "karma-coveralls": "^1.1.2",
     "karma-espower-preprocessor": "1.1.0",
     "karma-firefox-launcher": "^1.0.0",
-    "karma-mocha": "^1.0.1",
-    "lodash": "^4.13.1",
+    "karma-mocha": "^1.1.1",
+    "lodash": "^4.14.0",
     "mocha": "^2.5.3",
-    "npm-check-updates": "^2.6.7",
+    "npm-check-updates": "^2.7.2",
     "power-assert": "^1.4.1",
-    "run-sequence": "^1.2.1",
-    "semver": "^5.1.1",
-    "tsd": "^0.6.5",
-    "typescript": "^2.0.0-dev.20160702"
+    "run-sequence": "^1.2.2",
+    "semver": "^5.3.0",
+    "typescript": "2.1.0-dev.20160727"
   },
   "scripts": {
     "test": "gulp server"

@@ -1,1 +1,1 @@
-export {event, IDBEventType} from '../../../infrastructure/indexeddb/api';
+export { event, IDBEventType } from '../../../infrastructure/indexeddb/api';

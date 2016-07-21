@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0
+
+- Upgrade TypeScript to 2.0.
+
 ## 0.3.1
 
 - Enhance LocalSocket.recent method.
@@ -52,4 +56,3 @@
 ## 0.1.0
 
 - Publish.
-

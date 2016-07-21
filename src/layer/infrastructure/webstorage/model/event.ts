@@ -1,5 +1,5 @@
-import {Observable, Observer} from 'spica';
-import {localStorage, sessionStorage} from '../module/global';
+import { Observable, Observer } from 'spica';
+import { localStorage, sessionStorage } from '../module/global';
 
 const storageEvents = {
   localStorage: new Observable<['storage'], StorageEvent, void>(),
@@ -12,11 +12,11 @@ export const events: {
 
 void window.addEventListener('storage', event => {
   switch (event.storageArea) {
-    case localStorage: {
+    case localStorage:
       return void storageEvents.localStorage.emit(['storage'], event);
-    }
-    case sessionStorage: {
+    case sessionStorage:
       return void storageEvents.sessionStorage.emit(['storage'], event);
-    }
+    default:
+      return;
   }
 });

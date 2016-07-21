@@ -1,8 +1,8 @@
-import {KeyValueStore} from './key-value';
-import {IDBKey, IDBValue} from '../constraint/types';
-import {open, destroy, event, Config, IDBEventType} from '../../infrastructure/indexeddb/api';
+import { KeyValueStore } from './key-value';
+import { IDBValue } from '../constraint/types';
+import { open, destroy, event, Config, IDBEventType } from '../../infrastructure/indexeddb/api';
 
-describe('Unit: layers/data/store/key-value', function () {
+describe('Unit: layers/data/store/key-value', function (this: Mocha) {
   this.timeout(5 * 1e3);
 
   describe('spec', () => {
@@ -13,7 +13,7 @@ describe('Unit: layers/data/store/key-value', function () {
             if (db.objectStoreNames.contains('test')) {
               db.deleteObjectStore('test');
             }
-            const store = db.createObjectStore('test', {
+            void db.createObjectStore('test', {
               autoIncrement: false
             });
             return true;
@@ -30,18 +30,18 @@ describe('Unit: layers/data/store/key-value', function () {
 
     before(done => {
       event
-        .once(['test', IDBEventType.destroy], _ =>
+        .once(['test', IDBEventType.destroy], () =>
           event
-            .once(['test', IDBEventType.disconnect], _ => done())
+            .once(['test', IDBEventType.disconnect], () => done())
         );
       destroy('test');
     });
 
     afterEach(done => {
       event
-        .once(['test', IDBEventType.destroy], _ =>
+        .once(['test', IDBEventType.destroy], () =>
           event
-            .once(['test', IDBEventType.disconnect], _ => done())
+            .once(['test', IDBEventType.disconnect], () => done())
         );
       destroy('test');
     });

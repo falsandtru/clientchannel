@@ -1,19 +1,4 @@
-import def, {
-  status,
-  socket,
-  port,
-  LocalSocket,
-  LocalSocketObject,
-  LocalSocketObjectMetaData,
-  LocalSocketConfig,
-  LocalSocketEvent,
-  LocalSocketEventType,
-  LocalPort,
-  LocalPortObject,
-  LocalPortConfig,
-  LocalPortEvent,
-  LocalPortEventType
-} from 'localsocket';
+import def, { status, socket, port } from 'localsocket';
 
 describe('Interface: Package', function () {
   describe('localsocket', function () {

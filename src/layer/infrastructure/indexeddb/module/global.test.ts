@@ -1,4 +1,4 @@
-import {indexedDB, IDBKeyRange, IDBTransaction} from './global';
+import { indexedDB, IDBKeyRange, IDBTransaction } from './global';
 
 describe('Unit: layers/infrastructure/indexeddb/module/global', () => {
   describe('indexedDB', () => {

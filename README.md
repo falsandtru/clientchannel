@@ -20,7 +20,7 @@ https://falsandtru.github.io/localsocket/
 
 ## API
 
-[localsocket.d.ts](typings/localsocket.d.ts)
+[localsocket.d.ts](localsocket.d.ts)
 
 ## Usage
 

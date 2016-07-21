@@ -1,12 +1,12 @@
-import {Observable} from 'spica';
-import {Config} from '../../../../infrastructure/indexeddb/api';
-import {KeyValueStore} from '../../../../data/store/key-value';
-import {EventStore} from '../../../../data/store/event';
+import { Observable } from 'spica';
+import { Config } from '../../../../infrastructure/indexeddb/api';
+import { KeyValueStore } from '../../../../data/store/key-value';
+import { EventStore } from '../../../../data/store/event';
 
 export const STORE_NAME = 'access';
 
 export class AccessStore<K extends string> extends KeyValueStore<K, AccessRecord<K>> {
-  public static fields = Object.freeze({
+  public static readonly fields = Object.freeze({
     key: <'key'>'key',
     date: <'date'>'date'
   });
@@ -41,13 +41,13 @@ export class AccessStore<K extends string> extends KeyValueStore<K, AccessRecord
   }
   constructor(
     database: string,
-    event: Observable<[K] | [K, string] | [K, string, string], EventStore.Event<K>, void>
+    event: Observable<never[] | [K] | [K, string] | [K, string, string], EventStore.Event<K>, void>
   ) {
     super(database, STORE_NAME, AccessStore.fields.key);
     void Object.freeze(this);
 
     void event
-      .monitor(<any>[], ({key, type}) =>
+      .monitor([], ({key, type}) =>
         type === EventStore.EventType.delete
           ? void this.delete(key)
           : void this.set(key, new AccessRecord(key, Date.now()))
@@ -57,8 +57,8 @@ export class AccessStore<K extends string> extends KeyValueStore<K, AccessRecord
 
 class AccessRecord<K extends string> {
   constructor(
-    public key: K,
-    public date: number
+    public readonly key: K,
+    public readonly date: number
   ) {
   }
 }

@@ -1,5 +1,5 @@
-import {Config} from '../../../../infrastructure/indexeddb/api';
-import {EventStore} from '../../../../data/store/event';
+import { Config } from '../../../../infrastructure/indexeddb/api';
+import { EventStore } from '../../../../data/store/event';
 
 export const STORE_NAME = 'data';
 

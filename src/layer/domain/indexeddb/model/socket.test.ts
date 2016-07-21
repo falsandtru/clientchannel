@@ -1,25 +1,24 @@
-import {SocketStore} from './socket';
-import {IDBKey, IDBValue} from '../../../data/constraint/types';
-import {open, destroy, event, Config, IDBEventType} from '../../../infrastructure/indexeddb/api';
+import { SocketStore } from './socket';
+import { destroy, event, IDBEventType } from '../../../infrastructure/indexeddb/api';
 
-describe('Unit: layers/domain/indexeddb/model/socket', function () {
+describe('Unit: layers/domain/indexeddb/model/socket', function (this: Mocha) {
   this.timeout(5 * 1e3);
 
   describe('spec', () => {
     before(done => {
       event
-        .once(['test', IDBEventType.destroy], _ =>
+        .once(['test', IDBEventType.destroy], () =>
           event
-            .once(['test', IDBEventType.disconnect], _ => done())
+            .once(['test', IDBEventType.disconnect], () => done())
         );
       destroy('test');
     });
 
     afterEach(done => {
       event
-        .once(['test', IDBEventType.destroy], _ =>
+        .once(['test', IDBEventType.destroy], () =>
           event
-            .once(['test', IDBEventType.disconnect], _ => done())
+            .once(['test', IDBEventType.disconnect], () => done())
         );
       destroy('test');
     });
@@ -33,12 +32,12 @@ describe('Unit: layers/domain/indexeddb/model/socket', function () {
     }
 
     it('recent', done => {
-      const socket = new SocketStore<string, CustomSocketValue>('test', _ => false);
+      const socket = new SocketStore<string, CustomSocketValue>('test', () => true);
 
       socket.recent(Infinity, (keys, err) => {
         assert(!err);
         assert.deepStrictEqual(keys, []);
-        socket.recent(Infinity, (keys, err) => {
+        socket.recent(Infinity, () => {
           socket.add(new SocketStore.Record('a', new CustomSocketValue(0)));
           setTimeout(() => {
             socket.recent(Infinity, (keys, err) => {
@@ -72,7 +71,7 @@ describe('Unit: layers/domain/indexeddb/model/socket', function () {
     });
 
     it('clean', done => {
-      const socket = new SocketStore<string, CustomSocketValue>('test', _ => false);
+      const socket = new SocketStore<string, CustomSocketValue>('test', () => true);
 
       socket.add(new SocketStore.Record('a', new CustomSocketValue(0)));
       socket.recent(Infinity, keys => {
@@ -97,7 +96,7 @@ describe('Unit: layers/domain/indexeddb/model/socket', function () {
     });
 
     it('expiry', done => {
-      const socket = new SocketStore<string, CustomSocketValue>('test', _ => false, 700);
+      const socket = new SocketStore<string, CustomSocketValue>('test', () => true, 700);
 
       socket.expire('a');
       socket.add(new SocketStore.Record('a', new CustomSocketValue(0)));

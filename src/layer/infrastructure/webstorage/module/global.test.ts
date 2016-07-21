@@ -1,4 +1,4 @@
-import {localStorage, sessionStorage, supportWebStorage} from './global';
+import { localStorage, sessionStorage, supportWebStorage } from './global';
 
 describe('Unit: layers/infrastructure/webstorage/module/global', () => {
   describe('webStorage', () => {

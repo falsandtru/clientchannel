@@ -1,7 +1,7 @@
-import {compose, EventStore, UnsavedEventRecord, SavedEventRecord} from './event';
-import {open, destroy, event, Config, IDBEventType} from '../../infrastructure/indexeddb/api';
+import { compose, EventStore, UnsavedEventRecord, SavedEventRecord } from './event';
+import { open, destroy, event, IDBEventType } from '../../infrastructure/indexeddb/api';
 
-describe('Unit: layers/data/store/event', function () {
+describe('Unit: layers/data/store/event', function (this: Mocha) {
   this.timeout(5 * 1e3);
 
   describe('spec', () => {
@@ -24,18 +24,18 @@ describe('Unit: layers/data/store/event', function () {
 
     before(done => {
       event
-        .once(['test', IDBEventType.destroy], _ =>
+        .once(['test', IDBEventType.destroy], () =>
           event
-            .once(['test', IDBEventType.disconnect], _ => done())
+            .once(['test', IDBEventType.disconnect], () => done())
         );
       destroy('test');
     });
 
     afterEach(done => {
       event
-        .once(['test', IDBEventType.destroy], _ =>
+        .once(['test', IDBEventType.destroy], () =>
           event
-            .once(['test', IDBEventType.disconnect], _ => done())
+            .once(['test', IDBEventType.disconnect], () => done())
         );
       destroy('test');
     });
@@ -70,8 +70,6 @@ describe('Unit: layers/data/store/event', function () {
           if (value === null) return;
           this[typeof value] = value;
         }
-      }
-      class Store<K extends string, V extends EventStore.Value> extends EventStore<K, V> {
       }
 
       describe('single', () => {
@@ -298,7 +296,7 @@ describe('Unit: layers/data/store/event', function () {
       assert(es.has('a') === true);
       assert(es.get('a').value === 0);
       es.events.save
-        .once(['a', 'value', 'put'], _ => {
+        .once(['a', 'value', 'put'], () => {
           assert(es.meta('a').id === 1);
           assert(es.has('a') === true);
           assert(es.get('a').value === 0);
@@ -307,7 +305,7 @@ describe('Unit: layers/data/store/event', function () {
           assert(es.has('a') === false);
           assert(es.get('a').value === void 0);
           es.events.save
-            .once(['a', '', 'delete'], _ => {
+            .once(['a', '', 'delete'], () => {
               assert(es.meta('a').id === 2);
               assert(es.has('a') === false);
               assert(es.get('a').value === void 0);
@@ -343,10 +341,10 @@ describe('Unit: layers/data/store/event', function () {
       es.add(new UnsavedEventRecord('a', new Value(0)));
       es.add(new UnsavedEventRecord('b', new Value(0)));
       es.events.save
-        .once(['a', 'value', 'put'], _ => {
+        .once(['a', 'value', 'put'], () => {
           es.delete('a');
           es.events.save
-            .once(['a', '', 'delete'], _ => {
+            .once(['a', '', 'delete'], () => {
               assert(es.meta('a').id === 3);
               assert(es.has('a') === false);
               assert(es.get('a').value === void 0);

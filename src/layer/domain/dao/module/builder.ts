@@ -1,6 +1,5 @@
-import {assign} from 'spica';
-import {isValidName, isValidValue} from '../../../data/constraint/values';
-import {noop} from '../../../../lib/noop';
+import { isValidName, isValidValue } from '../../../data/constraint/values';
+import { noop } from '../../../../lib/noop';
 
 export {
   isValidName as isValidPropertyName,
@@ -31,7 +30,7 @@ export function build<V>(source: V, factory: () => V, update: (attr: string, new
     .map(prop => SCHEMA[prop].NAME)
     .reduce((_, prop) => { delete dao[prop] }, void 0);
   if (typeof source[SCHEMA.KEY.NAME] !== 'string') throw new TypeError(`LocalSocket: Invalid key: ${source[SCHEMA.KEY.NAME]}`);
-  const descmap: PropertyDescriptorMap = assign<PropertyDescriptorMap>(Object.keys(dao)
+  const descmap: PropertyDescriptorMap = Object.assign(Object.keys(dao)
     .filter(isValidName)
     .filter(isValidValue(dao))
     .reduce<PropertyDescriptorMap>((map, prop) => {

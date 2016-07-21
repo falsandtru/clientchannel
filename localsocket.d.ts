@@ -5,10 +5,10 @@
 
   export function socket<K extends string, V extends LocalSocketObject<K>>(name: string, config: LocalSocketConfig<K, V>): LocalSocket<K, V>;
   export interface LocalSocket<K extends string, V extends LocalSocketObject<K>> {
-    events: {
-      load: Observer<[K] | [K, string] | [K, string, LocalSocketEventType], LocalSocketEvent<K>, void>,
-      save: Observer<[K] | [K, string] | [K, string, LocalSocketEventType], LocalSocketEvent<K>, void>,
-      loss: Observer<[K] | [K, string] | [K, string, LocalSocketEventType], LocalSocketEvent<K>, void>
+    readonly events: {
+      readonly load: Observer<never[] | [K] | [K, string] | [K, string, LocalSocketEventType], LocalSocketEvent<K>, void>,
+      readonly save: Observer<never[] | [K] | [K, string] | [K, string, LocalSocketEventType], LocalSocketEvent<K>, void>,
+      readonly loss: Observer<never[] | [K] | [K, string] | [K, string, LocalSocketEventType], LocalSocketEvent<K>, void>
     };
     sync(keys: K[], cb?: (errs: [K, DOMError | Error][]) => any, timeout?: number): void;
     link(key: K, expiry?: number): V;
@@ -19,25 +19,25 @@
   export interface LocalSocketConfig<K extends string, V extends LocalSocketObject<K>> {
     schema(): V;
     expiry?: number;
-    destroy?(error: DOMError, event: Event): boolean;
+    destroy?(error: DOMError, event: Event | null): boolean;
   }
   export interface LocalSocketObject<K extends string> {
-    __meta?: LocalSocketObjectMetaData<K>;
-    __id?: number;
-    __key?: K;
-    __date?: number;
-    __event?: Observer<[LocalPortEventType] | [LocalPortEventType, string], LocalPortEvent, any>;
+    readonly __meta: LocalSocketObjectMetaData<K>;
+    readonly __id: number;
+    readonly __key: K;
+    readonly __date: number;
+    readonly __event: Observer<[LocalPortEventType] | [LocalPortEventType, string], LocalPortEvent, any>;
   }
   export interface LocalSocketObjectMetaData<K extends string> {
-    id: number;
-    key: K;
-    date: number;
+    readonly id: number;
+    readonly key: K;
+    readonly date: number;
   }
   export interface LocalSocketEvent<K extends string> {
-    type: LocalSocketEventType;
-    id: number;
-    key: K;
-    attr: string;
+    readonly type: LocalSocketEventType;
+    readonly id: number;
+    readonly key: K;
+    readonly attr: string;
   }
   export type LocalSocketEventType
     = 'put'
@@ -46,27 +46,27 @@
 
   export function port<V extends LocalPortObject>(name: string, config: LocalPortConfig<V>): LocalPort<V>;
   export interface LocalPort<V extends LocalPortObject> {
-    events: {
-      send: Observer<[string], LocalPortEvent, void>;
-      recv: Observer<[string], LocalPortEvent, void>;
+    readonly events: {
+      readonly send: Observer<never[] | [string], LocalPortEvent, void>;
+      readonly recv: Observer<never[] | [string], LocalPortEvent, void>;
     };
     link(): V;
     destroy(): void;
   }
   export interface LocalPortConfig<V extends LocalPortObject> {
     schema(): V;
-    destroy?(error: DOMError, event: Event): boolean;
+    destroy?(error: DOMError, event: Event | null): boolean;
   }
   export interface LocalPortObject {
-    __key?: string;
-    __event?: Observer<[LocalPortEventType] | [LocalPortEventType, string], LocalPortEvent, any>;
+    readonly __key: string;
+    readonly __event: Observer<[LocalPortEventType] | [LocalPortEventType, string], LocalPortEvent, any>;
   }
   export interface LocalPortEvent {
-    type: LocalPortEventType;
-    key: string;
-    attr: string;
-    newValue: any;
-    oldValue: any;
+    readonly type: LocalPortEventType;
+    readonly key: string;
+    readonly attr: string;
+    readonly newValue: any;
+    readonly oldValue: any;
   }
   export type LocalPortEventType
     = 'send'

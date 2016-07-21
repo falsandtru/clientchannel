@@ -28,6 +28,7 @@ module.exports = function (config) {
       ]
     },
     autoWatch: true,
+    autoWatchBatchDelay: 500,
     browsers: ['Chrome']
   });
 };

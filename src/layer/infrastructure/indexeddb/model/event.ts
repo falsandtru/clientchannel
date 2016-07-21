@@ -18,10 +18,10 @@ export namespace IDBEventType {
 
 export class IDBEvent {
   constructor(
-    public type: IDBEventType,
-    public name: string
+    public readonly type: IDBEventType,
+    public readonly name: string
   ) {
     void Object.freeze(this);
   }
-  public namespace = [this.name];
+  public readonly namespace = [this.name];
 }

@@ -1,7 +1,7 @@
-import {Observable} from 'spica';
-import {listen, Config, IDBTransaction, IDBCursorDirection, IDBKeyRange} from '../../infrastructure/indexeddb/api';
-import {IDBValue} from '../constraint/types';
-import {noop} from '../../../lib/noop';
+import { Observable } from 'spica';
+import { listen, Config, IDBTransaction, IDBCursorDirection } from '../../infrastructure/indexeddb/api';
+import { IDBValue } from '../constraint/types';
+import { noop } from '../../../lib/noop';
 
 export abstract class KeyValueStore<K extends string, V extends IDBValue> {
   public static configure(): Config {
@@ -18,17 +18,17 @@ export abstract class KeyValueStore<K extends string, V extends IDBValue> {
     };
   }
   constructor(
-    protected database: string,
-    protected name: string,
-    protected index: string
+    protected readonly database: string,
+    protected readonly name: string,
+    protected readonly index: string
   ) {
     if (typeof index !== 'string') throw new TypeError();
   }
-  protected cache = new Map<K, V>();
-  public events = {
+  protected readonly cache = new Map<K, V>();
+  public readonly events = {
     access: new Observable<[K], [[K], KeyValueStore.EventType], void>()
   };
-  public get(key: K, cb: (value: V, error: DOMError) => any = noop): V {
+  public get(key: K, cb: (value: V | void, error: DOMError) => any = noop): V | undefined {
     void this.events.access.emit([key], [[key], KeyValueStore.EventType.get]);
     void listen(this.database)(db => {
       const tx = db.transaction(this.name, IDBTransaction.readonly);
@@ -41,32 +41,32 @@ export abstract class KeyValueStore<K extends string, V extends IDBValue> {
           .objectStore(this.name)
           .get(key);
       let result: V;
-      req.onsuccess = _ =>
+      req.onsuccess = () =>
         result = req.result !== void 0 && req.result !== null
           ? req.result
           : this.cache.get(key);
-      tx.oncomplete = _ => cb(result, tx.error);
-      tx.onerror = tx.onabort = _ => cb(void 0, tx.error);
+      tx.oncomplete = () => cb(result, tx.error);
+      tx.onerror = tx.onabort = () => cb(void 0, tx.error);
     });
     return this.cache.get(key);
   }
-  public set(key: K, value: V, cb: (key: K, error: DOMError) => any = noop): V {
+  public set(key: K, value: V, cb: (key: K, error: DOMError) => any = noop): V | undefined {
     return this.put(value, key, cb);
   }
-  protected put(value: V, key: K, cb: (key: K, error: DOMError) => any = noop): V {
+  protected put(value: V, key: K, cb: (key: K, error: DOMError) => any = noop): V | undefined {
     void this.cache.set(key, value);
     void this.events.access.emit([key], [[key], KeyValueStore.EventType.put]);
     void listen(this.database)(db => {
       if (!this.cache.has(key)) return;
       const tx = db.transaction(this.name, IDBTransaction.readwrite);
-      const req = this.index
+      this.index
         ? tx
           .objectStore(this.name)
           .put(this.cache.get(key))
         : tx
           .objectStore(this.name)
           .put(this.cache.get(key), key);
-      tx.oncomplete = tx.onerror = tx.onabort = _ => void cb(key, tx.error);
+      tx.oncomplete = tx.onerror = tx.onabort = () => void cb(key, tx.error);
     });
     return this.cache.get(key);
   }
@@ -75,13 +75,13 @@ export abstract class KeyValueStore<K extends string, V extends IDBValue> {
     void this.events.access.emit([key], [[key], KeyValueStore.EventType.delete]);
     void listen(this.database)(db => {
       const tx = db.transaction(this.name, IDBTransaction.readwrite);
-      const req = tx
+      void tx
         .objectStore(this.name)
         .delete(key);
-      tx.oncomplete = tx.onerror = tx.onabort = _ => void cb(tx.error);
+      tx.oncomplete = tx.onerror = tx.onabort = () => void cb(tx.error);
     });
   }
-  public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransaction, cb: (cursor: IDBCursorWithValue, error: DOMError) => any): void {
+  public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransaction, cb: (cursor: IDBCursorWithValue | null, error: DOMError) => any): void {
     void listen(this.database)(db => {
       const tx = db
         .transaction(this.name, mode);
@@ -93,9 +93,9 @@ export abstract class KeyValueStore<K extends string, V extends IDBValue> {
         : tx
           .objectStore(this.name)
           .openCursor(query, direction);
-      req.onsuccess = _ => req.result && cb(req.result, req.error);
-      tx.oncomplete = _ => void cb(null, tx.error);;
-      tx.onerror = tx.onabort = _ => void cb(null, tx.error);
+      req.onsuccess = () => req.result && cb(req.result, req.error);
+      tx.oncomplete = () => void cb(null, tx.error);;
+      tx.onerror = tx.onabort = () => void cb(null, tx.error);
     });
   }
 }

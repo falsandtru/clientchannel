@@ -1,13 +1,19 @@
-interface StorageLike extends Storage {
+export interface StorageLike {
+  readonly length: number;
+  getItem(key: string): string | null;
+  setItem(key: string, data: string): void;
+  removeItem(key: string): void;
+  clear(): void;
 }
-class StorageLike {
-  private store = new Map<string, string>();
+
+class Storage implements StorageLike {
+  private readonly store = new Map<string, string>();
   public get length(): number {
     return this.store.size;
   }
-  public getItem(key: string): string {
+  public getItem(key: string): string | null {
     return this.store.has(key)
-      ? this.store.get(key)
+      ? this.store.get(key)!
       : null;
   }
   public setItem(key: string, data: string): void {
@@ -21,4 +27,4 @@ class StorageLike {
   }
 }
 
-export const fakeStorage = new StorageLike();
+export const fakeStorage: StorageLike = new Storage();

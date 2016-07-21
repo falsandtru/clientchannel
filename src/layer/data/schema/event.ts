@@ -1,5 +1,5 @@
-import {clone} from 'spica';
-import {IdNumber} from '../constraint/types';
+import { clone } from 'spica';
+import { IdNumber } from '../constraint/types';
 
 export namespace EventRecordFields {
   export const id: 'id' = 'id';
@@ -13,7 +13,6 @@ export namespace EventRecordFields {
 
 abstract class EventRecord<K extends string, V extends EventValue> {
   constructor(
-    id: IdNumber,
     key: K,
     value: V,
     date: number,
@@ -56,12 +55,12 @@ abstract class EventRecord<K extends string, V extends EventValue> {
         throw new TypeError(`LocalSocket: Invalid event type: ${type}`);
     }
   }
-  public id: IdNumber;
-  public type: EventType;
-  public key: K;
-  public attr: string;
-  public value: V;
-  public date: number;
+  public readonly id: IdNumber | undefined;
+  public readonly type: EventType;
+  public readonly key: K;
+  public readonly attr: string;
+  public readonly value: V;
+  public readonly date: number;
 }
 export class UnsavedEventRecord<K extends string, V extends EventValue> extends EventRecord<K, V> {
   private EVENT_RECORD: V;
@@ -71,22 +70,25 @@ export class UnsavedEventRecord<K extends string, V extends EventValue> extends 
     type: EventType = EventType.put,
     date: number = Date.now()
   ) {
-    super(void 0, key, value, date, type);
+    super(key, value, date, type);
+    this.EVENT_RECORD;
     // must not have id property
     if (this.id !== void 0 || 'id' in this) throw new TypeError(`LocalSocket: UnsavedEventRecord: Invalid event id: ${this.id}`);
-    //void Object.freeze(this);
+    void Object.freeze(this);
   }
+  public readonly id: undefined;
 }
 export class SavedEventRecord<K extends string, V extends EventValue> extends EventRecord<K, V> {
   private EVENT_RECORD: V;
   constructor(
-    public id: IdNumber,
+    public readonly id: IdNumber,
     key: K,
     value: V,
     type: EventType,
     date: number
   ) {
-    super(id, key, value, date, type);
+    super(key, value, date, type);
+    this.EVENT_RECORD;
     if (this.id > 0 === false) throw new TypeError(`LocalSocket: SavedEventRecord: Invalid event id: ${this.id}`);
     void Object.freeze(this);
   }

@@ -1,13 +1,12 @@
-import {Observable} from 'spica';
-import {event, IDBEventType, Config, IDBCursorDirection, IDBTransaction} from '../../../../infrastructure/indexeddb/api';
-import {KeyValueStore} from '../../../../data/store/key-value';
-import {EventStore} from '../../../../data/store/event';
-import {DataStore} from './data';
+import { event, IDBEventType, Config, IDBCursorDirection, IDBTransaction } from '../../../../infrastructure/indexeddb/api';
+import { KeyValueStore } from '../../../../data/store/key-value';
+import { EventStore } from '../../../../data/store/event';
+import { DataStore } from './data';
 
 export const STORE_NAME = 'expiry';
 
 export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord<K>> {
-  public static fields = Object.freeze({
+  public static readonly fields = Object.freeze({
     key: <'key'>'key',
     expiry: <'expiry'>'expiry'
   });
@@ -53,7 +52,7 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
 
     let timer = 0;
     let scheduled = Infinity;
-    const schedule = (date: number): void => {
+    let schedule = (date: number): void => {
       assert(date > Date.now() - 10);
       if (scheduled < date) return;
       void clearTimeout(timer);
@@ -77,7 +76,7 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
 
     void schedule(Date.now());
     void data.events_.access
-      .monitor(<any>[], ({key, type}) => {
+      .monitor([], ({key, type}) => {
         if (type === EventStore.EventType.delete) {
           void this.delete(key);
         }
@@ -94,8 +93,8 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
 
 class ExpiryRecord<K extends string> {
   constructor(
-    public key: K,
-    public expiry: number
+    public readonly key: K,
+    public readonly expiry: number
   ) {
   }
 }

@@ -1,16 +1,13 @@
-import {LocalPort, LocalPortObject, LocalPortEvent, LocalPortEventType} from 'localsocket';
-import {Observable, assign, uuid} from 'spica';
-import {SCHEMA, build, isValidPropertyName, isValidPropertyValue} from '../../dao/api';
-import {events} from '../service/event';
-import {localStorage, sessionStorage} from '../../../infrastructure/webstorage/api';
-import {fakeStorage} from '../service/storage';
-import {noop} from '../../../../lib/noop';
+import { LocalPort, LocalPortObject, LocalPortEvent, LocalPortEventType } from 'localsocket';
+import { Observable, uuid } from 'spica';
+import { SCHEMA, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
+import { events } from '../service/event';
+import { localStorage, sessionStorage } from '../../../infrastructure/webstorage/api';
+import { StorageLike, fakeStorage } from '../service/storage';
 
 const LocalStorageObjectCache = new Map<string, LocalPortObject>();
-const LocalStorageSubscriber = new Map<string, (event: StorageEvent) => any>();
 
 const SessionStorageObjectCache = new Map<string, LocalPortObject>();
-const SessionStorageSubscriber = new Map<string, (event: StorageEvent) => any>();
 
 export type PortEventType
   = typeof PortEventType.send
@@ -21,25 +18,26 @@ export namespace PortEventType {
 }
 export class PortEvent implements LocalPortEvent {
   constructor(
-    public type: LocalPortEventType,
-    public key: string,
-    public attr: string,
-    public newValue: any,
-    public oldValue: any
+    public readonly type: LocalPortEventType,
+    public readonly key: string,
+    public readonly attr: string,
+    public readonly newValue: any,
+    public readonly oldValue: any
   ) {
     assert(typeof type === 'string');
     assert(typeof key === 'string');
     assert(typeof attr === 'string');
+    void Object.freeze(this);
   }
 }
 
 export function port<V extends LocalPortObject>(
   name: string,
-  storage: Storage = sessionStorage || fakeStorage,
+  storage: StorageLike = sessionStorage || fakeStorage,
   factory: () => V,
   log = {
-    update(name: string) { },
-    delete(name: string) { }
+    update(_name: string) { },
+    delete(_name: string) { }
   }
 ): Port<V> {
   return new Port(name, storage, factory, log);
@@ -47,27 +45,27 @@ export function port<V extends LocalPortObject>(
 
 class Port<V extends LocalPortObject> implements LocalPort<V> {
   constructor(
-    public name: string,
-    private storage: Storage,
-    private factory: () => V,
-    private log = {
-      update(name: string) { },
-      delete(name: string) { }
+    public readonly name: string,
+    private readonly storage: StorageLike,
+    private readonly factory: () => V,
+    private readonly log = {
+      update(_name: string) { },
+      delete(_name: string) { }
     }
   ) {
     void Object.freeze(this);
   }
-  private cache = this.storage === localStorage ? LocalStorageObjectCache : SessionStorageObjectCache;
-  private eventSource = this.storage === localStorage ? events.localStorage : events.sessionStorage;
-  private uuid = uuid();
-  public events = {
-    send: new Observable<[string], PortEvent, void>(),
-    recv: new Observable<[string], PortEvent, void>()
+  private readonly cache = this.storage === localStorage ? LocalStorageObjectCache : SessionStorageObjectCache;
+  private readonly eventSource = this.storage === localStorage ? events.localStorage : events.sessionStorage;
+  private readonly uuid = uuid();
+  public readonly events = {
+    send: new Observable<never[] | [string], PortEvent, void>(),
+    recv: new Observable<never[] | [string], PortEvent, void>()
   };
   public link(): V {
     if (this.cache.has(this.name)) return <V>this.cache.get(this.name);
 
-    const source: V = assign<V>(
+    const source: V = Object.assign(
       <V><any>{
         [SCHEMA.KEY.NAME]: this.name,
         [SCHEMA.EVENT.NAME]: new Observable<[LocalPortEventType] | [LocalPortEventType, string], PortEvent, void>()
@@ -89,7 +87,7 @@ class Port<V extends LocalPortObject> implements LocalPort<V> {
       void Object.keys(item)
         .filter(isValidPropertyName)
         .filter(isValidPropertyValue(item))
-        .reduce((_, attr) => {
+        .reduce<void>((_, attr) => {
           const oldVal = source[attr];
           const newVal = item[attr];
           if (newVal === oldVal) return;
@@ -104,9 +102,9 @@ class Port<V extends LocalPortObject> implements LocalPort<V> {
     void this.log.update(this.name);
     return dao;
 
-    function parse<V>(item: string): V {
+    function parse<V>(item: string | undefined | null): V {
       try {
-        return JSON.parse(item) || <V>{};
+        return JSON.parse(item || '{}') || <V>{};
       }
       catch (_) {
         return <V>{};
