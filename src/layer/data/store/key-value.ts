@@ -20,11 +20,11 @@ export abstract class KeyValueStore<K extends string, V extends IDBValue> {
   constructor(
     protected readonly database: string,
     protected readonly name: string,
-    protected readonly index: string
+    private readonly index: string
   ) {
     if (typeof index !== 'string') throw new TypeError();
   }
-  protected readonly cache = new Map<K, V>();
+  private readonly cache = new Map<K, V>();
   public readonly events = {
     access: new Observable<[K], [[K], KeyValueStore.EventType], void>()
   };
@@ -53,7 +53,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValue> {
   public set(key: K, value: V, cb: (key: K, error: DOMError) => any = noop): V | undefined {
     return this.put(value, key, cb);
   }
-  protected put(value: V, key: K, cb: (key: K, error: DOMError) => any = noop): V | undefined {
+  private put(value: V, key: K, cb: (key: K, error: DOMError) => any = noop): V | undefined {
     void this.cache.set(key, value);
     void this.events.access.emit([key], [[key], KeyValueStore.EventType.put]);
     void listen(this.database)(db => {
