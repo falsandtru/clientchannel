@@ -96,33 +96,31 @@ describe('Unit: layers/domain/indexeddb/model/socket', function (this: Mocha) {
     });
 
     it('expiry', done => {
-      const socket = new SocketStore<string, CustomSocketValue>('test', () => true, 700);
+      const socket = new SocketStore<string, CustomSocketValue>('test', () => true, 2000);
 
       socket.expire('a');
       socket.add(new SocketStore.Record('a', new CustomSocketValue(0)));
-      assert(socket.get('a').val === 0);
-      socket.recent(Infinity, keys => {
-        assert.deepStrictEqual(keys, ['a']);
-        assert(socket.has('a') === true);
-        setTimeout(() => {
-          socket.expire('b', 300);
-          socket.add(new SocketStore.Record('b', new CustomSocketValue(0)));
-          socket.recent(Infinity, keys => {
-            assert.deepStrictEqual(keys, ['b']);
-            assert(socket.has('a') === false);
-            assert(socket.has('b') === true);
-            setTimeout(() => {
-              socket.recent(Infinity, keys => {
-                assert.deepStrictEqual(keys, []);
-                assert(socket.has('a') === false);
-                assert(socket.has('b') === false);
-                socket.destroy();
-                done();
-              });
-            }, 500);
-          });
-        }, 900);
-      });
+      socket.expire('b', 100);
+      socket.add(new SocketStore.Record('b', new CustomSocketValue(0)));
+      socket.add(new SocketStore.Record('c', new CustomSocketValue(0)));
+      setTimeout(() => {
+        socket.recent(Infinity, keys => {
+          assert.deepStrictEqual(keys, ['c', 'a']);
+          assert(socket.has('a') === true);
+          assert(socket.has('b') === false);
+          assert(socket.has('c') === true);
+          setTimeout(() => {
+            socket.recent(Infinity, keys => {
+              assert.deepStrictEqual(keys, ['c']);
+              assert(socket.has('a') === false);
+              assert(socket.has('b') === false);
+              assert(socket.has('c') === true);
+              socket.destroy();
+              done();
+            });
+          }, 2000);
+        });
+      }, 1000);
 
     });
 

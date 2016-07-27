@@ -62,13 +62,9 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
         void this.cursor(null, ExpiryStore.fields.expiry, IDBCursorDirection.next, IDBTransactionMode.readonly, cursor => {
           if (!cursor) return;
           const record: ExpiryRecord<K> = cursor.value;
-          if (record.expiry > Date.now()) {
-            void schedule(record.expiry);
-          }
-          else {
-            void store.delete(record.key);
-            void cursor.continue();
-          }
+          if (record.expiry > Date.now()) return void schedule(record.expiry);
+          void store.delete(record.key);
+          return void cursor.continue();
         });
       }, date - Date.now());
       void event.once([database, IDBEventType.destroy], () => void clearTimeout(timer));
@@ -77,15 +73,15 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
     void schedule(Date.now());
     void data.events_.access
       .monitor([], ({key, type}) => {
-        if (type === EventStore.EventType.delete) {
-          void this.delete(key);
-        }
-        else {
-          if (!expiries.has(key)) return;
-          assert(expiries.get(key) < Infinity);
-          const expiry = Date.now() + expiries.get(key);
-          void this.set(key, new ExpiryRecord(key, expiry));
-          void schedule(expiry);
+        switch (type) {
+          case EventStore.EventType.delete:
+            return void this.delete(key);
+          default:
+            if (!expiries.has(key)) return;
+            assert(expiries.get(key) < Infinity);
+            const expiry = Date.now() + expiries.get(key);
+            void this.set(key, new ExpiryRecord(key, expiry));
+            return void schedule(expiry);
         }
       });
   }
