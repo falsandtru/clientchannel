@@ -1,6 +1,6 @@
 import { LocalSocketObject, LocalSocketObjectMetaData, LocalSocketEvent, LocalSocketEventType } from 'localsocket';
 import { Observable, uuid } from 'spica';
-import { open, destroy, event, IDBEventType, IDBTransactionMode, IDBCursorDirection } from '../../../infrastructure/indexeddb/api';
+import { open, close, destroy, event, IDBEventType, IDBTransactionMode, IDBCursorDirection } from '../../../infrastructure/indexeddb/api';
 import { DataStore } from './socket/data';
 import { AccessStore } from './socket/access';
 import { ExpiryStore } from './socket/expiry';
@@ -78,6 +78,9 @@ export class SocketStore<K extends string, V extends SocketStore.Value<K>> {
         void keys.push(cursor.primaryKey);
         void cursor.continue();
       });
+  }
+  public close(): void {
+    return void close(this.database);
   }
   public destroy(): void {
     void event.off([this.database, IDBEventType.destroy, this.uuid]);

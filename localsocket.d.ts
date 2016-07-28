@@ -14,6 +14,7 @@
     link(key: K, expiry?: number): V;
     delete(key: K): void;
     recent(limit: number, cb?: (keys: K[], error: DOMError) => any): void;
+    close(): void;
     destroy(): void;
   }
   export interface LocalSocketConfig<K extends string, V extends LocalSocketObject<K>> {
