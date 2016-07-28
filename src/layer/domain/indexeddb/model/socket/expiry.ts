@@ -1,4 +1,4 @@
-import { event, IDBEventType, Config, IDBCursorDirection, IDBTransaction } from '../../../../infrastructure/indexeddb/api';
+import { event, IDBEventType, Config, IDBCursorDirection, IDBTransactionMode } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/store/key-value';
 import { EventStore } from '../../../../data/store/event';
 import { DataStore } from './data';
@@ -59,7 +59,7 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
       scheduled = date;
       timer = setTimeout(() => {
         scheduled = Infinity;
-        void this.cursor(null, ExpiryStore.fields.expiry, IDBCursorDirection.next, IDBTransaction.readonly, cursor => {
+        void this.cursor(null, ExpiryStore.fields.expiry, IDBCursorDirection.next, IDBTransactionMode.readonly, cursor => {
           if (!cursor) return;
           const record: ExpiryRecord<K> = cursor.value;
           if (record.expiry > Date.now()) {

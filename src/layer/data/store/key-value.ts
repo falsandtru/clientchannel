@@ -1,5 +1,5 @@
 import { Observable } from 'spica';
-import { listen, Config, IDBTransaction, IDBCursorDirection } from '../../infrastructure/indexeddb/api';
+import { listen, Config, IDBTransactionMode, IDBCursorDirection } from '../../infrastructure/indexeddb/api';
 import { IDBValue } from '../constraint/types';
 import { noop } from '../../../lib/noop';
 
@@ -31,7 +31,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValue> {
   public get(key: K, cb: (value: V | void, error: DOMError) => any = noop): V | undefined {
     void this.events.access.emit([key], [[key], KeyValueStore.EventType.get]);
     void listen(this.database)(db => {
-      const tx = db.transaction(this.name, IDBTransaction.readonly);
+      const tx = db.transaction(this.name, IDBTransactionMode.readonly);
       const req = this.index
         ? tx
           .objectStore(this.name)
@@ -58,7 +58,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValue> {
     void this.events.access.emit([key], [[key], KeyValueStore.EventType.put]);
     void listen(this.database)(db => {
       if (!this.cache.has(key)) return;
-      const tx = db.transaction(this.name, IDBTransaction.readwrite);
+      const tx = db.transaction(this.name, IDBTransactionMode.readwrite);
       this.index
         ? tx
           .objectStore(this.name)
@@ -74,14 +74,14 @@ export abstract class KeyValueStore<K extends string, V extends IDBValue> {
     void this.cache.delete(key);
     void this.events.access.emit([key], [[key], KeyValueStore.EventType.delete]);
     void listen(this.database)(db => {
-      const tx = db.transaction(this.name, IDBTransaction.readwrite);
+      const tx = db.transaction(this.name, IDBTransactionMode.readwrite);
       void tx
         .objectStore(this.name)
         .delete(key);
       tx.oncomplete = tx.onerror = tx.onabort = () => void cb(tx.error);
     });
   }
-  public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransaction, cb: (cursor: IDBCursorWithValue | null, error: DOMError) => any): void {
+  public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMError) => any): void {
     void listen(this.database)(db => {
       const tx = db
         .transaction(this.name, mode);

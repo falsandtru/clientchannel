@@ -1,6 +1,6 @@
 import { LocalSocketObject, LocalSocketObjectMetaData, LocalSocketEvent, LocalSocketEventType } from 'localsocket';
 import { Observable, uuid } from 'spica';
-import { open, destroy, event, IDBEventType, IDBTransaction, IDBCursorDirection } from '../../../infrastructure/indexeddb/api';
+import { open, destroy, event, IDBEventType, IDBTransactionMode, IDBCursorDirection } from '../../../infrastructure/indexeddb/api';
 import { DataStore } from './socket/data';
 import { AccessStore } from './socket/access';
 import { ExpiryStore } from './socket/expiry';
@@ -71,7 +71,7 @@ export class SocketStore<K extends string, V extends SocketStore.Value<K>> {
       null,
       AccessStore.fields.date,
       IDBCursorDirection.prevunique,
-      IDBTransaction.readonly,
+      IDBTransactionMode.readonly,
       (cursor, err): void => {
         if (!cursor) return void cb(keys, err);
         if (--limit < 0) return;

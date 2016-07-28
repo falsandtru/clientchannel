@@ -1,5 +1,5 @@
 import { Supervisor, Observable, sqid, clone, concat } from 'spica';
-import { listen, Config, IDBTransaction, IDBCursorDirection, IDBKeyRange } from '../../infrastructure/indexeddb/api';
+import { listen, Config, IDBTransactionMode, IDBCursorDirection, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { IdNumber } from '../constraint/types';
 import { EventRecordFields, UnsavedEventRecord, SavedEventRecord } from '../schema/event';
 import * as Schema from '../schema/event';
@@ -130,7 +130,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     const latest = this.meta(key);
     const savedEvents: SavedEventRecord<K, V>[] = [];
     void this.syncState.set(key, this.syncState.get(key) === true);
-    return void this.cursor(key, EventRecordFields.key, IDBCursorDirection.prev, IDBTransaction.readonly, (cursor, err): void => {
+    return void this.cursor(key, EventRecordFields.key, IDBCursorDirection.prev, IDBTransactionMode.readonly, (cursor, err): void => {
       if (err) return void this.syncWaits.emit([key], err);
       if (!cursor || (<SavedEventRecord<K, V>>cursor.value).id <= latest.id) {
         if (compose(savedEvents).reduce(e => e).type === EventStore.EventType.delete) {
@@ -220,7 +220,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       .cast([event.key, event.attr, sqid(0), id], void 0);
     return void listen(this.database)(db => {
       if (this.cache.refs([event.key, event.attr, sqid(0)]).length === 0) return;
-      const tx = db.transaction(this.name, IDBTransaction.readwrite);
+      const tx = db.transaction(this.name, IDBTransactionMode.readwrite);
       const req = tx
         .objectStore(this.name)
         .add(Object.assign({}, event));
@@ -260,7 +260,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     if (this.snapshotJobState.get(key)) return;
     void this.snapshotJobState.set(key, true);
     return void listen(this.database)(db => {
-      const tx = db.transaction(this.name, IDBTransaction.readwrite);
+      const tx = db.transaction(this.name, IDBTransactionMode.readwrite);
       const store = tx.objectStore(this.name);
       const req = store
         .index(EventRecordFields.key)
@@ -308,7 +308,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       key ? IDBKeyRange.bound([key, 0], [key, until]) : IDBKeyRange.upperBound(until),
       key ? EventRecordFields.surrogateKeyDateField : EventRecordFields.date,
       IDBCursorDirection.prev,
-      IDBTransaction.readwrite,
+      IDBTransactionMode.readwrite,
       (cursor): void => {
         if (!cursor) return void removedEvents.reduce<void>((_, event) => void this.cache.terminate([event.key, event.attr, sqid(event.id)]), void 0);
         const event: SavedEventRecord<K, V> = cursor.value;
@@ -337,7 +337,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         void cursor.continue();
       });
   }
-  public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransaction, cb: (cursor: IDBCursorWithValue | null, error: DOMError) => any): void {
+  public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMError) => any): void {
     return void listen(this.database)(db => {
       const tx = db
         .transaction(this.name, mode);

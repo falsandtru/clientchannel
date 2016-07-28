@@ -1,10 +1,10 @@
 export const indexedDB = self.indexedDB;
 export const IDBKeyRange = self.IDBKeyRange;
 
-export type IDBTransaction
-  = typeof IDBTransaction.readonly
-  | typeof IDBTransaction.readwrite;
-export namespace IDBTransaction {
+export type IDBTransactionMode
+  = typeof IDBTransactionMode.readonly
+  | typeof IDBTransactionMode.readwrite;
+export namespace IDBTransactionMode {
   export const readonly: 'readonly' = "readonly";
   export const readwrite: 'readwrite' = "readwrite";
 }
