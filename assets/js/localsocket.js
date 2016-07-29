@@ -1,4 +1,4 @@
-/*! localsocket v0.3.1 https://github.com/falsandtru/localsocket | (c) 2016, falsandtru | undefined License (undefined) */
+/*! localsocket v0.4.0 https://github.com/falsandtru/localsocket | (c) 2016, falsandtru | undefined License (undefined) */
 define = typeof define === 'function' && define.amd
   ? define
   : (function () {
@@ -55,12 +55,10 @@ define('src/layer/data/constraint/values', [
             case 'boolean':
             case 'number':
             case 'string':
-            case 'object': {
-                    return true;
-                }
-            default: {
-                    return false;
-                }
+            case 'object':
+                return true;
+            default:
+                return false;
             }
         };
     }
@@ -79,10 +77,9 @@ define('src/lib/noop', [
 define('src/layer/domain/dao/module/builder', [
     'require',
     'exports',
-    'spica',
     'src/layer/data/constraint/values',
     'src/lib/noop'
-], function (require, exports, spica_1, values_1, noop_1) {
+], function (require, exports, values_1, noop_1) {
     'use strict';
     exports.isValidPropertyName = values_1.isValidName;
     exports.isValidPropertyValue = values_1.isValidValue;
@@ -105,7 +102,7 @@ define('src/layer/domain/dao/module/builder', [
         }, void 0);
         if (typeof source[exports.SCHEMA.KEY.NAME] !== 'string')
             throw new TypeError('LocalSocket: Invalid key: ' + source[exports.SCHEMA.KEY.NAME]);
-        var descmap = spica_1.assign(Object.keys(dao).filter(values_1.isValidName).filter(values_1.isValidValue(dao)).reduce(function (map, prop) {
+        var descmap = Object.assign(Object.keys(dao).filter(values_1.isValidName).filter(values_1.isValidValue(dao)).reduce(function (map, prop) {
             {
                 var desc = Object.getOwnPropertyDescriptor(dao, prop);
                 if (desc && (desc.get || desc.set))
@@ -187,11 +184,11 @@ define('src/layer/infrastructure/indexeddb/module/global', [
     'use strict';
     exports.indexedDB = self.indexedDB;
     exports.IDBKeyRange = self.IDBKeyRange;
-    var IDBTransaction;
-    (function (IDBTransaction) {
-        IDBTransaction.readonly = 'readonly';
-        IDBTransaction.readwrite = 'readwrite';
-    }(IDBTransaction = exports.IDBTransaction || (exports.IDBTransaction = {})));
+    var IDBTransactionMode;
+    (function (IDBTransactionMode) {
+        IDBTransactionMode.readonly = 'readonly';
+        IDBTransactionMode.readwrite = 'readwrite';
+    }(IDBTransactionMode = exports.IDBTransactionMode || (exports.IDBTransactionMode = {})));
     var IDBCursorDirection;
     (function (IDBCursorDirection) {
         IDBCursorDirection.next = 'next';
@@ -226,72 +223,15 @@ define('src/layer/infrastructure/indexeddb/model/event', [
     }();
     exports.IDBEvent = IDBEvent;
 });
-define('src/layer/infrastructure/webstorage/module/global', [
-    'require',
-    'exports',
-    'spica'
-], function (require, exports, spica_2) {
-    'use strict';
-    var webStorage = {};
-    exports.supportWebStorage = function () {
-        try {
-            var key = 'localsocket#' + spica_2.uuid();
-            void self.sessionStorage.setItem(key, key);
-            if (key !== self.sessionStorage.getItem(key))
-                throw 1;
-            void self.sessionStorage.removeItem(key);
-            return true;
-        } catch (e) {
-            return false;
-        }
-    }();
-    exports.localStorage = exports.supportWebStorage ? self.localStorage : void 0;
-    exports.sessionStorage = exports.supportWebStorage ? self.sessionStorage : void 0;
-});
-define('src/layer/infrastructure/webstorage/model/event', [
-    'require',
-    'exports',
-    'spica',
-    'src/layer/infrastructure/webstorage/module/global'
-], function (require, exports, spica_3, global_1) {
-    'use strict';
-    var storageEvents = {
-        localStorage: new spica_3.Observable(),
-        sessionStorage: new spica_3.Observable()
-    };
-    exports.events = storageEvents;
-    void window.addEventListener('storage', function (event) {
-        switch (event.storageArea) {
-        case global_1.localStorage: {
-                return void storageEvents.localStorage.emit(['storage'], event);
-            }
-        case global_1.sessionStorage: {
-                return void storageEvents.sessionStorage.emit(['storage'], event);
-            }
-        }
-    });
-});
-define('src/layer/infrastructure/webstorage/api', [
-    'require',
-    'exports',
-    'src/layer/infrastructure/webstorage/module/global',
-    'src/layer/infrastructure/webstorage/model/event'
-], function (require, exports, global_2, event_1) {
-    'use strict';
-    exports.localStorage = global_2.localStorage;
-    exports.sessionStorage = global_2.sessionStorage;
-    exports.supportWebStorage = global_2.supportWebStorage;
-    exports.events = event_1.events;
-});
 define('src/layer/infrastructure/indexeddb/model/access', [
     'require',
     'exports',
     'spica',
     'src/layer/infrastructure/indexeddb/module/global',
     'src/layer/infrastructure/indexeddb/model/event'
-], function (require, exports, spica_4, global_3, event_2) {
+], function (require, exports, spica_1, global_1, event_1) {
     'use strict';
-    var IDBEventObserver = new spica_4.Observable();
+    var IDBEventObserver = new spica_1.Observable();
     exports.event = IDBEventObserver;
     exports.ConfigMap = new Map();
     var CommandMap = new Map();
@@ -307,6 +247,7 @@ define('src/layer/infrastructure/indexeddb/model/access', [
         var Initial = function () {
             function Initial(database) {
                 this.database = database;
+                this.STATE;
                 void StateMap.set(database, this);
             }
             return Initial;
@@ -315,6 +256,7 @@ define('src/layer/infrastructure/indexeddb/model/access', [
         var Block = function () {
             function Block(database) {
                 this.database = database;
+                this.STATE;
                 void StateMap.set(database, this);
             }
             return Block;
@@ -324,6 +266,7 @@ define('src/layer/infrastructure/indexeddb/model/access', [
             function Upgrade(database, session) {
                 this.database = database;
                 this.session = session;
+                this.STATE;
                 void StateMap.set(database, this);
             }
             return Upgrade;
@@ -333,6 +276,7 @@ define('src/layer/infrastructure/indexeddb/model/access', [
             function Success(database, connection) {
                 this.database = database;
                 this.connection = connection;
+                this.STATE;
                 void StateMap.set(database, this);
             }
             return Success;
@@ -343,6 +287,7 @@ define('src/layer/infrastructure/indexeddb/model/access', [
                 this.database = database;
                 this.error = error;
                 this.event = event;
+                this.STATE;
                 void StateMap.set(database, this);
             }
             return Error;
@@ -353,6 +298,7 @@ define('src/layer/infrastructure/indexeddb/model/access', [
                 this.database = database;
                 this.error = error;
                 this.event = event;
+                this.STATE;
                 void StateMap.set(database, this);
             }
             return Abort;
@@ -362,6 +308,7 @@ define('src/layer/infrastructure/indexeddb/model/access', [
             function Crash(database, error) {
                 this.database = database;
                 this.error = error;
+                this.STATE;
                 void StateMap.set(database, this);
             }
             return Crash;
@@ -370,6 +317,7 @@ define('src/layer/infrastructure/indexeddb/model/access', [
         var Destroy = function () {
             function Destroy(database) {
                 this.database = database;
+                this.STATE;
                 void StateMap.set(database, this);
             }
             return Destroy;
@@ -378,6 +326,7 @@ define('src/layer/infrastructure/indexeddb/model/access', [
         var End = function () {
             function End(database) {
                 this.database = database;
+                this.STATE;
                 void StateMap.set(database, this);
             }
             return End;
@@ -451,26 +400,21 @@ define('src/layer/infrastructure/indexeddb/model/access', [
         }
         var config = exports.ConfigMap.get(database);
         try {
-            var openRequest_1 = version ? global_3.indexedDB.open(database, version) : global_3.indexedDB.open(database);
+            var openRequest_1 = version ? global_1.indexedDB.open(database, version) : global_1.indexedDB.open(database);
             var clear_1 = function () {
-                openRequest_1.onupgradeneeded = void 0;
-                openRequest_1.onsuccess = void 0;
-                openRequest_1.onerror = void 0;
+                return openRequest_1.onupgradeneeded = void 0, openRequest_1.onsuccess = void 0, openRequest_1.onerror = void 0;
             };
-            openRequest_1.onblocked = function (_) {
+            openRequest_1.onblocked = function () {
                 return void handleFromBlockedState(new State.Block(database));
             };
-            openRequest_1.onupgradeneeded = function (event) {
-                void clear_1();
-                void handleFromUpgradeState(new State.Upgrade(database, openRequest_1));
+            openRequest_1.onupgradeneeded = function () {
+                return void clear_1(), void handleFromUpgradeState(new State.Upgrade(database, openRequest_1));
             };
-            openRequest_1.onsuccess = function (_) {
-                void clear_1();
-                void handleFromSuccessState(new State.Success(database, openRequest_1.result));
+            openRequest_1.onsuccess = function () {
+                return void clear_1(), void handleFromSuccessState(new State.Success(database, openRequest_1.result));
             };
             openRequest_1.onerror = function (event) {
-                void clear_1();
-                void handleFromErrorState(new State.Error(database, openRequest_1.error, event));
+                return void clear_1(), void handleFromErrorState(new State.Error(database, openRequest_1.error, event));
             };
         } catch (err) {
             void handleFromCrashState(new State.Crash(database, err));
@@ -480,8 +424,8 @@ define('src/layer/infrastructure/indexeddb/model/access', [
             var database = _a.database;
             void IDBEventObserver.emit([
                 database,
-                event_2.IDBEventType.block
-            ], new event_2.IDBEvent(event_2.IDBEventType.block, database));
+                event_1.IDBEventType.block
+            ], new event_1.IDBEvent(event_1.IDBEventType.block, database));
         }
         function handleFromUpgradeState(_a) {
             var database = _a.database, session = _a.session;
@@ -489,7 +433,7 @@ define('src/layer/infrastructure/indexeddb/model/access', [
             var _b = exports.ConfigMap.get(database), make = _b.make, destroy = _b.destroy;
             try {
                 if (make(db)) {
-                    session.onsuccess = function (_) {
+                    session.onsuccess = function () {
                         return void handleFromSuccessState(new State.Success(database, db));
                     };
                     session.onerror = function (event) {
@@ -497,8 +441,7 @@ define('src/layer/infrastructure/indexeddb/model/access', [
                     };
                 } else {
                     session.onsuccess = session.onerror = function (event) {
-                        void db.close();
-                        destroy(session.error, event) ? void handleFromDestroyState(new State.Destroy(database)) : void handleFromEndState(new State.End(database));
+                        return void db.close(), destroy(session.error, event) ? void handleFromDestroyState(new State.Destroy(database)) : void handleFromEndState(new State.End(database));
                     };
                 }
             } catch (err) {
@@ -508,12 +451,9 @@ define('src/layer/infrastructure/indexeddb/model/access', [
         function handleFromSuccessState(state) {
             var database = state.database, connection = state.connection;
             var clear = function () {
-                connection.onversionchange = function () {
+                return connection.onversionchange = function () {
                     return void connection.close();
-                };
-                connection.onerror = void 0;
-                connection.onabort = void 0;
-                connection.onclose = void 0;
+                }, connection.onerror = void 0, connection.onabort = void 0, connection.onclose = void 0;
             };
             connection.onversionchange = function (_a) {
                 var newVersion = _a.newVersion;
@@ -523,40 +463,30 @@ define('src/layer/infrastructure/indexeddb/model/access', [
                     void requests.delete(database);
                     void IDBEventObserver.emit([
                         database,
-                        event_2.IDBEventType.destroy
-                    ], new event_2.IDBEvent(event_2.IDBEventType.destroy, database));
+                        event_1.IDBEventType.destroy
+                    ], new event_1.IDBEvent(event_1.IDBEventType.destroy, database));
                 }
                 if (StateMap.get(database) !== state)
                     return;
                 void handleFromEndState(new State.End(database));
             };
             connection.onerror = function (event) {
-                void clear();
-                void handleFromErrorState(new State.Error(database, event.target.error, event));
+                return void clear(), void handleFromErrorState(new State.Error(database, event.target.error, event));
             };
             connection.onabort = function (event) {
-                void clear();
-                void handleFromAbortState(new State.Abort(database, event.target.error, event));
+                return void clear(), void handleFromAbortState(new State.Abort(database, event.target.error, event));
             };
-            connection.onclose = function (event) {
-                void clear();
-                void IDBEventObserver.emit([
+            connection.onclose = function () {
+                return void clear(), void IDBEventObserver.emit([
                     database,
-                    event_2.IDBEventType.destroy
-                ], new event_2.IDBEvent(event_2.IDBEventType.destroy, database));
-                if (StateMap.get(database) !== state)
-                    return;
-                void handleFromEndState(new State.End(database));
+                    event_1.IDBEventType.destroy
+                ], new event_1.IDBEvent(event_1.IDBEventType.destroy, database)), StateMap.get(database) === state ? void handleFromEndState(new State.End(database)) : void 0;
             };
             state.destroy = function () {
-                void clear();
-                void connection.close();
-                void handleFromDestroyState(new State.Destroy(database));
+                return void clear(), void connection.close(), void handleFromDestroyState(new State.Destroy(database));
             };
             state.end = function () {
-                void clear();
-                void connection.close();
-                void handleFromEndState(new State.End(database));
+                return void clear(), void connection.close(), void handleFromEndState(new State.End(database));
             };
             state.drain = function () {
                 var reqs = requests.get(database) || [];
@@ -586,16 +516,14 @@ define('src/layer/infrastructure/indexeddb/model/access', [
                     }
                     void IDBEventObserver.emit([
                         database,
-                        event_2.IDBEventType.connect
-                    ], new event_2.IDBEvent(event_2.IDBEventType.connect, database));
+                        event_1.IDBEventType.connect
+                    ], new event_1.IDBEvent(event_1.IDBEventType.connect, database));
                     return void state.drain();
                 }
-            case 1: {
-                    return void state.end();
-                }
-            case 2: {
-                    return void state.destroy();
-                }
+            case 1:
+                return void state.end();
+            case 2:
+                return void state.destroy();
             }
             throw new TypeError('LocalSocket: Invalid command ' + CommandMap.get(database) + '.');
         }
@@ -604,8 +532,8 @@ define('src/layer/infrastructure/indexeddb/model/access', [
             void event.preventDefault();
             void IDBEventObserver.emit([
                 database,
-                event_2.IDBEventType.error
-            ], new event_2.IDBEvent(event_2.IDBEventType.error, database));
+                event_1.IDBEventType.error
+            ], new event_1.IDBEvent(event_1.IDBEventType.error, database));
             var destroy = exports.ConfigMap.get(database).destroy;
             if (destroy(error, event)) {
                 return void handleFromDestroyState(new State.Destroy(database));
@@ -618,8 +546,8 @@ define('src/layer/infrastructure/indexeddb/model/access', [
             void event.preventDefault();
             void IDBEventObserver.emit([
                 database,
-                event_2.IDBEventType.abort
-            ], new event_2.IDBEvent(event_2.IDBEventType.abort, database));
+                event_1.IDBEventType.abort
+            ], new event_1.IDBEvent(event_1.IDBEventType.abort, database));
             var destroy = exports.ConfigMap.get(database).destroy;
             if (destroy(error, event)) {
                 return void handleFromDestroyState(new State.Destroy(database));
@@ -631,8 +559,8 @@ define('src/layer/infrastructure/indexeddb/model/access', [
             var database = _a.database, error = _a.error;
             void IDBEventObserver.emit([
                 database,
-                event_2.IDBEventType.crash
-            ], new event_2.IDBEvent(event_2.IDBEventType.crash, database));
+                event_1.IDBEventType.crash
+            ], new event_1.IDBEvent(event_1.IDBEventType.crash, database));
             var destroy = exports.ConfigMap.get(database).destroy;
             if (destroy(error, null)) {
                 return void handleFromDestroyState(new State.Destroy(database));
@@ -642,17 +570,15 @@ define('src/layer/infrastructure/indexeddb/model/access', [
         }
         function handleFromDestroyState(_a) {
             var database = _a.database;
-            var deleteRequest = global_3.indexedDB.deleteDatabase(database);
-            deleteRequest.onsuccess = function (_) {
-                void requests.delete(database);
-                void IDBEventObserver.emit([
+            var deleteRequest = global_1.indexedDB.deleteDatabase(database);
+            deleteRequest.onsuccess = function () {
+                return void requests.delete(database), void IDBEventObserver.emit([
                     database,
-                    event_2.IDBEventType.destroy
-                ], new event_2.IDBEvent(event_2.IDBEventType.destroy, database));
-                void handleFromEndState(new State.End(database));
+                    event_1.IDBEventType.destroy
+                ], new event_1.IDBEvent(event_1.IDBEventType.destroy, database)), void handleFromEndState(new State.End(database));
             };
             deleteRequest.onerror = function (event) {
-                void handleFromErrorState(new State.Error(database, deleteRequest.error, event));
+                return void handleFromErrorState(new State.Error(database, deleteRequest.error, event));
             };
         }
         function handleFromEndState(_a, version) {
@@ -662,25 +588,18 @@ define('src/layer/infrastructure/indexeddb/model/access', [
             }
             void StateMap.delete(database);
             switch (CommandMap.get(database)) {
-            case 0: {
-                    return void handleFromInitialState(new State.Initial(database), version);
-                }
-            case 1: {
-                    void CommandMap.delete(database);
-                    void exports.ConfigMap.delete(database);
-                    return void IDBEventObserver.emit([
-                        database,
-                        event_2.IDBEventType.disconnect
-                    ], new event_2.IDBEvent(event_2.IDBEventType.disconnect, database));
-                }
-            case 2: {
-                    void CommandMap.delete(database);
-                    void exports.ConfigMap.delete(database);
-                    return void IDBEventObserver.emit([
-                        database,
-                        event_2.IDBEventType.disconnect
-                    ], new event_2.IDBEvent(event_2.IDBEventType.disconnect, database));
-                }
+            case 0:
+                return void handleFromInitialState(new State.Initial(database), version);
+            case 1:
+                return void CommandMap.delete(database), void exports.ConfigMap.delete(database), void IDBEventObserver.emit([
+                    database,
+                    event_1.IDBEventType.disconnect
+                ], new event_1.IDBEvent(event_1.IDBEventType.disconnect, database));
+            case 2:
+                return void CommandMap.delete(database), void exports.ConfigMap.delete(database), void IDBEventObserver.emit([
+                    database,
+                    event_1.IDBEventType.disconnect
+                ], new event_1.IDBEvent(event_1.IDBEventType.disconnect, database));
             }
             throw new TypeError('LocalSocket: Invalid command ' + CommandMap.get(database) + '.');
         }
@@ -692,19 +611,19 @@ define('src/layer/infrastructure/indexeddb/api', [
     'src/layer/infrastructure/indexeddb/module/global',
     'src/layer/infrastructure/indexeddb/model/access',
     'src/layer/infrastructure/indexeddb/model/event'
-], function (require, exports, global_4, access_1, event_3) {
+], function (require, exports, global_2, access_1, event_2) {
     'use strict';
-    exports.indexedDB = global_4.indexedDB;
-    exports.IDBKeyRange = global_4.IDBKeyRange;
-    exports.IDBTransaction = global_4.IDBTransaction;
-    exports.IDBCursorDirection = global_4.IDBCursorDirection;
+    exports.indexedDB = global_2.indexedDB;
+    exports.IDBKeyRange = global_2.IDBKeyRange;
+    exports.IDBTransactionMode = global_2.IDBTransactionMode;
+    exports.IDBCursorDirection = global_2.IDBCursorDirection;
     exports.open = access_1.open;
     exports.listen = access_1.listen;
     exports.close = access_1.close;
     exports.destroy = access_1.destroy;
     exports.event = access_1.event;
-    exports.IDBEvent = event_3.IDBEvent;
-    exports.IDBEventType = event_3.IDBEventType;
+    exports.IDBEvent = event_2.IDBEvent;
+    exports.IDBEventType = event_2.IDBEventType;
 });
 define('src/layer/data/constraint/types', [
     'require',
@@ -720,7 +639,7 @@ define('src/layer/data/schema/event', [
     'require',
     'exports',
     'spica'
-], function (require, exports, spica_5) {
+], function (require, exports, spica_2) {
     'use strict';
     var EventRecordFields;
     (function (EventRecordFields) {
@@ -733,7 +652,7 @@ define('src/layer/data/schema/event', [
         EventRecordFields.surrogateKeyDateField = 'key+date';
     }(EventRecordFields = exports.EventRecordFields || (exports.EventRecordFields = {})));
     var EventRecord = function () {
-        function EventRecord(id, key, value, date, type) {
+        function EventRecord(key, value, date, type) {
             if (typeof this.id === 'number' && this.id > 0 === false || this.id !== void 0)
                 throw new TypeError('LocalSocket: EventRecord: Invalid event id: ' + this.id);
             this.type = type;
@@ -759,12 +678,12 @@ define('src/layer/data/schema/event', [
                 throw new TypeError('LocalSocket: EventRecord: Invalid event attr with ' + this.type + ': ' + this.attr);
             switch (type) {
             case exports.EventType.put: {
-                    this.value = value = spica_5.clone(new EventValue(), (_a = {}, _a[this.attr] = value[this.attr], _a));
+                    this.value = value = spica_2.clone(new EventValue(), (_a = {}, _a[this.attr] = value[this.attr], _a));
                     void Object.freeze(this.value);
                     return;
                 }
             case exports.EventType.snapshot: {
-                    this.value = value = spica_5.clone(new EventValue(), value);
+                    this.value = value = spica_2.clone(new EventValue(), value);
                     void Object.freeze(this.value);
                     return;
                 }
@@ -789,9 +708,11 @@ define('src/layer/data/schema/event', [
             if (date === void 0) {
                 date = Date.now();
             }
-            _super.call(this, void 0, key, value, date, type);
+            _super.call(this, key, value, date, type);
+            this.EVENT_RECORD;
             if (this.id !== void 0 || 'id' in this)
                 throw new TypeError('LocalSocket: UnsavedEventRecord: Invalid event id: ' + this.id);
+            void Object.freeze(this);
         }
         return UnsavedEventRecord;
     }(EventRecord);
@@ -799,8 +720,9 @@ define('src/layer/data/schema/event', [
     var SavedEventRecord = function (_super) {
         __extends(SavedEventRecord, _super);
         function SavedEventRecord(id, key, value, type, date) {
-            _super.call(this, id, key, value, date, type);
+            _super.call(this, key, value, date, type);
             this.id = id;
+            this.EVENT_RECORD;
             if (this.id > 0 === false)
                 throw new TypeError('LocalSocket: SavedEventRecord: Invalid event id: ' + this.id);
             void Object.freeze(this);
@@ -829,67 +751,71 @@ define('src/layer/data/store/event', [
     'src/layer/data/schema/event',
     'src/layer/data/schema/event',
     'src/lib/noop'
-], function (require, exports, spica_6, api_1, types_1, event_4, Schema, noop_2) {
+], function (require, exports, spica_3, api_1, types_1, event_3, Schema, noop_2) {
     'use strict';
-    exports.UnsavedEventRecord = event_4.UnsavedEventRecord;
-    exports.SavedEventRecord = event_4.SavedEventRecord;
+    exports.UnsavedEventRecord = event_3.UnsavedEventRecord;
+    exports.SavedEventRecord = event_3.SavedEventRecord;
     var EventStore = function () {
         function EventStore(database, name) {
             var _this = this;
             this.database = database;
             this.name = name;
-            this.cache = new (function (_super) {
+            this.memory = new (function (_super) {
                 __extends(class_1, _super);
                 function class_1() {
                     _super.apply(this, arguments);
                 }
                 return class_1;
-            }(spica_6.Supervisor))();
+            }(spica_3.Supervisor))();
             this.events = {
-                load: new spica_6.Observable(),
-                save: new spica_6.Observable(),
-                loss: new spica_6.Observable()
+                load: new spica_3.Observable(),
+                save: new spica_3.Observable(),
+                loss: new spica_3.Observable()
             };
-            this.events_ = { access: new spica_6.Observable() };
+            this.events_ = { access: new spica_3.Observable() };
             this.syncState = new Map();
-            this.syncWaits = new spica_6.Observable();
-            this.snapshotCycle = 10;
-            this.snapshotJobState = new Map();
-            var lastNotifiedIdSet = new Map();
-            var lastUpdatedDateSet = new Map();
-            void this.cache.events.exec.monitor([], function (_a) {
+            this.syncWaits = new spica_3.Observable();
+            this.snapshotCycle = 9;
+            var states = new (function () {
+                function class_2() {
+                    this.id = new Map();
+                    this.date = new Map();
+                }
+                class_2.prototype.update = function (event) {
+                    void this.id.set(event.key, types_1.IdNumber(Math.max(event.id || 0, this.id.get(event.key) || 0)));
+                    void this.date.set(event.key, Math.max(event.date, this.date.get(event.key) || 0));
+                };
+                return class_2;
+            }())();
+            void this.memory.events.exec.monitor([], function (_a) {
                 var sub = _a[1];
                 var event = sub(void 0);
-                if (event instanceof event_4.SavedEventRecord === false)
-                    return void 0;
-                var isNewMaxId = function () {
-                    return !lastNotifiedIdSet.has(event.key) || event.id > lastNotifiedIdSet.get(event.key);
-                };
-                var isNewMaxDate = function () {
-                    return !lastUpdatedDateSet.has(event.key) || event.date > lastUpdatedDateSet.get(event.key) && event.date > _this.cache.cast([event.key], void 0).filter(function (e) {
-                        return e !== event;
-                    }).reduce(function (date, e) {
-                        return e.date > date ? e.date : date;
-                    }, 0);
-                };
-                if (isNewMaxId() && isNewMaxDate()) {
-                    void lastNotifiedIdSet.set(event.key, event.id);
-                    void lastUpdatedDateSet.set(event.key, event.date);
-                    void _this.events.load.emit([
-                        event.key,
-                        event.attr,
-                        event.type
-                    ], new EventStore.Event(event.type, event.id, event.key, event.attr));
-                }
+                if (event instanceof event_3.UnsavedEventRecord)
+                    return;
+                if (event.date <= states.date.get(event.key) && event.id <= states.id.get(event.key))
+                    return;
+                void _this.events.load.emit([
+                    event.key,
+                    event.attr,
+                    event.type
+                ], new EventStore.Event(event.type, event.id, event.key, event.attr, event.date));
             });
-            void this.cache.events.exec.monitor([], function (_a) {
+            void this.memory.events.exec.monitor([], function (_a) {
                 var sub = _a[1];
                 var event = sub(void 0);
-                if (!lastNotifiedIdSet.has(event.key) || lastNotifiedIdSet.get(event.key) < event.id) {
-                    void lastNotifiedIdSet.set(event.key, event.id);
-                }
-                if (!lastUpdatedDateSet.has(event.key) || lastUpdatedDateSet.get(event.key) < event.date) {
-                    void lastUpdatedDateSet.set(event.key, event.date);
+                void states.update(new EventStore.Event(event.type, event.id || types_1.IdNumber(0), event.key, event.attr, event.date));
+            });
+            void this.events.load.monitor([], function (event) {
+                return void states.update(event);
+            });
+            void this.events.save.monitor([], function (event) {
+                return void states.update(event);
+            });
+            void this.events.save.monitor([], function (event) {
+                switch (event.type) {
+                case EventStore.EventType.delete:
+                case EventStore.EventType.snapshot:
+                    void _this.clean(Infinity, event.key);
                 }
             });
         }
@@ -897,42 +823,52 @@ define('src/layer/data/store/event', [
             return {
                 make: function (db) {
                     var store = db.objectStoreNames.contains(name) ? db.transaction(name).objectStore(name) : db.createObjectStore(name, {
-                        keyPath: event_4.EventRecordFields.id,
+                        keyPath: event_3.EventRecordFields.id,
                         autoIncrement: true
                     });
-                    if (!store.indexNames.contains(event_4.EventRecordFields.id)) {
-                        void store.createIndex(event_4.EventRecordFields.id, event_4.EventRecordFields.id, { unique: true });
+                    if (!store.indexNames.contains(event_3.EventRecordFields.id)) {
+                        void store.createIndex(event_3.EventRecordFields.id, event_3.EventRecordFields.id, { unique: true });
                     }
-                    if (!store.indexNames.contains(event_4.EventRecordFields.key)) {
-                        void store.createIndex(event_4.EventRecordFields.key, event_4.EventRecordFields.key);
+                    if (!store.indexNames.contains(event_3.EventRecordFields.key)) {
+                        void store.createIndex(event_3.EventRecordFields.key, event_3.EventRecordFields.key);
                     }
-                    if (!store.indexNames.contains(event_4.EventRecordFields.type)) {
-                        void store.createIndex(event_4.EventRecordFields.type, event_4.EventRecordFields.type);
+                    if (!store.indexNames.contains(event_3.EventRecordFields.type)) {
+                        void store.createIndex(event_3.EventRecordFields.type, event_3.EventRecordFields.type);
                     }
-                    if (!store.indexNames.contains(event_4.EventRecordFields.attr)) {
-                        void store.createIndex(event_4.EventRecordFields.attr, event_4.EventRecordFields.attr);
+                    if (!store.indexNames.contains(event_3.EventRecordFields.attr)) {
+                        void store.createIndex(event_3.EventRecordFields.attr, event_3.EventRecordFields.attr);
                     }
-                    if (!store.indexNames.contains(event_4.EventRecordFields.value)) {
-                        void store.createIndex(event_4.EventRecordFields.value, event_4.EventRecordFields.value);
+                    if (!store.indexNames.contains(event_3.EventRecordFields.value)) {
+                        void store.createIndex(event_3.EventRecordFields.value, event_3.EventRecordFields.value);
                     }
-                    if (!store.indexNames.contains(event_4.EventRecordFields.date)) {
-                        void store.createIndex(event_4.EventRecordFields.date, event_4.EventRecordFields.date);
+                    if (!store.indexNames.contains(event_3.EventRecordFields.date)) {
+                        void store.createIndex(event_3.EventRecordFields.date, event_3.EventRecordFields.date);
                     }
-                    if (!store.indexNames.contains(event_4.EventRecordFields.surrogateKeyDateField)) {
-                        void store.createIndex(event_4.EventRecordFields.surrogateKeyDateField, [
-                            event_4.EventRecordFields.key,
-                            event_4.EventRecordFields.date
+                    if (!store.indexNames.contains(event_3.EventRecordFields.surrogateKeyDateField)) {
+                        void store.createIndex(event_3.EventRecordFields.surrogateKeyDateField, [
+                            event_3.EventRecordFields.key,
+                            event_3.EventRecordFields.date
                         ]);
                     }
                     return true;
                 },
                 verify: function (db) {
-                    return db.objectStoreNames.contains(name) && db.transaction(name).objectStore(name).indexNames.contains(event_4.EventRecordFields.id) && db.transaction(name).objectStore(name).indexNames.contains(event_4.EventRecordFields.key) && db.transaction(name).objectStore(name).indexNames.contains(event_4.EventRecordFields.type) && db.transaction(name).objectStore(name).indexNames.contains(event_4.EventRecordFields.attr) && db.transaction(name).objectStore(name).indexNames.contains(event_4.EventRecordFields.value) && db.transaction(name).objectStore(name).indexNames.contains(event_4.EventRecordFields.date) && db.transaction(name).objectStore(name).indexNames.contains(event_4.EventRecordFields.surrogateKeyDateField);
+                    return db.objectStoreNames.contains(name) && db.transaction(name).objectStore(name).indexNames.contains(event_3.EventRecordFields.id) && db.transaction(name).objectStore(name).indexNames.contains(event_3.EventRecordFields.key) && db.transaction(name).objectStore(name).indexNames.contains(event_3.EventRecordFields.type) && db.transaction(name).objectStore(name).indexNames.contains(event_3.EventRecordFields.attr) && db.transaction(name).objectStore(name).indexNames.contains(event_3.EventRecordFields.value) && db.transaction(name).objectStore(name).indexNames.contains(event_3.EventRecordFields.date) && db.transaction(name).objectStore(name).indexNames.contains(event_3.EventRecordFields.surrogateKeyDateField);
                 },
                 destroy: function () {
                     return true;
                 }
             };
+        };
+        EventStore.prototype.update = function (key, attr, id) {
+            return typeof id === 'string' && typeof attr === 'string' ? void this.memory.cast([
+                key,
+                attr,
+                id
+            ], void 0) : typeof attr === 'string' ? void this.memory.cast([
+                key,
+                attr
+            ], void 0) : void this.memory.cast([key], void 0);
         };
         EventStore.prototype.sync = function (keys, cb, timeout) {
             var _this = this;
@@ -944,36 +880,34 @@ define('src/layer/data/store/event', [
             }
             return void keys.map(function (key) {
                 switch (_this.syncState.get(key)) {
-                case true: {
-                        return new Promise(function (resolve) {
+                case true:
+                    return new Promise(function (resolve) {
+                        return void resolve([
+                            key,
+                            null
+                        ]);
+                    });
+                case false:
+                    return cb === noop_2.noop ? new Promise(function (resolve) {
+                        return void resolve([
+                            key,
+                            null
+                        ]);
+                    }) : new Promise(function (resolve) {
+                        return void (timeout > 0 ? void (void _this.get(key), void setTimeout(function () {
+                            return resolve([
+                                key,
+                                new Error()
+                            ]);
+                        })) : void 0, void _this.syncWaits.once([key], function (err) {
                             return void resolve([
                                 key,
-                                null
+                                err
                             ]);
-                        });
-                    }
-                case false: {
-                        return cb === noop_2.noop ? new Promise(function (resolve) {
-                            return void resolve([
-                                key,
-                                null
-                            ]);
-                        }) : new Promise(function (resolve) {
-                            return void (timeout > 0 ? void (void _this.get(key), void setTimeout(function () {
-                                return resolve([
-                                    key,
-                                    new Error()
-                                ]);
-                            })) : void 0, void _this.syncWaits.once([key], function (err) {
-                                return void resolve([
-                                    key,
-                                    err
-                                ]);
-                            }));
-                        });
-                    }
+                        }));
+                    });
                 default: {
-                        void _this.update(key);
+                        void _this.fetch(key);
                         return cb === noop_2.noop ? new Promise(function (resolve) {
                             return void resolve([
                                 key,
@@ -1008,232 +942,213 @@ define('src/layer/data/store/event', [
                 }));
             });
         };
-        EventStore.prototype.update = function (key) {
+        EventStore.prototype.fetch = function (key) {
             var _this = this;
-            var latest = this.meta(key);
             var savedEvents = [];
             void this.syncState.set(key, this.syncState.get(key) === true);
-            return void this.cursor(key, event_4.EventRecordFields.key, api_1.IDBCursorDirection.prev, api_1.IDBTransaction.readonly, function (cursor, err) {
+            return void this.cursor(key, event_3.EventRecordFields.key, api_1.IDBCursorDirection.prev, api_1.IDBTransactionMode.readonly, function (cursor, err) {
                 if (err)
                     return void _this.syncWaits.emit([key], err);
-                if (!cursor || cursor.value.id <= latest.id) {
-                    if (compose(savedEvents).reduce(function (e) {
+                if (!cursor || cursor.value.date < _this.meta(key).date) {
+                    void Array.from(savedEvents.reduceRight(function (acc, e) {
+                        return acc.length === 0 || acc[0].type === EventStore.EventType.put ? spica_3.concat(acc, [e]) : acc;
+                    }, []).reduceRight(function (dict, e) {
+                        return dict.set(e.attr, e);
+                    }, new Map()).values()).sort(function (a, b) {
+                        return a.date - b.date || a.id - b.id;
+                    }).forEach(function (e) {
+                        void _this.memory.register([
+                            e.key,
+                            e.attr,
+                            spica_3.sqid(e.id)
+                        ], function () {
                             return e;
-                        }).type === EventStore.EventType.delete) {
-                        void _this.clean(Infinity, key);
-                    } else {
-                        void savedEvents.reduceRight(function (acc, e) {
-                            return acc.some(function (_a) {
-                                var attr = _a.attr;
-                                return attr === e.attr;
-                            }) ? acc : spica_6.concat([e], acc);
-                        }, []).reduce(function (acc, e) {
-                            switch (e.type) {
-                            case EventStore.EventType.put: {
-                                    return spica_6.concat([e], acc);
-                                }
-                            default: {
-                                    return [e];
-                                }
-                            }
-                        }, []).reduce(function (_, e) {
-                            void _this.cache.terminate([
-                                e.key,
-                                e.attr,
-                                spica_6.sqid(e.id)
-                            ]);
-                            void _this.cache.register([
-                                e.key,
-                                e.attr,
-                                spica_6.sqid(e.id)
-                            ], function (_) {
-                                return e;
-                            });
-                        }, void 0);
-                        void _this.cache.cast([key], void 0);
-                    }
+                        });
+                    });
                     void _this.syncState.set(key, true);
-                    void _this.syncWaits.emit([key], void 0);
-                    if (savedEvents.length > _this.snapshotCycle) {
+                    void _this.syncWaits.emit([key], null);
+                    void _this.update(key);
+                    if (savedEvents.length >= _this.snapshotCycle) {
                         void _this.snapshot(key);
                     }
                     return;
+                } else {
+                    var event_4 = cursor.value;
+                    if (_this.memory.refs([
+                            event_4.key,
+                            event_4.attr,
+                            spica_3.sqid(event_4.id)
+                        ]).length > 0)
+                        return;
+                    void savedEvents.unshift(new event_3.SavedEventRecord(event_4.id, event_4.key, event_4.value, event_4.type, event_4.date));
+                    if (event_4.type !== EventStore.EventType.put)
+                        return;
+                    return void cursor.continue();
                 }
-                var event = cursor.value;
-                if (_this.cache.refs([
-                        event.key,
-                        event.attr,
-                        spica_6.sqid(event.id)
-                    ]).length > 0)
-                    return;
-                void savedEvents.unshift(new event_4.SavedEventRecord(event.id, event.key, event.value, event.type, event.date));
-                if (event.type !== EventStore.EventType.put)
-                    return;
-                void cursor.continue();
             });
         };
+        EventStore.prototype.keys = function () {
+            return this.memory.cast([], void 0).reduce(function (keys, e) {
+                return keys.length === 0 || keys[keys.length - 1] !== e.key ? spica_3.concat(keys, [e.key]) : keys;
+            }, []).sort();
+        };
         EventStore.prototype.meta = function (key) {
-            var events = this.cache.cast([key], void 0);
-            return Object.freeze(spica_6.clone({
+            var events = this.memory.cast([key], void 0);
+            return Object.freeze({
+                key: key,
                 id: events.reduce(function (id, e) {
                     return e.id > id ? e.id : id;
                 }, 0),
-                date: 0
-            }, compose(events).reduce(function (e) {
-                return e;
-            }), { key: key }));
-        };
-        EventStore.prototype.keys = function () {
-            return this.cache.cast([], void 0).reduce(function (keys, e) {
-                return keys.length === 0 || keys[keys.length - 1] !== e.key ? spica_6.concat(keys, [e.key]) : keys;
-            }, []).sort();
+                date: events.reduce(function (date, e) {
+                    return e.date > date ? e.date : date;
+                }, 0)
+            });
         };
         EventStore.prototype.has = function (key) {
-            return compose(this.cache.cast([key], void 0)).reduce(function (e) {
-                return e;
-            }).type !== EventStore.EventType.delete;
+            return compose(key, this.memory.cast([key], void 0)).type !== EventStore.EventType.delete;
         };
         EventStore.prototype.get = function (key) {
             void this.sync([key]);
             void this.events_.access.emit([key], new InternalEvent(InternalEventType.query, types_1.IdNumber(0), key, ''));
-            return compose(this.cache.cast([key], void 0)).reduce(function (e) {
-                return e;
-            }).value;
+            return compose(key, this.memory.cast([key], void 0)).value;
         };
-        EventStore.prototype.add = function (event) {
+        EventStore.prototype.add = function (event, tx) {
             var _this = this;
             void this.events_.access.emit([
                 event.key,
                 event.attr,
                 event.type
             ], new InternalEvent(event.type, types_1.IdNumber(0), event.key, event.attr));
-            if (event instanceof event_4.UnsavedEventRecord === false)
+            if (!(event instanceof event_3.UnsavedEventRecord))
                 throw new Error('LocalSocket: Cannot add a saved event: ' + JSON.stringify(event));
             void this.sync([event.key]);
-            var id = spica_6.sqid();
-            void this.cache.register([
-                event.key,
-                event.attr,
-                spica_6.sqid(0),
-                id
-            ], function (_) {
-                return event;
-            });
-            void this.cache.cast([
-                event.key,
-                event.attr,
-                spica_6.sqid(0),
-                id
-            ], void 0);
-            return void api_1.listen(this.database)(function (db) {
-                if (_this.cache.refs([
+            switch (event.type) {
+            case EventStore.EventType.put: {
+                    void this.memory.terminate([
                         event.key,
                         event.attr,
-                        spica_6.sqid(0)
-                    ]).length === 0)
-                    return;
-                var tx = db.transaction(_this.name, api_1.IDBTransaction.readwrite);
-                var req = tx.objectStore(_this.name).add(event);
-                tx.oncomplete = function (_) {
-                    var savedEvent = new event_4.SavedEventRecord(types_1.IdNumber(req.result), event.key, event.value, event.type, event.date);
-                    void _this.cache.terminate([
-                        savedEvent.key,
-                        savedEvent.attr,
-                        spica_6.sqid(0),
-                        id
+                        spica_3.sqid(0)
                     ]);
-                    void _this.cache.register([
-                        savedEvent.key,
-                        savedEvent.attr,
-                        spica_6.sqid(savedEvent.id)
-                    ], function (_) {
-                        return savedEvent;
+                    break;
+                }
+            case EventStore.EventType.delete:
+            case EventStore.EventType.snapshot: {
+                    void this.memory.refs([event.key]).filter(function (_a) {
+                        var _b = _a[0], id = _b[2];
+                        return id === spica_3.sqid(0);
+                    }).reduce(function (m, _a) {
+                        var _b = _a[0], key = _b[0], attr = _b[1], id = _b[2];
+                        return m.set(key, [
+                            key,
+                            attr,
+                            id
+                        ]);
+                    }, new Map()).forEach(function (ns) {
+                        return void _this.memory.terminate(ns);
                     });
-                    void _this.events.save.emit([
-                        savedEvent.key,
-                        savedEvent.attr,
-                        savedEvent.type
-                    ], new EventStore.Event(savedEvent.type, savedEvent.id, savedEvent.key, savedEvent.attr));
-                    void _this.cache.cast([
-                        savedEvent.key,
-                        savedEvent.attr,
-                        spica_6.sqid(savedEvent.id)
-                    ], void 0);
-                    if (_this.cache.refs([event.key]).filter(function (_a) {
-                            var sub = _a[1];
-                            return sub(void 0) instanceof event_4.SavedEventRecord;
-                        }).length > _this.snapshotCycle) {
-                        void _this.snapshot(event.key);
-                    } else if (savedEvent.type === EventStore.EventType.delete) {
-                        void _this.clean(Infinity, savedEvent.key);
-                    }
-                };
-                tx.onerror = tx.onabort = function (_) {
-                    void setTimeout(function () {
-                        if (_this.cache.refs([
-                                event.key,
-                                event.attr,
-                                spica_6.sqid(0),
-                                id
-                            ]).length === 0)
-                            return;
-                        void _this.events.loss.emit([
+                    break;
+                }
+            }
+            var terminate = this.memory.register([
+                event.key,
+                event.attr,
+                spica_3.sqid(0),
+                spica_3.sqid()
+            ], function () {
+                return event;
+            });
+            void this.update(event.key, event.attr, spica_3.sqid(0));
+            return void new Promise(function (resolve, reject) {
+                void setTimeout(reject, 1000);
+                var cont = function (tx) {
+                    var active = function () {
+                        return _this.memory.refs([
                             event.key,
                             event.attr,
-                            event.type
-                        ], new EventStore.Event(event.type, event.id, event.key, event.attr));
-                    }, 1000);
+                            spica_3.sqid(0)
+                        ]).reduce(function (acc, _a) {
+                            var s = _a[1];
+                            return acc || s(void 0) === event;
+                        }, false);
+                    };
+                    if (!active())
+                        return;
+                    var req = tx.objectStore(_this.name).add(Object.assign({}, event));
+                    tx.oncomplete = function () {
+                        void terminate();
+                        var savedEvent = new event_3.SavedEventRecord(types_1.IdNumber(req.result), event.key, event.value, event.type, event.date);
+                        void _this.memory.register([
+                            savedEvent.key,
+                            savedEvent.attr,
+                            spica_3.sqid(savedEvent.id)
+                        ], function () {
+                            return savedEvent;
+                        });
+                        void _this.events.save.emit([
+                            savedEvent.key,
+                            savedEvent.attr,
+                            savedEvent.type
+                        ], new EventStore.Event(savedEvent.type, savedEvent.id, savedEvent.key, savedEvent.attr, event.date));
+                        void _this.update(savedEvent.key, savedEvent.attr, spica_3.sqid(savedEvent.id));
+                        void resolve();
+                        if (_this.memory.refs([savedEvent.key]).filter(function (_a) {
+                                var sub = _a[1];
+                                return sub(void 0) instanceof event_3.SavedEventRecord;
+                            }).length >= _this.snapshotCycle) {
+                            void _this.snapshot(savedEvent.key);
+                        }
+                    };
+                    tx.onerror = tx.onabort = function () {
+                        return active() ? void reject() : void resolve();
+                    };
                 };
+                tx ? void cont(tx) : void api_1.listen(_this.database)(function (db) {
+                    return void cont(db.transaction(_this.name, api_1.IDBTransactionMode.readwrite));
+                });
+            }).catch(function () {
+                return void _this.events.loss.emit([
+                    event.key,
+                    event.attr,
+                    event.type
+                ], new EventStore.Event(event.type, types_1.IdNumber(0), event.key, event.attr, event.date));
             });
         };
         EventStore.prototype.delete = function (key) {
-            return void this.add(new event_4.UnsavedEventRecord(key, new EventStore.Value(), EventStore.EventType.delete));
+            return void this.add(new event_3.UnsavedEventRecord(key, new EventStore.Value(), EventStore.EventType.delete));
         };
         EventStore.prototype.snapshot = function (key) {
             var _this = this;
-            if (this.snapshotJobState.get(key))
-                return;
-            void this.snapshotJobState.set(key, true);
             return void api_1.listen(this.database)(function (db) {
-                var tx = db.transaction(_this.name, api_1.IDBTransaction.readwrite);
+                if (!_this.syncState.get(key))
+                    return;
+                var tx = db.transaction(_this.name, api_1.IDBTransactionMode.readwrite);
                 var store = tx.objectStore(_this.name);
-                var req = store.index(event_4.EventRecordFields.key).openCursor(key, api_1.IDBCursorDirection.prev);
+                var req = store.index(event_3.EventRecordFields.key).openCursor(key, api_1.IDBCursorDirection.prev);
                 var savedEvents = [];
-                req.onsuccess = function (_) {
+                req.onsuccess = function () {
                     var cursor = req.result;
                     if (cursor) {
                         var event_5 = cursor.value;
-                        void savedEvents.unshift(new event_4.SavedEventRecord(event_5.id, event_5.key, event_5.value, event_5.type, event_5.date));
+                        void savedEvents.unshift(new event_3.SavedEventRecord(event_5.id, event_5.key, event_5.value, event_5.type, event_5.date));
                     }
                     if (!cursor || cursor.value.type !== EventStore.EventType.put) {
-                        if (savedEvents.length < _this.snapshotCycle)
+                        if (savedEvents.length === 0)
                             return;
-                        void _this.clean(Infinity, key);
-                        var composedEvent = compose(savedEvents).reduce(function (e) {
-                            return e;
-                        });
-                        if (composedEvent instanceof event_4.SavedEventRecord)
+                        var composedEvent = compose(key, savedEvents);
+                        if (composedEvent instanceof event_3.SavedEventRecord)
                             return;
                         switch (composedEvent.type) {
-                        case EventStore.EventType.snapshot: {
-                                return void store.add(new event_4.UnsavedEventRecord(composedEvent.key, composedEvent.value, composedEvent.type, savedEvents.reduce(function (date, e) {
-                                    return e.date > date ? e.date : date;
-                                }, 0)));
-                            }
-                        case EventStore.EventType.delete: {
-                                return void 0;
-                            }
+                        case EventStore.EventType.snapshot:
+                            return void _this.add(new event_3.UnsavedEventRecord(composedEvent.key, composedEvent.value, composedEvent.type, savedEvents.reduce(function (date, e) {
+                                return e.date > date ? e.date : date;
+                            }, 0)), tx);
+                        case EventStore.EventType.delete:
+                            return;
                         }
                         throw new TypeError('LocalSocket: Invalid event type: ' + composedEvent.type);
+                    } else {
+                        return void cursor.continue();
                     }
-                    void cursor.continue();
-                };
-                tx.oncomplete = function (_) {
-                    void _this.snapshotJobState.set(key, false);
-                    void _this.update(key);
-                };
-                tx.onerror = tx.onabort = function (_) {
-                    void _this.snapshotJobState.set(key, false);
                 };
             });
         };
@@ -1250,39 +1165,41 @@ define('src/layer/data/store/event', [
             ], [
                 key,
                 until
-            ]) : api_1.IDBKeyRange.upperBound(until), key ? event_4.EventRecordFields.surrogateKeyDateField : event_4.EventRecordFields.date, api_1.IDBCursorDirection.prev, api_1.IDBTransaction.readwrite, function (cursor, err) {
-                if (!cursor)
+            ]) : api_1.IDBKeyRange.upperBound(until), key ? event_3.EventRecordFields.surrogateKeyDateField : event_3.EventRecordFields.date, api_1.IDBCursorDirection.prev, api_1.IDBTransactionMode.readwrite, function (cursor) {
+                if (!cursor) {
                     return void removedEvents.reduce(function (_, event) {
-                        return void _this.cache.terminate([
+                        return void _this.memory.terminate([
                             event.key,
                             event.attr,
-                            spica_6.sqid(event.id)
+                            spica_3.sqid(event.id)
                         ]);
                     }, void 0);
-                var event = cursor.value;
-                switch (event.type) {
-                case EventStore.EventType.put: {
-                        void cleanStateMap.set(event.key, cleanStateMap.get(event.key) || false);
-                        break;
-                    }
-                case EventStore.EventType.snapshot: {
-                        if (!cleanStateMap.get(event.key)) {
-                            void cleanStateMap.set(event.key, true);
-                            void cursor.continue();
-                            return;
+                } else {
+                    var event_6 = cursor.value;
+                    switch (event_6.type) {
+                    case EventStore.EventType.put: {
+                            void cleanStateMap.set(event_6.key, cleanStateMap.get(event_6.key) || false);
+                            break;
                         }
-                        break;
+                    case EventStore.EventType.snapshot: {
+                            if (!cleanStateMap.get(event_6.key)) {
+                                void cleanStateMap.set(event_6.key, true);
+                                void cursor.continue();
+                                return;
+                            }
+                            break;
+                        }
+                    case EventStore.EventType.delete: {
+                            void cleanStateMap.set(event_6.key, true);
+                            break;
+                        }
                     }
-                case EventStore.EventType.delete: {
-                        void cleanStateMap.set(event.key, true);
-                        break;
+                    if (cleanStateMap.get(event_6.key)) {
+                        void cursor.delete();
+                        void removedEvents.unshift(event_6);
                     }
+                    return void cursor.continue();
                 }
-                if (cleanStateMap.get(event.key)) {
-                    void cursor.delete();
-                    void removedEvents.unshift(event);
-                }
-                void cursor.continue();
             });
         };
         EventStore.prototype.cursor = function (query, index, direction, mode, cb) {
@@ -1290,19 +1207,19 @@ define('src/layer/data/store/event', [
             return void api_1.listen(this.database)(function (db) {
                 var tx = db.transaction(_this.name, mode);
                 var req = index ? tx.objectStore(_this.name).index(index).openCursor(query, direction) : tx.objectStore(_this.name).openCursor(query, direction);
-                req.onsuccess = function (_) {
+                req.onsuccess = function () {
                     return req.result && cb(req.result, req.error);
                 };
-                tx.oncomplete = function (_) {
+                tx.oncomplete = function () {
                     return void cb(null, tx.error);
                 };
                 ;
-                tx.onerror = tx.onabort = function (_) {
+                tx.onerror = tx.onabort = function () {
                     return void cb(null, tx.error);
                 };
             });
         };
-        EventStore.fields = Object.freeze(event_4.EventRecordFields);
+        EventStore.fields = Object.freeze(event_3.EventRecordFields);
         return EventStore;
     }();
     exports.EventStore = EventStore;
@@ -1310,11 +1227,12 @@ define('src/layer/data/store/event', [
     (function (EventStore) {
         EventStore.EventType = Schema.EventType;
         var Event = function () {
-            function Event(type, id, key, attr) {
+            function Event(type, id, key, attr, date) {
                 this.type = type;
                 this.id = id;
                 this.key = key;
                 this.attr = attr;
+                this.date = date;
                 void Object.freeze(this);
             }
             return Event;
@@ -1326,7 +1244,7 @@ define('src/layer/data/store/event', [
                 _super.apply(this, arguments);
             }
             return Record;
-        }(event_4.UnsavedEventRecord);
+        }(event_3.UnsavedEventRecord);
         EventStore.Record = Record;
         var Value = function (_super) {
             __extends(Value, _super);
@@ -1353,9 +1271,11 @@ define('src/layer/data/store/event', [
         }
         return InternalEvent;
     }();
-    function compose(events) {
+    function compose(key, events) {
         return group(events).map(function (events) {
-            return events.reduceRight(compose, new event_4.UnsavedEventRecord('', new EventStore.Value(), EventStore.EventType.delete, 0));
+            return events.reduceRight(compose, new event_3.UnsavedEventRecord(key, new EventStore.Value(), EventStore.EventType.delete, 0));
+        }).reduce(function (e) {
+            return e;
         });
         function group(events) {
             return events.map(function (e, i) {
@@ -1366,32 +1286,29 @@ define('src/layer/data/store/event', [
             }).sort(function (_a, _b) {
                 var a = _a[0], ai = _a[1];
                 var b = _b[0], bi = _b[1];
-                return indexedDB.cmp(a.key, b.key) || b.date - a.date || bi - ai;
+                return indexedDB.cmp(a.key, b.key) || b.date - a.date || b.id - a.id || bi - ai;
             }).reduceRight(function (_a, _b) {
                 var head = _a[0], tail = _a.slice(1);
                 var event = _b[0];
                 var prev = head[0];
                 if (!prev)
                     return [[event]];
-                return prev.key === event.key ? spica_6.concat([spica_6.concat([event], head)], tail) : spica_6.concat([[event]], spica_6.concat([head], tail));
+                return prev.key === event.key ? spica_3.concat([spica_3.concat([event], head)], tail) : spica_3.concat([[event]], spica_3.concat([head], tail));
             }, [[]]);
         }
         function compose(target, source) {
             switch (source.type) {
-            case EventStore.EventType.put: {
-                    return source.value[source.attr] !== void 0 ? new event_4.UnsavedEventRecord(source.key, spica_6.assign(new EventStore.Value(), target.value, source.value), EventStore.EventType.snapshot) : new event_4.UnsavedEventRecord(source.key, Object.keys(target.value).reduce(function (value, prop) {
-                        if (prop === source.attr)
-                            return value;
-                        value[prop] = target[prop];
+            case EventStore.EventType.put:
+                return source.value[source.attr] !== void 0 ? new event_3.UnsavedEventRecord(source.key, Object.assign(new EventStore.Value(), target.value, source.value), EventStore.EventType.snapshot) : new event_3.UnsavedEventRecord(source.key, Object.keys(target.value).reduce(function (value, prop) {
+                    if (prop === source.attr)
                         return value;
-                    }, new EventStore.Value()), EventStore.EventType.snapshot);
-                }
-            case EventStore.EventType.snapshot: {
-                    return source;
-                }
-            case EventStore.EventType.delete: {
-                    return source;
-                }
+                    value[prop] = target[prop];
+                    return value;
+                }, new EventStore.Value()), EventStore.EventType.snapshot);
+            case EventStore.EventType.snapshot:
+                return source;
+            case EventStore.EventType.delete:
+                return source;
             }
             throw new TypeError('LocalSocket: Invalid event type: ' + source);
         }
@@ -1402,7 +1319,7 @@ define('src/layer/domain/indexeddb/model/socket/data', [
     'require',
     'exports',
     'src/layer/data/store/event'
-], function (require, exports, event_6) {
+], function (require, exports, event_7) {
     'use strict';
     exports.STORE_NAME = 'data';
     var DataStore = function (_super) {
@@ -1412,21 +1329,21 @@ define('src/layer/domain/indexeddb/model/socket/data', [
             void Object.freeze(this);
         }
         DataStore.configure = function () {
-            return event_6.EventStore.configure(exports.STORE_NAME);
+            return event_7.EventStore.configure(exports.STORE_NAME);
         };
         return DataStore;
-    }(event_6.EventStore);
+    }(event_7.EventStore);
     exports.DataStore = DataStore;
     var DataStore;
     (function (DataStore) {
-        DataStore.EventType = event_6.EventStore.EventType;
+        DataStore.EventType = event_7.EventStore.EventType;
         var Event = function (_super) {
             __extends(Event, _super);
             function Event() {
                 _super.apply(this, arguments);
             }
             return Event;
-        }(event_6.EventStore.Event);
+        }(event_7.EventStore.Event);
         DataStore.Event = Event;
         var Record = function (_super) {
             __extends(Record, _super);
@@ -1434,7 +1351,7 @@ define('src/layer/domain/indexeddb/model/socket/data', [
                 _super.apply(this, arguments);
             }
             return Record;
-        }(event_6.EventStore.Record);
+        }(event_7.EventStore.Record);
         DataStore.Record = Record;
         var Value = function (_super) {
             __extends(Value, _super);
@@ -1442,7 +1359,7 @@ define('src/layer/domain/indexeddb/model/socket/data', [
                 _super.apply(this, arguments);
             }
             return Value;
-        }(event_6.EventStore.Value);
+        }(event_7.EventStore.Value);
         DataStore.Value = Value;
     }(DataStore = exports.DataStore || (exports.DataStore = {})));
 });
@@ -1452,7 +1369,7 @@ define('src/layer/data/store/key-value', [
     'spica',
     'src/layer/infrastructure/indexeddb/api',
     'src/lib/noop'
-], function (require, exports, spica_7, api_2, noop_3) {
+], function (require, exports, spica_4, api_2, noop_3) {
     'use strict';
     var KeyValueStore = function () {
         function KeyValueStore(database, name, index) {
@@ -1460,7 +1377,7 @@ define('src/layer/data/store/key-value', [
             this.name = name;
             this.index = index;
             this.cache = new Map();
-            this.events = { access: new spica_7.Observable() };
+            this.events = { access: new spica_4.Observable() };
             if (typeof index !== 'string')
                 throw new TypeError();
         }
@@ -1487,16 +1404,16 @@ define('src/layer/data/store/key-value', [
                 KeyValueStore.EventType.get
             ]);
             void api_2.listen(this.database)(function (db) {
-                var tx = db.transaction(_this.name, api_2.IDBTransaction.readonly);
+                var tx = db.transaction(_this.name, api_2.IDBTransactionMode.readonly);
                 var req = _this.index ? tx.objectStore(_this.name).index(_this.index).get(key) : tx.objectStore(_this.name).get(key);
                 var result;
-                req.onsuccess = function (_) {
+                req.onsuccess = function () {
                     return result = req.result !== void 0 && req.result !== null ? req.result : _this.cache.get(key);
                 };
-                tx.oncomplete = function (_) {
+                tx.oncomplete = function () {
                     return cb(result, tx.error);
                 };
-                tx.onerror = tx.onabort = function (_) {
+                tx.onerror = tx.onabort = function () {
                     return cb(void 0, tx.error);
                 };
             });
@@ -1521,9 +1438,9 @@ define('src/layer/data/store/key-value', [
             void api_2.listen(this.database)(function (db) {
                 if (!_this.cache.has(key))
                     return;
-                var tx = db.transaction(_this.name, api_2.IDBTransaction.readwrite);
-                var req = _this.index ? tx.objectStore(_this.name).put(_this.cache.get(key)) : tx.objectStore(_this.name).put(_this.cache.get(key), key);
-                tx.oncomplete = tx.onerror = tx.onabort = function (_) {
+                var tx = db.transaction(_this.name, api_2.IDBTransactionMode.readwrite);
+                _this.index ? tx.objectStore(_this.name).put(_this.cache.get(key)) : tx.objectStore(_this.name).put(_this.cache.get(key), key);
+                tx.oncomplete = tx.onerror = tx.onabort = function () {
                     return void cb(key, tx.error);
                 };
             });
@@ -1540,9 +1457,9 @@ define('src/layer/data/store/key-value', [
                 KeyValueStore.EventType.delete
             ]);
             void api_2.listen(this.database)(function (db) {
-                var tx = db.transaction(_this.name, api_2.IDBTransaction.readwrite);
-                var req = tx.objectStore(_this.name).delete(key);
-                tx.oncomplete = tx.onerror = tx.onabort = function (_) {
+                var tx = db.transaction(_this.name, api_2.IDBTransactionMode.readwrite);
+                void tx.objectStore(_this.name).delete(key);
+                tx.oncomplete = tx.onerror = tx.onabort = function () {
                     return void cb(tx.error);
                 };
             });
@@ -1552,14 +1469,14 @@ define('src/layer/data/store/key-value', [
             void api_2.listen(this.database)(function (db) {
                 var tx = db.transaction(_this.name, mode);
                 var req = index ? tx.objectStore(_this.name).index(index).openCursor(query, direction) : tx.objectStore(_this.name).openCursor(query, direction);
-                req.onsuccess = function (_) {
+                req.onsuccess = function () {
                     return req.result && cb(req.result, req.error);
                 };
-                tx.oncomplete = function (_) {
+                tx.oncomplete = function () {
                     return void cb(null, tx.error);
                 };
                 ;
-                tx.onerror = tx.onabort = function (_) {
+                tx.onerror = tx.onabort = function () {
                     return void cb(null, tx.error);
                 };
             });
@@ -1581,7 +1498,7 @@ define('src/layer/domain/indexeddb/model/socket/access', [
     'exports',
     'src/layer/data/store/key-value',
     'src/layer/data/store/event'
-], function (require, exports, key_value_1, event_7) {
+], function (require, exports, key_value_1, event_8) {
     'use strict';
     exports.STORE_NAME = 'access';
     var AccessStore = function (_super) {
@@ -1592,7 +1509,7 @@ define('src/layer/domain/indexeddb/model/socket/access', [
             void Object.freeze(this);
             void event.monitor([], function (_a) {
                 var key = _a.key, type = _a.type;
-                return type === event_7.EventStore.EventType.delete ? void _this.delete(key) : void _this.set(key, new AccessRecord(key, Date.now()));
+                return type === event_8.EventStore.EventType.delete ? void _this.delete(key) : void _this.set(key, new AccessRecord(key, Date.now()));
             });
         }
         AccessStore.configure = function () {
@@ -1639,7 +1556,7 @@ define('src/layer/domain/indexeddb/model/socket/expiry', [
     'src/layer/infrastructure/indexeddb/api',
     'src/layer/data/store/key-value',
     'src/layer/data/store/event'
-], function (require, exports, api_3, key_value_2, event_8) {
+], function (require, exports, api_3, key_value_2, event_9) {
     'use strict';
     exports.STORE_NAME = 'expiry';
     var ExpiryStore = function (_super) {
@@ -1657,16 +1574,14 @@ define('src/layer/domain/indexeddb/model/socket/expiry', [
                 scheduled = date;
                 timer = setTimeout(function () {
                     scheduled = Infinity;
-                    void _this.cursor(null, ExpiryStore.fields.expiry, api_3.IDBCursorDirection.next, api_3.IDBTransaction.readonly, function (cursor) {
+                    void _this.cursor(null, ExpiryStore.fields.expiry, api_3.IDBCursorDirection.next, api_3.IDBTransactionMode.readonly, function (cursor) {
                         if (!cursor)
                             return;
                         var record = cursor.value;
-                        if (record.expiry > Date.now()) {
-                            void schedule(record.expiry);
-                        } else {
-                            void store.delete(record.key);
-                            void cursor.continue();
-                        }
+                        if (record.expiry > Date.now())
+                            return void schedule(record.expiry);
+                        void store.delete(record.key);
+                        return void cursor.continue();
                     });
                 }, date - Date.now());
                 void api_3.event.once([
@@ -1679,14 +1594,15 @@ define('src/layer/domain/indexeddb/model/socket/expiry', [
             void schedule(Date.now());
             void data.events_.access.monitor([], function (_a) {
                 var key = _a.key, type = _a.type;
-                if (type === event_8.EventStore.EventType.delete) {
-                    void _this.delete(key);
-                } else {
+                switch (type) {
+                case event_9.EventStore.EventType.delete:
+                    return void _this.delete(key);
+                default:
                     if (!expiries.has(key))
                         return;
                     var expiry = Date.now() + expiries.get(key);
                     void _this.set(key, new ExpiryRecord(key, expiry));
-                    void schedule(expiry);
+                    return void schedule(expiry);
                 }
             });
         }
@@ -1737,7 +1653,7 @@ define('src/layer/domain/indexeddb/model/socket', [
     'src/layer/domain/indexeddb/model/socket/access',
     'src/layer/domain/indexeddb/model/socket/expiry',
     'src/lib/noop'
-], function (require, exports, spica_8, api_4, data_1, access_2, expiry_1, noop_4) {
+], function (require, exports, spica_5, api_4, data_1, access_2, expiry_1, noop_4) {
     'use strict';
     var SocketStore = function () {
         function SocketStore(database, destroy, expiry) {
@@ -1747,11 +1663,11 @@ define('src/layer/domain/indexeddb/model/socket', [
             }
             this.database = database;
             this.expiry = expiry;
-            this.uuid = spica_8.uuid();
+            this.uuid = spica_5.uuid();
             this.events = {
-                load: new spica_8.Observable(),
-                save: new spica_8.Observable(),
-                loss: new spica_8.Observable()
+                load: new spica_5.Observable(),
+                save: new spica_5.Observable(),
+                loss: new spica_5.Observable()
             };
             this.expiries = new Map();
             void api_4.open(database, {
@@ -1810,7 +1726,7 @@ define('src/layer/domain/indexeddb/model/socket', [
                 };
             }
             var keys = [];
-            return void this.schema.access.cursor(null, access_2.AccessStore.fields.date, api_4.IDBCursorDirection.prevunique, api_4.IDBTransaction.readonly, function (cursor, err) {
+            return void this.schema.access.cursor(null, access_2.AccessStore.fields.date, api_4.IDBCursorDirection.prevunique, api_4.IDBTransactionMode.readonly, function (cursor, err) {
                 if (!cursor)
                     return void cb(keys, err);
                 if (--limit < 0)
@@ -1819,13 +1735,16 @@ define('src/layer/domain/indexeddb/model/socket', [
                 void cursor.continue();
             });
         };
+        SocketStore.prototype.close = function () {
+            return void api_4.close(this.database);
+        };
         SocketStore.prototype.destroy = function () {
             void api_4.event.off([
                 this.database,
                 api_4.IDBEventType.destroy,
                 this.uuid
             ]);
-            return api_4.destroy(this.database);
+            return void api_4.destroy(this.database);
         };
         return SocketStore;
     }();
@@ -1896,19 +1815,75 @@ define('src/layer/domain/indexeddb/model/socket', [
         return Schema;
     }();
 });
+define('src/layer/infrastructure/webstorage/module/global', [
+    'require',
+    'exports',
+    'spica'
+], function (require, exports, spica_6) {
+    'use strict';
+    exports.supportWebStorage = function () {
+        try {
+            var key = 'localsocket#' + spica_6.uuid();
+            void self.sessionStorage.setItem(key, key);
+            if (key !== self.sessionStorage.getItem(key))
+                throw 1;
+            void self.sessionStorage.removeItem(key);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }();
+    exports.localStorage = exports.supportWebStorage ? self.localStorage : void 0;
+    exports.sessionStorage = exports.supportWebStorage ? self.sessionStorage : void 0;
+});
+define('src/layer/infrastructure/webstorage/model/event', [
+    'require',
+    'exports',
+    'spica',
+    'src/layer/infrastructure/webstorage/module/global'
+], function (require, exports, spica_7, global_3) {
+    'use strict';
+    var storageEvents = {
+        localStorage: new spica_7.Observable(),
+        sessionStorage: new spica_7.Observable()
+    };
+    exports.events = storageEvents;
+    void window.addEventListener('storage', function (event) {
+        switch (event.storageArea) {
+        case global_3.localStorage:
+            return void storageEvents.localStorage.emit(['storage'], event);
+        case global_3.sessionStorage:
+            return void storageEvents.sessionStorage.emit(['storage'], event);
+        default:
+            return;
+        }
+    });
+});
+define('src/layer/infrastructure/webstorage/api', [
+    'require',
+    'exports',
+    'src/layer/infrastructure/webstorage/module/global',
+    'src/layer/infrastructure/webstorage/model/event'
+], function (require, exports, global_4, event_10) {
+    'use strict';
+    exports.localStorage = global_4.localStorage;
+    exports.sessionStorage = global_4.sessionStorage;
+    exports.supportWebStorage = global_4.supportWebStorage;
+    exports.events = event_10.events;
+});
 define('src/layer/domain/webstorage/service/event', [
     'require',
     'exports',
     'spica',
     'src/layer/infrastructure/webstorage/api'
-], function (require, exports, spica_9, api_5) {
+], function (require, exports, spica_8, api_5) {
     'use strict';
     exports.events = {
         localStorage: subscribe(api_5.events.localStorage),
         sessionStorage: subscribe(api_5.events.sessionStorage)
     };
     function subscribe(source) {
-        var observer = new spica_9.Observable();
+        var observer = new spica_8.Observable();
         void source.on(['storage'], function (event) {
             return void observer.emit([event.key], event);
         });
@@ -1920,32 +1895,32 @@ define('src/layer/domain/webstorage/service/storage', [
     'exports'
 ], function (require, exports) {
     'use strict';
-    var StorageLike = function () {
-        function StorageLike() {
+    var Storage = function () {
+        function Storage() {
             this.store = new Map();
         }
-        Object.defineProperty(StorageLike.prototype, 'length', {
+        Object.defineProperty(Storage.prototype, 'length', {
             get: function () {
                 return this.store.size;
             },
             enumerable: true,
             configurable: true
         });
-        StorageLike.prototype.getItem = function (key) {
+        Storage.prototype.getItem = function (key) {
             return this.store.has(key) ? this.store.get(key) : null;
         };
-        StorageLike.prototype.setItem = function (key, data) {
+        Storage.prototype.setItem = function (key, data) {
             void this.store.set(key, data);
         };
-        StorageLike.prototype.removeItem = function (key) {
+        Storage.prototype.removeItem = function (key) {
             void this.store.delete(key);
         };
-        StorageLike.prototype.clear = function () {
+        Storage.prototype.clear = function () {
             void this.store.clear();
         };
-        return StorageLike;
+        return Storage;
     }();
-    exports.fakeStorage = new StorageLike();
+    exports.fakeStorage = new Storage();
 });
 define('src/layer/domain/webstorage/repository/port', [
     'require',
@@ -1955,12 +1930,10 @@ define('src/layer/domain/webstorage/repository/port', [
     'src/layer/domain/webstorage/service/event',
     'src/layer/infrastructure/webstorage/api',
     'src/layer/domain/webstorage/service/storage'
-], function (require, exports, spica_10, api_6, event_9, api_7, storage_1) {
+], function (require, exports, spica_9, api_6, event_11, api_7, storage_1) {
     'use strict';
     var LocalStorageObjectCache = new Map();
-    var LocalStorageSubscriber = new Map();
     var SessionStorageObjectCache = new Map();
-    var SessionStorageSubscriber = new Map();
     var PortEventType;
     (function (PortEventType) {
         PortEventType.send = 'send';
@@ -1973,6 +1946,7 @@ define('src/layer/domain/webstorage/repository/port', [
             this.attr = attr;
             this.newValue = newValue;
             this.oldValue = oldValue;
+            void Object.freeze(this);
         }
         return PortEvent;
     }();
@@ -1983,9 +1957,9 @@ define('src/layer/domain/webstorage/repository/port', [
         }
         if (log === void 0) {
             log = {
-                update: function (name) {
+                update: function (_name) {
                 },
-                delete: function (name) {
+                delete: function (_name) {
                 }
             };
         }
@@ -1996,9 +1970,9 @@ define('src/layer/domain/webstorage/repository/port', [
         function Port(name, storage, factory, log) {
             if (log === void 0) {
                 log = {
-                    update: function (name) {
+                    update: function (_name) {
                     },
-                    delete: function (name) {
+                    delete: function (_name) {
                     }
                 };
             }
@@ -2007,11 +1981,11 @@ define('src/layer/domain/webstorage/repository/port', [
             this.factory = factory;
             this.log = log;
             this.cache = this.storage === api_7.localStorage ? LocalStorageObjectCache : SessionStorageObjectCache;
-            this.eventSource = this.storage === api_7.localStorage ? event_9.events.localStorage : event_9.events.sessionStorage;
-            this.uuid = spica_10.uuid();
+            this.eventSource = this.storage === api_7.localStorage ? event_11.events.localStorage : event_11.events.sessionStorage;
+            this.uuid = spica_9.uuid();
             this.events = {
-                send: new spica_10.Observable(),
-                recv: new spica_10.Observable()
+                send: new spica_9.Observable(),
+                recv: new spica_9.Observable()
             };
             void Object.freeze(this);
         }
@@ -2019,7 +1993,7 @@ define('src/layer/domain/webstorage/repository/port', [
             var _this = this;
             if (this.cache.has(this.name))
                 return this.cache.get(this.name);
-            var source = spica_10.assign((_a = {}, _a[api_6.SCHEMA.KEY.NAME] = this.name, _a[api_6.SCHEMA.EVENT.NAME] = new spica_10.Observable(), _a), parse(this.storage.getItem(this.name)));
+            var source = Object.assign((_a = {}, _a[api_6.SCHEMA.KEY.NAME] = this.name, _a[api_6.SCHEMA.EVENT.NAME] = new spica_9.Observable(), _a), parse(this.storage.getItem(this.name)));
             var dao = api_6.build(source, this.factory, function (attr, newValue, oldValue) {
                 void _this.log.update(_this.name);
                 void _this.storage.setItem(_this.name, JSON.stringify(Object.keys(source).filter(api_6.isValidPropertyName).filter(api_6.isValidPropertyValue(source)).reduce(function (acc, attr) {
@@ -2059,7 +2033,7 @@ define('src/layer/domain/webstorage/repository/port', [
             return dao;
             function parse(item) {
                 try {
-                    return JSON.parse(item) || {};
+                    return JSON.parse(item || '{}') || {};
                 } catch (_) {
                     return {};
                 }
@@ -2084,12 +2058,12 @@ define('src/layer/domain/webstorage/api', [
     'src/layer/infrastructure/webstorage/api',
     'src/layer/domain/webstorage/service/event',
     'src/layer/domain/webstorage/repository/port'
-], function (require, exports, api_8, event_10, port_1) {
+], function (require, exports, api_8, event_12, port_1) {
     'use strict';
     exports.localStorage = api_8.localStorage;
     exports.sessionStorage = api_8.sessionStorage;
     exports.supportWebStorage = api_8.supportWebStorage;
-    exports.events = event_10.events;
+    exports.events = event_12.events;
     exports.webstorage = port_1.port;
     exports.WebStorageEvent = port_1.PortEvent;
     exports.WebStorageEventType = port_1.PortEventType;
@@ -2102,9 +2076,14 @@ define('src/layer/domain/indexeddb/repository/socket', [
     'src/layer/domain/indexeddb/model/socket',
     'src/layer/infrastructure/webstorage/api',
     'src/layer/domain/webstorage/api'
-], function (require, exports, spica_11, api_9, socket_1, api_10, api_11) {
+], function (require, exports, spica_10, api_9, socket_1, api_10, api_11) {
     'use strict';
     function socket(name, factory, destroy, expiry) {
+        if (destroy === void 0) {
+            destroy = function () {
+                return true;
+            };
+        }
         if (expiry === void 0) {
             expiry = Infinity;
         }
@@ -2116,26 +2095,27 @@ define('src/layer/domain/indexeddb/repository/socket', [
             this.key = key;
             this.attr = attr;
             this.date = date;
+            void Object.freeze(this);
         }
         return Message;
     }();
     var Port = function () {
         function Port() {
             this.msgs = [];
-            this.msgHeadSet_ = new Map();
+            this.msgLatestUpdates_ = new Map();
         }
         Port.prototype.recv = function () {
             var _this = this;
-            return this.msgs.map(function (msg) {
-                return new Message(msg.key, msg.attr, msg.date);
-            }).filter(function (msg) {
-                return !_this.msgHeadSet_.has(msg.key) || msg.date > _this.msgHeadSet_.get(msg.key);
-            }).filter(function (msg) {
-                return !void _this.msgHeadSet_.set(msg.key, msg.date);
+            return this.msgs.filter(function (msg) {
+                var received = msg.date <= _this.msgLatestUpdates_.get(msg.key);
+                void _this.msgLatestUpdates_.set(msg.key, msg.date);
+                return !received;
+            }).map(function (msg) {
+                return msg.key;
             });
         };
         Port.prototype.send = function (msg) {
-            this.msgs = spica_11.concat([msg], this.msgs.slice(0, 9));
+            this.msgs = spica_10.concat([msg], this.msgs.slice(0, 9));
         };
         return Port;
     }();
@@ -2155,16 +2135,16 @@ define('src/layer/domain/indexeddb/repository/socket', [
                 api_11.WebStorageEventType.recv,
                 'msgs'
             ], function () {
-                void _this.port.recv().reduce(function (_, msg) {
-                    return void _this.schema.data.update(msg.key);
+                return void _this.port.recv().reduce(function (_, key) {
+                    return void _this.schema.data.fetch(key);
                 }, void 0);
             });
             void this.events.save.monitor([], function (_a) {
-                var id = _a.id, key = _a.key, attr = _a.attr;
-                void _this.port.send(new Message(key, attr, Date.now()));
+                var key = _a.key, attr = _a.attr;
+                return void _this.port.send(new Message(key, attr, Date.now()));
             });
             void this.events.load.monitor([], function (_a) {
-                var id = _a.id, key = _a.key, attr = _a.attr, type = _a.type;
+                var key = _a.key, attr = _a.attr, type = _a.type;
                 var source = _this.sources.get(key);
                 if (!source)
                     return;
@@ -2212,7 +2192,7 @@ define('src/layer/domain/indexeddb/repository/socket', [
         Socket.prototype.link = function (key, expiry) {
             var _this = this;
             void this.expire(key, expiry);
-            return this.links.has(key) ? this.links.get(key) : this.links.set(key, api_9.build(Object.defineProperties((void this.sources.set(key, spica_11.clone({}, this.get(key))), this.sources.get(key)), {
+            return this.links.has(key) ? this.links.get(key) : this.links.set(key, api_9.build(Object.defineProperties((void this.sources.set(key, spica_10.clone({}, this.get(key))), this.sources.get(key)), {
                 __meta: {
                     get: function () {
                         return _this.meta(key);
@@ -2233,10 +2213,9 @@ define('src/layer/domain/indexeddb/repository/socket', [
                         return this.__meta.date;
                     }
                 },
-                __event: { value: new spica_11.Observable() }
+                __event: { value: new spica_10.Observable() }
             }), this.factory, function (attr, newValue, oldValue) {
-                void _this.add(new socket_1.SocketStore.Record(key, (_a = {}, _a[attr] = newValue, _a)));
-                void _this.sources.get(key).__event.emit([
+                return void _this.add(new socket_1.SocketStore.Record(key, (_a = {}, _a[attr] = newValue, _a))), void _this.sources.get(key).__event.emit([
                     api_11.WebStorageEventType.send,
                     attr
                 ], new api_11.WebStorageEvent(api_11.WebStorageEventType.send, key, attr, newValue, oldValue));
@@ -2264,13 +2243,13 @@ define('src/layer/domain/indexeddb/api', [
     'exports',
     'src/layer/domain/indexeddb/repository/socket',
     'src/layer/domain/indexeddb/service/event'
-], function (require, exports, socket_2, event_11) {
+], function (require, exports, socket_2, event_13) {
     'use strict';
     exports.socket = socket_2.socket;
-    exports.event = event_11.event;
-    exports.IDBEventType = event_11.IDBEventType;
+    exports.event = event_13.event;
+    exports.IDBEventType = event_13.IDBEventType;
 });
-define('src/layer/app/api', [
+define('src/layer/application/api', [
     'require',
     'exports',
     'src/layer/domain/indexeddb/api',
@@ -2337,7 +2316,7 @@ define('src/layer/app/api', [
 define('src/layer/interface/api', [
     'require',
     'exports',
-    'src/layer/app/api'
+    'src/layer/application/api'
 ], function (require, exports, api_18) {
     'use strict';
     exports.socket = api_18.socket;
@@ -2360,7 +2339,9 @@ define('localsocket', [
     'require',
     'exports',
     'src/export',
-    'src/export'
+    'src/export',
+    './index',
+    './src/import'
 ], function (require, exports, export_1, export_2) {
     'use strict';
     function __export(m) {
