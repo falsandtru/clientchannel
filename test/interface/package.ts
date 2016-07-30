@@ -24,7 +24,7 @@ describe('Interface: Package', function () {
     it('assertion self-check', function (done) {
       setTimeout(function () {
         try {
-          console.log(assert(false === true), assert); // LOG: undefined, function powerAssert() { ... }
+          console.log(assert(!false === !true), assert); // LOG: undefined, function powerAssert() { ... }
         }
         catch (e) {
           done();
