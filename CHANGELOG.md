@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1
+
+- Fix the distribution.
+
 ## 0.4.0
 
 - Upgrade TypeScript to 2.0.

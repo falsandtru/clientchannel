@@ -18,8 +18,7 @@
   "main": "./dist/localsocket.js",
   "files": [
     "dist",
-    "index.*",
-    "typings",
+    "*.d.ts",
     "src",
     "test",
     "*.js",
