@@ -1,4 +1,4 @@
-/*! spica v0.0.22 https://github.com/falsandtru/spica | (c) 2016, falsandtru | undefined License (undefined) */
+/*! spica v0.0.23 https://github.com/falsandtru/spica | (c) 2016, falsandtru | MIT License */
 define = typeof define === 'function' && define.amd
   ? define
   : (function () {
