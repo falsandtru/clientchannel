@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.2
+
+- Fix a license notice.
+
 ## 0.4.1
 
 - Fix the distribution.
