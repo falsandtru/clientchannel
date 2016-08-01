@@ -1,6 +1,5 @@
 # jekyll
+.jekyll-metadata
 _site
 assets
 
-# adobe
-_notes
