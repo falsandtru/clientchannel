@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.3
+
+- Update dependencies.
+
 ## 0.4.2
 
 - Fix a license notice.
