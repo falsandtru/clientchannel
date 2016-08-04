@@ -71,8 +71,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     void this.memory.events.exec
       .monitor([], ([, sub]): void => {
         const event = sub(void 0);
-        assert(event instanceof UnsavedEventRecord || event instanceof SavedEventRecord);
         if (event instanceof UnsavedEventRecord) return;
+        assert(event instanceof SavedEventRecord);
         if (event.date <= states.date.get(event.key) && event.id <= states.id.get(event.key)) return;
         void this.events.load
           .emit([event.key, event.attr, event.type], new EventStore.Event(event.type, event.id, event.key, event.attr, event.date));
