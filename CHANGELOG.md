@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.4
+
+- Don't ignore same value updates.
+
 ## 0.4.3
 
 - Update dependencies.

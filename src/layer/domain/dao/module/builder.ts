@@ -48,7 +48,6 @@ export function build<V>(source: V, factory: () => V, update: (attr: string, new
         set: newVal => {
           const oldVal = source[prop];
           if (!isValidValue(source)(prop)) return;
-          if (newVal === oldVal && newVal instanceof Object === false) return;
           source[prop] = newVal === void 0 ? iniVal : newVal;
           void update(prop, newVal, oldVal);
         }
