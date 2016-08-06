@@ -27,10 +27,10 @@ https://falsandtru.github.io/localsocket/
 ### Persistence
 
 Schemas are defined by property names that made by factory function.
-A property name that has underscore(`_`) prefix or postfix be ignored.
+A property name that has underscore(`_`) prefix or postfix will be ignored.
 It means you can define the dynamic value object.
 
-Data that assigned to the property of Linked object will be saved in the storage.
+Data that assigned to a property of Linked object will be saved to the storage.
 When data was updated on other threads(tabs), own thread's property value will be updated automatically.
 
 ```ts
@@ -70,7 +70,7 @@ link.lastName = 'smith';
 
 ### Communicate and Synchronize
 
-Linked object provedes send/recv event.
+Linked object provedes send/recv events.
 `send` event will be emitted when linked object was updated by own thread(tab).
 `recv` event will be emitted when linked object was updated by other threads(tabs).
 
