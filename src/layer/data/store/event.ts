@@ -212,6 +212,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   }
   public add(event: UnsavedEventRecord<K, V>, tx?: IDBTransaction): void {
     assert(event.type === EventStore.EventType.snapshot ? tx : true);
+    assert(!tx || tx.db.name === this.database)
     void this.events_.access
       .emit([event.key, event.attr, event.type], new InternalEvent(event.type, IdNumber(0), event.key, event.attr));
     if (!(event instanceof UnsavedEventRecord)) throw new Error(`LocalSocket: Cannot add a saved event: ${JSON.stringify(event)}`);
