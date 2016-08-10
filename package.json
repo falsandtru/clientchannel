@@ -34,7 +34,7 @@
     "extend": "^3.0.0",
     "gulp": "^3.9.1",
     "gulp-footer": "^1.0.5",
-    "gulp-header": "1.8.7",
+    "gulp-header": "1.8.8",
     "gulp-load-plugins": "^1.2.4",
     "gulp-mocha": "^3.0.0",
     "gulp-rename": "^1.2.2",
@@ -49,14 +49,14 @@
     "karma-espower-preprocessor": "1.1.0",
     "karma-firefox-launcher": "^1.0.0",
     "karma-mocha": "^1.1.1",
-    "lodash": "^4.14.1",
-    "mocha": "^3.0.1",
+    "lodash": "^4.14.2",
+    "mocha": "^3.0.2",
     "npm-check-updates": "^2.8.0",
     "power-assert": "^1.4.1",
     "run-sequence": "^1.2.2",
     "semver": "^5.3.0",
-    "spica": "0.0.27",
-    "typescript": "2.1.0-dev.20160804"
+    "spica": "0.0.28",
+    "typescript": "2.1.0-dev.20160810"
   },
   "scripts": {
     "test": "gulp server"
