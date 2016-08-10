@@ -30,6 +30,7 @@ class Message<K extends string> {
 interface Port<K extends string> extends LocalPortObject {
 }
 class Port<K extends string> {
+  // msgs must be sorted by asc.
   public msgs: Message<K>[] = [];
   private readonly msgLatestUpdates_ = new Map<string, number>();
   public recv(): K[] {
@@ -42,8 +43,13 @@ class Port<K extends string> {
       .map(msg => msg.key);
   }
   public send(msg: Message<K>): void {
-    assert(msg instanceof Message);
-    this.msgs = concat([msg], this.msgs.slice(0, 9));
+    this.msgs = this.msgs
+      .reduceRight<Message<K>[]>((ms, m) =>
+        m.key === ms[0].key || m.date < ms[0].date - 1000 * 1e3
+          ? ms
+          : concat([m], ms)
+      , [msg])
+      .slice(-9);
   }
 }
 

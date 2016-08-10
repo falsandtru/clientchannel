@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.5
+
+- Improve messaging optimizations.
+
 ## 0.4.4
 
 - Don't ignore same value updates.
