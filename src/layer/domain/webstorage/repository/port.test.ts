@@ -53,10 +53,10 @@ describe('Unit: layers/domain/webstorage/repository/port', () => {
       assert(dao.n === 0);
       dao.n = 1;
       assert(dao.n === 1);
-      assert(JSON.parse(sessionStorage.getItem('test')).n === 1);
+      assert(JSON.parse(sessionStorage.getItem('test')!).n === 1);
       dao.n = 0;
       assert(dao.n === 0);
-      assert(JSON.parse(sessionStorage.getItem('test')).n === 0);
+      assert(JSON.parse(sessionStorage.getItem('test')!).n === 0);
       repo.destroy();
     });
 
