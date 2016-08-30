@@ -28,7 +28,7 @@
   ],
   "dependencies": {},
   "devDependencies": {
-    "@types/mocha": "^2.2.30",
+    "@types/mocha": "^2.2.31",
     "@types/power-assert": "0.0.27",
     "del": "^2.2.2",
     "extend": "^3.0.0",
@@ -55,8 +55,8 @@
     "power-assert": "^1.4.1",
     "run-sequence": "^1.2.2",
     "semver": "^5.3.0",
-    "spica": "0.0.29",
-    "typescript": "2.1.0-dev.20160824"
+    "spica": "0.0.30",
+    "typescript": "2.1.0-dev.20160829"
   },
   "scripts": {
     "test": "gulp server"
