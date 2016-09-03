@@ -55,8 +55,8 @@
     "power-assert": "^1.4.1",
     "run-sequence": "^1.2.2",
     "semver": "^5.3.0",
-    "spica": "0.0.30",
-    "typescript": "2.1.0-dev.20160829"
+    "spica": "0.0.31",
+    "typescript": "2.1.0-dev.20160903"
   },
   "scripts": {
     "test": "gulp server"
