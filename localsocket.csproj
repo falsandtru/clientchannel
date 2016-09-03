@@ -36,7 +36,7 @@
     <TypeScriptNoImplicitAny>True</TypeScriptNoImplicitAny>
     <TypeScriptNoImplicitThis>True</TypeScriptNoImplicitThis>
     <TypeScriptNoImplicitReturns>True</TypeScriptNoImplicitReturns>
-    <TypeScriptNoUnusedParameters>False</TypeScriptNoUnusedParameters>
+    <TypeScriptNoUnusedParameters>True</TypeScriptNoUnusedParameters>
     <TypeScriptNoUnusedLocals>True</TypeScriptNoUnusedLocals>
     <TypeScriptNoFallthroughCasesInSwitch>True</TypeScriptNoFallthroughCasesInSwitch>
     <TypeScriptSuppressImplicitAnyIndexErrors>True</TypeScriptSuppressImplicitAnyIndexErrors>
