@@ -18,7 +18,7 @@ abstract class EventRecord<K extends string, V extends EventValue> {
     date: number,
     type: EventType
   ) {
-    if (typeof this.id === 'number' && this.id > 0 === false || this.id !== void 0) throw new TypeError(`LocalSocket: EventRecord: Invalid event id: ${this.id}`);
+    if (typeof this.id === 'number' && <number>this.id > 0 === false || this.id !== void 0) throw new TypeError(`LocalSocket: EventRecord: Invalid event id: ${this.id}`);
     this.type = type;
     if (typeof this.type !== 'string') throw new TypeError(`LocalSocket: EventRecord: Invalid event type: ${this.type}`);
     this.key = key;
@@ -89,7 +89,7 @@ export class SavedEventRecord<K extends string, V extends EventValue> extends Ev
   ) {
     super(key, value, date, type);
     this.EVENT_RECORD;
-    if (this.id > 0 === false) throw new TypeError(`LocalSocket: SavedEventRecord: Invalid event id: ${this.id}`);
+    if (<number>this.id > 0 === false) throw new TypeError(`LocalSocket: SavedEventRecord: Invalid event id: ${this.id}`);
     void Object.freeze(this);
   }
 }
