@@ -55,7 +55,7 @@ abstract class EventRecord<K extends string, V extends EventValue> {
         throw new TypeError(`LocalSocket: Invalid event type: ${type}`);
     }
   }
-  public readonly id: IdNumber | undefined;
+  public readonly id: IdNumber | never;
   public readonly type: EventType;
   public readonly key: K;
   public readonly attr: string;
@@ -76,7 +76,7 @@ export class UnsavedEventRecord<K extends string, V extends EventValue> extends 
     if (this.id !== void 0 || 'id' in this) throw new TypeError(`LocalSocket: UnsavedEventRecord: Invalid event id: ${this.id}`);
     void Object.freeze(this);
   }
-  public readonly id: undefined;
+  public readonly id: never;
 }
 export class SavedEventRecord<K extends string, V extends EventValue> extends EventRecord<K, V> {
   private EVENT_RECORD: V;
