@@ -10,7 +10,7 @@ export const events: {
   sessionStorage: Observer<['storage'], StorageEvent, void>;
 } = storageEvents;
 
-void window.addEventListener('storage', event => {
+void self.addEventListener('storage', event => {
   switch (event.storageArea) {
     case localStorage:
       return void storageEvents.localStorage.emit(['storage'], event);
