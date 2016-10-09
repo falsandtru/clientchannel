@@ -73,29 +73,13 @@
     = 'send'
     | 'recv';
 
-  // spica@0.0.0
-  class Observable<T extends Array<string | number>, D, R>
-    implements Observer<T, D, R>, Publisher<T, D, R> {
-    monitor(type: T, subscriber: Subscriber<D, R>): () => void;
-    on(type: T, subscriber: Subscriber<D, R>): () => void;
-    off(type: T, subscriber?: Subscriber<D, R>): void;
-    once(type: T, subscriber: Subscriber<D, R>): () => void;
-    emit(type: T, data: D, tracker?: (data: D, results: R[]) => any): void;
-    reflect(type: T, data: D): R[];
-    refs(type: T): [T, Subscriber<D, R>, boolean][];
-  }
+  // spica@0.0.35
   interface Observer<T extends Array<string | number>, D, R> {
     monitor(type: T, subscriber: Subscriber<D, R>): () => void;
     on(type: T, subscriber: Subscriber<D, R>): () => void;
     off(type: T, subscriber?: Subscriber<D, R>): void;
     once(type: T, subscriber: Subscriber<D, R>): () => void;
   }
-  interface Publisher<T extends Array<string | number>, D, R> {
-    emit(type: T, data: D, tracker?: (data: D, results: any[]) => any): void;
-    reflect(type: T, data: D): R[];
-  }
-  interface Subscriber<D, R> {
-    (data: D): R;
-  }
+  type Subscriber<D, R> = (data: D) => R;
 
 }
