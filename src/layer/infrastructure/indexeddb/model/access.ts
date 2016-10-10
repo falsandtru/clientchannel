@@ -5,21 +5,21 @@ import { IDBEvent, IDBEventType } from './event';
 const IDBEventObserver = new Observable<[string] | [string, IDBEventType], IDBEvent, void>();
 export const event: Observer<[string] | [string, IDBEventType], IDBEvent, void> = IDBEventObserver;
 
-export const ConfigMap = new Map<string, Config>();
+const configs = new Map<string, Config>();
 export type Config = {
   make: (db: IDBDatabase) => boolean;
   verify: (db: IDBDatabase) => boolean;
   destroy: (error: DOMError, event: Event | null) => boolean;
 };
 
-const CommandMap = new Map<string, CommandType>();
-const enum CommandType {
+const commands = new Map<string, Command>();
+const enum Command {
   open,
   close,
   destroy
 }
 
-const StateMap = new Map<string, State>();
+const states = new Map<string, State>();
 type State
   = State.Initial
   | State.Block
@@ -37,8 +37,8 @@ namespace State {
       public readonly database: string
     ) {
       this.STATE;
-      assert(!StateMap.has(database));
-      void StateMap.set(database, this);
+      assert(!states.has(database));
+      void states.set(database, this);
     }
   }
   export class Block {
@@ -47,7 +47,7 @@ namespace State {
       public readonly database: string
     ) {
       this.STATE;
-      void StateMap.set(database, this);
+      void states.set(database, this);
     }
   }
   export class Upgrade {
@@ -57,7 +57,7 @@ namespace State {
       public readonly session: IDBOpenDBRequest
     ) {
       this.STATE;
-      void StateMap.set(database, this);
+      void states.set(database, this);
     }
   }
   export class Success {
@@ -67,7 +67,7 @@ namespace State {
       public readonly connection: IDBDatabase
     ) {
       this.STATE;
-      void StateMap.set(database, this);
+      void states.set(database, this);
     }
     public drain: () => void;
     public destroy: () => void;
@@ -81,7 +81,7 @@ namespace State {
       public readonly event: Event
     ) {
       this.STATE;
-      void StateMap.set(database, this);
+      void states.set(database, this);
     }
   }
   export class Abort {
@@ -92,7 +92,7 @@ namespace State {
       public readonly event: Event
     ) {
       this.STATE;
-      void StateMap.set(database, this);
+      void states.set(database, this);
     }
   }
   export class Crash {
@@ -102,7 +102,7 @@ namespace State {
       public readonly error: DOMError
     ) {
       this.STATE;
-      void StateMap.set(database, this);
+      void states.set(database, this);
     }
   }
   export class Destroy {
@@ -111,7 +111,7 @@ namespace State {
       public readonly database: string
     ) {
       this.STATE;
-      void StateMap.set(database, this);
+      void states.set(database, this);
     }
   }
   export class End {
@@ -120,34 +120,34 @@ namespace State {
       public readonly database: string
     ) {
       this.STATE;
-      void StateMap.set(database, this);
+      void states.set(database, this);
     }
   }
 }
 
-type Request = (db: IDBDatabase) => any;
 const requests = new Map<string, Request[]>();
+type Request = (db: IDBDatabase) => any;
 
 export function open(name: string, config: Config): void {
   assert(config);
-  void CommandMap.set(name, CommandType.open);
-  void ConfigMap.set(name, config);
-  if (StateMap.has(name)) return;
+  void commands.set(name, Command.open);
+  void configs.set(name, config);
+  if (states.has(name)) return;
   void handleFromInitialState(new State.Initial(name));
 }
 export function listen(name: string): (req: Request) => any {
   return (req: Request) => {
     const queue = requests.get(name) || requests.set(name, []).get(name)!;
     void queue.push(req);
-    const state = StateMap.get(name);
+    const state = states.get(name);
     if (state instanceof State.Success) {
       void state.drain();
     }
   };
 }
 export function close(name: string): void {
-  void CommandMap.set(name, CommandType.close);
-  void ConfigMap.set(name, {
+  void commands.set(name, Command.close);
+  void configs.set(name, {
     make() {
       return false;
     },
@@ -158,13 +158,13 @@ export function close(name: string): void {
       return false;
     }
   });
-  if (StateMap.get(name) instanceof State.Success) return (<State.Success>StateMap.get(name)).end();
-  if (StateMap.has(name)) return;
+  if (states.get(name) instanceof State.Success) return (<State.Success>states.get(name)).end();
+  if (states.has(name)) return;
   void handleFromInitialState(new State.Initial(name));
 }
 export function destroy(name: string): void {
-  void CommandMap.set(name, CommandType.destroy);
-  void ConfigMap.set(name, {
+  void commands.set(name, Command.destroy);
+  void configs.set(name, {
     make() {
       return false;
     },
@@ -175,14 +175,14 @@ export function destroy(name: string): void {
       return true;
     }
   });
-  if (StateMap.get(name) instanceof State.Success) return (<State.Success>StateMap.get(name)).destroy();
-  if (StateMap.has(name)) return;
+  if (states.get(name) instanceof State.Success) return (<State.Success>states.get(name)).destroy();
+  if (states.has(name)) return;
   void handleFromInitialState(new State.Initial(name));
 }
 
 function handleFromInitialState({database}: State.Initial, version: number = 0): void {
   assert(version >= 0);
-  const config = ConfigMap.get(database);
+  const config = configs.get(database);
   assert(config);
   try {
     const openRequest = version
@@ -217,7 +217,7 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
   function handleFromUpgradeState({database, session}: State.Upgrade): void {
     const db: IDBDatabase = session.transaction.db;
     assert(db);
-    const {make, destroy} = ConfigMap.get(database)!;
+    const {make, destroy} = configs.get(database)!;
     try {
       if (make(db)) {
         session.onsuccess = () =>
@@ -252,7 +252,7 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
         void requests.delete(database);
         void IDBEventObserver.emit([database, IDBEventType.destroy], new IDBEvent(IDBEventType.destroy, database));
       }
-      if (StateMap.get(database) !== state) return;
+      if (states.get(database) !== state) return;
       void handleFromEndState(new State.End(database));
     };
     connection.onerror = event => (
@@ -264,7 +264,7 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
     connection.onclose = () => (
       void clear(),
       void IDBEventObserver.emit([database, IDBEventType.destroy], new IDBEvent(IDBEventType.destroy, database)),
-      StateMap.get(database) === state
+      states.get(database) === state
         ? void handleFromEndState(new State.End(database))
         : void 0);
     state.destroy = () => (
@@ -278,7 +278,7 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
     state.drain = () => {
       const reqs = requests.get(database) || [];
       try {
-        while (reqs.length > 0 && CommandMap.get(database) === CommandType.open) {
+        while (reqs.length > 0 && commands.get(database) === Command.open) {
           void reqs[0](connection);
           void reqs.shift();
         }
@@ -298,9 +298,9 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
     };
 
 
-    switch (CommandMap.get(database)) {
-      case CommandType.open: {
-        const {verify} = ConfigMap.get(database)!;
+    switch (commands.get(database)) {
+      case Command.open: {
+        const {verify} = configs.get(database)!;
         try {
           if (!verify(connection)) return void handleFromEndState(new State.End(database), connection.version + 1);
         }
@@ -310,18 +310,18 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
         void IDBEventObserver.emit([database, IDBEventType.connect], new IDBEvent(IDBEventType.connect, database));
         return void state.drain();
       }
-      case CommandType.close:
+      case Command.close:
         return void state.end();
-      case CommandType.destroy:
+      case Command.destroy:
         return void state.destroy();
     }
-    throw new TypeError(`LocalSocket: Invalid command ${CommandMap.get(database)}.`);
+    throw new TypeError(`LocalSocket: Invalid command ${commands.get(database)}.`);
   }
 
   function handleFromErrorState({database, error, event}: State.Error): void {
     void event.preventDefault();
     void IDBEventObserver.emit([database, IDBEventType.error], new IDBEvent(IDBEventType.error, database));
-    const {destroy} = ConfigMap.get(database)!;
+    const {destroy} = configs.get(database)!;
     if (destroy(error, event)) {
       return void handleFromDestroyState(new State.Destroy(database));
     }
@@ -333,7 +333,7 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
   function handleFromAbortState({database, error, event}: State.Abort): void {
     void event.preventDefault();
     void IDBEventObserver.emit([database, IDBEventType.abort], new IDBEvent(IDBEventType.abort, database));
-    const {destroy} = ConfigMap.get(database)!;
+    const {destroy} = configs.get(database)!;
     if (destroy(error, event)) {
       return void handleFromDestroyState(new State.Destroy(database));
     }
@@ -344,7 +344,7 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
 
   function handleFromCrashState({database, error}: State.Crash): void {
     void IDBEventObserver.emit([database, IDBEventType.crash], new IDBEvent(IDBEventType.crash, database));
-    const {destroy} = ConfigMap.get(database)!;
+    const {destroy} = configs.get(database)!;
     if (destroy(error, null)) {
       return void handleFromDestroyState(new State.Destroy(database));
     }
@@ -364,22 +364,22 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
   }
 
   function handleFromEndState({database}: State.End, version = 0): void {
-    void StateMap.delete(database);
-    switch (CommandMap.get(database)) {
-      case CommandType.open:
+    void states.delete(database);
+    switch (commands.get(database)) {
+      case Command.open:
         return (
           void handleFromInitialState(new State.Initial(database), version));
-      case CommandType.close:
+      case Command.close:
         return (
-          void CommandMap.delete(database),
-          void ConfigMap.delete(database),
+          void commands.delete(database),
+          void configs.delete(database),
           void IDBEventObserver.emit([database, IDBEventType.disconnect], new IDBEvent(IDBEventType.disconnect, database)));
-      case CommandType.destroy:
+      case Command.destroy:
         return (
-          void CommandMap.delete(database),
-          void ConfigMap.delete(database),
+          void commands.delete(database),
+          void configs.delete(database),
           void IDBEventObserver.emit([database, IDBEventType.disconnect], new IDBEvent(IDBEventType.disconnect, database)));
     }
-    throw new TypeError(`LocalSocket: Invalid command ${CommandMap.get(database)}.`);
+    throw new TypeError(`LocalSocket: Invalid command ${commands.get(database)}.`);
   }
 }

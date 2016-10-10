@@ -59,11 +59,11 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     protected readonly name: string
   ) {
     const states = new class {
-      id = new Map<K, IdNumber>();
-      date = new Map<K, number>();
+      ids = new Map<K, IdNumber>();
+      dates = new Map<K, number>();
       update(event: EventStore.Event<K>): void {
-        void this.id.set(event.key, IdNumber(Math.max(event.id || 0, this.id.get(event.key) || 0)));
-        void this.date.set(event.key, Math.max(event.date, this.date.get(event.key) || 0));
+        void this.ids.set(event.key, IdNumber(Math.max(event.id || 0, this.ids.get(event.key) || 0)));
+        void this.dates.set(event.key, Math.max(event.date, this.dates.get(event.key) || 0));
       }
     }();
 
@@ -72,7 +72,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       .monitor([], (event): void => {
         if (event instanceof UnsavedEventRecord) return;
         assert(event instanceof SavedEventRecord);
-        if (event.date <= states.date.get(event.key) && event.id <= states.id.get(event.key)) return;
+        if (event.date <= states.dates.get(event.key) && event.id <= states.ids.get(event.key)) return;
         void this.events.load
           .emit([event.key, event.attr, event.type], new EventStore.Event(event.type, event.id, event.key, event.attr, event.date));
       });
@@ -328,7 +328,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   }
   private clean(until: number = Infinity, key?: K): void {
     const removedEvents: SavedEventRecord<K, V>[] = [];
-    const cleanStateMap = new Map<K, boolean>();
+    const cleanState = new Map<K, boolean>();
     return void this.cursor(
       key ? IDBKeyRange.bound([key, 0], [key, until]) : IDBKeyRange.upperBound(until),
       key ? EventRecordFields.surrogateKeyDateField : EventRecordFields.date,
@@ -345,23 +345,23 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           const event: SavedEventRecord<K, V> = cursor.value;
           switch (event.type) {
             case EventStore.EventType.put: {
-              void cleanStateMap.set(event.key, cleanStateMap.get(event.key) || false);
+              void cleanState.set(event.key, cleanState.get(event.key) || false);
               break;
             }
             case EventStore.EventType.snapshot: {
-              if (!cleanStateMap.get(event.key)) {
-                void cleanStateMap.set(event.key, true);
+              if (!cleanState.get(event.key)) {
+                void cleanState.set(event.key, true);
                 void cursor.continue();
                 return;
               }
               break;
             }
             case EventStore.EventType.delete: {
-              void cleanStateMap.set(event.key, true);
+              void cleanState.set(event.key, true);
               break;
             }
           }
-          if (cleanStateMap.get(event.key)) {
+          if (cleanState.get(event.key)) {
             void cursor.delete();
             void removedEvents.unshift(event);
           }
