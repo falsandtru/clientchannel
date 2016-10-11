@@ -300,7 +300,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           const event: SavedEventRecord<K, V> = cursor.value;
           void savedEvents.unshift(new SavedEventRecord(event.id, event.key, event.value, event.type, event.date));
         }
-        if (!cursor || (<SavedEventRecord<K, V>>cursor.value).type !== EventStore.EventType.put) {
+        if (!cursor) {
           assert(this.snapshotCycle > 0);
           if (savedEvents.length === 0) return;
           const composedEvent = compose(key, savedEvents);
