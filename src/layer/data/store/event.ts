@@ -284,7 +284,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   public delete(key: K): void {
     return void this.add(new UnsavedEventRecord(key, <V>new EventStore.Value(), EventStore.EventType.delete));
   }
-  private readonly snapshotCycle = 9;
+  private readonly snapshotCycle: number = 9;
   private snapshot(key: K): void {
     return void listen(this.database)(db => {
       if (!this.syncState.get(key)) return;
@@ -301,7 +301,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           void savedEvents.unshift(new SavedEventRecord(event.id, event.key, event.value, event.type, event.date));
         }
         if (!cursor || (<SavedEventRecord<K, V>>cursor.value).type !== EventStore.EventType.put) {
-          assert(<number>this.snapshotCycle > 0);
+          assert(this.snapshotCycle > 0);
           if (savedEvents.length === 0) return;
           const composedEvent = compose(key, savedEvents);
           if (composedEvent instanceof SavedEventRecord) return;
