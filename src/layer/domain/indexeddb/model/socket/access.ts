@@ -1,4 +1,4 @@
-import { Observable } from 'spica';
+import { Observer } from 'spica';
 import { Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/store/key-value';
 import { EventStore } from '../../../../data/store/event';
@@ -41,12 +41,12 @@ export class AccessStore<K extends string> extends KeyValueStore<K, AccessRecord
   }
   constructor(
     database: string,
-    event: Observable<never[] | [K] | [K, string] | [K, string, string], EventStore.Event<K>, void>
+    access: Observer<never[] | [K] | [K, string] | [K, string, string], EventStore.Event<K>, void>
   ) {
     super(database, STORE_NAME, AccessStore.fields.key);
     void Object.freeze(this);
 
-    void event
+    void access
       .monitor([], ({key, type}) =>
         type === EventStore.EventType.delete
           ? void this.delete(key)

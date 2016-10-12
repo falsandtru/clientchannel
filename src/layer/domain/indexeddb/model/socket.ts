@@ -111,7 +111,7 @@ class Schema<K extends string, V extends SocketStore.Value<K>> {
     this.data.events.save.monitor([], ev => this.store_.events.save.emit([ev.key, ev.attr, ev.type], ev));
     this.data.events.loss.monitor([], ev => this.store_.events.loss.emit([ev.key, ev.attr, ev.type], ev));
     this.access = new AccessStore<K>(this.store_.database, this.data.events_.access);
-    this.expire = new ExpiryStore<K>(this.store_.database, this.store_, this.data, this.expiries_);
+    this.expire = new ExpiryStore<K>(this.store_.database, this.store_, this.data.events_.access, this.expiries_);
 
     void this.data.sync(keys);
   }

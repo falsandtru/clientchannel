@@ -1,7 +1,7 @@
+import { Observer } from 'spica';
 import { event, IDBEventType, Config, IDBCursorDirection, IDBTransactionMode } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/store/key-value';
 import { EventStore } from '../../../../data/store/event';
-import { DataStore } from './data';
 
 export const STORE_NAME = 'expiry';
 
@@ -44,7 +44,7 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
     store: {
       delete(key: K): void;
     },
-    data: DataStore<K, any>,
+    access: Observer<never[] | [K] | [K, string] | [K, string, string], EventStore.Event<K>, void>,
     expiries: Map<K, number>
   ) {
     super(database, STORE_NAME, ExpiryStore.fields.key);
@@ -71,7 +71,7 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
     };
 
     void schedule(Date.now());
-    void data.events_.access
+    void access
       .monitor([], ({key, type}) => {
         switch (type) {
           case EventStore.EventType.delete:
