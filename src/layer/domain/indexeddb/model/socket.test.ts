@@ -96,7 +96,7 @@ describe('Unit: layers/domain/indexeddb/model/socket', function (this: Mocha) {
     });
 
     it('expiry', done => {
-      const socket = new SocketStore<string, CustomSocketValue>('test', () => true, 2000);
+      const socket = new SocketStore<string, CustomSocketValue>('test', () => true, 3000);
 
       socket.expire('a');
       socket.add(new SocketStore.Record('a', new CustomSocketValue(0)));
