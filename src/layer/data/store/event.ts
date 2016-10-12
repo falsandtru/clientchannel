@@ -1,4 +1,4 @@
-import { Observable, sqid, concat } from 'spica';
+import { Observable, Cancelable, sqid, concat } from 'spica';
 import { listen, Config, IDBTransactionMode, IDBCursorDirection, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { IdNumber } from '../constraint/types';
 import { EventRecordFields, UnsavedEventRecord, SavedEventRecord } from '../schema/event';
@@ -242,13 +242,12 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     void this.memory
       .once([event.key, event.attr, sqid(0)], () => { throw void this.events_.update.emit([event.key, event.attr, sqid(0)], event); });
     void this.update(event.key, event.attr, sqid(0));
-    return void new Promise<void>((resolve, reject) => {
-      void setTimeout(reject, 1000);
-      const cont = (tx: IDBTransaction) => {
+    return void new Promise<void>((resolve, reject): void => {
+      const cont = (tx: IDBTransaction): void => {
         const active = (): boolean =>
           this.memory.refs([event.key, event.attr, sqid(0)])
             .reduce((acc, [, s]) => acc || s(void 0) === event, false);
-        if (!active()) return;
+        if (!active()) return void resolve();
         const req = tx
           .objectStore(this.name)
           .add(Object.assign({}, event));
@@ -273,10 +272,16 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             ? void reject()
             : void resolve();
       };
-      tx
-        ? void cont(tx)
-        : void listen(this.database)(db =>
-          void cont(db.transaction(this.name, IDBTransactionMode.readwrite)));
+      if (tx) return void cont(tx);
+      const cancelable = new Cancelable<void>();
+      void cancelable.listeners.add(reject);
+      void setTimeout(() => (
+        void setTimeout(cancelable.cancel, 1000),
+        void listen(this.database)(db => (
+          void cancelable.listeners.clear(),
+          void cancelable.maybe(db)
+            .fmap(db => void cont(db.transaction(this.name, IDBTransactionMode.readwrite)))
+            .extract(() => void 0)))));
     })
       .catch(() =>
         void this.events.loss.emit([event.key, event.attr, event.type], new EventStore.Event(event.type, IdNumber(0), event.key, event.attr, event.date)));

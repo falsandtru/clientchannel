@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.9
+
+- Fix a timeout processing.
+
 ## 0.4.8
 
 - Fix the snapshot processing.
