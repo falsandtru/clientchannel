@@ -47,6 +47,7 @@ namespace State {
       public readonly database: string
     ) {
       this.STATE;
+      assert([Initial].some(S => states.get(database) instanceof S));
       void states.set(database, this);
     }
   }
@@ -57,6 +58,7 @@ namespace State {
       public readonly session: IDBOpenDBRequest
     ) {
       this.STATE;
+      assert([Initial].some(S => states.get(database) instanceof S));
       void states.set(database, this);
     }
   }
@@ -67,6 +69,7 @@ namespace State {
       public readonly connection: IDBDatabase
     ) {
       this.STATE;
+      assert([Initial, Upgrade].some(S => states.get(database) instanceof S));
       void states.set(database, this);
     }
     public drain: () => void;
@@ -81,6 +84,7 @@ namespace State {
       public readonly event: Event
     ) {
       this.STATE;
+      assert(states.has(database));
       void states.set(database, this);
     }
   }
@@ -92,6 +96,7 @@ namespace State {
       public readonly event: Event
     ) {
       this.STATE;
+      assert(states.has(database));
       void states.set(database, this);
     }
   }
@@ -102,6 +107,7 @@ namespace State {
       public readonly error: DOMError
     ) {
       this.STATE;
+      assert(states.has(database));
       void states.set(database, this);
     }
   }
@@ -111,6 +117,7 @@ namespace State {
       public readonly database: string
     ) {
       this.STATE;
+      assert(states.has(database));
       void states.set(database, this);
     }
   }
@@ -120,6 +127,7 @@ namespace State {
       public readonly database: string
     ) {
       this.STATE;
+      assert(states.has(database));
       void states.set(database, this);
     }
   }
@@ -139,6 +147,7 @@ export function listen(name: string): (req: Request) => any {
   return (req: Request) => {
     const queue = requests.get(name) || requests.set(name, []).get(name)!;
     void queue.push(req);
+    if (!states.has(name)) return;
     const state = states.get(name);
     if (state instanceof State.Success) {
       void state.drain();
@@ -158,9 +167,11 @@ export function close(name: string): void {
       return false;
     }
   });
-  if (states.get(name) instanceof State.Success) return (<State.Success>states.get(name)).end();
-  if (states.has(name)) return;
-  void handleFromInitialState(new State.Initial(name));
+  if (!states.has(name)) return void handleFromInitialState(new State.Initial(name));
+  const state = states.get(name);
+  if (state instanceof State.Success) {
+    state.end();
+  }
 }
 export function destroy(name: string): void {
   void commands.set(name, Command.destroy);
@@ -175,9 +186,11 @@ export function destroy(name: string): void {
       return true;
     }
   });
-  if (states.get(name) instanceof State.Success) return (<State.Success>states.get(name)).destroy();
-  if (states.has(name)) return;
-  void handleFromInitialState(new State.Initial(name));
+  if (!states.has(name)) return void handleFromInitialState(new State.Initial(name));
+  const state = states.get(name);
+  if (state instanceof State.Success) {
+    state.destroy();
+  }
 }
 
 function handleFromInitialState({database}: State.Initial, version: number = 0): void {
@@ -264,9 +277,7 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
     connection.onclose = () => (
       void clear(),
       void IDBEventObserver.emit([database, IDBEventType.destroy], new IDBEvent(IDBEventType.destroy, database)),
-      states.get(database) === state
-        ? void handleFromEndState(new State.End(database))
-        : void 0);
+      void handleFromEndState(new State.End(database)));
     state.destroy = () => (
       void clear(),
       void connection.close(),
