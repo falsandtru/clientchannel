@@ -109,10 +109,10 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   };
   private update(key: K, attr?: string, id?: string): void {
     return typeof id === 'string' && typeof attr === 'string'
-      ? void this.memory.emit([key, attr, id], void 0)
+      ? void this.memory.emit([key, attr, id])
       : typeof attr === 'string'
-        ? void this.memory.emit([key, attr], void 0)
-        : void this.memory.emit([key], void 0);
+        ? void this.memory.emit([key, attr])
+        : void this.memory.emit([key]);
   }
   private readonly syncState = new Map<K, boolean>();
   private readonly syncWaits = new Observable<[K], DOMError | null, any>();
@@ -187,12 +187,12 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     });
   }
   public keys(): K[] {
-    return this.memory.reflect([], void 0)
+    return this.memory.reflect([])
       .reduce((keys, e) => keys.length === 0 || keys[keys.length - 1] !== e.key ? concat(keys, [e.key]) : keys, <K[]>[])
       .sort();
   }
   public meta(key: K): MetaData<K> {
-    const events = this.memory.reflect([key], void 0);
+    const events = this.memory.reflect([key]);
     return Object.freeze({
       key: key,
       id: events.reduce<number>((id, e) =>
@@ -202,13 +202,13 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     });
   }
   public has(key: K): boolean {
-    return compose(key, this.memory.reflect([key], void 0)).type !== EventStore.EventType.delete;
+    return compose(key, this.memory.reflect([key])).type !== EventStore.EventType.delete;
   }
   public get(key: K): V {
     void this.sync([key]);
     void this.events_.access
       .emit([key], new InternalEvent(InternalEventType.query, IdNumber(0), key, ''));
-    return compose(key, this.memory.reflect([key], void 0))
+    return compose(key, this.memory.reflect([key]))
       .value;
   }
   public add(event: UnsavedEventRecord<K, V>, tx?: IDBTransaction): void {
