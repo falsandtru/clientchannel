@@ -1,9 +1,8 @@
 import { Observable } from 'spica';
 import { listen, Config, IDBTransactionMode, IDBCursorDirection } from '../../infrastructure/indexeddb/api';
-import { IDBValue } from '../constraint/types';
 import { noop } from '../../../lib/noop';
 
-export abstract class KeyValueStore<K extends string, V extends IDBValue> {
+export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
   public static configure(): Config {
     return {
       make() {

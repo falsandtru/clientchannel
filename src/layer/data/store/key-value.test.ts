@@ -1,12 +1,11 @@
 import { KeyValueStore } from './key-value';
-import { IDBValue } from '../constraint/types';
 import { open, destroy, event, Config, IDBEventType } from '../../infrastructure/indexeddb/api';
 
 describe('Unit: layers/data/store/key-value', function (this: Mocha) {
   this.timeout(5 * 1e3);
 
   describe('spec', () => {
-    class Store<K extends string, V extends IDBValue> extends KeyValueStore<K, V> {
+    class Store<K extends string, V extends IDBValidValue> extends KeyValueStore<K, V> {
       public static configure(): Config {
         return {
           make(db) {
