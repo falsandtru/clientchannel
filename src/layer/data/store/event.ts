@@ -246,7 +246,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       const cont = (tx: IDBTransaction): void => {
         const active = (): boolean =>
           this.memory.refs([event.key, event.attr, sqid(0)])
-            .reduce((acc, [, s]) => acc || s(void 0) === event, false);
+            .some(([, s]) => s(void 0) === event);
         if (!active()) return void resolve();
         const req = tx
           .objectStore(this.name)
