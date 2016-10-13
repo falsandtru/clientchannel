@@ -8,7 +8,7 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
 
     const config: Config = {
       make: state => state.objectStoreNames.contains('test') || !!state.createObjectStore('test'),
-      verify: () => true,
+      verify: state => state.objectStoreNames.contains('test'),
       destroy: () => true
     };
     Object.freeze(config);
