@@ -31,8 +31,13 @@ describe('Unit: layers/domain/indexeddb/model/socket', function (this: Mocha) {
       }
     }
 
+    it('singleton', () => {
+      assert(new SocketStore('test', () => true, Infinity) === new SocketStore('test', () => true, Infinity));
+      new SocketStore('test', () => true, Infinity).destroy();
+    });
+
     it('recent', done => {
-      const socket = new SocketStore<string, CustomSocketValue>('test', () => true);
+      const socket = new SocketStore<string, CustomSocketValue>('test', () => true, Infinity);
 
       socket.recent(Infinity, (keys, err) => {
         assert(!err);
@@ -71,7 +76,7 @@ describe('Unit: layers/domain/indexeddb/model/socket', function (this: Mocha) {
     });
 
     it('clean', done => {
-      const socket = new SocketStore<string, CustomSocketValue>('test', () => true);
+      const socket = new SocketStore<string, CustomSocketValue>('test', () => true, Infinity);
 
       socket.add(new SocketStore.Record('a', new CustomSocketValue(0)));
       socket.recent(Infinity, keys => {
@@ -121,7 +126,6 @@ describe('Unit: layers/domain/indexeddb/model/socket', function (this: Mocha) {
           }, 2000);
         });
       }, 1000);
-
     });
 
   });

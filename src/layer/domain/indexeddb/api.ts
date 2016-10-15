@@ -1,2 +1,2 @@
-export { socket } from './repository/socket';
+export { Socket } from './service/socket';
 export { event, IDBEventType } from './service/event';

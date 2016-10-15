@@ -3,16 +3,9 @@ import { Observable, clone, concat } from 'spica';
 import { build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { SocketStore } from '../model/socket';
 import { localStorage } from '../../../infrastructure/webstorage/api';
-import { webstorage, WebStorageEvent, WebStorageEventType } from '../../webstorage/api';
+import { Port, WebStorageEvent, WebStorageEventType } from '../../webstorage/api';
 
-export function socket<K extends string, V extends SocketStore.Value<K>>(
-  name: string,
-  factory: () => V,
-  destroy: (err: DOMError, event: Event | null) => boolean = () => true,
-  expiry = Infinity
-): Socket<K, V> {
-  return new Socket<K, V>(name, factory, expiry, destroy);
-}
+const cache = new WeakSet<Socket<string, SocketStore.Value<string>>>();
 
 class Message<K extends string> {
   constructor(
@@ -27,9 +20,9 @@ class Message<K extends string> {
   }
 }
 
-interface Port<K extends string> extends LocalPortObject {
+interface PortSchema<K extends string> extends LocalPortObject {
 }
-class Port<K extends string> {
+class PortSchema<K extends string> {
   // msgs must be sorted by asc.
   public msgs: Message<K>[] = [];
   private readonly msgLatestUpdates_ = new Map<string, number>();
@@ -53,24 +46,26 @@ class Port<K extends string> {
   }
 }
 
-class Socket<K extends string, V extends SocketStore.Value<K>> extends SocketStore<K, V> implements LocalSocket<K, V> {
+export class Socket<K extends string, V extends SocketStore.Value<K>> extends SocketStore<K, V> implements LocalSocket<K, V> {
   constructor(
-    database: string,
+    name: string,
     private readonly factory: () => V,
-    expiry: number,
-    destroy: (err: DOMError, ev: Event) => boolean
+    destroy: (err: DOMError, ev: Event | null) => boolean = () => true,
+    expiry: number = Infinity
   ) {
-    super(database, destroy, expiry);
-    void this.port.__event
+    super(name, destroy, expiry);
+    if (cache.has(this)) return this;
+    void cache.add(this);
+    void this.port.link().__event
       .on([WebStorageEventType.recv, 'msgs'], () =>
-        void this.port.recv()
+        void this.port.link().recv()
           .reduce<void>((_, key) => void this.schema.data.fetch(key), void 0));
     void this.events.save
       .monitor([], ({key, attr}) =>
-        void this.port.send(new Message(key, attr, Date.now())));
+        void this.port.link().send(new Message(key, attr, Date.now())));
     void this.events.load
       .monitor([], ({key, attr, type}) => {
-        const source: V & LocalSocketObject<K> | undefined = this.sources.get(key);
+        const source = this.sources.get(key);
         if (!source) return;
         switch (type) {
           case SocketStore.EventType.put: {
@@ -113,10 +108,9 @@ class Socket<K extends string, V extends SocketStore.Value<K>> extends SocketSto
           }
         }
       });
-    void Object.freeze(this);
+    void Object.seal(this);
   }
-  private readonly proxy = webstorage(this.database, localStorage, () => new Port<K>());
-  private readonly port = this.proxy.link();
+  private readonly port = new Port(this.name, localStorage, () => new PortSchema<K>());
   private readonly links = new Map<K, V>();
   private readonly sources = new Map<K, V>();
   public link(key: K, expiry?: number): V {
@@ -159,7 +153,8 @@ class Socket<K extends string, V extends SocketStore.Value<K>> extends SocketSto
         .get(key)!;
   }
   public destroy(): void {
-    void this.proxy.destroy();
+    void this.port.destroy();
+    void cache.delete(this);
     void super.destroy();
   }
 }

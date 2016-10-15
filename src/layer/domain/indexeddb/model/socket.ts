@@ -1,18 +1,22 @@
 import { LocalSocketObject, LocalSocketObjectMetaData, LocalSocketEvent, LocalSocketEventType } from 'localsocket';
-import { Observable, uuid } from 'spica';
+import { Observable } from 'spica';
 import { open, close, destroy, event, IDBEventType, IDBTransactionMode, IDBCursorDirection } from '../../../infrastructure/indexeddb/api';
 import { DataStore } from './socket/data';
 import { AccessStore } from './socket/access';
 import { ExpiryStore } from './socket/expiry';
 import { noop } from '../../../../lib/noop';
 
+const cache = new Map<string, SocketStore<string, SocketStore.Value<string>>>();
+
 export class SocketStore<K extends string, V extends SocketStore.Value<K>> {
   constructor(
-    public readonly database: string,
+    public readonly name: string,
     destroy: (err: DOMError, event: Event | null) => boolean,
-    private readonly expiry = Infinity
+    private readonly expiry: number
   ) {
-    void open(database, {
+    if (cache.has(name)) return <SocketStore<K, V>>cache.get(name)!;
+    void cache.set(name, this);
+    void open(name, {
       make(db) {
         return DataStore.configure().make(db)
             && AccessStore.configure().make(db)
@@ -31,10 +35,9 @@ export class SocketStore<K extends string, V extends SocketStore.Value<K>> {
       }
     });
     this.schema = new Schema<K, V>(this, this.expiries);
-    void event.on([database, IDBEventType.destroy, this.uuid], () =>
+    void event.on([name, IDBEventType.destroy], () =>
       void this.schema.bind());
   }
-  private readonly uuid = uuid();
   protected readonly schema: Schema<K, V>;
   public readonly events = {
     load: new Observable<never[] | [K] | [K, string] | [K, string, SocketStore.EventType], SocketStore.Event<K>, void>(),
@@ -80,11 +83,13 @@ export class SocketStore<K extends string, V extends SocketStore.Value<K>> {
       });
   }
   public close(): void {
-    return void close(this.database);
+    void cache.delete(this.name);
+    return void close(this.name);
   }
   public destroy(): void {
-    void event.off([this.database, IDBEventType.destroy, this.uuid]);
-    return void destroy(this.database);
+    void event.off([this.name, IDBEventType.destroy]);
+    void cache.delete(this.name);
+    return void destroy(this.name);
   }
 }
 export namespace SocketStore {
@@ -106,12 +111,12 @@ class Schema<K extends string, V extends SocketStore.Value<K>> {
   }
   public bind(): void {
     const keys = this.data ? this.data.keys() : [];
-    this.data = new DataStore<K, V>(this.store_.database);
+    this.data = new DataStore<K, V>(this.store_.name);
     this.data.events.load.monitor([], ev => this.store_.events.load.emit([ev.key, ev.attr, ev.type], ev));
     this.data.events.save.monitor([], ev => this.store_.events.save.emit([ev.key, ev.attr, ev.type], ev));
     this.data.events.loss.monitor([], ev => this.store_.events.loss.emit([ev.key, ev.attr, ev.type], ev));
-    this.access = new AccessStore<K>(this.store_.database, this.data.events_.access);
-    this.expire = new ExpiryStore<K>(this.store_.database, this.store_, this.data.events_.access, this.expiries_);
+    this.access = new AccessStore<K>(this.store_.name, this.data.events_.access);
+    this.expire = new ExpiryStore<K>(this.store_.name, this.store_, this.data.events_.access, this.expiries_);
 
     void this.data.sync(keys);
   }

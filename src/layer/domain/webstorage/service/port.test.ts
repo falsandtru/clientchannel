@@ -1,8 +1,8 @@
 import { LocalPortObject } from 'localsocket';
-import { port } from './port';
+import { Port } from './port';
 
-describe('Unit: layers/domain/webstorage/repository/port', () => {
-  describe('repository', () => {
+describe('Unit: layers/domain/webstorage/service/port', () => {
+  describe('spec', () => {
     interface DAO extends LocalPortObject {
     }
     class DAO {
@@ -20,9 +20,14 @@ describe('Unit: layers/domain/webstorage/repository/port', () => {
       sessionStorage.removeItem('test');
     });
 
+    it('singleton', () => {
+      assert(new Port('test', sessionStorage, factory) === new Port('test', sessionStorage, factory));
+      new Port('test', sessionStorage, factory).destroy();
+    });
+
     it('make/destroy', () => {
       assert(sessionStorage.getItem('test') === null);
-      const repo = port('test', sessionStorage, factory);
+      const repo = new Port('test', sessionStorage, factory);
       const dao = repo.link();
       assert(dao.__key === 'test');
       assert(dao.n === 0);
@@ -40,15 +45,15 @@ describe('Unit: layers/domain/webstorage/repository/port', () => {
     it('remake', () => {
       assert(sessionStorage.getItem('test') === null);
       assert.equal(
-        port('test', sessionStorage, factory).link(),
-        port('test', sessionStorage, factory).link()
+        new Port('test', sessionStorage, factory).link(),
+        new Port('test', sessionStorage, factory).link()
       );
-      port('test', sessionStorage, factory).destroy();
+      new Port('test', sessionStorage, factory).destroy();
       assert(sessionStorage.getItem('test') === null);
     });
 
     it('update', () => {
-      const repo = port('test', sessionStorage, factory);
+      const repo = new Port('test', sessionStorage, factory);
       const dao = repo.link();
       assert(dao.n === 0);
       dao.n = 1;

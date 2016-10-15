@@ -1,9 +1,9 @@
 import { LocalSocketObject } from 'localsocket';
-import { socket } from './socket';
+import { Socket } from './socket';
 import { SocketStore } from '../model/socket';
 import { listen, destroy, event, IDBEventType } from '../../../infrastructure/indexeddb/api';
 
-describe('Unit: layers/domain/indexeddb/repository/socket', function (this: Mocha) {
+describe('Unit: layers/domain/indexeddb/service/socket', function (this: Mocha) {
   this.timeout(5 * 1e3);
 
   describe('spec', () => {
@@ -35,8 +35,13 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function (this: Moch
       }
     }
 
-    it('link', done => {
-      const sock = socket('test', () => new Value(0, ''), () => true);
+    it('singleton', () => {
+      assert(new Socket('test', () => new Value(0, '')) === new Socket('test', () => new Value(0, '')));
+      new Socket('test', () => new Value(0, '')).destroy();
+    });
+
+    it('link', () => {
+      const sock = new Socket('test', () => new Value(0, ''));
       const dao = sock.link('a');
 
       assert(dao === sock.link('a'));
@@ -47,11 +52,10 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function (this: Moch
       assert(dao.s === '');
 
       sock.destroy();
-      done();
     });
 
     it('send', done => {
-      const sock = socket('test', () => new Value(0, ''), () => true);
+      const sock = new Socket('test', () => new Value(0, ''));
       const dao = sock.link('a');
 
       dao.__event.once(['send', 'n'], ev => {
@@ -84,7 +88,7 @@ describe('Unit: layers/domain/indexeddb/repository/socket', function (this: Moch
     });
 
     it('recv', done => {
-      const sock = socket('test', () => new Value(0, ''), () => true);
+      const sock = new Socket('test', () => new Value(0, ''));
       const dao = sock.link('a');
 
       assert(dao.n === 0);

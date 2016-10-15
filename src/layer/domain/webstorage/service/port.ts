@@ -1,13 +1,11 @@
 import { LocalPort, LocalPortObject, LocalPortEvent, LocalPortEventType } from 'localsocket';
-import { Observable, uuid } from 'spica';
+import { Observable } from 'spica';
 import { SCHEMA, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { events } from '../service/event';
 import { localStorage, sessionStorage } from '../../../infrastructure/webstorage/api';
-import { StorageLike, fakeStorage } from '../service/storage';
+import { StorageLike, fakeStorage } from '../model/storage';
 
-const LocalStorageObjectCache = new Map<string, LocalPortObject>();
-
-const SessionStorageObjectCache = new Map<string, LocalPortObject>();
+const cache = new Map<string, Port<LocalPortObject>>();
 
 export type PortEventType
   = typeof PortEventType.send
@@ -31,48 +29,25 @@ export class PortEvent implements LocalPortEvent {
   }
 }
 
-export function port<V extends LocalPortObject>(
-  name: string,
-  storage: StorageLike = sessionStorage || fakeStorage,
-  factory: () => V,
-  log = {
-    update(_name: string) { },
-    delete(_name: string) { }
-  }
-): Port<V> {
-  return new Port(name, storage, factory, log);
-}
-
-class Port<V extends LocalPortObject> implements LocalPort<V> {
+export class Port<V extends LocalPortObject> implements LocalPort<V> {
   constructor(
     public readonly name: string,
-    private readonly storage: StorageLike,
+    private readonly storage: StorageLike = sessionStorage || fakeStorage,
     private readonly factory: () => V,
     private readonly log = {
       update(_name: string) { },
       delete(_name: string) { }
     }
   ) {
-    void Object.freeze(this);
-  }
-  private readonly cache = this.storage === localStorage ? LocalStorageObjectCache : SessionStorageObjectCache;
-  private readonly eventSource = this.storage === localStorage ? events.localStorage : events.sessionStorage;
-  private readonly uuid = uuid();
-  public readonly events = {
-    send: new Observable<never[] | [string], PortEvent, void>(),
-    recv: new Observable<never[] | [string], PortEvent, void>()
-  };
-  public link(): V {
-    if (this.cache.has(this.name)) return <V>this.cache.get(this.name);
-
+    if (cache.has(name)) return <Port<V>>cache.get(name)!;
+    void cache.set(name, this);
     const source: V = Object.assign(
       <V><any>{
         [SCHEMA.KEY.NAME]: this.name,
         [SCHEMA.EVENT.NAME]: new Observable<[LocalPortEventType] | [LocalPortEventType, string], PortEvent, void>()
       },
-      parse<V>(this.storage.getItem(this.name))
-    );
-    const dao: V = build(source, this.factory, (attr, newValue, oldValue) => {
+      parse<V>(this.storage.getItem(this.name)));
+    this.link_ = build(source, this.factory, (attr, newValue, oldValue) => {
       void this.log.update(this.name);
       void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, attr) => {
         acc[attr] = source[attr];
@@ -97,24 +72,32 @@ class Port<V extends LocalPortObject> implements LocalPort<V> {
           void this.events.recv.emit([event.attr], event);
         }, void 0);
     };
-    void this.eventSource.on([this.name, this.uuid], subscriber);
-    void this.cache.set(this.name, dao);
+    void this.eventSource.on([this.name], subscriber);
     void this.log.update(this.name);
-    return dao;
-
-    function parse<V>(item: string | undefined | null): V {
-      try {
-        return JSON.parse(item || '{}') || <V>{};
-      }
-      catch (_) {
-        return <V>{};
-      }
-    }
+    void Object.freeze(this);
+  }
+  private readonly eventSource = this.storage === localStorage ? events.localStorage : events.sessionStorage;
+  public readonly events = {
+    send: new Observable<never[] | [string], PortEvent, void>(),
+    recv: new Observable<never[] | [string], PortEvent, void>()
+  };
+  private readonly link_: V;
+  public link(): V {
+    return this.link_;
   }
   public destroy(): void {
-    void this.eventSource.off([this.name, this.uuid]);
-    void this.cache.delete(this.name);
+    void this.eventSource.off([this.name]);
     void this.storage.removeItem(this.name);
     void this.log.delete(this.name);
+    void cache.delete(this.name);
+  }
+}
+
+function parse<V>(item: string | undefined | null): V {
+  try {
+    return JSON.parse(item || '{}') || <V>{};
+  }
+  catch (_) {
+    return <V>{};
   }
 }
