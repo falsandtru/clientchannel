@@ -2,7 +2,7 @@ sudo: required
 dist: trusty
 language: node_js
 node_js:
-- 6
+- 7
 addons:
   firefox: latest
   apt:
@@ -33,7 +33,7 @@ deploy:
     secure: pMRoD7KZzmFE7c5JY2ILydjtR1pMzSmEiHMLesCXOE7f89GHlS0Eau01RGg20lUtFnMbVsUImgPMKPbNF4V8dPSZpZnktcXG2eStVGiVeB0rARDxfV5ucX8UlKk/68uuqQYqhmmNljuQwPp7pPrRBD4TBxWmJmqika3layGuV4y+49lcF7H0PT5+pnOB+jExH8ZNthNa2CW/yg9dezETdG3b3ZmsoemL/TuGiDPuvHs/MIMxN6vOYXm9nocxwcW3VF3ZpnIP1IgXP6GHgoaRzKXSbGO4XoVzj41cIOopBTfeycSn6E1b50t72vVAMNR3Yo7WFyH30jS8cC2gzPkIoLhG1rlpdq8NENg0RUTZKsyiufbl//9IVemZWgLGUTLHE3ABcrktgorvbeLoFB8iAxdRQDaheXy+JGpc43pyavIUROQ6OTSxINXVChw/8MWoIe41WW0iVF+1QB/+aaTLevDEgs2YIzs0G7qcYYKUE4ITx6GF028BY0k0YZT6pUtbAt/fCBXnXXEdHprbt9kOtM5vx9bogwDIRPXAi1BIbpeVwnOTuDRIwlhtsRXozxwbbNLHb4vCfvZDLns8ZnLIXS5u5D1YZkMcWugnZWyg7TliQX+TcSBUE7pmY22GHfLYawCYy7YU0ZJDugBjm1aSIyLggAFjAQePKDIgsKafDdE=
   on:
     branch: master
-    node: stable
+    node: 7
   skip_cleanup: true
 notifications:
   email:
