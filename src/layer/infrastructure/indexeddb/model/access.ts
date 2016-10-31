@@ -58,7 +58,7 @@ namespace State {
       public readonly session: IDBOpenDBRequest
     ) {
       this.STATE;
-      assert([Initial].some(S => states.get(database) instanceof S));
+      assert([Initial, Block].some(S => states.get(database) instanceof S));
       void states.set(database, this);
     }
   }
@@ -69,7 +69,7 @@ namespace State {
       public readonly connection: IDBDatabase
     ) {
       this.STATE;
-      assert([Initial, Upgrade].some(S => states.get(database) instanceof S));
+      assert([Initial, Upgrade, Block].some(S => states.get(database) instanceof S));
       void states.set(database, this);
     }
     public drain: () => void;
