@@ -93,7 +93,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         switch (event.type) {
           case EventStore.EventType.delete:
           case EventStore.EventType.snapshot:
-            void this.clean(Infinity, event.key);
+            void this.clean(event.key);
         }
       });
   }
@@ -331,12 +331,12 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       };
     });
   }
-  private clean(until: number = Infinity, key?: K): void {
+  private clean(key?: K): void {
     const removedEvents: SavedEventRecord<K, V>[] = [];
     const cleanState = new Map<K, boolean>();
     return void this.cursor(
-      key ? IDBKeyRange.bound([key, 0], [key, until]) : IDBKeyRange.upperBound(until),
-      key ? EventRecordFields.surrogateKeyDateField : EventRecordFields.date,
+      key ? IDBKeyRange.bound(key, key) : IDBKeyRange.upperBound(Infinity),
+      key ? EventRecordFields.key : EventRecordFields.date,
       IDBCursorDirection.prev,
       IDBTransactionMode.readwrite,
       cursor => {

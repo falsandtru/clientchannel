@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.11
+
+- Fix support for Edge browser.
+
 ## 0.4.10
 
 - Refactoring.

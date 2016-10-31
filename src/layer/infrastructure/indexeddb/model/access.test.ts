@@ -4,7 +4,7 @@ import { IDBTransactionMode } from '../module/global';
 
 describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
   describe('database', function (this: Mocha) {
-    this.timeout(5e3);
+    this.timeout(10 * 1e3);
 
     const config: Config = {
       make: state => state.objectStoreNames.contains('test') || !!state.createObjectStore('test'),
@@ -114,7 +114,7 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
       destroy('test');
     });
 
-    it('concurrent', done => {
+    it.skip('concurrent', done => {
       // call in random order on IE
       let cnt = 0;
       open('test', config);
