@@ -109,5 +109,5 @@ link.version = VERSION;
 
 - Chrome
 - Firefox
-- Edge
+- Edge (without iframe)
 - Safari
