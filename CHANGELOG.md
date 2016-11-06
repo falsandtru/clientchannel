@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.12
+
+- Remove `destroy` parameter of LocalPortConfig.
+
 ## 0.4.11
 
 - Fix support for Edge browser.

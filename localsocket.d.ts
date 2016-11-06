@@ -56,7 +56,6 @@
   }
   export interface LocalPortConfig<V extends LocalPortObject> {
     schema(): V;
-    destroy?(error: DOMError, event: Event | null): boolean;
   }
   export interface LocalPortObject {
     readonly __key: string;
