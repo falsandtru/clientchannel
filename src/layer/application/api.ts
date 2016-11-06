@@ -8,45 +8,19 @@ import { events as WebStorageEventStreams } from '../domain/webstorage/api';
 export { supportWebStorage as status } from '../domain/webstorage/api';
 
 export function socket<K extends string, V extends LocalSocketObject<K>>(name: string, config: LocalSocketConfig<K, V>): LocalSocket<K, V> {
-  config = configure(config);
-  return new Socket<K, V>(name, config.schema, config.destroy, config.expiry);
-
-  function configure<K extends string, V extends LocalSocketObject<K>>(config: LocalSocketConfig<K, V>): LocalSocketConfig<K, V> {
-    class Config implements LocalSocketConfig<K, V> {
-      constructor(
-        public schema: () => V,
-        public expiry: number = Infinity,
-        public destroy: (err: DOMError, event: Event) => boolean = () => true
-      ) {
-        void Object.freeze(this);
-      }
-    }
-    return new Config(
-      config.schema,
-      config.expiry,
-      config.destroy
-    );
-  }
+  const {
+    schema,
+    destroy = () => true,
+    expiry = Infinity
+  } = config;
+  return new Socket<K, V>(name, schema, destroy, expiry);
 }
 
 export function port<V extends LocalPortObject>(name: string, config: LocalPortConfig<V>): LocalPort<V> {
-  config = configure(config);
-  return new Port(name, localStorage, config.schema);
-
-  function configure<V extends LocalPortObject>(config: LocalPortConfig<V>): LocalPortConfig<V> {
-    class Config<V extends LocalPortObject> implements LocalPortConfig<V> {
-      constructor(
-        public schema: () => V,
-        public destroy: (err: DOMError, event: Event) => boolean = () => true
-      ) {
-        void Object.freeze(this);
-      }
-    }
-    return new Config(
-      config.schema,
-      config.destroy
-    );
-  }
+  const {
+    schema
+  } = config;
+  return new Port(name, localStorage, schema);
 }
 
 export namespace events {
