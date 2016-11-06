@@ -72,8 +72,8 @@
     = 'send'
     | 'recv';
 
-  // spica@0.0.35
-  interface Observer<T extends Array<string | number>, D, R> {
+  // spica@0.0.40
+  interface Observer<T extends any[], D, R> {
     monitor(type: T, subscriber: Subscriber<D, R>): () => void;
     on(type: T, subscriber: Subscriber<D, R>): () => void;
     off(type: T, subscriber?: Subscriber<D, R>): void;
