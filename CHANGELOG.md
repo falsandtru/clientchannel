@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0
+
+- Use Browserify.
+
 ## 0.4.12
 
 - Remove `destroy` parameter of LocalPortConfig.

@@ -120,7 +120,7 @@ export class Socket<K extends string, V extends SocketStore.Value<K>> extends So
       : this.links
         .set(key, build(
           Object.defineProperties(
-            (void this.sources.set(key, clone<V>({}, this.get(key))), this.sources.get(key)),
+            (void this.sources.set(key, clone<{}, V>({}, this.get(key))), this.sources.get(key)),
             {
               __meta: {
                 get: () => this.meta(key)
