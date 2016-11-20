@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.1
+
+- Add interop with es6 modules.
+
 ## 0.5.0
 
 - Use Browserify.
