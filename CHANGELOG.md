@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.2
+
+- Add support for bundling using Browserify.
+
 ## 0.5.1
 
 - Add interop with es6 modules.
