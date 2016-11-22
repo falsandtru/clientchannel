@@ -2,7 +2,7 @@
 
 ## 0.5.2
 
-- Add support for bundling using Browserify.
+- ~~Add support for bundling using Browserify.~~
 
 ## 0.5.1
 
