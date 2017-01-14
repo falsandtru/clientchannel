@@ -115,37 +115,32 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         : void this.memory.emit([key]);
   }
   private readonly syncState = new Map<K, boolean>();
-  private readonly syncWaits = new Observable<[K], DOMError | null, any>();
-  public sync(keys: K[], cb: (errs: [K, DOMError | Error | null][]) => any = noop, timeout = 0): void {
+  private readonly syncWaits = new Observable<[K], DOMError | Error | void, any>();
+  public sync(keys: K[], cb: (errs: [K, DOMError | Error][]) => any = noop, timeout = 0): void {
     return void keys
-      .map<Promise<[K, DOMError | Error | null]>>(key => {
+      .map<Promise<[K, DOMError | Error] | void>>(key => {
         switch (this.syncState.get(key)) {
           case true:
-            return new Promise<[K, DOMError | Error | null]>(resolve => void resolve([key, null]));
+            return Promise.resolve();
           case false:
-            return cb === noop
-              ? new Promise<[K, DOMError | Error | null]>(resolve => void resolve([key, null]))
-              : new Promise<[K, DOMError | Error | null]>(resolve => void (
-                timeout > 0 ? void (void this.get(key), void setTimeout(() => resolve([key, new Error()]))) : void 0,
-                void this.syncWaits.once([key], err => void resolve([key, err]))));
-          default: {
-            void this.fetch(key);
-            return cb === noop
-              ? new Promise<[K, DOMError | Error | null]>(resolve => void resolve([key, null]))
-              : new Promise<[K, DOMError | Error | null]>(resolve => void (
-                timeout > 0 ? void (void this.get(key), void setTimeout(() => resolve([key, new Error()]))) : void 0,
-                void this.syncWaits.once([key], err => void resolve([key, err]))));
-          }
+            return new Promise<[K, DOMError | Error] | void>(resolve => void (
+              timeout > 0 ? void (void this.get(key), void setTimeout(() => resolve([key, new Error()]))) : void 0,
+              void this.syncWaits.once([key], err => void resolve(err ? [key, err] : void 0))));
+          default:
+            return new Promise<[K, DOMError | Error] | void>(resolve => void (
+              timeout > 0 ? void (void this.get(key), void setTimeout(() => resolve([key, new Error()]))) : void 0,
+              void this.syncWaits.once([key], err => void resolve(err ? [key, err] : void 0)),
+              void this.fetch(key, err => void this.syncWaits.emit([key], err))));
         }
       })
-      .reduce<Promise<[K, DOMError | Error | null][]>>((ps, p) => ps.then(es => p.then(e => es.concat([e]))), new Promise<[K, DOMError][]>(resolve => void resolve([])))
-      .then(es => void cb(es.filter(e => !!e[1])));
+      .reduce<Promise<([K, DOMError | Error] | void)[]>>((ps, p) => ps.then(es => p.then(e => es.concat([e]))), Promise.resolve<([K, DOMError | Error] | void)[]>([]))
+      .then(es => void cb(<[K, DOMError | Error][]>es.filter(e => !!e)));
   }
-  public fetch(key: K): void {
+  public fetch(key: K, cb: (err?: DOMError | Error) => any = noop): void {
     const savedEvents: SavedEventRecord<K, V>[] = [];
     void this.syncState.set(key, this.syncState.get(key) === true);
     return void this.cursor(key, EventRecordFields.key, IDBCursorDirection.prev, IDBTransactionMode.readonly, (cursor, err): void => {
-      if (err) return void this.syncWaits.emit([key], err);
+      if (err) return void cb(err);
       if (!cursor || (<SavedEventRecord<K, V>>cursor.value).date < this.meta(key).date) {
         // register latest events
         void Array.from(
@@ -170,7 +165,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
               .once([e.key], () => { throw void this.events_.update.emit([e.key, e.attr, sqid(e.id)], e); });
           });
         void this.syncState.set(key, true);
-        void this.syncWaits.emit([key], null);
+        void cb();
         void this.update(key);
         if (savedEvents.length >= this.snapshotCycle) {
           void this.snapshot(key);
@@ -205,7 +200,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     return compose(key, this.memory.reflect([key])).type !== EventStore.EventType.delete;
   }
   public get(key: K): V {
-    void this.sync([key]);
+    if (!this.syncState.get(key)) {
+      void this.fetch(key);
+    }
     void this.events_.access
       .emit([key], new InternalEvent(InternalEventType.query, IdNumber(0), key, ''));
     return compose(key, this.memory.reflect([key]))
@@ -217,7 +214,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     void this.events_.access
       .emit([event.key, event.attr, event.type], new InternalEvent(event.type, IdNumber(0), event.key, event.attr));
     if (!(event instanceof UnsavedEventRecord)) throw new Error(`LocalSocket: Cannot add a saved event: ${JSON.stringify(event)}`);
-    void this.sync([event.key]);
+    if (!this.syncState.get(event.key)) {
+      void this.fetch(event.key);
+    }
     switch (event.type) {
       case EventStore.EventType.put: {
         void this.memory
