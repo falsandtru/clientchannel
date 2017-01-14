@@ -3,7 +3,7 @@ import { Socket } from './socket';
 import { SocketStore } from '../model/socket';
 import { listen, destroy, event, IDBEventType } from '../../../infrastructure/indexeddb/api';
 
-describe('Unit: layers/domain/indexeddb/service/socket', function (this: Mocha) {
+describe('Unit: layers/domain/indexeddb/service/socket', function () {
   this.timeout(5 * 1e3);
 
   describe('spec', () => {

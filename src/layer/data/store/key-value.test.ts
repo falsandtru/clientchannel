@@ -1,7 +1,7 @@
 import { KeyValueStore } from './key-value';
 import { open, destroy, event, Config, IDBEventType } from '../../infrastructure/indexeddb/api';
 
-describe('Unit: layers/data/store/key-value', function (this: Mocha) {
+describe('Unit: layers/data/store/key-value', function () {
   this.timeout(5 * 1e3);
 
   describe('spec', () => {

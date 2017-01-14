@@ -3,7 +3,7 @@ import { IDBEventType } from './event';
 import { IDBTransactionMode } from '../module/global';
 
 describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
-  describe('database', function (this: Mocha) {
+  describe('database', function () {
     this.timeout(10 * 1e3);
 
     const config: Config = {

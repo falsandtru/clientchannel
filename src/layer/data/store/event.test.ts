@@ -1,7 +1,7 @@
 import { compose, EventStore, UnsavedEventRecord, SavedEventRecord } from './event';
 import { open, destroy, event, IDBEventType } from '../../infrastructure/indexeddb/api';
 
-describe('Unit: layers/data/store/event', function (this: Mocha) {
+describe('Unit: layers/data/store/event', function () {
   this.timeout(5 * 1e3);
 
   describe('spec', () => {
