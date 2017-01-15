@@ -68,12 +68,12 @@ export class SocketStore<K extends string, V extends SocketStore.Value<K>> {
     if (expiry === Infinity) return;
     return void this.expiries.set(key, expiry);
   }
-  public recent(limit: number, cb: (keys: K[], error: DOMError) => any = () => void 0): void {
+  public recent(limit: number, cb: (keys: K[], err: DOMError | null) => any): void {
     const keys: K[] = [];
     return void this.schema.access.cursor(
       null,
       AccessStore.fields.date,
-      IDBCursorDirection.prevunique,
+      IDBCursorDirection.prev,
       IDBTransactionMode.readonly,
       (cursor, err): void => {
         if (!cursor) return void cb(keys, err);

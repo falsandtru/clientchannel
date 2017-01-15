@@ -374,7 +374,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         }
       });
   }
-  public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMError) => any): void {
+  public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMError | null) => any): void {
     return void listen(this.database)(db => {
       const tx = db
         .transaction(this.name, mode);

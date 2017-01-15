@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.4
+
+- Fix LocalSocket.recent method.
+
 ## 0.5.3
 
 - Update dependencies.
