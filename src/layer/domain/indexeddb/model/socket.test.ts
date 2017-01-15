@@ -123,7 +123,7 @@ describe('Unit: layers/domain/indexeddb/model/socket', function () {
               socket.destroy();
               done();
             });
-          }, 2000);
+          }, 3000);
         });
       }, 1000);
     });
