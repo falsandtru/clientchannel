@@ -1,7 +1,8 @@
 # Changelog
 
-## 0.5.4
+## 0.6.0
 
+- Add transaction feature.
 - Fix LocalSocket.recent method.
 
 ## 0.5.3

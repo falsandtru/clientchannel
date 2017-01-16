@@ -142,6 +142,9 @@ export class Socket<K extends string, V extends SocketStore.Value<K>> extends So
               },
               __event: {
                 value: new Observable<[LocalPortEventType], LocalPortEvent, any>()
+              },
+              __transaction: {
+                value: (cb: () => any, done: () => any, fail: (err: DOMError | Error) => any) => this.transaction(key, cb, done, fail)
               }
             }
           ),

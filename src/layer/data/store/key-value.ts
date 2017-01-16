@@ -92,8 +92,8 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
         : tx
           .objectStore(this.name)
           .openCursor(query, direction);
-      req.onsuccess = () => req.result && cb(req.result, req.error);
-      tx.oncomplete = () => void cb(null, tx.error);;
+      req.onsuccess = () => req.result && void cb(req.result, req.error);
+      tx.oncomplete = () => void cb(null, tx.error);
       tx.onerror = tx.onabort = () => void cb(null, tx.error);
     });
   }

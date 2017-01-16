@@ -136,50 +136,88 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       .reduce<Promise<([K, DOMError | Error] | void)[]>>((ps, p) => ps.then(es => p.then(e => es.concat([e]))), Promise.resolve<([K, DOMError | Error] | void)[]>([]))
       .then(es => void cb(<[K, DOMError | Error][]>es.filter(e => !!e)));
   }
-  public fetch(key: K, cb: (err?: DOMError | Error) => any = noop): void {
-    const savedEvents: SavedEventRecord<K, V>[] = [];
+  public fetch(key: K, cb: (err?: DOMError | Error) => any = noop, after: (tx: IDBTransaction, err?: DOMError) => any = noop): void {
     void this.syncState.set(key, this.syncState.get(key) === true);
-    return void this.cursor(key, EventRecordFields.key, IDBCursorDirection.prev, IDBTransactionMode.readonly, (cursor, err): void => {
-      if (err) return void cb(err);
-      if (!cursor || (<SavedEventRecord<K, V>>cursor.value).date < this.meta(key).date) {
-        // register latest events
-        void Array.from(
-          savedEvents
-            // remove overridable event
-            .reduceRight<SavedEventRecord<K, V>[]>((acc, e) =>
-              acc.length === 0 || acc[0].type === EventStore.EventType.put
-                ? concat(acc, [e])
-                : acc
-            , [])
-            .reduceRight<Map<string, SavedEventRecord<K, V>>>((dict, e) =>
-              dict.set(e.attr, e)
-            , new Map())
-            .values())
-          .sort((a, b) => a.date - b.date || a.id - b.id)
-          .forEach(e => {
-            assert(this.memory.refs([e.key, e.attr, sqid(e.id)]).length === 0);
-            assert(this.memory.refs([e.key, e.attr, sqid(e.id + 1)]).length === 0);
-            void this.memory
-              .on([e.key, e.attr, sqid(e.id)], () => e);
-            void this.memory
-              .once([e.key], () => { throw void this.events_.update.emit([e.key, e.attr, sqid(e.id)], e); });
-          });
-        void this.syncState.set(key, true);
-        void cb();
-        void this.update(key);
-        if (savedEvents.length >= this.snapshotCycle) {
-          void this.snapshot(key);
+    const savedEvents: SavedEventRecord<K, V>[] = [];
+    return void listen(this.database)(db => {
+      const tx = db
+        .transaction(this.name, after ? IDBTransactionMode.readwrite : IDBTransactionMode.readonly);
+      const req = tx
+        .objectStore(this.name)
+        .index(EventRecordFields.key)
+        .openCursor(key, IDBCursorDirection.prev);
+      const unbind = () => {
+        req.onsuccess = tx.onerror = tx.onabort = <any>null;
+      };
+      const proc = (cursor: IDBCursorWithValue | null, err: DOMError | null): void => {
+        if (err) return (
+          void cb(err),
+          void unbind(),
+          void after(tx, err));
+        if (!cursor || (<SavedEventRecord<K, V>>cursor.value).date < this.meta(key).date) {
+          // register latest events
+          void Array.from(
+            savedEvents
+              // remove overridable event
+              .reduceRight<SavedEventRecord<K, V>[]>((acc, e) =>
+                acc.length === 0 || acc[0].type === EventStore.EventType.put
+                  ? concat(acc, [e])
+                  : acc
+              , [])
+              .reduceRight<Map<string, SavedEventRecord<K, V>>>((dict, e) =>
+                dict.set(e.attr, e)
+              , new Map())
+              .values())
+            .sort((a, b) => a.date - b.date || a.id - b.id)
+            .forEach(e => {
+              assert(this.memory.refs([e.key, e.attr, sqid(e.id)]).length === 0);
+              assert(this.memory.refs([e.key, e.attr, sqid(e.id + 1)]).length === 0);
+              void this.memory
+                .on([e.key, e.attr, sqid(e.id)], () => e);
+              void this.memory
+                .once([e.key], () => { throw void this.events_.update.emit([e.key, e.attr, sqid(e.id)], e); });
+            });
+          void this.syncState.set(key, true);
+          void cb();
+          void unbind();
+          void after(tx);
+          void this.update(key);
+          if (savedEvents.length >= this.snapshotCycle) {
+            void this.snapshot(key);
+          }
+          return;
         }
-        return;
-      }
-      else {
-        const event: SavedEventRecord<K, V> = cursor.value;
-        if (this.memory.refs([event.key, event.attr, sqid(event.id)]).length > 0) return;
-        void savedEvents.unshift(new SavedEventRecord(event.id, event.key, event.value, event.type, event.date));
-        if (event.type !== EventStore.EventType.put) return;
-        return void cursor.continue();
-      }
+        else {
+          const event: SavedEventRecord<K, V> = cursor.value;
+          if (this.memory.refs([event.key, event.attr, sqid(event.id)]).length > 0) return void proc(null, err);
+          void savedEvents.unshift(new SavedEventRecord(event.id, event.key, event.value, event.type, event.date));
+          if (event.type !== EventStore.EventType.put) return void proc(null, err);
+          return void cursor.continue();
+        }
+      };
+      req.onsuccess = () => void proc(req.result, req.error);
+      tx.onerror = tx.onabort = () => void cb(tx.error);
     });
+  }
+  private tx: IDBTransaction | void;
+  public transaction(key: K, cb: () => any, done: () => any, fail: (err: DOMError | Error) => any): void {
+    void setTimeout(() => (
+      void this.fetch(key, noop, (tx, err) => {
+        try {
+          if (err) throw err;
+          this.tx = tx;
+          void cb();
+          void tx.addEventListener('complete', () => void done());
+          void tx.addEventListener('abort', () => void fail(tx.error));
+          void tx.addEventListener('error', () => void fail(tx.error));
+        }
+        catch (e) {
+          void fail(e);
+        }
+        finally {
+          this.tx = void 0;
+        }
+      })));
   }
   public keys(): K[] {
     return this.memory.reflect([])
@@ -208,9 +246,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     return compose(key, this.memory.reflect([key]))
       .value;
   }
-  public add(event: UnsavedEventRecord<K, V>, tx?: IDBTransaction): void {
+  public add(event: UnsavedEventRecord<K, V>, tx: IDBTransaction | void = this.tx): void {
     assert(event.type === EventStore.EventType.snapshot ? tx : true);
-    assert(!tx || tx.db.name === this.database)
+    assert(!tx || tx.db.name === this.database && tx.mode === IDBTransactionMode.readwrite)
     void this.events_.access
       .emit([event.key, event.attr, event.type], new InternalEvent(event.type, IdNumber(0), event.key, event.attr));
     if (!(event instanceof UnsavedEventRecord)) throw new Error(`LocalSocket: Cannot add a saved event: ${JSON.stringify(event)}`);
@@ -250,6 +288,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         const req = tx
           .objectStore(this.name)
           .add(Object.assign({}, event));
+        assert(!tx.oncomplete);
         tx.oncomplete = () => {
           assert(req.result > 0);
           void terminate();
@@ -266,6 +305,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             void this.snapshot(savedEvent.key);
           }
         };
+        assert(!tx.onerror);
+        assert(!tx.onabort);
         tx.onerror = tx.onabort = () =>
           active()
             ? void reject()
@@ -385,8 +426,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         : tx
           .objectStore(this.name)
           .openCursor(query, direction);
-      req.onsuccess = () => req.result && cb(req.result, req.error);
-      tx.oncomplete = () => void cb(null, tx.error);;
+      req.onsuccess = () => req.result && void cb(req.result, req.error);
+      tx.oncomplete = () => void cb(null, tx.error);
       tx.onerror = tx.onabort = () => void cb(null, tx.error);
     });
   }

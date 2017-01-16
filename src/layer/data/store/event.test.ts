@@ -344,6 +344,26 @@ describe('Unit: layers/data/store/event', function () {
       });
     });
 
+    it('transaction', done => {
+      open('test', Store.configure('test'));
+      const es = new Store<string, Value>('test', 'test');
+
+      es.add(new UnsavedEventRecord('', new Value(0)));
+      es.transaction('', () => {
+        assert(es.meta('').id === 1);
+        assert(es.get('').value === 0);
+        es.fetch('', err => {
+          assert(!err);
+          assert(es.meta('').id === 2);
+          assert(es.get('').value === 1);
+          done();
+        });
+        es.add(new UnsavedEventRecord('', new Value(es.get('').value + 1)));
+        assert(es.meta('').id === 1);
+        assert(es.get('').value === 1);
+      }, () => void 0, () => done(false))
+    });
+
     it('clean', done => {
       open('test', Store.configure('test'));
       const es = new Store<string, Value>('test', 'test');
