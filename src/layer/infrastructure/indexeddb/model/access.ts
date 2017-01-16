@@ -9,7 +9,7 @@ const configs = new Map<string, Config>();
 export type Config = {
   make: (db: IDBDatabase) => boolean;
   verify: (db: IDBDatabase) => boolean;
-  destroy: (error: DOMError, event: Event | null) => boolean;
+  destroy: (error: DOMException | DOMError, event: Event | null) => boolean;
 };
 
 const commands = new Map<string, Command>();
@@ -80,7 +80,7 @@ namespace State {
     private readonly STATE: this;
     constructor(
       public readonly database: string,
-      public readonly error: DOMError,
+      public readonly error: DOMException | DOMError,
       public readonly event: Event
     ) {
       this.STATE;
@@ -92,7 +92,7 @@ namespace State {
     private readonly STATE: this;
     constructor(
       public readonly database: string,
-      public readonly error: DOMError,
+      public readonly error: DOMException | DOMError,
       public readonly event: Event
     ) {
       this.STATE;
@@ -104,7 +104,7 @@ namespace State {
     private readonly STATE: this;
     constructor(
       public readonly database: string,
-      public readonly error: DOMError
+      public readonly error: DOMException | DOMError
     ) {
       this.STATE;
       assert(states.has(database));
@@ -295,7 +295,7 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
         }
       }
       catch (err) {
-        if (err instanceof DOMError || err instanceof DOMException) {
+        if (err instanceof DOMException || err instanceof DOMError) {
           void console.warn(err);
           assert(!console.info(err + ''));
         }

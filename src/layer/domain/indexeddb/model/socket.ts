@@ -11,7 +11,7 @@ const cache = new Map<string, SocketStore<string, SocketStore.Value<string>>>();
 export class SocketStore<K extends string, V extends SocketStore.Value<K>> {
   constructor(
     public readonly name: string,
-    destroy: (err: DOMError, event: Event | null) => boolean,
+    destroy: (err: DOMException | DOMError, event: Event | null) => boolean,
     private readonly expiry: number
   ) {
     if (cache.has(name)) return <SocketStore<K, V>>cache.get(name)!;
@@ -44,10 +44,10 @@ export class SocketStore<K extends string, V extends SocketStore.Value<K>> {
     save: new Observable<never[] | [K] | [K, string] | [K, string, SocketStore.EventType], SocketStore.Event<K>, void>(),
     loss: new Observable<never[] | [K] | [K, string] | [K, string, SocketStore.EventType], SocketStore.Event<K>, void>()
   };
-  public sync(keys: K[], cb: (errs: [K, DOMError | Error][]) => any = noop, timeout?: number): void {
+  public sync(keys: K[], cb: (errs: [K, DOMException | DOMError | Error][]) => any = noop, timeout?: number): void {
     return this.schema.data.sync(keys, cb, timeout);
   }
-  public transaction(key: K, cb: () => any, done: () => any, fail: (err: DOMError | Error) => any): void {
+  public transaction(key: K, cb: () => any, done: () => any, fail: (err: DOMException | DOMError | Error) => any): void {
     return this.schema.data.transaction(key, cb, done, fail);
   }
   public meta(key: K): LocalSocketObjectMetaData<K> {
@@ -71,7 +71,7 @@ export class SocketStore<K extends string, V extends SocketStore.Value<K>> {
     if (expiry === Infinity) return;
     return void this.expiries.set(key, expiry);
   }
-  public recent(limit: number, cb: (keys: K[], err: DOMError | null) => any): void {
+  public recent(limit: number, cb: (keys: K[], err: DOMException | DOMError | null) => any): void {
     const keys: K[] = [];
     return void this.schema.access.cursor(
       null,

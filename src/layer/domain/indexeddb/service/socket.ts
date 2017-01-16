@@ -50,7 +50,7 @@ export class Socket<K extends string, V extends SocketStore.Value<K>> extends So
   constructor(
     name: string,
     private readonly factory: () => V,
-    destroy: (err: DOMError, ev: Event | null) => boolean = () => true,
+    destroy: (err: DOMException | DOMError, ev: Event | null) => boolean = () => true,
     expiry: number = Infinity
   ) {
     super(name, destroy, expiry);
@@ -144,7 +144,7 @@ export class Socket<K extends string, V extends SocketStore.Value<K>> extends So
                 value: new Observable<[LocalPortEventType], LocalPortEvent, any>()
               },
               __transaction: {
-                value: (cb: () => any, done: () => any, fail: (err: DOMError | Error) => any) => this.transaction(key, cb, done, fail)
+                value: (cb: () => any, done: () => any, fail: (err: DOMException | DOMError | Error) => any) => this.transaction(key, cb, done, fail)
               }
             }
           ),

@@ -10,18 +10,18 @@
       readonly save: Observer<never[] | [K] | [K, string] | [K, string, LocalSocketEventType], LocalSocketEvent<K>, void>,
       readonly loss: Observer<never[] | [K] | [K, string] | [K, string, LocalSocketEventType], LocalSocketEvent<K>, void>
     };
-    sync(keys: K[], cb?: (errs: [K, DOMError | Error][]) => any, timeout?: number): void;
-    transaction(key: K, cb: () => any, done: () => any, fail: (err: DOMError | Error) => any): void;
+    sync(keys: K[], cb?: (errs: [K, DOMException | DOMError | Error][]) => any, timeout?: number): void;
+    transaction(key: K, cb: () => any, done: () => any, fail: (err: DOMException | DOMError | Error) => any): void;
     link(key: K, expiry?: number): V;
     delete(key: K): void;
-    recent(limit: number, cb: (keys: K[], err?: DOMError | null) => any): void;
+    recent(limit: number, cb: (keys: K[], err?: DOMException | DOMError | null) => any): void;
     close(): void;
     destroy(): void;
   }
   export interface LocalSocketConfig<K extends string, V extends LocalSocketObject<K>> {
     schema(): V;
     expiry?: number;
-    destroy?(error: DOMError, event: Event | null): boolean;
+    destroy?(error: DOMException | DOMError, event: Event | null): boolean;
   }
   export interface LocalSocketObject<K extends string> {
     readonly __meta: LocalSocketObjectMetaData<K>;
@@ -29,7 +29,7 @@
     readonly __key: K;
     readonly __date: number;
     readonly __event: Observer<[LocalPortEventType] | [LocalPortEventType, string], LocalPortEvent, any>;
-    readonly __transaction: (key: K, cb: () => any, done: () => any, fail: (err: DOMError | Error) => any) => void;
+    readonly __transaction: (key: K, cb: () => any, done: () => any, fail: (err: DOMException | DOMError | Error) => any) => void;
   }
   export interface LocalSocketObjectMetaData<K extends string> {
     readonly id: number;
