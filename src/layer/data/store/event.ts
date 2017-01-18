@@ -212,7 +212,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           void tx.addEventListener('error', () => void fail(tx.error));
         }
         catch (e) {
-          void fail(e);
+          e = e instanceof Error || e instanceof DOMError ? e : new Error();
+          void fail(<DOMException | DOMError | Error>e);
         }
         finally {
           this.tx = void 0;
