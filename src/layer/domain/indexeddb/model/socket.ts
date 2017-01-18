@@ -44,8 +44,8 @@ export class SocketStore<K extends string, V extends SocketStore.Value<K>> {
     save: new Observable<never[] | [K] | [K, string] | [K, string, SocketStore.EventType], SocketStore.Event<K>, void>(),
     loss: new Observable<never[] | [K] | [K, string] | [K, string, SocketStore.EventType], SocketStore.Event<K>, void>()
   };
-  public sync(keys: K[], cb: (errs: [K, DOMException | DOMError | Error][]) => any = noop, timeout?: number): void {
-    return this.schema.data.sync(keys, cb, timeout);
+  public sync(keys: K[], cb: (errs: [K, DOMException | DOMError][]) => any = noop): void {
+    return this.schema.data.sync(keys, cb);
   }
   public transaction(key: K, cb: () => any, done: () => any, fail: (err: DOMException | DOMError | Error) => any): void {
     return this.schema.data.transaction(key, cb, done, fail);

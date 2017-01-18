@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.0
+
+- Refine LocalSocket.sync method.
+
 ## 0.6.0
 
 - Add transaction feature.

@@ -10,7 +10,7 @@
       readonly save: Observer<never[] | [K] | [K, string] | [K, string, LocalSocketEventType], LocalSocketEvent<K>, void>,
       readonly loss: Observer<never[] | [K] | [K, string] | [K, string, LocalSocketEventType], LocalSocketEvent<K>, void>
     };
-    sync(keys: K[], cb?: (errs: [K, DOMException | DOMError | Error][]) => any, timeout?: number): void;
+    sync(keys: K[], cb?: (errs: [K, DOMException | DOMError][]) => any): void;
     transaction(key: K, cb: () => any, done: () => any, fail: (err: DOMException | DOMError | Error) => any): void;
     link(key: K, expiry?: number): V;
     delete(key: K): void;

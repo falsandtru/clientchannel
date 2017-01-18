@@ -115,28 +115,26 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         : void this.memory.emit([key]);
   }
   private readonly syncState = new Map<K, boolean>();
-  private readonly syncWaits = new Observable<[K], DOMException | DOMError | Error | void, any>();
-  public sync(keys: K[], cb: (errs: [K, DOMException | DOMError | Error][]) => any = noop, timeout = 0): void {
+  private readonly syncWaits = new Observable<[K], DOMException | DOMError | void, any>();
+  public sync(keys: K[], cb: (errs: [K, DOMException | DOMError][]) => any = noop): void {
     return void keys
-      .map<Promise<[K, DOMException | DOMError | Error] | void>>(key => {
+      .map<Promise<[K, DOMException | DOMError] | void>>(key => {
         switch (this.syncState.get(key)) {
           case true:
             return Promise.resolve();
           case false:
-            return new Promise<[K, DOMException | DOMError | Error] | void>(resolve => void (
-              timeout > 0 ? void (void this.get(key), void setTimeout(() => resolve([key, new Error()]))) : void 0,
+            return new Promise<[K, DOMException | DOMError] | void>(resolve => void (
               void this.syncWaits.once([key], err => void resolve(err ? [key, err] : void 0))));
           default:
-            return new Promise<[K, DOMException | DOMError | Error] | void>(resolve => void (
-              timeout > 0 ? void (void this.get(key), void setTimeout(() => resolve([key, new Error()]))) : void 0,
+            return new Promise<[K, DOMException | DOMError] | void>(resolve => void (
               void this.syncWaits.once([key], err => void resolve(err ? [key, err] : void 0)),
               void this.fetch(key, err => void this.syncWaits.emit([key], err))));
         }
       })
-      .reduce<Promise<([K, DOMException | DOMError | Error] | void)[]>>((ps, p) => ps.then(es => p.then(e => es.concat([e]))), Promise.resolve<([K, DOMException | DOMError | Error] | void)[]>([]))
-      .then(es => void cb(<[K, DOMException | DOMError | Error][]>es.filter(e => !!e)));
+      .reduce<Promise<([K, DOMException | DOMError] | void)[]>>((ps, p) => ps.then(es => p.then(e => es.concat([e]))), Promise.resolve<([K, DOMException | DOMError] | void)[]>([]))
+      .then(es => void cb(<[K, DOMException | DOMError][]>es.filter(e => !!e)));
   }
-  public fetch(key: K, cb: (err?: DOMException | DOMError | Error) => any = noop, after: (tx: IDBTransaction, err?: DOMException | DOMError) => any = noop): void {
+  public fetch(key: K, cb: (err?: DOMException | DOMError) => any = noop, after: (tx: IDBTransaction, err?: DOMException | DOMError) => any = noop): void {
     void this.syncState.set(key, this.syncState.get(key) === true);
     const savedEvents: SavedEventRecord<K, V>[] = [];
     return void listen(this.database)(db => {
@@ -182,6 +180,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           void unbind();
           void after(tx);
           void this.update(key);
+          void this.events_.access
+            .emit([key], new InternalEvent(InternalEventType.query, IdNumber(0), key, ''));
           if (savedEvents.length >= this.snapshotCycle) {
             void this.snapshot(key);
           }
