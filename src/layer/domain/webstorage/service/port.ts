@@ -41,12 +41,11 @@ export class Port<V extends LocalPortObject> implements LocalPort<V> {
   ) {
     if (cache.has(name)) return <Port<V>>cache.get(name)!;
     void cache.set(name, this);
-    const source: V = Object.assign(
-      <V><any>{
-        [SCHEMA.KEY.NAME]: this.name,
-        [SCHEMA.EVENT.NAME]: new Observable<[LocalPortEventType] | [LocalPortEventType, string], PortEvent, void>()
-      },
-      parse<V>(this.storage.getItem(this.name)));
+    const source: V = <any>{
+      [SCHEMA.KEY.NAME]: this.name,
+      [SCHEMA.EVENT.NAME]: new Observable<[LocalPortEventType] | [LocalPortEventType, string], PortEvent, void>(),
+      ...<Object>parse<V>(this.storage.getItem(this.name))
+    };
     this.link_ = build(source, this.factory, (attr, newValue, oldValue) => {
       void this.log.update(this.name);
       void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, attr) => {

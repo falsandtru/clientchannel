@@ -288,7 +288,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         if (!active()) return void resolve();
         const req = tx
           .objectStore(this.name)
-          .add(Object.assign({}, event));
+          .add({ ...event });
         assert(!tx.oncomplete);
         tx.oncomplete = () => {
           assert(req.result > 0);
@@ -456,13 +456,11 @@ export {
   SavedEventRecord
 }
 
-type InternalEventType = EventStore.EventType | 'query';
 const InternalEventType = {
-  put: <'put'>'put',
-  delete: <'delete'>'delete',
-  snapshot: <'snapshot'>'snapshot',
+  ...EventStore.EventType,
   query: <'query'>'query'
 };
+type InternalEventType = EventStore.EventType | typeof InternalEventType.query;
 class InternalEvent<K extends string> {
   constructor(
     public readonly type: InternalEventType,
