@@ -4,7 +4,7 @@
 [![Coverage Status](https://coveralls.io/repos/falsandtru/localsocket/badge.svg?branch=master&service=github)](https://coveralls.io/github/falsandtru/localsocket?branch=master)
 [![Dependency Status](https://gemnasium.com/falsandtru/localsocket.svg)](https://gemnasium.com/falsandtru/localsocket)
 
-Communicate between other tabs via IndexedDB and LocalStorage.
+Store and sync values by communicating between tabs via IndexedDB and LocalStorage.
 
 ## Feature
 
