@@ -27,12 +27,12 @@
     "LICENSE"
   ],
   "dependencies": {
-    "spica": "0.0.46"
+    "spica": "0.0.47"
   },
   "devDependencies": {
     "@types/mocha": "^2.2.38",
     "@types/power-assert": "1.4.29",
-    "browserify": "^13.3.0",
+    "browserify": "^14.0.0",
     "del": "^2.2.2",
     "extend": "^3.0.0",
     "gulp": "^3.9.1",
@@ -41,7 +41,7 @@
     "gulp-load-plugins": "^1.4.0",
     "gulp-mocha": "^3.0.1",
     "gulp-rename": "^1.2.2",
-    "gulp-uglify": "^2.0.0",
+    "gulp-uglify": "^2.0.1",
     "gulp-unassert": "^1.0.1",
     "json": "^9.0.4",
     "karma": "1.4.0",
@@ -58,8 +58,8 @@
     "power-assert": "^1.4.2",
     "run-sequence": "^1.2.2",
     "semver": "^5.3.0",
-    "tsify": "^3.0.0",
-    "typescript": "2.2.0-dev.20170115",
+    "tsify": "^3.0.1",
+    "typescript": "2.2.0-dev.20170128",
     "vinyl-buffer": "^1.0.0",
     "vinyl-source-stream": "^1.1.0"
   },

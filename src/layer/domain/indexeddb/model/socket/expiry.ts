@@ -78,8 +78,8 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
             return void this.delete(key);
           default:
             if (!expiries.has(key)) return;
-            assert(expiries.get(key) < Infinity);
-            const expiry = Date.now() + expiries.get(key);
+            assert(expiries.get(key)! < Infinity);
+            const expiry = Date.now() + expiries.get(key)!;
             void this.set(key, new ExpiryRecord(key, expiry));
             return void schedule(expiry);
         }

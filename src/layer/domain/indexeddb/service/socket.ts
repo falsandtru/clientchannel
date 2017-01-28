@@ -29,7 +29,7 @@ class PortSchema<K extends string> {
   public recv(): K[] {
     return this.msgs
       .filter(msg => {
-        const received: boolean = msg.date <= this.msgLatestUpdates_.get(msg.key);
+        const received: boolean = msg.date <= this.msgLatestUpdates_.get(msg.key)!;
         void this.msgLatestUpdates_.set(msg.key, msg.date);
         return !received;
       })
