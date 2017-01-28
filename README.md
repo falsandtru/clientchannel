@@ -107,6 +107,8 @@ link.version = VERSION;
 
 ## Browser
 
+Requires es6 support.
+
 - Chrome
 - Firefox
 - Edge (without iframe)
