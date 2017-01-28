@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.1
+
+- Update dependencies.
+
 ## 0.7.0
 
 - Refine LocalSocket.sync method.
