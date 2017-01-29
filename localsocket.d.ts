@@ -1,4 +1,6 @@
 ﻿declare module 'localsocket' {
+  import { Observer, Subscriber } from 'spica';
+
   export default socket;
 
   export const status: boolean;
@@ -73,14 +75,5 @@
   export type LocalPortEventType
     = 'send'
     | 'recv';
-
-  // spica@0.0.40
-  interface Observer<T extends any[], D, R> {
-    monitor(type: T, subscriber: Subscriber<D, R>): () => void;
-    on(type: T, subscriber: Subscriber<D, R>): () => void;
-    off(type: T, subscriber?: Subscriber<D, R>): void;
-    once(type: T, subscriber: Subscriber<D, R>): () => void;
-  }
-  type Subscriber<D, R> = (data: D) => R;
 
 }
