@@ -1,4 +1,4 @@
-const RegValidValueNameFormat = /^[A-z][0-9A-z_]*$/;
+const RegValidValueNameFormat = /^[a-zA-Z][0-9a-zA-Z_]*$/;
 const RegInvalidValueNameFormat = /^[0-9A-Z_]+$/;
 
 export function isValidName(prop: string): boolean {

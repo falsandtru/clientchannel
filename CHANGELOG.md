@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.3
+
+- Fix value name constraints.
+
 ## 0.7.2
 
 - Update dependencies.
