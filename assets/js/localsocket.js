@@ -1,4 +1,4 @@
-/*! localsocket v0.7.2 https://github.com/falsandtru/localsocket | (c) 2016, falsandtru | MIT License */
+/*! localsocket v0.7.3 https://github.com/falsandtru/localsocket | (c) 2016, falsandtru | MIT License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -44,6 +44,7 @@ require = function e(t, n, r) {
     4: [
         function (require, module, exports) {
             'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             var api_1 = require('./layer/interface/api');
             exports.default = api_1.socket;
             exports.socket = api_1.socket;
@@ -55,6 +56,7 @@ require = function e(t, n, r) {
     5: [
         function (require, module, exports) {
             'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             var api_1 = require('../domain/indexeddb/api');
             var api_2 = require('../domain/webstorage/api');
             var api_3 = require('../domain/indexeddb/api');
@@ -88,6 +90,7 @@ require = function e(t, n, r) {
     6: [
         function (require, module, exports) {
             'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             function IdNumber(id) {
                 return +id;
             }
@@ -98,7 +101,8 @@ require = function e(t, n, r) {
     7: [
         function (require, module, exports) {
             'use strict';
-            var RegValidValueNameFormat = /^[A-z][0-9A-z_]*$/;
+            Object.defineProperty(exports, '__esModule', { value: true });
+            var RegValidValueNameFormat = /^[a-zA-Z][0-9a-zA-Z_]*$/;
             var RegInvalidValueNameFormat = /^[0-9A-Z_]+$/;
             function isValidName(prop) {
                 return prop.length > 0 && prop[0] !== '_' && prop[prop.length - 1] !== '_' && !RegInvalidValueNameFormat.test(prop) && RegValidValueNameFormat.test(prop);
@@ -141,6 +145,7 @@ require = function e(t, n, r) {
                     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
                 };
             }();
+            Object.defineProperty(exports, '__esModule', { value: true });
             var spica_1 = require('spica');
             var EventRecordFields;
             (function (EventRecordFields) {
@@ -275,6 +280,7 @@ require = function e(t, n, r) {
                 }
                 return t;
             };
+            Object.defineProperty(exports, '__esModule', { value: true });
             var spica_1 = require('spica');
             var api_1 = require('../../infrastructure/indexeddb/api');
             var types_1 = require('../constraint/types');
@@ -896,6 +902,7 @@ require = function e(t, n, r) {
     10: [
         function (require, module, exports) {
             'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             var spica_1 = require('spica');
             var api_1 = require('../../infrastructure/indexeddb/api');
             var noop_1 = require('../../../lib/noop');
@@ -1029,6 +1036,7 @@ require = function e(t, n, r) {
     11: [
         function (require, module, exports) {
             'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             var builder_1 = require('./module/builder');
             exports.SCHEMA = builder_1.SCHEMA;
             exports.build = builder_1.build;
@@ -1040,6 +1048,7 @@ require = function e(t, n, r) {
     12: [
         function (require, module, exports) {
             'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             var values_1 = require('../../../data/constraint/values');
             exports.isValidPropertyName = values_1.isValidName;
             exports.isValidPropertyValue = values_1.isValidValue;
@@ -1133,6 +1142,7 @@ require = function e(t, n, r) {
     13: [
         function (require, module, exports) {
             'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             var socket_1 = require('./service/socket');
             exports.Socket = socket_1.Socket;
             var event_1 = require('./service/event');
@@ -1163,6 +1173,7 @@ require = function e(t, n, r) {
                     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
                 };
             }();
+            Object.defineProperty(exports, '__esModule', { value: true });
             var spica_1 = require('spica');
             var api_1 = require('../../../infrastructure/indexeddb/api');
             var data_1 = require('./socket/data');
@@ -1355,6 +1366,7 @@ require = function e(t, n, r) {
                     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
                 };
             }();
+            Object.defineProperty(exports, '__esModule', { value: true });
             var key_value_1 = require('../../../../data/store/key-value');
             var event_1 = require('../../../../data/store/event');
             exports.STORE_NAME = 'access';
@@ -1431,6 +1443,7 @@ require = function e(t, n, r) {
                     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
                 };
             }();
+            Object.defineProperty(exports, '__esModule', { value: true });
             var event_1 = require('../../../../data/store/event');
             exports.STORE_NAME = 'data';
             var DataStore = function (_super) {
@@ -1496,6 +1509,7 @@ require = function e(t, n, r) {
                     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
                 };
             }();
+            Object.defineProperty(exports, '__esModule', { value: true });
             var api_1 = require('../../../../infrastructure/indexeddb/api');
             var key_value_1 = require('../../../../data/store/key-value');
             var event_1 = require('../../../../data/store/event');
@@ -1594,6 +1608,7 @@ require = function e(t, n, r) {
     18: [
         function (require, module, exports) {
             'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             var api_1 = require('../../../infrastructure/indexeddb/api');
             exports.event = api_1.event;
             exports.IDBEventType = api_1.IDBEventType;
@@ -1619,6 +1634,7 @@ require = function e(t, n, r) {
                     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
                 };
             }();
+            Object.defineProperty(exports, '__esModule', { value: true });
             var spica_1 = require('spica');
             var api_1 = require('../../dao/api');
             var socket_1 = require('../model/socket');
@@ -1794,6 +1810,7 @@ require = function e(t, n, r) {
     20: [
         function (require, module, exports) {
             'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             var api_1 = require('../../infrastructure/webstorage/api');
             exports.localStorage = api_1.localStorage;
             exports.sessionStorage = api_1.sessionStorage;
@@ -1814,6 +1831,7 @@ require = function e(t, n, r) {
     21: [
         function (require, module, exports) {
             'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             var Storage = function () {
                 function Storage() {
                     this.store = new Map();
@@ -1846,6 +1864,7 @@ require = function e(t, n, r) {
     22: [
         function (require, module, exports) {
             'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             var spica_1 = require('spica');
             var api_1 = require('../../../infrastructure/webstorage/api');
             exports.events = {
@@ -1877,6 +1896,7 @@ require = function e(t, n, r) {
                 }
                 return t;
             };
+            Object.defineProperty(exports, '__esModule', { value: true });
             var spica_1 = require('spica');
             var api_1 = require('../../dao/api');
             var event_1 = require('../service/event');
@@ -1993,6 +2013,7 @@ require = function e(t, n, r) {
     24: [
         function (require, module, exports) {
             'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             var global_1 = require('./module/global');
             exports.indexedDB = global_1.indexedDB;
             exports.IDBKeyRange = global_1.IDBKeyRange;
@@ -2017,6 +2038,7 @@ require = function e(t, n, r) {
     25: [
         function (require, module, exports) {
             'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             var spica_1 = require('spica');
             var global_1 = require('../module/global');
             var event_1 = require('./event');
@@ -2407,6 +2429,7 @@ require = function e(t, n, r) {
     26: [
         function (require, module, exports) {
             'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             var IDBEventType;
             (function (IDBEventType) {
                 IDBEventType.connect = 'connect';
@@ -2433,6 +2456,7 @@ require = function e(t, n, r) {
     27: [
         function (require, module, exports) {
             'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             exports.indexedDB = self.indexedDB;
             exports.IDBKeyRange = self.IDBKeyRange;
             var IDBTransactionMode;
@@ -2453,6 +2477,7 @@ require = function e(t, n, r) {
     28: [
         function (require, module, exports) {
             'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             var global_1 = require('./module/global');
             exports.localStorage = global_1.localStorage;
             exports.sessionStorage = global_1.sessionStorage;
@@ -2468,6 +2493,7 @@ require = function e(t, n, r) {
     29: [
         function (require, module, exports) {
             'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             var spica_1 = require('spica');
             var global_1 = require('../module/global');
             var storageEvents = {
@@ -2494,6 +2520,7 @@ require = function e(t, n, r) {
     30: [
         function (require, module, exports) {
             'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             var spica_1 = require('spica');
             exports.supportWebStorage = function () {
                 try {
@@ -2515,6 +2542,7 @@ require = function e(t, n, r) {
     31: [
         function (require, module, exports) {
             'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             var api_1 = require('../application/api');
             exports.socket = api_1.socket;
             exports.port = api_1.port;
@@ -2526,6 +2554,7 @@ require = function e(t, n, r) {
     32: [
         function (require, module, exports) {
             'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             function noop() {
                 ;
             }
@@ -2541,10 +2570,10 @@ require = function e(t, n, r) {
                     if (!exports.hasOwnProperty(p))
                         exports[p] = m[p];
             }
+            Object.defineProperty(exports, '__esModule', { value: true });
             __export(require('./src/export'));
             var export_1 = require('./src/export');
             exports.default = export_1.default;
-            exports.__esModule = true;
         },
         { './src/export': 4 }
     ]
