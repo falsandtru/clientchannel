@@ -361,7 +361,7 @@ describe('Unit: layers/data/store/event', function () {
         es.add(new UnsavedEventRecord('', new Value(es.get('').value + 1)));
         assert(es.meta('').id === 1);
         assert(es.get('').value === 1);
-      }, () => void 0, () => done(false))
+      }, done);
     });
 
     it('clean', done => {

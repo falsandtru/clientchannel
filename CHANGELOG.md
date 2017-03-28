@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0
+
+- Refine LocalSocket.transaction method.
+
 ## 0.7.3
 
 - Fix value name constraints.

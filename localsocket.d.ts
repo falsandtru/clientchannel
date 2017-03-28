@@ -13,7 +13,7 @@
       readonly loss: Observer<never[] | [K] | [K, string] | [K, string, LocalSocketEventType], LocalSocketEvent<K>, void>
     };
     sync(keys: K[], cb?: (errs: [K, DOMException | DOMError][]) => any): void;
-    transaction(key: K, cb: () => any, done: () => any, fail: (err: DOMException | DOMError | Error) => any): void;
+    transaction(key: K, cb: () => any, complete: (err?: DOMException | DOMError | Error) => any): void;
     link(key: K, expiry?: number): V;
     delete(key: K): void;
     recent(limit: number, cb: (keys: K[], err?: DOMException | DOMError | null) => any): void;
@@ -31,7 +31,7 @@
     readonly __key: K;
     readonly __date: number;
     readonly __event: Observer<[LocalPortEventType] | [LocalPortEventType, string], LocalPortEvent, any>;
-    readonly __transaction: (key: K, cb: () => any, done: () => any, fail: (err: DOMException | DOMError | Error) => any) => void;
+    readonly __transaction: (key: K, cb: () => any, complete: (err?: DOMException | DOMError | Error) => any) => void;
   }
   export interface LocalSocketObjectMetaData<K extends string> {
     readonly id: number;

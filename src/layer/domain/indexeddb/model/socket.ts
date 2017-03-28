@@ -47,8 +47,8 @@ export class SocketStore<K extends string, V extends SocketStore.Value<K>> {
   public sync(keys: K[], cb: (errs: [K, DOMException | DOMError][]) => any = noop): void {
     return this.schema.data.sync(keys, cb);
   }
-  public transaction(key: K, cb: () => any, done: () => any, fail: (err: DOMException | DOMError | Error) => any): void {
-    return this.schema.data.transaction(key, cb, done, fail);
+  public transaction(key: K, cb: () => any, complete: (err?: DOMException | DOMError | Error) => any): void {
+    return this.schema.data.transaction(key, cb, complete);
   }
   public meta(key: K): LocalSocketObjectMetaData<K> {
     return this.schema.data.meta(key);

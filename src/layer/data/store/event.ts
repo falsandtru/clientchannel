@@ -200,20 +200,20 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     });
   }
   private tx: IDBTransaction | void;
-  public transaction(key: K, cb: () => any, done: () => any, fail: (err: DOMException | DOMError | Error) => any): void {
+  public transaction(key: K, cb: () => any, complete: (err?: DOMException | DOMError | Error) => any): void {
     void setTimeout(() => (
       void this.fetch(key, noop, (tx, err) => {
         try {
           if (err) throw err;
           this.tx = tx;
           void cb();
-          void tx.addEventListener('complete', () => void done());
-          void tx.addEventListener('abort', () => void fail(tx.error));
-          void tx.addEventListener('error', () => void fail(tx.error));
+          void tx.addEventListener('complete', () => void complete());
+          void tx.addEventListener('abort', () => void complete(tx.error));
+          void tx.addEventListener('error', () => void complete(tx.error));
         }
         catch (e) {
           e = e instanceof Error || e instanceof DOMError ? e : new Error();
-          void fail(<DOMException | DOMError | Error>e);
+          void complete(<DOMException | DOMError | Error>e);
         }
         finally {
           this.tx = void 0;
