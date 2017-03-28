@@ -1,4 +1,4 @@
-import { LocalPort, LocalPortObject, LocalPortEvent, LocalPortEventType } from 'localsocket';
+import { LocalPort, LocalPortObject, LocalPortEvent, LocalPortEventType } from '../../../../../';
 import { Observable } from 'spica';
 import { SCHEMA, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { events } from '../service/event';

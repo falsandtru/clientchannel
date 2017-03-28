@@ -1,4 +1,4 @@
-import { LocalSocketObject } from 'localsocket';
+import { LocalSocketObject } from '../../../../../';
 import { Socket } from './socket';
 import { SocketStore } from '../model/socket';
 import { listen, destroy, event, IDBEventType } from '../../../infrastructure/indexeddb/api';

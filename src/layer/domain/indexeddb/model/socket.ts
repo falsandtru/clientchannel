@@ -1,4 +1,4 @@
-import { LocalSocketObject, LocalSocketObjectMetaData, LocalSocketEvent, LocalSocketEventType } from 'localsocket';
+import { LocalSocketObject, LocalSocketObjectMetaData, LocalSocketEvent, LocalSocketEventType } from '../../../../../';
 import { Observable } from 'spica';
 import { open, close, destroy, event, IDBEventType, IDBTransactionMode, IDBCursorDirection } from '../../../infrastructure/indexeddb/api';
 import { DataStore } from './socket/data';

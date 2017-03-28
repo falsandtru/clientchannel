@@ -15,6 +15,7 @@
     "store",
     "repository"
   ],
+  "types": "./index.d.ts",
   "main": "./dist/localsocket.js",
   "files": [
     "dist",

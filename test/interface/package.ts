@@ -1,4 +1,4 @@
-import def, { status, socket, port } from 'localsocket';
+import def, { status, socket, port } from '../../';
 
 describe('Interface: Package', function () {
   describe('localsocket', function () {

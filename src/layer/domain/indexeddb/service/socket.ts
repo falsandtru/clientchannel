@@ -1,4 +1,4 @@
-import { LocalSocket, LocalSocketObject, LocalPortObject, LocalPortEvent, LocalPortEventType } from 'localsocket';
+import { LocalSocket, LocalSocketObject, LocalPortObject, LocalPortEvent, LocalPortEventType } from '../../../../../';
 import { Observable, clone, concat } from 'spica';
 import { build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { SocketStore } from '../model/socket';

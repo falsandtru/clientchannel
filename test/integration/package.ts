@@ -1,5 +1,5 @@
-import { socket, LocalSocketObject } from 'localsocket';
-import { port, LocalPortObject } from 'localsocket';
+import { socket, LocalSocketObject } from '../../';
+import { port, LocalPortObject } from '../../';
 
 describe('Integration: Package', function () {
   describe('usage', function () {
