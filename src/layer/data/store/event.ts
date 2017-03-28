@@ -1,4 +1,4 @@
-import { Observable, Cancelable, sqid, concat } from 'spica';
+import { Observable, Cancelable, Tick, sqid, concat } from 'spica';
 import { listen, Config, IDBTransactionMode, IDBCursorDirection, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { IdNumber } from '../constraint/types';
 import { EventRecordFields, UnsavedEventRecord, SavedEventRecord } from '../schema/event';
@@ -201,24 +201,23 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   }
   private tx: IDBTransaction | void;
   public transaction(key: K, cb: () => any, complete: (err?: DOMException | DOMError | Error) => any): void {
-    void setTimeout(() => (
-      void this.fetch(key, noop, (tx, err) => {
-        try {
-          if (err) throw err;
-          this.tx = tx;
-          void cb();
-          void tx.addEventListener('complete', () => void complete());
-          void tx.addEventListener('abort', () => void complete(tx.error));
-          void tx.addEventListener('error', () => void complete(tx.error));
-        }
-        catch (e) {
-          e = e instanceof Error || e instanceof DOMError ? e : new Error();
-          void complete(<DOMException | DOMError | Error>e);
-        }
-        finally {
-          this.tx = void 0;
-        }
-      })));
+    return void this.fetch(key, noop, (tx, err) => {
+      try {
+        if (err) throw err;
+        this.tx = tx;
+        void cb();
+        void tx.addEventListener('complete', () => void complete());
+        void tx.addEventListener('abort', () => void complete(tx.error));
+        void tx.addEventListener('error', () => void complete(tx.error));
+      }
+      catch (e) {
+        e = e instanceof Error || e instanceof DOMError ? e : new Error();
+        void complete(<DOMException | DOMError | Error>e);
+      }
+      finally {
+        this.tx = void 0;
+      }
+    });
   }
   public keys(): K[] {
     return this.memory.reflect([])
@@ -316,7 +315,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       if (tx) return void cont(tx);
       const cancelable = new Cancelable<void>();
       void cancelable.listeners.add(reject);
-      void setTimeout(() => (
+      void Tick(() => (
         void setTimeout(cancelable.cancel, 1000),
         void listen(this.database)(db => (
           void cancelable.listeners.clear(),

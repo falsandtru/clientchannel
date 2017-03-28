@@ -350,7 +350,7 @@ describe('Unit: layers/data/store/event', function () {
 
       es.add(new UnsavedEventRecord('', new Value(0)));
       es.transaction('', () => {
-        assert(es.meta('').id === 1);
+        assert(es.meta('').id === 0);
         assert(es.get('').value === 0);
         es.fetch('', err => {
           assert(!err);
@@ -359,7 +359,7 @@ describe('Unit: layers/data/store/event', function () {
           done();
         });
         es.add(new UnsavedEventRecord('', new Value(es.get('').value + 1)));
-        assert(es.meta('').id === 1);
+        assert(es.meta('').id === 0);
         assert(es.get('').value === 1);
       }, done);
     });
