@@ -1,4 +1,4 @@
-/*! localsocket v0.7.3 https://github.com/falsandtru/localsocket | (c) 2016, falsandtru | MIT License */
+/*! localsocket v0.8.0 https://github.com/falsandtru/localsocket | (c) 2016, falsandtru | MIT License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -37,12 +37,6 @@ require = function e(t, n, r) {
     ],
     3: [
         function (require, module, exports) {
-            arguments[4][1][0].apply(exports, arguments);
-        },
-        { 'dup': 1 }
-    ],
-    4: [
-        function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var api_1 = require('./layer/interface/api');
@@ -51,9 +45,9 @@ require = function e(t, n, r) {
             exports.port = api_1.port;
             exports.status = api_1.status;
         },
-        { './layer/interface/api': 31 }
+        { './layer/interface/api': 30 }
     ],
-    5: [
+    4: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -83,11 +77,11 @@ require = function e(t, n, r) {
             }(events = exports.events || (exports.events = {})));
         },
         {
-            '../domain/indexeddb/api': 13,
-            '../domain/webstorage/api': 20
+            '../domain/indexeddb/api': 12,
+            '../domain/webstorage/api': 19
         }
     ],
-    6: [
+    5: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -98,7 +92,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    7: [
+    6: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -126,7 +120,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    8: [
+    7: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -252,7 +246,7 @@ require = function e(t, n, r) {
         },
         { 'spica': undefined }
     ],
-    9: [
+    8: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -513,31 +507,29 @@ require = function e(t, n, r) {
                         };
                     });
                 };
-                EventStore.prototype.transaction = function (key, cb, done, fail) {
+                EventStore.prototype.transaction = function (key, cb, complete) {
                     var _this = this;
-                    void setTimeout(function () {
-                        return void _this.fetch(key, noop_1.noop, function (tx, err) {
-                            try {
-                                if (err)
-                                    throw err;
-                                _this.tx = tx;
-                                void cb();
-                                void tx.addEventListener('complete', function () {
-                                    return void done();
-                                });
-                                void tx.addEventListener('abort', function () {
-                                    return void fail(tx.error);
-                                });
-                                void tx.addEventListener('error', function () {
-                                    return void fail(tx.error);
-                                });
-                            } catch (e) {
-                                e = e instanceof Error || e instanceof DOMError ? e : new Error();
-                                void fail(e);
-                            } finally {
-                                _this.tx = void 0;
-                            }
-                        });
+                    return void this.fetch(key, noop_1.noop, function (tx, err) {
+                        try {
+                            if (err)
+                                throw err;
+                            _this.tx = tx;
+                            void cb();
+                            void tx.addEventListener('complete', function () {
+                                return void complete();
+                            });
+                            void tx.addEventListener('abort', function () {
+                                return void complete(tx.error);
+                            });
+                            void tx.addEventListener('error', function () {
+                                return void complete(tx.error);
+                            });
+                        } catch (e) {
+                            e = e instanceof Error || e instanceof DOMError ? e : new Error();
+                            void complete(e);
+                        } finally {
+                            _this.tx = void 0;
+                        }
                     });
                 };
                 EventStore.prototype.keys = function () {
@@ -687,7 +679,7 @@ require = function e(t, n, r) {
                             return void cont(tx);
                         var cancelable = new spica_1.Cancelable();
                         void cancelable.listeners.add(reject);
-                        void setTimeout(function () {
+                        void spica_1.Tick(function () {
                             return void setTimeout(cancelable.cancel, 1000), void api_1.listen(_this.database)(function (db) {
                                 return void cancelable.listeners.clear(), void cancelable.maybe(db).fmap(function (db) {
                                     return void cont(db.transaction(_this.name, api_1.IDBTransactionMode.readwrite));
@@ -892,14 +884,14 @@ require = function e(t, n, r) {
             exports.compose = compose;
         },
         {
-            '../../../lib/noop': 32,
-            '../../infrastructure/indexeddb/api': 24,
-            '../constraint/types': 6,
-            '../schema/event': 8,
+            '../../../lib/noop': 31,
+            '../../infrastructure/indexeddb/api': 23,
+            '../constraint/types': 5,
+            '../schema/event': 7,
             'spica': undefined
         }
     ],
-    10: [
+    9: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1028,12 +1020,12 @@ require = function e(t, n, r) {
             exports.KeyValueStore = KeyValueStore;
         },
         {
-            '../../../lib/noop': 32,
-            '../../infrastructure/indexeddb/api': 24,
+            '../../../lib/noop': 31,
+            '../../infrastructure/indexeddb/api': 23,
             'spica': undefined
         }
     ],
-    11: [
+    10: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1043,9 +1035,9 @@ require = function e(t, n, r) {
             exports.isValidPropertyName = builder_1.isValidPropertyName;
             exports.isValidPropertyValue = builder_1.isValidPropertyValue;
         },
-        { './module/builder': 12 }
+        { './module/builder': 11 }
     ],
-    12: [
+    11: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1135,11 +1127,11 @@ require = function e(t, n, r) {
             exports.build = build;
         },
         {
-            '../../../../lib/noop': 32,
-            '../../../data/constraint/values': 7
+            '../../../../lib/noop': 31,
+            '../../../data/constraint/values': 6
         }
     ],
-    13: [
+    12: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1150,11 +1142,11 @@ require = function e(t, n, r) {
             exports.IDBEventType = event_1.IDBEventType;
         },
         {
-            './service/event': 18,
-            './service/socket': 19
+            './service/event': 17,
+            './service/socket': 18
         }
     ],
-    14: [
+    13: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -1220,8 +1212,8 @@ require = function e(t, n, r) {
                     }
                     return this.schema.data.sync(keys, cb);
                 };
-                SocketStore.prototype.transaction = function (key, cb, done, fail) {
-                    return this.schema.data.transaction(key, cb, done, fail);
+                SocketStore.prototype.transaction = function (key, cb, complete) {
+                    return this.schema.data.transaction(key, cb, complete);
                 };
                 SocketStore.prototype.meta = function (key) {
                     return this.schema.data.meta(key);
@@ -1339,15 +1331,15 @@ require = function e(t, n, r) {
             }();
         },
         {
-            '../../../../lib/noop': 32,
-            '../../../infrastructure/indexeddb/api': 24,
-            './socket/access': 15,
-            './socket/data': 16,
-            './socket/expiry': 17,
+            '../../../../lib/noop': 31,
+            '../../../infrastructure/indexeddb/api': 23,
+            './socket/access': 14,
+            './socket/data': 15,
+            './socket/expiry': 16,
             'spica': undefined
         }
     ],
-    15: [
+    14: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -1420,11 +1412,11 @@ require = function e(t, n, r) {
             }();
         },
         {
-            '../../../../data/store/event': 9,
-            '../../../../data/store/key-value': 10
+            '../../../../data/store/event': 8,
+            '../../../../data/store/key-value': 9
         }
     ],
-    16: [
+    15: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -1488,9 +1480,9 @@ require = function e(t, n, r) {
             }(DataStore = exports.DataStore || (exports.DataStore = {})));
             exports.DataStore = DataStore;
         },
-        { '../../../../data/store/event': 9 }
+        { '../../../../data/store/event': 8 }
     ],
-    17: [
+    16: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -1600,12 +1592,12 @@ require = function e(t, n, r) {
             }();
         },
         {
-            '../../../../data/store/event': 9,
-            '../../../../data/store/key-value': 10,
-            '../../../../infrastructure/indexeddb/api': 24
+            '../../../../data/store/event': 8,
+            '../../../../data/store/key-value': 9,
+            '../../../../infrastructure/indexeddb/api': 23
         }
     ],
-    18: [
+    17: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1613,9 +1605,9 @@ require = function e(t, n, r) {
             exports.event = api_1.event;
             exports.IDBEventType = api_1.IDBEventType;
         },
-        { '../../../infrastructure/indexeddb/api': 24 }
+        { '../../../infrastructure/indexeddb/api': 23 }
     ],
-    19: [
+    18: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -1778,8 +1770,8 @@ require = function e(t, n, r) {
                         },
                         __event: { value: new spica_1.Observable() },
                         __transaction: {
-                            value: function (cb, done, fail) {
-                                return _this.transaction(key, cb, done, fail);
+                            value: function (cb, complete) {
+                                return _this.transaction(key, cb, complete);
                             }
                         }
                     }), this.factory, function (attr, newValue, oldValue) {
@@ -1800,14 +1792,14 @@ require = function e(t, n, r) {
             exports.Socket = Socket;
         },
         {
-            '../../../infrastructure/webstorage/api': 28,
-            '../../dao/api': 11,
-            '../../webstorage/api': 20,
-            '../model/socket': 14,
+            '../../../infrastructure/webstorage/api': 27,
+            '../../dao/api': 10,
+            '../../webstorage/api': 19,
+            '../model/socket': 13,
             'spica': undefined
         }
     ],
-    20: [
+    19: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1823,12 +1815,12 @@ require = function e(t, n, r) {
             exports.WebStorageEventType = port_1.PortEventType;
         },
         {
-            '../../infrastructure/webstorage/api': 28,
-            './service/event': 22,
-            './service/port': 23
+            '../../infrastructure/webstorage/api': 27,
+            './service/event': 21,
+            './service/port': 22
         }
     ],
-    21: [
+    20: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1861,7 +1853,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    22: [
+    21: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1880,11 +1872,11 @@ require = function e(t, n, r) {
             }
         },
         {
-            '../../../infrastructure/webstorage/api': 28,
+            '../../../infrastructure/webstorage/api': 27,
             'spica': undefined
         }
     ],
-    23: [
+    22: [
         function (require, module, exports) {
             'use strict';
             var __assign = this && this.__assign || Object.assign || function (t) {
@@ -2003,14 +1995,14 @@ require = function e(t, n, r) {
             }
         },
         {
-            '../../../infrastructure/webstorage/api': 28,
-            '../../dao/api': 11,
-            '../model/storage': 21,
-            '../service/event': 22,
+            '../../../infrastructure/webstorage/api': 27,
+            '../../dao/api': 10,
+            '../model/storage': 20,
+            '../service/event': 21,
             'spica': undefined
         }
     ],
-    24: [
+    23: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2030,12 +2022,12 @@ require = function e(t, n, r) {
             exports.IDBEventType = event_1.IDBEventType;
         },
         {
-            './model/access': 25,
-            './model/event': 26,
-            './module/global': 27
+            './model/access': 24,
+            './model/event': 25,
+            './module/global': 26
         }
     ],
-    25: [
+    24: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2421,12 +2413,12 @@ require = function e(t, n, r) {
             }
         },
         {
-            '../module/global': 27,
-            './event': 26,
+            '../module/global': 26,
+            './event': 25,
             'spica': undefined
         }
     ],
-    26: [
+    25: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2453,7 +2445,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    27: [
+    26: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2474,7 +2466,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    28: [
+    27: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2486,11 +2478,11 @@ require = function e(t, n, r) {
             exports.events = event_1.events;
         },
         {
-            './model/event': 29,
-            './module/global': 30
+            './model/event': 28,
+            './module/global': 29
         }
     ],
-    29: [
+    28: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2513,11 +2505,11 @@ require = function e(t, n, r) {
             });
         },
         {
-            '../module/global': 30,
+            '../module/global': 29,
             'spica': undefined
         }
     ],
-    30: [
+    29: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2539,7 +2531,7 @@ require = function e(t, n, r) {
         },
         { 'spica': undefined }
     ],
-    31: [
+    30: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2549,9 +2541,9 @@ require = function e(t, n, r) {
             exports.events = api_1.events;
             exports.status = api_1.status;
         },
-        { '../application/api': 5 }
+        { '../application/api': 4 }
     ],
-    32: [
+    31: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2575,11 +2567,10 @@ require = function e(t, n, r) {
             var export_1 = require('./src/export');
             exports.default = export_1.default;
         },
-        { './src/export': 4 }
+        { './src/export': 3 }
     ]
 }, {}, [
     1,
     2,
-    3,
     'localsocket'
 ]);
