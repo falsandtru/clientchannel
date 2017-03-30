@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noarchive">
 
-<title>Canvas | LocalSocket</title>
+<title>Canvas | ClientChannel</title>
 
 </head>
 <body>
@@ -19,14 +19,14 @@
 <script src="https://cdn.polyfill.io/v2/polyfill.js?features=default,WeakMap,WeakSet,Array.prototype.findIndex&flags=gated"></script>
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/fabric.js/1.5.0/fabric.min.js"></script>
-<script src="/localsocket/assets/js/spica.js"></script>
-<script src="/localsocket/assets/js/localsocket.js"></script>
+<script src="/clientchannel/assets/js/spica.js"></script>
+<script src="/clientchannel/assets/js/clientchannel.js"></script>
 
 <script>
   var width = 400, height = 500;
   $(function () {
     // connect to database
-    var sock = require('localsocket').default('demo', {
+    var sock = require('clientchannel').storechannel('demo', {
       schema: function () {
         // define schema
         return {

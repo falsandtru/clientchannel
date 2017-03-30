@@ -1,4 +1,4 @@
-/*! localsocket v0.8.0 https://github.com/falsandtru/localsocket | (c) 2016, falsandtru | MIT License */
+/*! clientchannel v0.9.0 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -40,10 +40,8 @@ require = function e(t, n, r) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var api_1 = require('./layer/interface/api');
-            exports.default = api_1.socket;
-            exports.socket = api_1.socket;
-            exports.port = api_1.port;
-            exports.status = api_1.status;
+            exports.storechannel = api_1.storechannel;
+            exports.messagechannel = api_1.messagechannel;
         },
         { './layer/interface/api': 30 }
     ],
@@ -53,28 +51,22 @@ require = function e(t, n, r) {
             Object.defineProperty(exports, '__esModule', { value: true });
             var api_1 = require('../domain/indexeddb/api');
             var api_2 = require('../domain/webstorage/api');
-            var api_3 = require('../domain/indexeddb/api');
-            var api_4 = require('../domain/webstorage/api');
-            var api_5 = require('../domain/webstorage/api');
-            exports.status = api_5.supportWebStorage;
-            function socket(name, config) {
+            function storechannel(name, config) {
+                if (!api_2.supportWebStorage)
+                    throw new Error('ClientChannel: Couldn\'t use WebStorage.');
                 var schema = config.schema, _a = config.destroy, destroy = _a === void 0 ? function () {
                         return true;
                     } : _a, _b = config.expiry, expiry = _b === void 0 ? Infinity : _b;
-                return new api_1.Socket(name, schema, destroy, expiry);
+                return new api_1.StoreChannel(name, schema, destroy, expiry);
             }
-            exports.socket = socket;
-            function port(name, config) {
+            exports.storechannel = storechannel;
+            function messagechannel(name, config) {
+                if (!api_2.supportWebStorage)
+                    throw new Error('ClientChannel: Couldn\'t use WebStorage.');
                 var schema = config.schema;
-                return new api_2.Port(name, api_2.localStorage, schema);
+                return new api_2.MessageChannel(name, api_2.localStorage, schema);
             }
-            exports.port = port;
-            var events;
-            (function (events) {
-                events.indexedDB = api_3.event;
-                events.localStorage = api_4.events.localStorage;
-                events.sessionStorage = api_4.events.sessionStorage;
-            }(events = exports.events || (exports.events = {})));
+            exports.messagechannel = messagechannel;
         },
         {
             '../domain/indexeddb/api': 12,
@@ -154,28 +146,28 @@ require = function e(t, n, r) {
             var EventRecord = function () {
                 function EventRecord(key, value, date, type) {
                     if (typeof this.id === 'number' && this.id > 0 === false || this.id !== void 0)
-                        throw new TypeError('LocalSocket: EventRecord: Invalid event id: ' + this.id);
+                        throw new TypeError('ClientChannel: EventRecord: Invalid event id: ' + this.id);
                     this.type = type;
                     if (typeof this.type !== 'string')
-                        throw new TypeError('LocalSocket: EventRecord: Invalid event type: ' + this.type);
+                        throw new TypeError('ClientChannel: EventRecord: Invalid event type: ' + this.type);
                     this.key = key;
                     if (typeof this.key !== 'string')
-                        throw new TypeError('LocalSocket: EventRecord: Invalid event key: ' + this.key);
+                        throw new TypeError('ClientChannel: EventRecord: Invalid event key: ' + this.key);
                     this.value = value;
                     if (typeof this.value !== 'object' || !this.value)
-                        throw new TypeError('LocalSocket: EventRecord: Invalid event value: ' + this.value);
+                        throw new TypeError('ClientChannel: EventRecord: Invalid event value: ' + this.value);
                     this.date = date;
                     if (typeof this.date !== 'number' || this.date >= 0 === false)
-                        throw new TypeError('LocalSocket: EventRecord: Invalid event date: ' + this.date);
+                        throw new TypeError('ClientChannel: EventRecord: Invalid event date: ' + this.date);
                     this.attr = this.type === exports.EventType.put ? Object.keys(value).reduce(function (r, p) {
                         return p.length > 0 && p[0] !== '_' && p[p.length - 1] !== '_' ? p : r;
                     }, '') : '';
                     if (typeof this.attr !== 'string')
-                        throw new TypeError('LocalSocket: EventRecord: Invalid event attr: ' + this.key);
+                        throw new TypeError('ClientChannel: EventRecord: Invalid event attr: ' + this.key);
                     if (this.type === exports.EventType.put && this.attr.length === 0)
-                        throw new TypeError('LocalSocket: EventRecord: Invalid event attr with ' + this.type + ': ' + this.attr);
+                        throw new TypeError('ClientChannel: EventRecord: Invalid event attr with ' + this.type + ': ' + this.attr);
                     if (this.type !== exports.EventType.put && this.attr.length !== 0)
-                        throw new TypeError('LocalSocket: EventRecord: Invalid event attr with ' + this.type + ': ' + this.attr);
+                        throw new TypeError('ClientChannel: EventRecord: Invalid event attr with ' + this.type + ': ' + this.attr);
                     switch (type) {
                     case exports.EventType.put: {
                             this.value = value = spica_1.clone(new EventValue(), (_a = {}, _a[this.attr] = value[this.attr], _a));
@@ -193,7 +185,7 @@ require = function e(t, n, r) {
                             return;
                         }
                     default:
-                        throw new TypeError('LocalSocket: Invalid event type: ' + type);
+                        throw new TypeError('ClientChannel: Invalid event type: ' + type);
                     }
                     var _a;
                 }
@@ -211,7 +203,7 @@ require = function e(t, n, r) {
                     var _this = _super.call(this, key, value, date, type) || this;
                     _this.EVENT_RECORD;
                     if (_this.id !== void 0 || 'id' in _this)
-                        throw new TypeError('LocalSocket: UnsavedEventRecord: Invalid event id: ' + _this.id);
+                        throw new TypeError('ClientChannel: UnsavedEventRecord: Invalid event id: ' + _this.id);
                     void Object.freeze(_this);
                     return _this;
                 }
@@ -225,7 +217,7 @@ require = function e(t, n, r) {
                     _this.id = id;
                     _this.EVENT_RECORD;
                     if (_this.id > 0 === false)
-                        throw new TypeError('LocalSocket: SavedEventRecord: Invalid event id: ' + _this.id);
+                        throw new TypeError('ClientChannel: SavedEventRecord: Invalid event id: ' + _this.id);
                     void Object.freeze(_this);
                     return _this;
                 }
@@ -334,8 +326,8 @@ require = function e(t, n, r) {
                     });
                     void this.events.save.monitor([], function (event) {
                         switch (event.type) {
-                        case EventStore.EventType.delete:
-                        case EventStore.EventType.snapshot:
+                        case EventStore.Event.Type.delete:
+                        case EventStore.Event.Type.snapshot:
                             void _this.clean(event.key);
                         }
                     });
@@ -454,7 +446,7 @@ require = function e(t, n, r) {
                                 return void cb(err), void unbind(), void after(tx, err);
                             if (!cursor || cursor.value.date < _this.meta(key).date) {
                                 void Array.from(savedEvents.reduceRight(function (acc, e) {
-                                    return acc.length === 0 || acc[0].type === EventStore.EventType.put ? spica_1.concat(acc, [e]) : acc;
+                                    return acc.length === 0 || acc[0].type === EventStore.Event.Type.put ? spica_1.concat(acc, [e]) : acc;
                                 }, []).reduceRight(function (dict, e) {
                                     return dict.set(e.attr, e);
                                 }, new Map()).values()).sort(function (a, b) {
@@ -494,7 +486,7 @@ require = function e(t, n, r) {
                                     ]).length > 0)
                                     return void proc(null, err);
                                 void savedEvents.unshift(new event_1.SavedEventRecord(event_2.id, event_2.key, event_2.value, event_2.type, event_2.date));
-                                if (event_2.type !== EventStore.EventType.put)
+                                if (event_2.type !== EventStore.Event.Type.put)
                                     return void proc(null, err);
                                 return void cursor.continue();
                             }
@@ -550,7 +542,7 @@ require = function e(t, n, r) {
                     });
                 };
                 EventStore.prototype.has = function (key) {
-                    return compose(key, this.memory.reflect([key])).type !== EventStore.EventType.delete;
+                    return compose(key, this.memory.reflect([key])).type !== EventStore.Event.Type.delete;
                 };
                 EventStore.prototype.get = function (key) {
                     if (!this.syncState.get(key)) {
@@ -570,12 +562,12 @@ require = function e(t, n, r) {
                         event.type
                     ], new InternalEvent(event.type, types_1.IdNumber(0), event.key, event.attr));
                     if (!(event instanceof event_1.UnsavedEventRecord))
-                        throw new Error('LocalSocket: Cannot add a saved event: ' + JSON.stringify(event));
+                        throw new Error('ClientChannel: Cannot add a saved event: ' + JSON.stringify(event));
                     if (!this.syncState.get(event.key)) {
                         void this.fetch(event.key);
                     }
                     switch (event.type) {
-                    case EventStore.EventType.put: {
+                    case EventStore.Event.Type.put: {
                             void this.memory.off([
                                 event.key,
                                 event.attr,
@@ -583,8 +575,8 @@ require = function e(t, n, r) {
                             ]);
                             break;
                         }
-                    case EventStore.EventType.delete:
-                    case EventStore.EventType.snapshot: {
+                    case EventStore.Event.Type.delete:
+                    case EventStore.Event.Type.snapshot: {
                             void this.memory.refs([event.key]).filter(function (_a) {
                                 var _b = _a[0], id = _b[2];
                                 return id === spica_1.sqid(0);
@@ -697,7 +689,7 @@ require = function e(t, n, r) {
                     });
                 };
                 EventStore.prototype.delete = function (key) {
-                    return void this.add(new event_1.UnsavedEventRecord(key, new EventStore.Value(), EventStore.EventType.delete));
+                    return void this.add(new event_1.UnsavedEventRecord(key, new EventStore.Value(), EventStore.Event.Type.delete));
                 };
                 EventStore.prototype.snapshot = function (key) {
                     var _this = this;
@@ -721,14 +713,14 @@ require = function e(t, n, r) {
                                 if (composedEvent instanceof event_1.SavedEventRecord)
                                     return;
                                 switch (composedEvent.type) {
-                                case EventStore.EventType.snapshot:
+                                case EventStore.Event.Type.snapshot:
                                     return void _this.add(new event_1.UnsavedEventRecord(composedEvent.key, composedEvent.value, composedEvent.type, savedEvents.reduce(function (date, e) {
                                         return e.date > date ? e.date : date;
                                     }, 0)), tx);
-                                case EventStore.EventType.delete:
+                                case EventStore.Event.Type.delete:
                                     return;
                                 }
-                                throw new TypeError('LocalSocket: Invalid event type: ' + composedEvent.type);
+                                throw new TypeError('ClientChannel: Invalid event type: ' + composedEvent.type);
                             } else {
                                 return void cursor.continue();
                             }
@@ -751,11 +743,11 @@ require = function e(t, n, r) {
                         } else {
                             var event_4 = cursor.value;
                             switch (event_4.type) {
-                            case EventStore.EventType.put: {
+                            case EventStore.Event.Type.put: {
                                     void cleanState.set(event_4.key, cleanState.get(event_4.key) || false);
                                     break;
                                 }
-                            case EventStore.EventType.snapshot: {
+                            case EventStore.Event.Type.snapshot: {
                                     if (!cleanState.get(event_4.key)) {
                                         void cleanState.set(event_4.key, true);
                                         void cursor.continue();
@@ -763,7 +755,7 @@ require = function e(t, n, r) {
                                     }
                                     break;
                                 }
-                            case EventStore.EventType.delete: {
+                            case EventStore.Event.Type.delete: {
                                     void cleanState.set(event_4.key, true);
                                     break;
                                 }
@@ -797,7 +789,6 @@ require = function e(t, n, r) {
             EventStore.fields = Object.freeze(event_1.EventRecordFields);
             exports.EventStore = EventStore;
             (function (EventStore) {
-                EventStore.EventType = Schema.EventType;
                 var Event = function () {
                     function Event(type, id, key, attr, date) {
                         this.type = type;
@@ -810,6 +801,9 @@ require = function e(t, n, r) {
                     return Event;
                 }();
                 EventStore.Event = Event;
+                (function (Event) {
+                    Event.Type = Schema.EventType;
+                }(Event = EventStore.Event || (EventStore.Event = {})));
                 var Record = function (_super) {
                     __extends(Record, _super);
                     function Record() {
@@ -828,7 +822,7 @@ require = function e(t, n, r) {
                 EventStore.Value = Value;
             }(EventStore = exports.EventStore || (exports.EventStore = {})));
             exports.EventStore = EventStore;
-            var InternalEventType = __assign({}, EventStore.EventType, { query: 'query' });
+            var InternalEventType = __assign({}, EventStore.Event.Type, { query: 'query' });
             var InternalEvent = function () {
                 function InternalEvent(type, id, key, attr) {
                     this.type = type;
@@ -841,7 +835,7 @@ require = function e(t, n, r) {
             }();
             function compose(key, events) {
                 return group(events).map(function (events) {
-                    return events.reduceRight(compose, new event_1.UnsavedEventRecord(key, new EventStore.Value(), EventStore.EventType.delete, 0));
+                    return events.reduceRight(compose, new event_1.UnsavedEventRecord(key, new EventStore.Value(), EventStore.Event.Type.delete, 0));
                 }).reduce(function (e) {
                     return e;
                 });
@@ -866,19 +860,19 @@ require = function e(t, n, r) {
                 }
                 function compose(target, source) {
                     switch (source.type) {
-                    case EventStore.EventType.put:
-                        return source.value[source.attr] !== void 0 ? new event_1.UnsavedEventRecord(source.key, Object.assign(new EventStore.Value(), target.value, source.value), EventStore.EventType.snapshot) : new event_1.UnsavedEventRecord(source.key, Object.keys(target.value).reduce(function (value, prop) {
+                    case EventStore.Event.Type.put:
+                        return source.value[source.attr] !== void 0 ? new event_1.UnsavedEventRecord(source.key, Object.assign(new EventStore.Value(), target.value, source.value), EventStore.Event.Type.snapshot) : new event_1.UnsavedEventRecord(source.key, Object.keys(target.value).reduce(function (value, prop) {
                             if (prop === source.attr)
                                 return value;
                             value[prop] = target[prop];
                             return value;
-                        }, new EventStore.Value()), EventStore.EventType.snapshot);
-                    case EventStore.EventType.snapshot:
+                        }, new EventStore.Value()), EventStore.Event.Type.snapshot);
+                    case EventStore.Event.Type.snapshot:
                         return source;
-                    case EventStore.EventType.delete:
+                    case EventStore.Event.Type.delete:
                         return source;
                     }
-                    throw new TypeError('LocalSocket: Invalid event type: ' + source);
+                    throw new TypeError('ClientChannel: Invalid event type: ' + source);
                 }
             }
             exports.compose = compose;
@@ -1063,7 +1057,7 @@ require = function e(t, n, r) {
                     delete dao[prop];
                 }, void 0);
                 if (typeof source[exports.SCHEMA.KEY.NAME] !== 'string')
-                    throw new TypeError('LocalSocket: Invalid key: ' + source[exports.SCHEMA.KEY.NAME]);
+                    throw new TypeError('ClientChannel: Invalid key: ' + source[exports.SCHEMA.KEY.NAME]);
                 var descmap = Object.assign(Object.keys(dao).filter(values_1.isValidName).filter(values_1.isValidValue(dao)).reduce(function (map, prop) {
                     {
                         var desc = Object.getOwnPropertyDescriptor(dao, prop);
@@ -1135,15 +1129,15 @@ require = function e(t, n, r) {
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            var socket_1 = require('./service/socket');
-            exports.Socket = socket_1.Socket;
+            var channel_1 = require('./service/channel');
+            exports.StoreChannel = channel_1.Channel;
             var event_1 = require('./service/event');
             exports.event = event_1.event;
             exports.IDBEventType = event_1.IDBEventType;
         },
         {
-            './service/event': 17,
-            './service/socket': 18
+            './service/channel': 17,
+            './service/event': 18
         }
     ],
     13: [
@@ -1168,13 +1162,13 @@ require = function e(t, n, r) {
             Object.defineProperty(exports, '__esModule', { value: true });
             var spica_1 = require('spica');
             var api_1 = require('../../../infrastructure/indexeddb/api');
-            var data_1 = require('./socket/data');
-            var access_1 = require('./socket/access');
-            var expiry_1 = require('./socket/expiry');
+            var data_1 = require('./channel/data');
+            var access_1 = require('./channel/access');
+            var expiry_1 = require('./channel/expiry');
             var noop_1 = require('../../../../lib/noop');
             var cache = new Map();
-            var SocketStore = function () {
-                function SocketStore(name, destroy, expiry) {
+            var ChannelStore = function () {
+                function ChannelStore(name, destroy, expiry) {
                     var _this = this;
                     this.name = name;
                     this.expiry = expiry;
@@ -1206,31 +1200,31 @@ require = function e(t, n, r) {
                         return void _this.schema.bind();
                     });
                 }
-                SocketStore.prototype.sync = function (keys, cb) {
+                ChannelStore.prototype.sync = function (keys, cb) {
                     if (cb === void 0) {
                         cb = noop_1.noop;
                     }
                     return this.schema.data.sync(keys, cb);
                 };
-                SocketStore.prototype.transaction = function (key, cb, complete) {
+                ChannelStore.prototype.transaction = function (key, cb, complete) {
                     return this.schema.data.transaction(key, cb, complete);
                 };
-                SocketStore.prototype.meta = function (key) {
+                ChannelStore.prototype.meta = function (key) {
                     return this.schema.data.meta(key);
                 };
-                SocketStore.prototype.has = function (key) {
+                ChannelStore.prototype.has = function (key) {
                     return this.schema.data.has(key);
                 };
-                SocketStore.prototype.get = function (key) {
+                ChannelStore.prototype.get = function (key) {
                     return this.schema.data.get(key);
                 };
-                SocketStore.prototype.add = function (record) {
+                ChannelStore.prototype.add = function (record) {
                     return this.schema.data.add(record);
                 };
-                SocketStore.prototype.delete = function (key) {
+                ChannelStore.prototype.delete = function (key) {
                     return this.schema.data.delete(key);
                 };
-                SocketStore.prototype.expire = function (key, expiry) {
+                ChannelStore.prototype.expire = function (key, expiry) {
                     if (expiry === void 0) {
                         expiry = this.expiry;
                     }
@@ -1238,7 +1232,7 @@ require = function e(t, n, r) {
                         return;
                     return void this.expiries.set(key, expiry);
                 };
-                SocketStore.prototype.recent = function (limit, cb) {
+                ChannelStore.prototype.recent = function (limit, cb) {
                     var keys = [];
                     return void this.schema.access.cursor(null, access_1.AccessStore.fields.date, api_1.IDBCursorDirection.prev, api_1.IDBTransactionMode.readonly, function (cursor, err) {
                         if (!cursor)
@@ -1249,11 +1243,11 @@ require = function e(t, n, r) {
                         void cursor.continue();
                     });
                 };
-                SocketStore.prototype.close = function () {
+                ChannelStore.prototype.close = function () {
                     void cache.delete(this.name);
                     return void api_1.close(this.name);
                 };
-                SocketStore.prototype.destroy = function () {
+                ChannelStore.prototype.destroy = function () {
                     void api_1.event.off([
                         this.name,
                         api_1.IDBEventType.destroy
@@ -1261,27 +1255,12 @@ require = function e(t, n, r) {
                     void cache.delete(this.name);
                     return void api_1.destroy(this.name);
                 };
-                return SocketStore;
+                return ChannelStore;
             }();
-            exports.SocketStore = SocketStore;
-            (function (SocketStore) {
-                SocketStore.EventType = data_1.DataStore.EventType;
-                var Event = function (_super) {
-                    __extends(Event, _super);
-                    function Event() {
-                        return _super !== null && _super.apply(this, arguments) || this;
-                    }
-                    return Event;
-                }(data_1.DataStore.Event);
-                SocketStore.Event = Event;
-                var Record = function (_super) {
-                    __extends(Record, _super);
-                    function Record() {
-                        return _super !== null && _super.apply(this, arguments) || this;
-                    }
-                    return Record;
-                }(data_1.DataStore.Record);
-                SocketStore.Record = Record;
+            exports.ChannelStore = ChannelStore;
+            (function (ChannelStore) {
+                ChannelStore.Event = data_1.DataStore.Event;
+                ChannelStore.Record = data_1.DataStore.Record;
                 var Value = function (_super) {
                     __extends(Value, _super);
                     function Value() {
@@ -1289,9 +1268,9 @@ require = function e(t, n, r) {
                     }
                     return Value;
                 }(data_1.DataStore.Value);
-                SocketStore.Value = Value;
-            }(SocketStore = exports.SocketStore || (exports.SocketStore = {})));
-            exports.SocketStore = SocketStore;
+                ChannelStore.Value = Value;
+            }(ChannelStore = exports.ChannelStore || (exports.ChannelStore = {})));
+            exports.ChannelStore = ChannelStore;
             var Schema = function () {
                 function Schema(store_, expiries_) {
                     this.store_ = store_;
@@ -1333,9 +1312,9 @@ require = function e(t, n, r) {
         {
             '../../../../lib/noop': 31,
             '../../../infrastructure/indexeddb/api': 23,
-            './socket/access': 14,
-            './socket/data': 15,
-            './socket/expiry': 16,
+            './channel/access': 14,
+            './channel/data': 15,
+            './channel/expiry': 16,
             'spica': undefined
         }
     ],
@@ -1369,7 +1348,7 @@ require = function e(t, n, r) {
                     void Object.freeze(_this);
                     void access.monitor([], function (_a) {
                         var key = _a.key, type = _a.type;
-                        return type === event_1.EventStore.EventType.delete ? void _this.delete(key) : void _this.set(key, new AccessRecord(key, Date.now()));
+                        return type === event_1.EventStore.Event.Type.delete ? void _this.delete(key) : void _this.set(key, new AccessRecord(key, Date.now()));
                     });
                     return _this;
                 }
@@ -1452,7 +1431,6 @@ require = function e(t, n, r) {
             }(event_1.EventStore);
             exports.DataStore = DataStore;
             (function (DataStore) {
-                DataStore.EventType = event_1.EventStore.EventType;
                 var Event = function (_super) {
                     __extends(Event, _super);
                     function Event() {
@@ -1461,6 +1439,9 @@ require = function e(t, n, r) {
                     return Event;
                 }(event_1.EventStore.Event);
                 DataStore.Event = Event;
+                (function (Event) {
+                    Event.Type = event_1.EventStore.Event.Type;
+                }(Event = DataStore.Event || (DataStore.Event = {})));
                 var Record = function (_super) {
                     __extends(Record, _super);
                     function Record() {
@@ -1541,7 +1522,7 @@ require = function e(t, n, r) {
                     void access.monitor([], function (_a) {
                         var key = _a.key, type = _a.type;
                         switch (type) {
-                        case event_1.EventStore.EventType.delete:
+                        case event_1.EventStore.Event.Type.delete:
                             return void _this.delete(key);
                         default:
                             if (!expiries.has(key))
@@ -1600,16 +1581,6 @@ require = function e(t, n, r) {
     17: [
         function (require, module, exports) {
             'use strict';
-            Object.defineProperty(exports, '__esModule', { value: true });
-            var api_1 = require('../../../infrastructure/indexeddb/api');
-            exports.event = api_1.event;
-            exports.IDBEventType = api_1.IDBEventType;
-        },
-        { '../../../infrastructure/indexeddb/api': 23 }
-    ],
-    18: [
-        function (require, module, exports) {
-            'use strict';
             var __extends = this && this.__extends || function () {
                 var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
                     d.__proto__ = b;
@@ -1629,44 +1600,13 @@ require = function e(t, n, r) {
             Object.defineProperty(exports, '__esModule', { value: true });
             var spica_1 = require('spica');
             var api_1 = require('../../dao/api');
-            var socket_1 = require('../model/socket');
+            var channel_1 = require('../model/channel');
             var api_2 = require('../../../infrastructure/webstorage/api');
             var api_3 = require('../../webstorage/api');
             var cache = new WeakSet();
-            var Message = function () {
-                function Message(key, attr, date) {
-                    this.key = key;
-                    this.attr = attr;
-                    this.date = date;
-                    void Object.freeze(this);
-                }
-                return Message;
-            }();
-            var PortSchema = function () {
-                function PortSchema() {
-                    this.msgs = [];
-                    this.msgLatestUpdates_ = new Map();
-                }
-                PortSchema.prototype.recv = function () {
-                    var _this = this;
-                    return this.msgs.filter(function (msg) {
-                        var received = msg.date <= _this.msgLatestUpdates_.get(msg.key);
-                        void _this.msgLatestUpdates_.set(msg.key, msg.date);
-                        return !received;
-                    }).map(function (msg) {
-                        return msg.key;
-                    });
-                };
-                PortSchema.prototype.send = function (msg) {
-                    this.msgs = this.msgs.reduceRight(function (ms, m) {
-                        return m.key === ms[0].key || m.date < ms[0].date - 1000 * 1000 ? ms : spica_1.concat([m], ms);
-                    }, [msg]).slice(-9);
-                };
-                return PortSchema;
-            }();
-            var Socket = function (_super) {
-                __extends(Socket, _super);
-                function Socket(name, factory, destroy, expiry) {
+            var Channel = function (_super) {
+                __extends(Channel, _super);
+                function Channel(name, factory, destroy, expiry) {
                     if (destroy === void 0) {
                         destroy = function () {
                             return true;
@@ -1677,25 +1617,25 @@ require = function e(t, n, r) {
                     }
                     var _this = _super.call(this, name, destroy, expiry) || this;
                     _this.factory = factory;
-                    _this.port = new api_3.Port(_this.name, api_2.localStorage, function () {
-                        return new PortSchema();
+                    _this.message = new api_3.MessageChannel(_this.name, api_2.localStorage, function () {
+                        return new MessageSchema();
                     });
                     _this.links = new Map();
                     _this.sources = new Map();
                     if (cache.has(_this))
                         return _this;
                     void cache.add(_this);
-                    void _this.port.link().__event.on([
-                        api_3.WebStorageEventType.recv,
+                    void _this.message.link().__event.on([
+                        api_3.MessageChannelEvent.Type.recv,
                         'msgs'
                     ], function () {
-                        return void _this.port.link().recv().reduce(function (_, key) {
+                        return void _this.message.link().recv().reduce(function (_, key) {
                             return void _this.schema.data.fetch(key);
                         }, void 0);
                     });
                     void _this.events.save.monitor([], function (_a) {
                         var key = _a.key, attr = _a.attr;
-                        return void _this.port.link().send(new Message(key, attr, Date.now()));
+                        return void _this.message.link().send(new Message(key, attr, Date.now()));
                     });
                     void _this.events.load.monitor([], function (_a) {
                         var key = _a.key, attr = _a.attr, type = _a.type;
@@ -1703,39 +1643,39 @@ require = function e(t, n, r) {
                         if (!source)
                             return;
                         switch (type) {
-                        case socket_1.SocketStore.EventType.put: {
+                        case channel_1.ChannelStore.Event.Type.put: {
                                 var oldVal = source[attr];
                                 var newVal = _this.get(key)[attr];
                                 source[attr] = newVal;
                                 void source.__event.emit([
-                                    api_3.WebStorageEventType.recv,
+                                    api_3.MessageChannelEvent.Type.recv,
                                     attr
-                                ], new api_3.WebStorageEvent(api_3.WebStorageEventType.recv, key, attr, newVal, oldVal));
+                                ], new api_3.MessageChannelEvent(api_3.MessageChannelEvent.Type.recv, key, attr, newVal, oldVal));
                                 return;
                             }
-                        case socket_1.SocketStore.EventType.delete: {
+                        case channel_1.ChannelStore.Event.Type.delete: {
                                 var cache_1 = _this.get(key);
                                 void Object.keys(cache_1).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(cache_1)).sort().reduce(function (_, attr) {
                                     var oldVal = source[attr];
                                     var newVal = void 0;
                                     source[attr] = newVal;
                                     void source.__event.emit([
-                                        api_3.WebStorageEventType.recv,
+                                        api_3.MessageChannelEvent.Type.recv,
                                         attr
-                                    ], new api_3.WebStorageEvent(api_3.WebStorageEventType.recv, key, attr, newVal, oldVal));
+                                    ], new api_3.MessageChannelEvent(api_3.MessageChannelEvent.Type.recv, key, attr, newVal, oldVal));
                                 }, void 0);
                                 return;
                             }
-                        case socket_1.SocketStore.EventType.snapshot: {
+                        case channel_1.ChannelStore.Event.Type.snapshot: {
                                 var cache_2 = _this.get(key);
                                 void Object.keys(cache_2).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(cache_2)).sort().reduce(function (_, attr) {
                                     var oldVal = source[attr];
                                     var newVal = cache_2[attr];
                                     source[attr] = newVal;
                                     void source.__event.emit([
-                                        api_3.WebStorageEventType.recv,
+                                        api_3.MessageChannelEvent.Type.recv,
                                         attr
-                                    ], new api_3.WebStorageEvent(api_3.WebStorageEventType.recv, key, attr, newVal, oldVal));
+                                    ], new api_3.MessageChannelEvent(api_3.MessageChannelEvent.Type.recv, key, attr, newVal, oldVal));
                                 }, void 0);
                                 return;
                             }
@@ -1744,7 +1684,7 @@ require = function e(t, n, r) {
                     void Object.seal(_this);
                     return _this;
                 }
-                Socket.prototype.link = function (key, expiry) {
+                Channel.prototype.link = function (key, expiry) {
                     var _this = this;
                     void this.expire(key, expiry);
                     return this.links.has(key) ? this.links.get(key) : this.links.set(key, api_1.build(Object.defineProperties((void this.sources.set(key, spica_1.clone({}, this.get(key))), this.sources.get(key)), {
@@ -1775,29 +1715,70 @@ require = function e(t, n, r) {
                             }
                         }
                     }), this.factory, function (attr, newValue, oldValue) {
-                        return void _this.add(new socket_1.SocketStore.Record(key, (_a = {}, _a[attr] = newValue, _a))), void _this.sources.get(key).__event.emit([
-                            api_3.WebStorageEventType.send,
+                        return void _this.add(new channel_1.ChannelStore.Record(key, (_a = {}, _a[attr] = newValue, _a))), void _this.sources.get(key).__event.emit([
+                            api_3.MessageChannelEvent.Type.send,
                             attr
-                        ], new api_3.WebStorageEvent(api_3.WebStorageEventType.send, key, attr, newValue, oldValue));
+                        ], new api_3.MessageChannelEvent(api_3.MessageChannelEvent.Type.send, key, attr, newValue, oldValue));
                         var _a;
                     })).get(key);
                 };
-                Socket.prototype.destroy = function () {
-                    void this.port.destroy();
+                Channel.prototype.destroy = function () {
+                    void this.message.destroy();
                     void cache.delete(this);
                     void _super.prototype.destroy.call(this);
                 };
-                return Socket;
-            }(socket_1.SocketStore);
-            exports.Socket = Socket;
+                return Channel;
+            }(channel_1.ChannelStore);
+            exports.Channel = Channel;
+            var Message = function () {
+                function Message(key, attr, date) {
+                    this.key = key;
+                    this.attr = attr;
+                    this.date = date;
+                    void Object.freeze(this);
+                }
+                return Message;
+            }();
+            var MessageSchema = function () {
+                function MessageSchema() {
+                    this.msgs = [];
+                    this.msgLatestUpdates_ = new Map();
+                }
+                MessageSchema.prototype.recv = function () {
+                    var _this = this;
+                    return this.msgs.filter(function (msg) {
+                        var received = msg.date <= _this.msgLatestUpdates_.get(msg.key);
+                        void _this.msgLatestUpdates_.set(msg.key, msg.date);
+                        return !received;
+                    }).map(function (msg) {
+                        return msg.key;
+                    });
+                };
+                MessageSchema.prototype.send = function (msg) {
+                    this.msgs = this.msgs.reduceRight(function (ms, m) {
+                        return m.key === ms[0].key || m.date < ms[0].date - 1000 * 1000 ? ms : spica_1.concat([m], ms);
+                    }, [msg]).slice(-9);
+                };
+                return MessageSchema;
+            }();
         },
         {
             '../../../infrastructure/webstorage/api': 27,
             '../../dao/api': 10,
             '../../webstorage/api': 19,
-            '../model/socket': 13,
+            '../model/channel': 13,
             'spica': undefined
         }
+    ],
+    18: [
+        function (require, module, exports) {
+            'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
+            var api_1 = require('../../../infrastructure/indexeddb/api');
+            exports.event = api_1.event;
+            exports.IDBEventType = api_1.IDBEventType;
+        },
+        { '../../../infrastructure/indexeddb/api': 23 }
     ],
     19: [
         function (require, module, exports) {
@@ -1809,15 +1790,14 @@ require = function e(t, n, r) {
             exports.supportWebStorage = api_1.supportWebStorage;
             var event_1 = require('./service/event');
             exports.events = event_1.events;
-            var port_1 = require('./service/port');
-            exports.Port = port_1.Port;
-            exports.WebStorageEvent = port_1.PortEvent;
-            exports.WebStorageEventType = port_1.PortEventType;
+            var channel_1 = require('./service/channel');
+            exports.MessageChannel = channel_1.Channel;
+            exports.MessageChannelEvent = channel_1.ChannelEvent;
         },
         {
             '../../infrastructure/webstorage/api': 27,
-            './service/event': 21,
-            './service/port': 22
+            './service/channel': 21,
+            './service/event': 22
         }
     ],
     20: [
@@ -1856,29 +1836,6 @@ require = function e(t, n, r) {
     21: [
         function (require, module, exports) {
             'use strict';
-            Object.defineProperty(exports, '__esModule', { value: true });
-            var spica_1 = require('spica');
-            var api_1 = require('../../../infrastructure/webstorage/api');
-            exports.events = {
-                localStorage: subscribe(api_1.events.localStorage),
-                sessionStorage: subscribe(api_1.events.sessionStorage)
-            };
-            function subscribe(source) {
-                var observer = new spica_1.Observable();
-                void source.on(['storage'], function (event) {
-                    return void observer.emit([event.key], event);
-                });
-                return observer;
-            }
-        },
-        {
-            '../../../infrastructure/webstorage/api': 27,
-            'spica': undefined
-        }
-    ],
-    22: [
-        function (require, module, exports) {
-            'use strict';
             var __assign = this && this.__assign || Object.assign || function (t) {
                 for (var s, i = 1, n = arguments.length; i < n; i++) {
                     s = arguments[i];
@@ -1895,13 +1852,8 @@ require = function e(t, n, r) {
             var api_2 = require('../../../infrastructure/webstorage/api');
             var storage_1 = require('../model/storage');
             var cache = new Map();
-            var PortEventType;
-            (function (PortEventType) {
-                PortEventType.send = 'send';
-                PortEventType.recv = 'recv';
-            }(PortEventType = exports.PortEventType || (exports.PortEventType = {})));
-            var PortEvent = function () {
-                function PortEvent(type, key, attr, newValue, oldValue) {
+            var ChannelEvent = function () {
+                function ChannelEvent(type, key, attr, newValue, oldValue) {
                     this.type = type;
                     this.key = key;
                     this.attr = attr;
@@ -1909,11 +1861,19 @@ require = function e(t, n, r) {
                     this.oldValue = oldValue;
                     void Object.freeze(this);
                 }
-                return PortEvent;
+                return ChannelEvent;
             }();
-            exports.PortEvent = PortEvent;
-            var Port = function () {
-                function Port(name, storage, factory, log) {
+            exports.ChannelEvent = ChannelEvent;
+            (function (ChannelEvent) {
+                var Type;
+                (function (Type) {
+                    Type.send = 'send';
+                    Type.recv = 'recv';
+                }(Type = ChannelEvent.Type || (ChannelEvent.Type = {})));
+            }(ChannelEvent = exports.ChannelEvent || (exports.ChannelEvent = {})));
+            exports.ChannelEvent = ChannelEvent;
+            var Channel = function () {
+                function Channel(name, storage, factory, log) {
                     if (storage === void 0) {
                         storage = api_2.sessionStorage || storage_1.fakeStorage;
                     }
@@ -1945,7 +1905,7 @@ require = function e(t, n, r) {
                             acc[attr] = source[attr];
                             return acc;
                         }, {})));
-                        var event = new PortEvent(PortEventType.send, _this.name, attr, newValue, oldValue);
+                        var event = new ChannelEvent(ChannelEvent.Type.send, _this.name, attr, newValue, oldValue);
                         void source.__event.emit([
                             event.type,
                             event.attr
@@ -1961,7 +1921,7 @@ require = function e(t, n, r) {
                             if (newVal === oldVal)
                                 return;
                             source[attr] = newVal;
-                            var event = new PortEvent(PortEventType.recv, _this.name, attr, newVal, oldVal);
+                            var event = new ChannelEvent(ChannelEvent.Type.recv, _this.name, attr, newVal, oldVal);
                             void source.__event.emit([
                                 event.type,
                                 event.attr
@@ -1974,18 +1934,18 @@ require = function e(t, n, r) {
                     void Object.freeze(this);
                     var _a;
                 }
-                Port.prototype.link = function () {
+                Channel.prototype.link = function () {
                     return this.link_;
                 };
-                Port.prototype.destroy = function () {
+                Channel.prototype.destroy = function () {
                     void this.eventSource.off([this.name]);
                     void this.storage.removeItem(this.name);
                     void this.log.delete(this.name);
                     void cache.delete(this.name);
                 };
-                return Port;
+                return Channel;
             }();
-            exports.Port = Port;
+            exports.Channel = Channel;
             function parse(item) {
                 try {
                     return JSON.parse(item || '{}') || {};
@@ -1998,7 +1958,30 @@ require = function e(t, n, r) {
             '../../../infrastructure/webstorage/api': 27,
             '../../dao/api': 10,
             '../model/storage': 20,
-            '../service/event': 21,
+            '../service/event': 22,
+            'spica': undefined
+        }
+    ],
+    22: [
+        function (require, module, exports) {
+            'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
+            var spica_1 = require('spica');
+            var api_1 = require('../../../infrastructure/webstorage/api');
+            exports.events = {
+                localStorage: subscribe(api_1.events.localStorage),
+                sessionStorage: subscribe(api_1.events.sessionStorage)
+            };
+            function subscribe(source) {
+                var observer = new spica_1.Observable();
+                void source.on(['storage'], function (event) {
+                    return void observer.emit([event.key], event);
+                });
+                return observer;
+            }
+        },
+        {
+            '../../../infrastructure/webstorage/api': 27,
             'spica': undefined
         }
     ],
@@ -2332,7 +2315,7 @@ require = function e(t, n, r) {
                     case 2:
                         return void state.destroy();
                     }
-                    throw new TypeError('LocalSocket: Invalid command ' + commands.get(database) + '.');
+                    throw new TypeError('ClientChannel: Invalid command ' + commands.get(database) + '.');
                 }
                 function handleFromErrorState(_a) {
                     var database = _a.database, error = _a.error, event = _a.event;
@@ -2408,7 +2391,7 @@ require = function e(t, n, r) {
                             event_1.IDBEventType.disconnect
                         ], new event_1.IDBEvent(event_1.IDBEventType.disconnect, database));
                     }
-                    throw new TypeError('LocalSocket: Invalid command ' + commands.get(database) + '.');
+                    throw new TypeError('ClientChannel: Invalid command ' + commands.get(database) + '.');
                 }
             }
         },
@@ -2516,13 +2499,15 @@ require = function e(t, n, r) {
             var spica_1 = require('spica');
             exports.supportWebStorage = function () {
                 try {
-                    var key = 'localsocket#' + spica_1.uuid();
+                    if (!window.navigator.cookieEnabled)
+                        throw void 0;
+                    var key = 'clientchannel#' + spica_1.uuid();
                     void self.sessionStorage.setItem(key, key);
                     if (key !== self.sessionStorage.getItem(key))
-                        throw 1;
+                        throw void 0;
                     void self.sessionStorage.removeItem(key);
                     return true;
-                } catch (e) {
+                } catch (_) {
                     return false;
                 }
             }();
@@ -2536,10 +2521,8 @@ require = function e(t, n, r) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var api_1 = require('../application/api');
-            exports.socket = api_1.socket;
-            exports.port = api_1.port;
-            exports.events = api_1.events;
-            exports.status = api_1.status;
+            exports.storechannel = api_1.storechannel;
+            exports.messagechannel = api_1.messagechannel;
         },
         { '../application/api': 4 }
     ],
@@ -2554,7 +2537,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    'localsocket': [
+    'clientchannel': [
         function (require, module, exports) {
             'use strict';
             function __export(m) {
@@ -2572,5 +2555,5 @@ require = function e(t, n, r) {
 }, {}, [
     1,
     2,
-    'localsocket'
+    'clientchannel'
 ]);
