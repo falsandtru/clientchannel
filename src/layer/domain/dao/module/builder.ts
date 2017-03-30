@@ -29,7 +29,7 @@ export function build<V>(source: V, factory: () => V, update: (attr: string, new
   void Object.keys(SCHEMA)
     .map(prop => SCHEMA[prop].NAME)
     .reduce((_, prop) => { delete dao[prop] }, void 0);
-  if (typeof source[SCHEMA.KEY.NAME] !== 'string') throw new TypeError(`LocalSocket: Invalid key: ${source[SCHEMA.KEY.NAME]}`);
+  if (typeof source[SCHEMA.KEY.NAME] !== 'string') throw new TypeError(`ClientChannel: Invalid key: ${source[SCHEMA.KEY.NAME]}`);
   const descmap: PropertyDescriptorMap = Object.assign(Object.keys(dao)
     .filter(isValidName)
     .filter(isValidValue(dao))

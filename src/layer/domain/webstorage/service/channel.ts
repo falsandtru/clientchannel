@@ -1,22 +1,15 @@
-import { LocalPort, LocalPortObject, LocalPortEvent, LocalPortEventType } from '../../../../../';
+import { MessageChannel, MessageChannelObject, MessageChannelEvent } from '../../../../../';
 import { Observable } from 'spica';
 import { SCHEMA, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { events } from '../service/event';
 import { localStorage, sessionStorage } from '../../../infrastructure/webstorage/api';
 import { StorageLike, fakeStorage } from '../model/storage';
 
-const cache = new Map<string, Port<LocalPortObject>>();
+const cache = new Map<string, Channel<ChannelObject>>();
 
-export type PortEventType
-  = typeof PortEventType.send
-  | typeof PortEventType.recv;
-export namespace PortEventType {
-  export const send: 'send' = 'send';
-  export const recv: 'recv' = 'recv';
-}
-export class PortEvent implements LocalPortEvent {
+export class ChannelEvent implements MessageChannelEvent {
   constructor(
-    public readonly type: LocalPortEventType,
+    public readonly type: ChannelEvent.Type,
     public readonly key: string,
     public readonly attr: string,
     public readonly newValue: any,
@@ -28,8 +21,16 @@ export class PortEvent implements LocalPortEvent {
     void Object.freeze(this);
   }
 }
+export namespace ChannelEvent {
+  export type Type = MessageChannelEvent.Type;
+  export namespace Type {
+    export const send: MessageChannelEvent.Type.Send = 'send';
+    export const recv: MessageChannelEvent.Type.Recv = 'recv';
+  }
+}
+export type ChannelObject = MessageChannelObject;
 
-export class Port<V extends LocalPortObject> implements LocalPort<V> {
+export class Channel<V extends ChannelObject> implements MessageChannel<V> {
   constructor(
     public readonly name: string,
     private readonly storage: StorageLike = sessionStorage || fakeStorage,
@@ -39,11 +40,11 @@ export class Port<V extends LocalPortObject> implements LocalPort<V> {
       delete(_name: string) { }
     }
   ) {
-    if (cache.has(name)) return <Port<V>>cache.get(name)!;
+    if (cache.has(name)) return <Channel<V>>cache.get(name)!;
     void cache.set(name, this);
     const source: V = <any>{
       [SCHEMA.KEY.NAME]: this.name,
-      [SCHEMA.EVENT.NAME]: new Observable<[LocalPortEventType] | [LocalPortEventType, string], PortEvent, void>(),
+      [SCHEMA.EVENT.NAME]: new Observable<[MessageChannelEvent.Type] | [MessageChannelEvent.Type, string], ChannelEvent, void>(),
       ...<Object>parse<V>(this.storage.getItem(this.name))
     };
     this.link_ = build(source, this.factory, (attr, newValue, oldValue) => {
@@ -52,8 +53,8 @@ export class Port<V extends LocalPortObject> implements LocalPort<V> {
         acc[attr] = source[attr];
         return acc;
       }, {})));
-      const event = new PortEvent(PortEventType.send, this.name, attr, newValue, oldValue);
-      void (<Observable<[LocalPortEventType, string], PortEvent, any>>source.__event).emit([event.type, event.attr], event);
+      const event = new ChannelEvent(ChannelEvent.Type.send, this.name, attr, newValue, oldValue);
+      void (<Observable<[MessageChannelEvent.Type, string], ChannelEvent, any>>source.__event).emit([event.type, event.attr], event);
       void this.events.send.emit([event.attr], event);
     });
     const subscriber = ({newValue}: StorageEvent): void => {
@@ -66,8 +67,8 @@ export class Port<V extends LocalPortObject> implements LocalPort<V> {
           const newVal = item[attr];
           if (newVal === oldVal) return;
           source[attr] = newVal;
-          const event = new PortEvent(PortEventType.recv, this.name, attr, newVal, oldVal);
-          void (<Observable<[LocalPortEventType, string], PortEvent, any>>source.__event).emit([event.type, event.attr], event);
+          const event = new ChannelEvent(ChannelEvent.Type.recv, this.name, attr, newVal, oldVal);
+          void (<Observable<[MessageChannelEvent.Type, string], ChannelEvent, any>>source.__event).emit([event.type, event.attr], event);
           void this.events.recv.emit([event.attr], event);
         }, void 0);
     };
@@ -77,8 +78,8 @@ export class Port<V extends LocalPortObject> implements LocalPort<V> {
   }
   private readonly eventSource = this.storage === localStorage ? events.localStorage : events.sessionStorage;
   public readonly events = {
-    send: new Observable<never[] | [string], PortEvent, void>(),
-    recv: new Observable<never[] | [string], PortEvent, void>()
+    send: new Observable<never[] | [string], ChannelEvent, void>(),
+    recv: new Observable<never[] | [string], ChannelEvent, void>()
   };
   private readonly link_: V;
   public link(): V {

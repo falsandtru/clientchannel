@@ -1,30 +1,22 @@
-import { LocalSocket, LocalSocketObject, LocalSocketConfig } from '../../../';
-import { LocalPort, LocalPortObject, LocalPortConfig } from '../../../';
-import { Socket } from '../domain/indexeddb/api';
-import { Port, localStorage } from '../domain/webstorage/api';
-import { event as IDBEventStream } from '../domain/indexeddb/api';
-import { events as WebStorageEventStreams } from '../domain/webstorage/api';
+import { StoreChannel, StoreChannelObject, StoreChannelConfig } from '../../../';
+import { MessageChannel, MessageChannelObject, MessageChannelConfig } from '../../../';
+import { StoreChannel as IDBChannel } from '../domain/indexeddb/api';
+import { MessageChannel as WebStorage, localStorage, supportWebStorage } from '../domain/webstorage/api';
 
-export { supportWebStorage as status } from '../domain/webstorage/api';
-
-export function socket<K extends string, V extends LocalSocketObject<K>>(name: string, config: LocalSocketConfig<K, V>): LocalSocket<K, V> {
+export function storechannel<K extends string, V extends StoreChannelObject<K>>(name: string, config: StoreChannelConfig<K, V>): StoreChannel<K, V> {
+  if (!supportWebStorage) throw new Error(`ClientChannel: Couldn't use WebStorage.`);
   const {
     schema,
     destroy = () => true,
     expiry = Infinity
   } = config;
-  return new Socket<K, V>(name, schema, destroy, expiry);
+  return new IDBChannel<K, V>(name, schema, destroy, expiry);
 }
 
-export function port<V extends LocalPortObject>(name: string, config: LocalPortConfig<V>): LocalPort<V> {
+export function messagechannel<V extends MessageChannelObject>(name: string, config: MessageChannelConfig<V>): MessageChannel<V> {
+  if (!supportWebStorage) throw new Error(`ClientChannel: Couldn't use WebStorage.`);
   const {
     schema
   } = config;
-  return new Port(name, localStorage, schema);
-}
-
-export namespace events {
-  export const indexedDB = IDBEventStream;
-  export const localStorage = WebStorageEventStreams.localStorage;
-  export const sessionStorage = WebStorageEventStreams.sessionStorage;
+  return new WebStorage(name, localStorage, schema);
 }

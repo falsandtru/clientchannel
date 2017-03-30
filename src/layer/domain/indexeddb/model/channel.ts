@@ -1,20 +1,20 @@
-import { LocalSocketObject, LocalSocketObjectMetaData, LocalSocketEvent, LocalSocketEventType } from '../../../../../';
+import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../';
 import { Observable } from 'spica';
 import { open, close, destroy, event, IDBEventType, IDBTransactionMode, IDBCursorDirection } from '../../../infrastructure/indexeddb/api';
-import { DataStore } from './socket/data';
-import { AccessStore } from './socket/access';
-import { ExpiryStore } from './socket/expiry';
+import { DataStore } from './channel/data';
+import { AccessStore } from './channel/access';
+import { ExpiryStore } from './channel/expiry';
 import { noop } from '../../../../lib/noop';
 
-const cache = new Map<string, SocketStore<string, SocketStore.Value<string>>>();
+const cache = new Map<string, ChannelStore<string, ChannelStore.Value<string>>>();
 
-export class SocketStore<K extends string, V extends SocketStore.Value<K>> {
+export class ChannelStore<K extends string, V extends ChannelStore.Value<K>> {
   constructor(
     public readonly name: string,
     destroy: (err: DOMException | DOMError, event: Event | null) => boolean,
     private readonly expiry: number
   ) {
-    if (cache.has(name)) return <SocketStore<K, V>>cache.get(name)!;
+    if (cache.has(name)) return <ChannelStore<K, V>>cache.get(name)!;
     void cache.set(name, this);
     void open(name, {
       make(db) {
@@ -40,9 +40,9 @@ export class SocketStore<K extends string, V extends SocketStore.Value<K>> {
   }
   protected readonly schema: Schema<K, V>;
   public readonly events = {
-    load: new Observable<never[] | [K] | [K, string] | [K, string, SocketStore.EventType], SocketStore.Event<K>, void>(),
-    save: new Observable<never[] | [K] | [K, string] | [K, string, SocketStore.EventType], SocketStore.Event<K>, void>(),
-    loss: new Observable<never[] | [K] | [K, string] | [K, string, SocketStore.EventType], SocketStore.Event<K>, void>()
+    load: new Observable<never[] | [K] | [K, string] | [K, string, ChannelStore.Event.Type], ChannelStore.Event<K>, void>(),
+    save: new Observable<never[] | [K] | [K, string] | [K, string, ChannelStore.Event.Type], ChannelStore.Event<K>, void>(),
+    loss: new Observable<never[] | [K] | [K, string] | [K, string, ChannelStore.Event.Type], ChannelStore.Event<K>, void>()
   };
   public sync(keys: K[], cb: (errs: [K, DOMException | DOMError][]) => any = noop): void {
     return this.schema.data.sync(keys, cb);
@@ -50,7 +50,7 @@ export class SocketStore<K extends string, V extends SocketStore.Value<K>> {
   public transaction(key: K, cb: () => any, complete: (err?: DOMException | DOMError | Error) => any): void {
     return this.schema.data.transaction(key, cb, complete);
   }
-  public meta(key: K): LocalSocketObjectMetaData<K> {
+  public meta(key: K): StoreChannelObjectMetaData<K> {
     return this.schema.data.meta(key);
   }
   public has(key: K): boolean {
@@ -95,19 +95,17 @@ export class SocketStore<K extends string, V extends SocketStore.Value<K>> {
     return void destroy(this.name);
   }
 }
-export namespace SocketStore {
-  export type EventType = LocalSocketEventType;
-  export const EventType = DataStore.EventType;
-  export class Event<K extends string> extends DataStore.Event<K> implements LocalSocketEvent<K> { }
-  export class Record<K extends string, V> extends DataStore.Record<K, V> { }
-  export interface Value<K extends string> extends LocalSocketObject<K> { }
-  export class Value<K extends string> extends DataStore.Value implements LocalSocketObject<K> {
+export namespace ChannelStore {
+  export import Event = DataStore.Event;
+  export import Record = DataStore.Record;
+  export interface Value<K extends string> extends StoreChannelObject<K> { }
+  export class Value<K extends string> extends DataStore.Value implements StoreChannelObject<K> {
   }
 }
 
-class Schema<K extends string, V extends SocketStore.Value<K>> {
+class Schema<K extends string, V extends ChannelStore.Value<K>> {
   constructor(
-    private readonly store_: SocketStore<K, V>,
+    private readonly store_: ChannelStore<K, V>,
     private readonly expiries_: Map<K, number>
   ) {
     void this.bind();

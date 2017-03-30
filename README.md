@@ -1,8 +1,8 @@
-# localsocket
+# ClientChannel
 
-[![Build Status](https://travis-ci.org/falsandtru/localsocket.svg?branch=master)](https://travis-ci.org/falsandtru/localsocket)
-[![Coverage Status](https://coveralls.io/repos/falsandtru/localsocket/badge.svg?branch=master&service=github)](https://coveralls.io/github/falsandtru/localsocket?branch=master)
-[![Dependency Status](https://gemnasium.com/falsandtru/localsocket.svg)](https://gemnasium.com/falsandtru/localsocket)
+[![Build Status](https://travis-ci.org/falsandtru/clientchannel.svg?branch=master)](https://travis-ci.org/falsandtru/clientchannel)
+[![Coverage Status](https://coveralls.io/repos/falsandtru/clientchannel/badge.svg?branch=master&service=github)](https://coveralls.io/github/falsandtru/clientchannel?branch=master)
+[![Dependency Status](https://gemnasium.com/falsandtru/clientchannel.svg)](https://gemnasium.com/falsandtru/clientchannel)
 
 Store and sync values by communicating between tabs via IndexedDB and LocalStorage.
 
@@ -16,11 +16,11 @@ Store and sync values by communicating between tabs via IndexedDB and LocalStora
 
 Text and Canvas.
 
-https://falsandtru.github.io/localsocket/
+https://falsandtru.github.io/clientchannel/
 
 ## API
 
-[localsocket.d.ts](localsocket.d.ts)
+[index.d.ts](index.d.ts)
 
 ## Usage
 
@@ -34,9 +34,9 @@ Data that assigned to a property of Linked object will be saved to the storage.
 When data was updated on other threads(tabs), own thread's property value will be updated automatically.
 
 ```ts
-import {socket, LocalSocketObject} from 'localsocket';
+import {storechannel, StoreChannelObject} from 'clientchannel';
 
-interface Schema extends LocalSocketObject<string> {
+interface Schema extends StoreChannelObject<string> {
 }
 class Schema {
 	// getter/setter will be excluded in schema.
@@ -54,7 +54,7 @@ class Schema {
 	}
 }
 
-const sock = socket('domain', {
+const chan = storechannel('domain', {
 	// delete linked records 3 days later since last access.
 	expiry: 3 * 24 * 60 * 60 * 1e3,
 	schema() {
@@ -62,7 +62,7 @@ const sock = socket('domain', {
 	}
 });
 // load data from indexeddb a little later.
-const link: Schema = sock.link('path');
+const link: Schema = chan.link('path');
 // save data to indexeddb, and sync data between all tabs.
 link.firstName = 'john';
 link.lastName = 'smith';
@@ -75,9 +75,9 @@ Linked object provedes send/recv events.
 `recv` event will be emitted when linked object was updated by other threads(tabs).
 
 ```ts
-import {port, LocalPortObject} from 'localsocket';
+import {messagechannel, MessageChannelObject} from 'clientchannel';
 
-interface Schema extends LocalPortObject {
+interface Schema extends MessageChannelObject {
 }
 class Schema {
 	get event() {
@@ -86,12 +86,12 @@ class Schema {
 	version = 0;
 }
 
-const sock = port('version', {
+const chan = messagechannel('version', {
 	schema() {
 		return new Schema();
 	}
 });
-const link: Schema = sock.link();
+const link: Schema = chan.link();
 const VERSION = 1;
 link.event.on(['recv', 'version'], ({newValue}) => {
 	if (newValue === VERSION) return;

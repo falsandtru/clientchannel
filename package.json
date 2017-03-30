@@ -1,12 +1,12 @@
 {
-  "name": "localsocket",
-  "version": "0.8.0",
+  "name": "clientchannel",
+  "version": "0.0.0",
   "description": "Store and sync values by communicating between tabs via IndexedDB and LocalStorage.",
   "private": true,
-  "homepage": "https://github.com/falsandtru/localsocket",
+  "homepage": "https://github.com/falsandtru/clientchannel",
   "repository": {
     "type": "git",
-    "url": "https://github.com/falsandtru/localsocket"
+    "url": "https://github.com/falsandtru/clientchannel"
   },
   "keywords": [
     "indexeddb",
@@ -16,7 +16,7 @@
     "repository"
   ],
   "types": "./index.d.ts",
-  "main": "./dist/localsocket.js",
+  "main": "./dist/clientchannel.js",
   "files": [
     "dist",
     "*.d.ts",
@@ -40,7 +40,7 @@
     "gulp-footer": "^1.0.5",
     "gulp-header": "1.8.8",
     "gulp-load-plugins": "^1.5.0",
-    "gulp-mocha": "^4.1.0",
+    "gulp-mocha": "^4.2.0",
     "gulp-rename": "^1.2.2",
     "gulp-uglify": "^2.1.2",
     "gulp-unassert": "^1.0.1",
@@ -60,7 +60,7 @@
     "run-sequence": "^1.2.2",
     "semver": "^5.3.0",
     "tsify": "^3.0.1",
-    "typescript": "2.3.0-dev.20170328",
+    "typescript": "2.3.0-dev.20170330",
     "vinyl-buffer": "^1.0.0",
     "vinyl-source-stream": "^1.1.0"
   },
@@ -69,5 +69,5 @@
     "ci": "gulp ci"
   },
   "author": "falsandtru",
-  "license": "MIT"
+  "license": "(Apache-2.0 AND MPL-2.0)"
 }

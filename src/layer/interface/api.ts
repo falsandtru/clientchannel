@@ -1,1 +1,1 @@
-export { socket, port, events, status } from '../application/api';
+export { storechannel, messagechannel } from '../application/api';

@@ -1,9 +1,9 @@
-import { LocalSocketObject } from '../../../../../';
-import { Socket } from './socket';
-import { SocketStore } from '../model/socket';
+import { StoreChannelObject } from '../../../../../';
+import { Channel } from './channel';
+import { ChannelStore } from '../model/channel';
 import { listen, destroy, event, IDBEventType } from '../../../infrastructure/indexeddb/api';
 
-describe('Unit: layers/domain/indexeddb/service/socket', function () {
+describe('Unit: layers/domain/indexeddb/service/channel', function () {
   this.timeout(5 * 1e3);
 
   describe('spec', () => {
@@ -25,7 +25,7 @@ describe('Unit: layers/domain/indexeddb/service/socket', function () {
       destroy('test');
     });
 
-    interface Value extends LocalSocketObject<string> {
+    interface Value extends StoreChannelObject<string> {
     }
     class Value {
       constructor(
@@ -36,12 +36,12 @@ describe('Unit: layers/domain/indexeddb/service/socket', function () {
     }
 
     it('singleton', () => {
-      assert(new Socket('test', () => new Value(0, '')) === new Socket('test', () => new Value(0, '')));
-      new Socket('test', () => new Value(0, '')).destroy();
+      assert(new Channel('test', () => new Value(0, '')) === new Channel('test', () => new Value(0, '')));
+      new Channel('test', () => new Value(0, '')).destroy();
     });
 
     it('link', () => {
-      const sock = new Socket('test', () => new Value(0, ''));
+      const sock = new Channel('test', () => new Value(0, ''));
       const dao = sock.link('a');
 
       assert(dao === sock.link('a'));
@@ -55,7 +55,7 @@ describe('Unit: layers/domain/indexeddb/service/socket', function () {
     });
 
     it('send', done => {
-      const sock = new Socket('test', () => new Value(0, ''));
+      const sock = new Channel('test', () => new Value(0, ''));
       const dao = sock.link('a');
 
       dao.__event.once(['send', 'n'], ev => {
@@ -88,12 +88,12 @@ describe('Unit: layers/domain/indexeddb/service/socket', function () {
     });
 
     it('recv', done => {
-      const sock = new Socket('test', () => new Value(0, ''));
+      const sock = new Channel('test', () => new Value(0, ''));
       const dao = sock.link('a');
 
       assert(dao.n === 0);
       listen('test')(db => {
-        db.transaction('data', 'readwrite').objectStore('data').put(Object.assign({}, new SocketStore.Record('a', { n: 1 }))).onsuccess = () => {
+        db.transaction('data', 'readwrite').objectStore('data').put(Object.assign({}, new ChannelStore.Record('a', { n: 1 }))).onsuccess = () => {
           sock['schema'].data.fetch('a');
           dao.__event.once(['recv', 'n'], () => {
             assert(dao.__id === 1);

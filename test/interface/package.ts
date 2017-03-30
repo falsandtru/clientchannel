@@ -1,21 +1,13 @@
-import def, { status, socket, port } from '../../';
+import { storechannel, messagechannel } from '../../index';
 
 describe('Interface: Package', function () {
-  describe('localsocket', function () {
-    it('default', function () {
-      assert(typeof def === 'function');
+  describe('clientchannel', function () {
+    it('storechannel', function () {
+      assert(typeof storechannel === 'function');
     });
 
-    it('status', function () {
-      assert(status === true);
-    });
-
-    it('socket', function () {
-      assert(typeof socket === 'function');
-    });
-
-    it('port', function () {
-      assert(typeof port === 'function');
+    it('messagechannel', function () {
+      assert(typeof messagechannel === 'function');
     });
 
   });

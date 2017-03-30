@@ -1,10 +1,10 @@
-import { socket, LocalSocketObject } from '../../';
-import { port, LocalPortObject } from '../../';
+import { storechannel, StoreChannelObject } from '../../';
+import { messagechannel, MessageChannelObject } from '../../';
 
 describe('Integration: Package', function () {
   describe('usage', function () {
     it('persistence', () => {
-      interface Schema extends LocalSocketObject<string> {
+      interface Schema extends StoreChannelObject<string> {
       }
       class Schema {
         // getter/setter will be excluded in schema.
@@ -22,7 +22,7 @@ describe('Integration: Package', function () {
         }
       }
 
-      const sock = socket('domain', {
+      const chan = storechannel('domain', {
         // delete linked record 3 days later since last access.
         expiry: 3 * 24 * 60 * 60 * 1e3,
         schema() {
@@ -30,15 +30,15 @@ describe('Integration: Package', function () {
         }
       });
       // load data from indexeddb a little later.
-      const link: Schema = sock.link('path');
+      const link: Schema = chan.link('path');
       // save data to indexeddb, and sync data between all tabs.
       link.firstName = 'john';
       link.lastName = 'smith';
-      sock.destroy();
+      chan.destroy();
     });
 
     it('communicate', () => {
-      interface Schema extends LocalPortObject {
+      interface Schema extends MessageChannelObject {
       }
       class Schema {
         get event() {
@@ -47,12 +47,12 @@ describe('Integration: Package', function () {
         version = 0;
       }
 
-      const sock = port('version', {
+      const chan = messagechannel('version', {
         schema() {
           return new Schema();
         }
       });
-      const link: Schema = sock.link();
+      const link: Schema = chan.link();
       const VERSION = 1;
       link.event.on(['recv', 'version'], ({newValue}) => {
         if (newValue === VERSION) return;
@@ -64,7 +64,7 @@ describe('Integration: Package', function () {
         }
       });
       link.version = VERSION;
-      sock.destroy();
+      chan.destroy();
     });
 
   });

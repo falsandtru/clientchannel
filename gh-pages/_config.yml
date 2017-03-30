@@ -5,5 +5,5 @@ kramdown:
   input: GFM
 
 # Config
-baseurl: /localsocket
+baseurl: /clientchannel
 permalink: /:categories/:year/:month/:day/:title

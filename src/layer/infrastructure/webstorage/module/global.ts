@@ -2,13 +2,14 @@ import { uuid } from 'spica';
 
 export const supportWebStorage: boolean = (() => {
   try {
-    const key = 'localsocket#' + uuid();
+    if (!window.navigator.cookieEnabled) throw void 0;
+    const key = 'clientchannel#' + uuid();
     void self.sessionStorage.setItem(key, key);
-    if (key !== self.sessionStorage.getItem(key)) throw 1;
+    if (key !== self.sessionStorage.getItem(key)) throw void 0;
     void self.sessionStorage.removeItem(key);
     return true;
   }
-  catch (e) {
+  catch (_) {
     return false;
   }
 })();

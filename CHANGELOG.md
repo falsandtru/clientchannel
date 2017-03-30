@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.0
+
+- Rename the project to clientchannel.
+- Change the license to Apache-2.0 AND MPL-2.0.
+
 ## 0.8.0
 
 - Refine LocalSocket.transaction method.

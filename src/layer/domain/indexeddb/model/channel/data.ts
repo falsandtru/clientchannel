@@ -15,9 +15,10 @@ export class DataStore<K extends string, V extends DataStore.Value> extends Even
   }
 }
 export namespace DataStore {
-  export type EventType = EventStore.EventType;
-  export const EventType = EventStore.EventType;
   export class Event<K extends string> extends EventStore.Event<K> { }
+  export namespace Event {
+    export import Type = EventStore.Event.Type;
+  }
   export class Record<K extends string, V extends Value> extends EventStore.Record<K, V> { }
   export class Value extends EventStore.Value {
   }

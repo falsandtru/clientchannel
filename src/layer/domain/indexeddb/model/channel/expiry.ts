@@ -74,7 +74,7 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
     void access
       .monitor([], ({key, type}) => {
         switch (type) {
-          case EventStore.EventType.delete:
+          case EventStore.Event.Type.delete:
             return void this.delete(key);
           default:
             if (!expiries.has(key)) return;

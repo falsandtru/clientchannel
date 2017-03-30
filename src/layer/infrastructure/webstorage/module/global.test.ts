@@ -4,6 +4,7 @@ describe('Unit: layers/infrastructure/webstorage/module/global', () => {
   describe('webStorage', () => {
     it('supportWebStorage', () => {
       assert(supportWebStorage);
+      assert(supportWebStorage === window.navigator.cookieEnabled);
     });
 
     it('localStorage', () => {

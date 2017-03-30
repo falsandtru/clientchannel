@@ -1,3 +1,4 @@
+import { StoreChannelEvent } from '../../../../';
 import { clone } from 'spica';
 import { IdNumber } from '../constraint/types';
 
@@ -18,22 +19,22 @@ abstract class EventRecord<K extends string, V extends EventValue> {
     date: number,
     type: EventType
   ) {
-    if (typeof this.id === 'number' && <number>this.id > 0 === false || this.id !== void 0) throw new TypeError(`LocalSocket: EventRecord: Invalid event id: ${this.id}`);
+    if (typeof this.id === 'number' && <number>this.id > 0 === false || this.id !== void 0) throw new TypeError(`ClientChannel: EventRecord: Invalid event id: ${this.id}`);
     this.type = type;
-    if (typeof this.type !== 'string') throw new TypeError(`LocalSocket: EventRecord: Invalid event type: ${this.type}`);
+    if (typeof this.type !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event type: ${this.type}`);
     this.key = key;
-    if (typeof this.key !== 'string') throw new TypeError(`LocalSocket: EventRecord: Invalid event key: ${this.key}`);
+    if (typeof this.key !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event key: ${this.key}`);
     this.value = value;
-    if (typeof this.value !== 'object' || !this.value) throw new TypeError(`LocalSocket: EventRecord: Invalid event value: ${this.value}`);
+    if (typeof this.value !== 'object' || !this.value) throw new TypeError(`ClientChannel: EventRecord: Invalid event value: ${this.value}`);
     this.date = date;
-    if (typeof this.date !== 'number' || this.date >= 0 === false) throw new TypeError(`LocalSocket: EventRecord: Invalid event date: ${this.date}`);
+    if (typeof this.date !== 'number' || this.date >= 0 === false) throw new TypeError(`ClientChannel: EventRecord: Invalid event date: ${this.date}`);
     // put -> string, delete or snapshot -> empty string
     this.attr = this.type === EventType.put
       ? Object.keys(value).reduce((r, p) => p.length > 0 && p[0] !== '_' && p[p.length - 1] !== '_' ? p : r, '')
       : '';
-    if (typeof this.attr !== 'string') throw new TypeError(`LocalSocket: EventRecord: Invalid event attr: ${this.key}`);
-    if (this.type === EventType.put && this.attr.length === 0) throw new TypeError(`LocalSocket: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
-    if (this.type !== EventType.put && this.attr.length !== 0) throw new TypeError(`LocalSocket: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
+    if (typeof this.attr !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event attr: ${this.key}`);
+    if (this.type === EventType.put && this.attr.length === 0) throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
+    if (this.type !== EventType.put && this.attr.length !== 0) throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
 
     switch (type) {
       case EventType.put: {
@@ -52,7 +53,7 @@ abstract class EventRecord<K extends string, V extends EventValue> {
         return;
       }
       default:
-        throw new TypeError(`LocalSocket: Invalid event type: ${type}`);
+        throw new TypeError(`ClientChannel: Invalid event type: ${type}`);
     }
   }
   public readonly id: IdNumber | never;
@@ -73,7 +74,7 @@ export class UnsavedEventRecord<K extends string, V extends EventValue> extends 
     super(key, value, date, type);
     this.EVENT_RECORD;
     // must not have id property
-    if (this.id !== void 0 || 'id' in this) throw new TypeError(`LocalSocket: UnsavedEventRecord: Invalid event id: ${this.id}`);
+    if (this.id !== void 0 || 'id' in this) throw new TypeError(`ClientChannel: UnsavedEventRecord: Invalid event id: ${this.id}`);
     void Object.freeze(this);
   }
   public readonly id: never;
@@ -89,20 +90,22 @@ export class SavedEventRecord<K extends string, V extends EventValue> extends Ev
   ) {
     super(key, value, date, type);
     this.EVENT_RECORD;
-    if (<number>this.id > 0 === false) throw new TypeError(`LocalSocket: SavedEventRecord: Invalid event id: ${this.id}`);
+    if (<number>this.id > 0 === false) throw new TypeError(`ClientChannel: SavedEventRecord: Invalid event id: ${this.id}`);
     void Object.freeze(this);
   }
 }
 
 export const EventType = {
-  put: <'put'>'put',
-  delete: <'delete'>'delete',
-  snapshot: <'snapshot'>'snapshot'
+  put: <EventType.Put>'put',
+  delete: <EventType.Delete>'delete',
+  snapshot: <EventType.Snapshot>'snapshot'
 };
-export type EventType
-  = typeof EventType.put
-  | typeof EventType.delete
-  | typeof EventType.snapshot;
+export type EventType = StoreChannelEvent.Type
+export namespace EventType {
+  export type Put = StoreChannelEvent.Type.Put;
+  export type Delete = StoreChannelEvent.Type.Delete;
+  export type Snapshot = StoreChannelEvent.Type.Snapshot;
+}
 
 export class EventValue {
 }

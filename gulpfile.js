@@ -40,7 +40,7 @@ const config = {
     }
   },
   banner: [
-    `/*! ${pkg.name} v${pkg.version} ${pkg.repository.url} | (c) 2016, ${pkg.author} | ${pkg.license} License */`,
+    `/*! ${pkg.name} v${pkg.version} ${pkg.repository.url} | (c) 2017, ${pkg.author} | ${pkg.license} License */`,
     ''
   ].join('\n'),
   clean: {
@@ -50,13 +50,8 @@ const config = {
 
 function compile(paths, force) {
   let done = true;
-  return browserify({
-      basedir: '.',
-      debug: false,
-      entries: Object.values(paths).map(p => glob.sync(p)),
+  return browserify(Object.values(paths).map(p => glob.sync(p)), {
       bundleExternal: false,
-      cache: {},
-      packageCache: {}
     })
     .require(`./index.ts`, { expose: pkg.name })
     .plugin(tsify, require('./tsconfig.json').compilerOptions)
@@ -171,7 +166,7 @@ gulp.task('dist', ['clean'], function (done) {
 gulp.task('site', ['dist'], function () {
   return gulp.src([
     'node_modules/spica/dist/spica.js',
-    'dist/localsocket.js'
+    'dist/clientchannel.js'
   ])
     .pipe(gulp.dest('./gh-pages/assets/js'));
 });

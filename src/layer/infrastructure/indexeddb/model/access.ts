@@ -326,7 +326,7 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
       case Command.destroy:
         return void state.destroy();
     }
-    throw new TypeError(`LocalSocket: Invalid command ${commands.get(database)}.`);
+    throw new TypeError(`ClientChannel: Invalid command ${commands.get(database)}.`);
   }
 
   function handleFromErrorState({database, error, event}: State.Error): void {
@@ -391,6 +391,6 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
           void configs.delete(database),
           void IDBEventObserver.emit([database, IDBEventType.disconnect], new IDBEvent(IDBEventType.disconnect, database)));
     }
-    throw new TypeError(`LocalSocket: Invalid command ${commands.get(database)}.`);
+    throw new TypeError(`ClientChannel: Invalid command ${commands.get(database)}.`);
   }
 }
