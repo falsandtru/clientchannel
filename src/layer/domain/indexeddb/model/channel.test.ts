@@ -105,7 +105,7 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
 
       channel.expire('a');
       channel.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
-      channel.expire('b', 100);
+      channel.expire('b', 1000);
       channel.add(new ChannelStore.Record('b', new CustomSocketValue(0)));
       channel.add(new ChannelStore.Record('c', new CustomSocketValue(0)));
       setTimeout(() => {
@@ -123,9 +123,9 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
               channel.destroy();
               done();
             });
-          }, 3000);
+          }, 2000);
         });
-      }, 1000);
+      }, 2000);
     });
 
   });

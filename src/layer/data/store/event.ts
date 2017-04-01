@@ -61,7 +61,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       ids = new Map<K, IdNumber>();
       dates = new Map<K, number>();
       update(event: EventStore.Event<K>): void {
-        void this.ids.set(event.key, IdNumber(Math.max(event.id || 0, this.ids.get(event.key) || 0)));
+        assert(Number.isSafeInteger(event.id));
+        void this.ids.set(event.key, IdNumber(Math.max(event.id, this.ids.get(event.key) || 0)));
+        assert(event.date >= 0);
         void this.dates.set(event.key, Math.max(event.date, this.dates.get(event.key) || 0));
       }
     }();
@@ -77,9 +79,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       });
     // update states
     void this.events_.update
-      .monitor([], (event): void => {
-        void states.update(new EventStore.Event(event.type, event.id || IdNumber(0), event.key, event.attr, event.date));
-      });
+      .monitor([], event =>
+        void states.update(new EventStore.Event(event.type, event.id, event.key, event.attr, event.date)));
     void this.events.load
       .monitor([], event =>
         void states.update(event));
@@ -286,7 +287,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         if (!active()) return void resolve();
         const req = tx
           .objectStore(this.name)
-          .add({ ...event });
+          .add(adjust(event));
         assert(!tx.oncomplete);
         tx.oncomplete = () => {
           assert(req.result > 0);
@@ -477,6 +478,12 @@ interface MetaData<K extends string> {
   readonly id: number;
   readonly key: K;
   readonly date: number;
+}
+
+export function adjust(record: UnsavedEventRecord<any, any>): {} {
+  const ret = { ...record };
+  delete (<{ id: IdNumber; }>ret).id;
+  return ret;
 }
 
 // input order must be asc

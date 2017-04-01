@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.1
+
+- Fix event id missing.
+
 ## 0.9.0
 
 - Rename the project to clientchannel.
