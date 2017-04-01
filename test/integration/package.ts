@@ -1,5 +1,5 @@
-import { storechannel, StoreChannelObject } from '../../';
-import { messagechannel, MessageChannelObject } from '../../';
+import { storechannel, StoreChannelObject } from '../../index';
+import { messagechannel, MessageChannelObject } from '../../index';
 
 describe('Integration: Package', function () {
   describe('usage', function () {

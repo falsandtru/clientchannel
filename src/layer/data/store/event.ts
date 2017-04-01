@@ -1,8 +1,7 @@
 import { Observable, Cancelable, Tick, sqid, concat } from 'spica';
 import { listen, Config, IDBTransactionMode, IDBCursorDirection, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { IdNumber } from '../constraint/types';
-import { EventRecordFields, UnsavedEventRecord, SavedEventRecord } from '../schema/event';
-import * as Schema from '../schema/event';
+import { EventRecordFields, EventType, EventValue, UnsavedEventRecord, SavedEventRecord } from '../schema/event';
 import { noop } from '../../../lib/noop';
 
 export abstract class EventStore<K extends string, V extends EventStore.Value> {
@@ -434,6 +433,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
 }
 export namespace EventStore {
   export class Event<K extends string> {
+    private EVENT: K;
     constructor(
       public readonly type: Event.Type,
       public readonly id: IdNumber,
@@ -441,14 +441,15 @@ export namespace EventStore {
       public readonly attr: string,
       public readonly date: number
     ) {
+      this.EVENT;
       void Object.freeze(this);
     }
   }
   export namespace Event {
-    export import Type = Schema.EventType;
+    export import Type = EventType;
   }
   export class Record<K extends string, V extends Value> extends UnsavedEventRecord<K, V> { }
-  export class Value extends Schema.EventValue {
+  export class Value extends EventValue {
   }
 }
 export {

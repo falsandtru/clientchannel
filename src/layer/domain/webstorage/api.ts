@@ -1,3 +1,4 @@
-export { localStorage, sessionStorage, supportWebStorage } from '../../infrastructure/webstorage/api';
+export { MessageChannelConfig, MessageChannelObject, MessageChannelEvent } from '../../../../';
+export { Channel as MessageChannel } from './service/channel';
 export { events } from './service/event';
-export { Channel as MessageChannel, ChannelObject as MessageChannelObject, ChannelEvent as MessageChannelEvent } from './service/channel';
+export { localStorage, sessionStorage, supportWebStorage } from '../../infrastructure/webstorage/api';

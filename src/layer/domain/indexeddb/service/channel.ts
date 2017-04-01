@@ -1,4 +1,4 @@
-import { StoreChannel, StoreChannelObject } from '../../../../../';
+import { StoreChannel, StoreChannelObject as ChannelObject } from '../../../../../';
 import { Observable, clone, concat } from 'spica';
 import { build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { ChannelStore } from '../model/channel';
@@ -18,7 +18,7 @@ export class Channel<K extends string, V extends ChannelStore.Value<K>> extends 
     if (cache.has(this)) return this;
     void cache.add(this);
     void this.message.link().__event
-      .on([MessageChannelEvent.Type.recv, 'msgs'], () =>
+      .on([MessageChannel.Event.Type.recv, 'msgs'], () =>
         void this.message.link().recv()
           .reduce<void>((_, key) => void this.schema.data.fetch(key), void 0));
     void this.events.save
@@ -34,7 +34,7 @@ export class Channel<K extends string, V extends ChannelStore.Value<K>> extends 
             const newVal = this.get(key)[attr];
             source[attr] = newVal;
             void (<Observable<[MessageChannelEvent.Type] | [MessageChannelEvent.Type, string], MessageChannelEvent, any>>source.__event)
-              .emit([MessageChannelEvent.Type.recv, attr], new MessageChannelEvent(MessageChannelEvent.Type.recv, key, attr, newVal, oldVal));
+              .emit([MessageChannel.Event.Type.recv, attr], new MessageChannel.Event(MessageChannel.Event.Type.recv, key, attr, newVal, oldVal));
             return;
           }
           case ChannelStore.Event.Type.delete: {
@@ -48,7 +48,7 @@ export class Channel<K extends string, V extends ChannelStore.Value<K>> extends 
                 const newVal = <void>void 0;
                 source[attr] = newVal;
                 void (<Observable<[MessageChannelEvent.Type] | [MessageChannelEvent.Type, string], MessageChannelEvent, any>>source.__event)
-                  .emit([MessageChannelEvent.Type.recv, attr], new MessageChannelEvent(MessageChannelEvent.Type.recv, key, attr, newVal, oldVal));
+                  .emit([MessageChannel.Event.Type.recv, attr], new MessageChannel.Event(MessageChannel.Event.Type.recv, key, attr, newVal, oldVal));
               }, void 0);
             return;
           }
@@ -63,7 +63,7 @@ export class Channel<K extends string, V extends ChannelStore.Value<K>> extends 
                 const newVal = cache[attr];
                 source[attr] = newVal;
                 void (<Observable<[MessageChannelEvent.Type] | [MessageChannelEvent.Type, string], MessageChannelEvent, any>>source.__event)
-                  .emit([MessageChannelEvent.Type.recv, attr], new MessageChannelEvent(MessageChannelEvent.Type.recv, key, attr, newVal, oldVal));
+                  .emit([MessageChannel.Event.Type.recv, attr], new MessageChannel.Event(MessageChannel.Event.Type.recv, key, attr, newVal, oldVal));
               }, void 0);
             return;
           }
@@ -87,17 +87,17 @@ export class Channel<K extends string, V extends ChannelStore.Value<K>> extends 
                 get: () => this.meta(key)
               },
               __id: {
-                get(this: StoreChannelObject<K>): number {
+                get(this: ChannelObject<K>): number {
                   return this.__meta.id;
                 }
               },
               __key: {
-                get(this: StoreChannelObject<K>): string {
+                get(this: ChannelObject<K>): string {
                   return this.__meta.key;
                 }
               },
               __date: {
-                get(this: StoreChannelObject<K>): number {
+                get(this: ChannelObject<K>): number {
                   return this.__meta.date;
                 }
               },
@@ -113,7 +113,7 @@ export class Channel<K extends string, V extends ChannelStore.Value<K>> extends 
           (attr, newValue, oldValue) => (
             void this.add(new ChannelStore.Record(<K>key, <V>{ [attr]: newValue })),
             void (<Observable<[MessageChannelEvent.Type, string], MessageChannelEvent, void>>this.sources.get(key)!.__event)
-              .emit([MessageChannelEvent.Type.send, attr], new MessageChannelEvent(MessageChannelEvent.Type.send, key, attr, newValue, oldValue)))))
+              .emit([MessageChannel.Event.Type.send, attr], new MessageChannel.Event(MessageChannel.Event.Type.send, key, attr, newValue, oldValue)))))
         .get(key)!;
   }
   public destroy(): void {

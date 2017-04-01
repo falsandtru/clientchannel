@@ -1,1 +1,1 @@
-export { storechannel, messagechannel } from '../application/api';
+export * from '../application/api';

@@ -1,1 +1,1 @@
-export { storechannel, messagechannel } from './layer/interface/api';
+export * from './layer/interface/api';
