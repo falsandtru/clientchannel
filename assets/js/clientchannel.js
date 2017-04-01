@@ -1,4 +1,4 @@
-/*! clientchannel v0.9.0 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.9.1 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -38,19 +38,29 @@ require = function e(t, n, r) {
     3: [
         function (require, module, exports) {
             'use strict';
+            function __export(m) {
+                for (var p in m)
+                    if (!exports.hasOwnProperty(p))
+                        exports[p] = m[p];
+            }
             Object.defineProperty(exports, '__esModule', { value: true });
-            var api_1 = require('./layer/interface/api');
-            exports.storechannel = api_1.storechannel;
-            exports.messagechannel = api_1.messagechannel;
+            __export(require('./layer/interface/api'));
         },
         { './layer/interface/api': 30 }
     ],
     4: [
         function (require, module, exports) {
             'use strict';
+            function __export(m) {
+                for (var p in m)
+                    if (!exports.hasOwnProperty(p))
+                        exports[p] = m[p];
+            }
             Object.defineProperty(exports, '__esModule', { value: true });
             var api_1 = require('../domain/indexeddb/api');
             var api_2 = require('../domain/webstorage/api');
+            __export(require('../domain/indexeddb/api'));
+            __export(require('../domain/webstorage/api'));
             function storechannel(name, config) {
                 if (!api_2.supportWebStorage)
                     throw new Error('ClientChannel: Couldn\'t use WebStorage.');
@@ -133,6 +143,7 @@ require = function e(t, n, r) {
             }();
             Object.defineProperty(exports, '__esModule', { value: true });
             var spica_1 = require('spica');
+            var types_1 = require('../constraint/types');
             var EventRecordFields;
             (function (EventRecordFields) {
                 EventRecordFields.id = 'id';
@@ -144,19 +155,20 @@ require = function e(t, n, r) {
                 EventRecordFields.surrogateKeyDateField = 'key+date';
             }(EventRecordFields = exports.EventRecordFields || (exports.EventRecordFields = {})));
             var EventRecord = function () {
-                function EventRecord(key, value, date, type) {
-                    if (typeof this.id === 'number' && this.id > 0 === false || this.id !== void 0)
-                        throw new TypeError('ClientChannel: EventRecord: Invalid event id: ' + this.id);
+                function EventRecord(id, type, key, value, date) {
+                    this.id = id;
                     this.type = type;
+                    this.key = key;
+                    this.value = value;
+                    this.date = date;
+                    if (typeof this.id === 'number' && this.id >= 0 === false || !Number.isSafeInteger(this.id))
+                        throw new TypeError('ClientChannel: EventRecord: Invalid event id: ' + this.id);
                     if (typeof this.type !== 'string')
                         throw new TypeError('ClientChannel: EventRecord: Invalid event type: ' + this.type);
-                    this.key = key;
                     if (typeof this.key !== 'string')
                         throw new TypeError('ClientChannel: EventRecord: Invalid event key: ' + this.key);
-                    this.value = value;
                     if (typeof this.value !== 'object' || !this.value)
                         throw new TypeError('ClientChannel: EventRecord: Invalid event value: ' + this.value);
-                    this.date = date;
                     if (typeof this.date !== 'number' || this.date >= 0 === false)
                         throw new TypeError('ClientChannel: EventRecord: Invalid event date: ' + this.date);
                     this.attr = this.type === exports.EventType.put ? Object.keys(value).reduce(function (r, p) {
@@ -172,16 +184,19 @@ require = function e(t, n, r) {
                     case exports.EventType.put: {
                             this.value = value = spica_1.clone(new EventValue(), (_a = {}, _a[this.attr] = value[this.attr], _a));
                             void Object.freeze(this.value);
+                            void Object.freeze(this);
                             return;
                         }
                     case exports.EventType.snapshot: {
                             this.value = value = spica_1.clone(new EventValue(), value);
                             void Object.freeze(this.value);
+                            void Object.freeze(this);
                             return;
                         }
                     case exports.EventType.delete: {
                             this.value = value = new EventValue();
                             void Object.freeze(this.value);
+                            void Object.freeze(this);
                             return;
                         }
                     default:
@@ -200,11 +215,10 @@ require = function e(t, n, r) {
                     if (date === void 0) {
                         date = Date.now();
                     }
-                    var _this = _super.call(this, key, value, date, type) || this;
+                    var _this = _super.call(this, types_1.IdNumber(0), type, key, value, date) || this;
                     _this.EVENT_RECORD;
-                    if (_this.id !== void 0 || 'id' in _this)
+                    if (_this.id !== 0)
                         throw new TypeError('ClientChannel: UnsavedEventRecord: Invalid event id: ' + _this.id);
-                    void Object.freeze(_this);
                     return _this;
                 }
                 return UnsavedEventRecord;
@@ -213,12 +227,10 @@ require = function e(t, n, r) {
             var SavedEventRecord = function (_super) {
                 __extends(SavedEventRecord, _super);
                 function SavedEventRecord(id, key, value, type, date) {
-                    var _this = _super.call(this, key, value, date, type) || this;
-                    _this.id = id;
+                    var _this = _super.call(this, id, type, key, value, date) || this;
                     _this.EVENT_RECORD;
                     if (_this.id > 0 === false)
                         throw new TypeError('ClientChannel: SavedEventRecord: Invalid event id: ' + _this.id);
-                    void Object.freeze(_this);
                     return _this;
                 }
                 return SavedEventRecord;
@@ -236,7 +248,10 @@ require = function e(t, n, r) {
             }();
             exports.EventValue = EventValue;
         },
-        { 'spica': undefined }
+        {
+            '../constraint/types': 5,
+            'spica': undefined
+        }
     ],
     8: [
         function (require, module, exports) {
@@ -273,7 +288,6 @@ require = function e(t, n, r) {
             var event_1 = require('../schema/event');
             exports.UnsavedEventRecord = event_1.UnsavedEventRecord;
             exports.SavedEventRecord = event_1.SavedEventRecord;
-            var Schema = require('../schema/event');
             var noop_1 = require('../../../lib/noop');
             var EventStore = function () {
                 function EventStore(database, name) {
@@ -299,7 +313,7 @@ require = function e(t, n, r) {
                             this.dates = new Map();
                         }
                         class_1.prototype.update = function (event) {
-                            void this.ids.set(event.key, types_1.IdNumber(Math.max(event.id || 0, this.ids.get(event.key) || 0)));
+                            void this.ids.set(event.key, types_1.IdNumber(Math.max(event.id, this.ids.get(event.key) || 0)));
                             void this.dates.set(event.key, Math.max(event.date, this.dates.get(event.key) || 0));
                         };
                         return class_1;
@@ -316,7 +330,7 @@ require = function e(t, n, r) {
                         ], new EventStore.Event(event.type, event.id, event.key, event.attr, event.date));
                     });
                     void this.events_.update.monitor([], function (event) {
-                        void states.update(new EventStore.Event(event.type, event.id || types_1.IdNumber(0), event.key, event.attr, event.date));
+                        return void states.update(new EventStore.Event(event.type, event.id, event.key, event.attr, event.date));
                     });
                     void this.events.load.monitor([], function (event) {
                         return void states.update(event);
@@ -627,7 +641,7 @@ require = function e(t, n, r) {
                             };
                             if (!active())
                                 return void resolve();
-                            var req = tx.objectStore(_this.name).add(__assign({}, event));
+                            var req = tx.objectStore(_this.name).add(adjust(event));
                             tx.oncomplete = function () {
                                 void terminate();
                                 var savedEvent = new event_1.SavedEventRecord(types_1.IdNumber(req.result), event.key, event.value, event.type, event.date);
@@ -796,13 +810,14 @@ require = function e(t, n, r) {
                         this.key = key;
                         this.attr = attr;
                         this.date = date;
+                        this.EVENT;
                         void Object.freeze(this);
                     }
                     return Event;
                 }();
                 EventStore.Event = Event;
                 (function (Event) {
-                    Event.Type = Schema.EventType;
+                    Event.Type = event_1.EventType;
                 }(Event = EventStore.Event || (EventStore.Event = {})));
                 var Record = function (_super) {
                     __extends(Record, _super);
@@ -818,7 +833,7 @@ require = function e(t, n, r) {
                         return _super !== null && _super.apply(this, arguments) || this;
                     }
                     return Value;
-                }(Schema.EventValue);
+                }(event_1.EventValue);
                 EventStore.Value = Value;
             }(EventStore = exports.EventStore || (exports.EventStore = {})));
             exports.EventStore = EventStore;
@@ -833,6 +848,12 @@ require = function e(t, n, r) {
                 }
                 return InternalEvent;
             }();
+            function adjust(record) {
+                var ret = __assign({}, record);
+                delete ret.id;
+                return ret;
+            }
+            exports.adjust = adjust;
             function compose(key, events) {
                 return group(events).map(function (events) {
                     return events.reduceRight(compose, new event_1.UnsavedEventRecord(key, new EventStore.Value(), EventStore.Event.Type.delete, 0));
@@ -1626,7 +1647,7 @@ require = function e(t, n, r) {
                         return _this;
                     void cache.add(_this);
                     void _this.message.link().__event.on([
-                        api_3.MessageChannelEvent.Type.recv,
+                        api_3.MessageChannel.Event.Type.recv,
                         'msgs'
                     ], function () {
                         return void _this.message.link().recv().reduce(function (_, key) {
@@ -1648,9 +1669,9 @@ require = function e(t, n, r) {
                                 var newVal = _this.get(key)[attr];
                                 source[attr] = newVal;
                                 void source.__event.emit([
-                                    api_3.MessageChannelEvent.Type.recv,
+                                    api_3.MessageChannel.Event.Type.recv,
                                     attr
-                                ], new api_3.MessageChannelEvent(api_3.MessageChannelEvent.Type.recv, key, attr, newVal, oldVal));
+                                ], new api_3.MessageChannel.Event(api_3.MessageChannel.Event.Type.recv, key, attr, newVal, oldVal));
                                 return;
                             }
                         case channel_1.ChannelStore.Event.Type.delete: {
@@ -1660,9 +1681,9 @@ require = function e(t, n, r) {
                                     var newVal = void 0;
                                     source[attr] = newVal;
                                     void source.__event.emit([
-                                        api_3.MessageChannelEvent.Type.recv,
+                                        api_3.MessageChannel.Event.Type.recv,
                                         attr
-                                    ], new api_3.MessageChannelEvent(api_3.MessageChannelEvent.Type.recv, key, attr, newVal, oldVal));
+                                    ], new api_3.MessageChannel.Event(api_3.MessageChannel.Event.Type.recv, key, attr, newVal, oldVal));
                                 }, void 0);
                                 return;
                             }
@@ -1673,9 +1694,9 @@ require = function e(t, n, r) {
                                     var newVal = cache_2[attr];
                                     source[attr] = newVal;
                                     void source.__event.emit([
-                                        api_3.MessageChannelEvent.Type.recv,
+                                        api_3.MessageChannel.Event.Type.recv,
                                         attr
-                                    ], new api_3.MessageChannelEvent(api_3.MessageChannelEvent.Type.recv, key, attr, newVal, oldVal));
+                                    ], new api_3.MessageChannel.Event(api_3.MessageChannel.Event.Type.recv, key, attr, newVal, oldVal));
                                 }, void 0);
                                 return;
                             }
@@ -1716,9 +1737,9 @@ require = function e(t, n, r) {
                         }
                     }), this.factory, function (attr, newValue, oldValue) {
                         return void _this.add(new channel_1.ChannelStore.Record(key, (_a = {}, _a[attr] = newValue, _a))), void _this.sources.get(key).__event.emit([
-                            api_3.MessageChannelEvent.Type.send,
+                            api_3.MessageChannel.Event.Type.send,
                             attr
-                        ], new api_3.MessageChannelEvent(api_3.MessageChannelEvent.Type.send, key, attr, newValue, oldValue));
+                        ], new api_3.MessageChannel.Event(api_3.MessageChannel.Event.Type.send, key, attr, newValue, oldValue));
                         var _a;
                     })).get(key);
                 };
@@ -1784,15 +1805,14 @@ require = function e(t, n, r) {
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            var channel_1 = require('./service/channel');
+            exports.MessageChannel = channel_1.Channel;
+            var event_1 = require('./service/event');
+            exports.events = event_1.events;
             var api_1 = require('../../infrastructure/webstorage/api');
             exports.localStorage = api_1.localStorage;
             exports.sessionStorage = api_1.sessionStorage;
             exports.supportWebStorage = api_1.supportWebStorage;
-            var event_1 = require('./service/event');
-            exports.events = event_1.events;
-            var channel_1 = require('./service/channel');
-            exports.MessageChannel = channel_1.Channel;
-            exports.MessageChannelEvent = channel_1.ChannelEvent;
         },
         {
             '../../infrastructure/webstorage/api': 27,
@@ -1852,26 +1872,6 @@ require = function e(t, n, r) {
             var api_2 = require('../../../infrastructure/webstorage/api');
             var storage_1 = require('../model/storage');
             var cache = new Map();
-            var ChannelEvent = function () {
-                function ChannelEvent(type, key, attr, newValue, oldValue) {
-                    this.type = type;
-                    this.key = key;
-                    this.attr = attr;
-                    this.newValue = newValue;
-                    this.oldValue = oldValue;
-                    void Object.freeze(this);
-                }
-                return ChannelEvent;
-            }();
-            exports.ChannelEvent = ChannelEvent;
-            (function (ChannelEvent) {
-                var Type;
-                (function (Type) {
-                    Type.send = 'send';
-                    Type.recv = 'recv';
-                }(Type = ChannelEvent.Type || (ChannelEvent.Type = {})));
-            }(ChannelEvent = exports.ChannelEvent || (exports.ChannelEvent = {})));
-            exports.ChannelEvent = ChannelEvent;
             var Channel = function () {
                 function Channel(name, storage, factory, log) {
                     if (storage === void 0) {
@@ -1905,7 +1905,7 @@ require = function e(t, n, r) {
                             acc[attr] = source[attr];
                             return acc;
                         }, {})));
-                        var event = new ChannelEvent(ChannelEvent.Type.send, _this.name, attr, newValue, oldValue);
+                        var event = new Channel.Event(Channel.Event.Type.send, _this.name, attr, newValue, oldValue);
                         void source.__event.emit([
                             event.type,
                             event.attr
@@ -1921,7 +1921,7 @@ require = function e(t, n, r) {
                             if (newVal === oldVal)
                                 return;
                             source[attr] = newVal;
-                            var event = new ChannelEvent(ChannelEvent.Type.recv, _this.name, attr, newVal, oldVal);
+                            var event = new Channel.Event(Channel.Event.Type.recv, _this.name, attr, newVal, oldVal);
                             void source.__event.emit([
                                 event.type,
                                 event.attr
@@ -1945,6 +1945,28 @@ require = function e(t, n, r) {
                 };
                 return Channel;
             }();
+            exports.Channel = Channel;
+            (function (Channel) {
+                var Event = function () {
+                    function Event(type, key, attr, newValue, oldValue) {
+                        this.type = type;
+                        this.key = key;
+                        this.attr = attr;
+                        this.newValue = newValue;
+                        this.oldValue = oldValue;
+                        void Object.freeze(this);
+                    }
+                    return Event;
+                }();
+                Channel.Event = Event;
+                (function (Event) {
+                    var Type;
+                    (function (Type) {
+                        Type.send = 'send';
+                        Type.recv = 'recv';
+                    }(Type = Event.Type || (Event.Type = {})));
+                }(Event = Channel.Event || (Channel.Event = {})));
+            }(Channel = exports.Channel || (exports.Channel = {})));
             exports.Channel = Channel;
             function parse(item) {
                 try {
@@ -2519,10 +2541,13 @@ require = function e(t, n, r) {
     30: [
         function (require, module, exports) {
             'use strict';
+            function __export(m) {
+                for (var p in m)
+                    if (!exports.hasOwnProperty(p))
+                        exports[p] = m[p];
+            }
             Object.defineProperty(exports, '__esModule', { value: true });
-            var api_1 = require('../application/api');
-            exports.storechannel = api_1.storechannel;
-            exports.messagechannel = api_1.messagechannel;
+            __export(require('../application/api'));
         },
         { '../application/api': 4 }
     ],
