@@ -89,7 +89,7 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
       : this.links
         .set(key, build(
           Object.defineProperties(
-            this.sources.set(key, assign<{}, V>({}, this.get(key))).get(key)!,
+            this.sources.set(key, assign<V>({}, this.get(key))).get(key)!,
             {
               __meta: {
                 get: () => this.meta(key)
