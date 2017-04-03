@@ -13,7 +13,10 @@
     "webstorage",
     "localstorage",
     "store",
-    "repository"
+    "eventstore",
+    "repository",
+    "messaging",
+    "eventsourcing"
   ],
   "types": "./index.d.ts",
   "main": "./dist/clientchannel.js",
