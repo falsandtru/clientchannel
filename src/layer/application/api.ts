@@ -15,7 +15,7 @@ export function store<K extends string, V extends StoreChannelObject<K>>(name: s
   return new IDBChannel<K, V>(name, schema, destroy, expiry);
 }
 
-export function broadcastchannel<V extends BroadcastChannelObject>(name: string, config: BroadcastChannelConfig<V>): BroadcastChannel<V> {
+export function broadcast<V extends BroadcastChannelObject>(name: string, config: BroadcastChannelConfig<V>): BroadcastChannel<V> {
   if (!supportWebStorage) throw new Error(`ClientChannel: Couldn't use WebStorage.`);
   const {
     schema

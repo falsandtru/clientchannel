@@ -4,6 +4,7 @@
 
 - Rename Message to Broadcast feature.
 - Rename storechannel to store function.
+- Rename broadcastchannel to broadcast function.
 
 ## 0.9.1
 

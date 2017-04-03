@@ -1,5 +1,5 @@
 import { store, StoreChannelObject } from '../../index';
-import { broadcastchannel, BroadcastChannelObject } from '../../index';
+import { broadcast, BroadcastChannelObject } from '../../index';
 
 describe('Integration: Package', function () {
   describe('usage', function () {
@@ -47,7 +47,7 @@ describe('Integration: Package', function () {
         version = 0;
       }
 
-      const chan = broadcastchannel('version', {
+      const chan = broadcast('version', {
         schema() {
           return new Schema();
         }

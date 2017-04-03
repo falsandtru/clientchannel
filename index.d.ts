@@ -51,7 +51,7 @@ export namespace StoreChannelEvent {
   }
 }
 
-export function broadcastchannel<V extends BroadcastChannelObject>(name: string, config: BroadcastChannelConfig<V>): BroadcastChannel<V>;
+export function broadcast<V extends BroadcastChannelObject>(name: string, config: BroadcastChannelConfig<V>): BroadcastChannel<V>;
 export interface BroadcastChannel<V extends BroadcastChannelObject> {
   readonly events: {
     readonly send: Observer<never[] | [string], BroadcastChannelEvent, void>;
