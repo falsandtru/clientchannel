@@ -7,6 +7,7 @@
 - Rename broadcastchannel to broadcast function.
 - Enhance typings.
 - Remove BroadcastChannelEvent.key property.
+- Remove BroadcastChannelObject.__key property.
 
 ## 0.9.1
 

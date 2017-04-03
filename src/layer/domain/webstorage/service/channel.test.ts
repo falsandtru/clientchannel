@@ -29,15 +29,12 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
       assert(sessionStorage.getItem('test') === null);
       const repo = new Channel('test', sessionStorage, factory);
       const dao = repo.link();
-      assert(dao.__key === 'test');
       assert(dao.n === 0);
       assert(sessionStorage.getItem('test') === null);
       dao.n = 1;
-      assert(dao.__key === 'test');
       assert(dao.n === 1);
       assert(sessionStorage.getItem('test') === '{\"n\":1}');
       repo.destroy();
-      assert(dao.__key === 'test');
       assert(dao.n === 1);
       assert(sessionStorage.getItem('test') === null);
     });

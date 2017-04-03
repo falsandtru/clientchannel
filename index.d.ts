@@ -64,7 +64,6 @@ export interface BroadcastChannelConfig<V extends BroadcastChannelObject> {
   schema(): V;
 }
 export interface BroadcastChannelObject {
-  readonly __key: string;
   readonly __event: Observer<[BroadcastChannelEvent.Type] | [BroadcastChannelEvent.Type, keyof this], BroadcastChannelEvent<this>, any>;
 }
 export interface BroadcastChannelEvent<V extends BroadcastChannelObject> {
