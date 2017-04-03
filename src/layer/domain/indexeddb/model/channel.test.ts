@@ -1,3 +1,4 @@
+import { StoreChannelObject } from '../../../../../';
 import { ChannelStore } from './channel';
 import { destroy, event, IDBEventType } from '../../../infrastructure/indexeddb/api';
 
@@ -23,11 +24,11 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
       destroy('test');
     });
 
-    class CustomSocketValue extends ChannelStore.Value<string> {
+    interface CustomSocketValue extends StoreChannelObject<string> { }
+    class CustomSocketValue {
       constructor(
         public val: number
       ) {
-        super();
       }
     }
 

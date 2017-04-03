@@ -6,9 +6,9 @@ import { AccessStore } from './channel/access';
 import { ExpiryStore } from './channel/expiry';
 import { noop } from '../../../../lib/noop';
 
-const cache = new Map<string, ChannelStore<string, ChannelStore.Value<string>>>();
+const cache = new Map<string, ChannelStore<string, StoreChannelObject<string>>>();
 
-export class ChannelStore<K extends string, V extends ChannelStore.Value<K>> {
+export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   constructor(
     public readonly name: string,
     destroy: (err: DOMException | DOMError, event: Event | null) => boolean,
@@ -98,12 +98,9 @@ export class ChannelStore<K extends string, V extends ChannelStore.Value<K>> {
 export namespace ChannelStore {
   export import Event = DataStore.Event;
   export import Record = DataStore.Record;
-  export interface Value<K extends string> extends StoreChannelObject<K> { }
-  export class Value<K extends string> extends DataStore.Value implements StoreChannelObject<K> {
-  }
 }
 
-class Schema<K extends string, V extends ChannelStore.Value<K>> {
+class Schema<K extends string, V extends StoreChannelObject<K>> {
   constructor(
     private readonly store_: ChannelStore<K, V>,
     private readonly expiries_: Map<K, number>
