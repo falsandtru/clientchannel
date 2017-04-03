@@ -1,5 +1,5 @@
 import { storechannel, StoreChannelObject } from '../../index';
-import { messagechannel, MessageChannelObject } from '../../index';
+import { broadcastchannel, BroadcastChannelObject } from '../../index';
 
 describe('Integration: Package', function () {
   describe('usage', function () {
@@ -38,7 +38,7 @@ describe('Integration: Package', function () {
     });
 
     it('communicate', () => {
-      interface Schema extends MessageChannelObject {
+      interface Schema extends BroadcastChannelObject {
       }
       class Schema {
         get event() {
@@ -47,7 +47,7 @@ describe('Integration: Package', function () {
         version = 0;
       }
 
-      const chan = messagechannel('version', {
+      const chan = broadcastchannel('version', {
         schema() {
           return new Schema();
         }
@@ -57,7 +57,7 @@ describe('Integration: Package', function () {
       link.event.on(['recv', 'version'], ({newValue}) => {
         if (newValue === VERSION) return;
         if (newValue > VERSION) {
-          location.reload();
+          location.reload(true);
         }
         else {
           link.version = VERSION;

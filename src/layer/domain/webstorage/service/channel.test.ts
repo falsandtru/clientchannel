@@ -1,9 +1,9 @@
-import { MessageChannelObject } from '../../../../../';
+import { BroadcastChannelObject } from '../../../../../';
 import { Channel } from './channel';
 
 describe('Unit: layers/domain/webstorage/service/channel', () => {
   describe('spec', () => {
-    interface DAO extends MessageChannelObject {
+    interface DAO extends BroadcastChannelObject {
     }
     class DAO {
       n = 0;

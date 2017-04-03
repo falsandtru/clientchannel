@@ -3,7 +3,7 @@ import { Observable, clone, concat } from 'spica';
 import { build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { ChannelStore } from '../model/channel';
 import { localStorage } from '../../../infrastructure/webstorage/api';
-import { MessageChannel, MessageChannelObject, MessageChannelEvent } from '../../webstorage/api';
+import { BroadcastChannel, BroadcastChannelObject, BroadcastChannelEvent } from '../../webstorage/api';
 
 const cache = new WeakSet<Channel<string, ChannelObject<string>>>();
 
@@ -17,13 +17,13 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
     super(name, destroy, expiry);
     if (cache.has(this)) return this;
     void cache.add(this);
-    void this.message.link().__event
-      .on([MessageChannel.Event.Type.recv, 'msgs'], () =>
-        void this.message.link().recv()
+    void this.broadcast.link().__event
+      .on([BroadcastChannel.Event.Type.recv, 'msgs'], () =>
+        void this.broadcast.link().recv()
           .reduce<void>((_, key) => void this.schema.data.fetch(key), void 0));
     void this.events.save
       .monitor([], ({key, attr}) =>
-        void this.message.link().send(new Message(key, attr, Date.now())));
+        void this.broadcast.link().send(new Message(key, attr, Date.now())));
     void this.events.load
       .monitor([], ({key, attr, type}) => {
         const source = this.sources.get(key);
@@ -34,7 +34,7 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
             const newVal = this.get(key)[attr];
             source[attr] = newVal;
             void source.__event
-              .emit([MessageChannel.Event.Type.recv, attr], new MessageChannel.Event(MessageChannel.Event.Type.recv, key, attr, newVal, oldVal));
+              .emit([BroadcastChannel.Event.Type.recv, attr], new BroadcastChannel.Event(BroadcastChannel.Event.Type.recv, key, attr, newVal, oldVal));
             return;
           }
           case ChannelStore.Event.Type.delete: {
@@ -48,7 +48,7 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
                 const newVal = <void>void 0;
                 source[attr] = newVal;
                 void source.__event
-                  .emit([MessageChannel.Event.Type.recv, attr], new MessageChannel.Event(MessageChannel.Event.Type.recv, key, attr, newVal, oldVal));
+                  .emit([BroadcastChannel.Event.Type.recv, attr], new BroadcastChannel.Event(BroadcastChannel.Event.Type.recv, key, attr, newVal, oldVal));
               }, void 0);
             return;
           }
@@ -63,7 +63,7 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
                 const newVal = cache[attr];
                 source[attr] = newVal;
                 void source.__event
-                  .emit([MessageChannel.Event.Type.recv, attr], new MessageChannel.Event(MessageChannel.Event.Type.recv, key, attr, newVal, oldVal));
+                  .emit([BroadcastChannel.Event.Type.recv, attr], new BroadcastChannel.Event(BroadcastChannel.Event.Type.recv, key, attr, newVal, oldVal));
               }, void 0);
             return;
           }
@@ -71,7 +71,7 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
       });
     void Object.seal(this);
   }
-  private readonly message = new MessageChannel(this.name, localStorage, () => new MessageSchema<K>());
+  private readonly broadcast = new BroadcastChannel(this.name, localStorage, () => new BroadcastSchema<K>());
   private readonly links = new Map<K, V>();
   private readonly sources = new Map<K, InternalChannelObject<K>>();
   public link(key: K, expiry?: number): V {
@@ -102,7 +102,7 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
                 }
               },
               __event: {
-                value: new Observable<[MessageChannelEvent.Type], MessageChannelEvent, any>()
+                value: new Observable<[BroadcastChannelEvent.Type], BroadcastChannelEvent, any>()
               },
               __transaction: {
                 value: (cb: () => any, complete: (err?: DOMException | DOMError | Error) => any) => this.transaction(key, cb, complete)
@@ -113,18 +113,18 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
           (attr, newValue, oldValue) => (
             void this.add(new ChannelStore.Record(<K>key, <V>{ [attr]: newValue })),
             void this.sources.get(key)!.__event
-              .emit([MessageChannel.Event.Type.send, attr], new MessageChannel.Event(MessageChannel.Event.Type.send, key, attr, newValue, oldValue)))))
+              .emit([BroadcastChannel.Event.Type.send, attr], new BroadcastChannel.Event(BroadcastChannel.Event.Type.send, key, attr, newValue, oldValue)))))
         .get(key)!;
   }
   public destroy(): void {
-    void this.message.destroy();
+    void this.broadcast.destroy();
     void cache.delete(this);
     void super.destroy();
   }
 }
 
 interface InternalChannelObject<K extends string> extends ChannelObject<K> {
-  readonly __event: Observable<[MessageChannelEvent.Type] | [MessageChannelEvent.Type, string], MessageChannelEvent, any>;
+  readonly __event: Observable<[BroadcastChannelEvent.Type] | [BroadcastChannelEvent.Type, string], BroadcastChannelEvent, any>;
 }
 
 class Message<K extends string> {
@@ -140,9 +140,9 @@ class Message<K extends string> {
   }
 }
 
-interface MessageSchema<K extends string> extends MessageChannelObject {
+interface BroadcastSchema<K extends string> extends BroadcastChannelObject {
 }
-class MessageSchema<K extends string> {
+class BroadcastSchema<K extends string> {
   // msgs must be sorted by asc.
   public msgs: Message<K>[] = [];
   private readonly msgLatestUpdates_ = new Map<string, number>();

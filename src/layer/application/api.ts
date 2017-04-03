@@ -1,7 +1,7 @@
 import { StoreChannel, StoreChannelObject, StoreChannelConfig } from '../../../';
-import { MessageChannel, MessageChannelObject, MessageChannelConfig } from '../../../';
+import { BroadcastChannel, BroadcastChannelObject, BroadcastChannelConfig } from '../../../';
 import { StoreChannel as IDBChannel } from '../domain/indexeddb/api';
-import { MessageChannel as WebStorage, localStorage, supportWebStorage } from '../domain/webstorage/api';
+import { BroadcastChannel as WebStorage, localStorage, supportWebStorage } from '../domain/webstorage/api';
 export * from '../domain/indexeddb/api';
 export * from '../domain/webstorage/api';
 
@@ -15,7 +15,7 @@ export function storechannel<K extends string, V extends StoreChannelObject<K>>(
   return new IDBChannel<K, V>(name, schema, destroy, expiry);
 }
 
-export function messagechannel<V extends MessageChannelObject>(name: string, config: MessageChannelConfig<V>): MessageChannel<V> {
+export function broadcastchannel<V extends BroadcastChannelObject>(name: string, config: BroadcastChannelConfig<V>): BroadcastChannel<V> {
   if (!supportWebStorage) throw new Error(`ClientChannel: Couldn't use WebStorage.`);
   const {
     schema

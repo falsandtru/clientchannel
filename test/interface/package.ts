@@ -1,4 +1,4 @@
-import { storechannel, messagechannel } from '../../index';
+import { storechannel, broadcastchannel } from '../../index';
 
 describe('Interface: Package', function () {
   describe('clientchannel', function () {
@@ -6,8 +6,8 @@ describe('Interface: Package', function () {
       assert(typeof storechannel === 'function');
     });
 
-    it('messagechannel', function () {
-      assert(typeof messagechannel === 'function');
+    it('broadcastchannel', function () {
+      assert(typeof broadcastchannel === 'function');
     });
 
   });

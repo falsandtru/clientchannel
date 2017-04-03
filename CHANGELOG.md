@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.0
+
+- Rename Message to Broadcast feature.
+
 ## 0.9.1
 
 - Fix event id missing.

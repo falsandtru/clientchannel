@@ -1,4 +1,4 @@
-import { MessageChannel, MessageChannelObject as ChannelObject, MessageChannelEvent } from '../../../../../';
+import { BroadcastChannel, BroadcastChannelObject as ChannelObject, BroadcastChannelEvent } from '../../../../../';
 import { Observable } from 'spica';
 import { SCHEMA, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { events } from '../service/event';
@@ -7,7 +7,7 @@ import { StorageLike, fakeStorage } from '../model/storage';
 
 const cache = new Map<string, Channel<ChannelObject>>();
 
-export class Channel<V extends ChannelObject> implements MessageChannel<V> {
+export class Channel<V extends ChannelObject> implements BroadcastChannel<V> {
   constructor(
     public readonly name: string,
     private readonly storage: StorageLike = sessionStorage || fakeStorage,
@@ -21,7 +21,7 @@ export class Channel<V extends ChannelObject> implements MessageChannel<V> {
     void cache.set(name, this);
     const source: V = <any>{
       [SCHEMA.KEY.NAME]: this.name,
-      [SCHEMA.EVENT.NAME]: new Observable<[MessageChannelEvent.Type] | [MessageChannelEvent.Type, string], Channel.Event, void>(),
+      [SCHEMA.EVENT.NAME]: new Observable<[BroadcastChannelEvent.Type] | [BroadcastChannelEvent.Type, string], Channel.Event, void>(),
       ...<Object>parse<V>(this.storage.getItem(this.name))
     };
     this.link_ = build(source, this.factory, (attr, newValue, oldValue) => {
@@ -31,7 +31,7 @@ export class Channel<V extends ChannelObject> implements MessageChannel<V> {
         return acc;
       }, {})));
       const event = new Channel.Event(Channel.Event.Type.send, this.name, attr, newValue, oldValue);
-      void (<Observable<[MessageChannelEvent.Type, string], Channel.Event, any>>source.__event).emit([event.type, event.attr], event);
+      void (<Observable<[BroadcastChannelEvent.Type, string], Channel.Event, any>>source.__event).emit([event.type, event.attr], event);
       void this.events.send.emit([event.attr], event);
     });
     const subscriber = ({newValue}: StorageEvent): void => {
@@ -45,7 +45,7 @@ export class Channel<V extends ChannelObject> implements MessageChannel<V> {
           if (newVal === oldVal) return;
           source[attr] = newVal;
           const event = new Channel.Event(Channel.Event.Type.recv, this.name, attr, newVal, oldVal);
-          void (<Observable<[MessageChannelEvent.Type, string], Channel.Event, any>>source.__event).emit([event.type, event.attr], event);
+          void (<Observable<[BroadcastChannelEvent.Type, string], Channel.Event, any>>source.__event).emit([event.type, event.attr], event);
           void this.events.recv.emit([event.attr], event);
         }, void 0);
     };
@@ -70,7 +70,7 @@ export class Channel<V extends ChannelObject> implements MessageChannel<V> {
   }
 }
 export namespace Channel {
-  export class Event implements MessageChannelEvent {
+  export class Event implements BroadcastChannelEvent {
     constructor(
       public readonly type: Event.Type,
       public readonly key: string,
@@ -85,10 +85,10 @@ export namespace Channel {
     }
   }
   export namespace Event {
-    export type Type = MessageChannelEvent.Type;
+    export type Type = BroadcastChannelEvent.Type;
     export namespace Type {
-      export const send: MessageChannelEvent.Type.Send = 'send';
-      export const recv: MessageChannelEvent.Type.Recv = 'recv';
+      export const send: BroadcastChannelEvent.Type.Send = 'send';
+      export const recv: BroadcastChannelEvent.Type.Recv = 'recv';
     }
   }
 }
