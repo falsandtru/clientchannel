@@ -1,6 +1,6 @@
 ﻿import { Observer, Subscriber } from 'spica';
 
-export function storechannel<K extends string, V extends StoreChannelObject<K>>(name: string, config: StoreChannelConfig<K, V>): StoreChannel<K, V>;
+export function store<K extends string, V extends StoreChannelObject<K>>(name: string, config: StoreChannelConfig<K, V>): StoreChannel<K, V>;
 export interface StoreChannel<K extends string, V extends StoreChannelObject<K>> {
   readonly events: {
     readonly load: Observer<never[] | [K] | [K, string] | [K, string, StoreChannelEvent.Type], StoreChannelEvent<K>, void>,

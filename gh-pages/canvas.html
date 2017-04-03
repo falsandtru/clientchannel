@@ -26,7 +26,7 @@
   var width = 400, height = 500;
   $(function () {
     // connect to database
-    var chan = require('clientchannel').storechannel('demo', {
+    var chan = require('clientchannel').store('demo', {
       schema: function () {
         // define schema
         return {

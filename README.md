@@ -34,7 +34,7 @@ Data that assigned to a property of Linked object will be saved to the storage.
 When data was updated on other threads(tabs), own thread's property value will be updated automatically.
 
 ```ts
-import {storechannel, StoreChannelObject} from 'clientchannel';
+import { store, StoreChannelObject } from 'clientchannel';
 
 interface Schema extends StoreChannelObject<string> {
 }
@@ -54,7 +54,7 @@ class Schema {
 	}
 }
 
-const chan = storechannel('domain', {
+const chan = store('domain', {
 	// delete linked records 3 days later since last access.
 	expiry: 3 * 24 * 60 * 60 * 1e3,
 	schema() {

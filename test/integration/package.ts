@@ -1,4 +1,4 @@
-import { storechannel, StoreChannelObject } from '../../index';
+import { store, StoreChannelObject } from '../../index';
 import { broadcastchannel, BroadcastChannelObject } from '../../index';
 
 describe('Integration: Package', function () {
@@ -22,7 +22,7 @@ describe('Integration: Package', function () {
         }
       }
 
-      const chan = storechannel('domain', {
+      const chan = store('domain', {
         // delete linked record 3 days later since last access.
         expiry: 3 * 24 * 60 * 60 * 1e3,
         schema() {

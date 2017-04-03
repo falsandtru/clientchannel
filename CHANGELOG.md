@@ -3,6 +3,7 @@
 ## 0.10.0
 
 - Rename Message to Broadcast feature.
+- Rename storechannel to store function.
 
 ## 0.9.1
 
