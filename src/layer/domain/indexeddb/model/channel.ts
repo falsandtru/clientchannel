@@ -40,9 +40,9 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   }
   protected readonly schema: Schema<K, V>;
   public readonly events = {
-    load: new Observable<never[] | [K] | [K, string] | [K, string, ChannelStore.Event.Type], ChannelStore.Event<K>, void>(),
-    save: new Observable<never[] | [K] | [K, string] | [K, string, ChannelStore.Event.Type], ChannelStore.Event<K>, void>(),
-    loss: new Observable<never[] | [K] | [K, string] | [K, string, ChannelStore.Event.Type], ChannelStore.Event<K>, void>()
+    load: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.Event.Type], ChannelStore.Event<K, V>, void>(),
+    save: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.Event.Type], ChannelStore.Event<K, V>, void>(),
+    loss: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.Event.Type], ChannelStore.Event<K, V>, void>()
   };
   public sync(keys: K[], cb: (errs: [K, DOMException | DOMError][]) => any = noop): void {
     return this.schema.data.sync(keys, cb);

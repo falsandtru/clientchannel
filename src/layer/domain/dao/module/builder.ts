@@ -46,8 +46,8 @@ export function build<V>(source: V, factory: () => V, update: (attr: string, new
         enumerable: true,
         get: () => source[prop] === void 0 ? iniVal : source[prop],
         set: newVal => {
+          if (!isValidValue(source)(newVal)) return;
           const oldVal = source[prop];
-          if (!isValidValue(source)(prop)) return;
           source[prop] = newVal === void 0 ? iniVal : newVal;
           void update(prop, newVal, oldVal);
         }

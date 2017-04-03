@@ -41,7 +41,7 @@ export class AccessStore<K extends string> extends KeyValueStore<K, AccessRecord
   }
   constructor(
     database: string,
-    access: Observer<never[] | [K] | [K, string] | [K, string, string], EventStore.Event<K>, void>
+    access: Observer<never[], EventStore.Event<K, any>, void>
   ) {
     super(database, STORE_NAME, AccessStore.fields.key);
     void Object.freeze(this);

@@ -3,9 +3,9 @@
 export function store<K extends string, V extends StoreChannelObject<K>>(name: string, config: StoreChannelConfig<K, V>): StoreChannel<K, V>;
 export interface StoreChannel<K extends string, V extends StoreChannelObject<K>> {
   readonly events: {
-    readonly load: Observer<never[] | [K] | [K, string] | [K, string, StoreChannelEvent.Type], StoreChannelEvent<K>, void>,
-    readonly save: Observer<never[] | [K] | [K, string] | [K, string, StoreChannelEvent.Type], StoreChannelEvent<K>, void>,
-    readonly loss: Observer<never[] | [K] | [K, string] | [K, string, StoreChannelEvent.Type], StoreChannelEvent<K>, void>
+    readonly load: Observer<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', StoreChannelEvent.Type], StoreChannelEvent<K, V>, void>,
+    readonly save: Observer<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', StoreChannelEvent.Type], StoreChannelEvent<K, V>, void>,
+    readonly loss: Observer<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', StoreChannelEvent.Type], StoreChannelEvent<K, V>, void>
   };
   sync(keys: K[], cb?: (errs: [K, DOMException | DOMError][]) => any): void;
   transaction(key: K, cb: () => any, complete: (err?: DOMException | DOMError | Error) => any): void;
@@ -25,7 +25,7 @@ export interface StoreChannelObject<K extends string> {
   readonly __id: number;
   readonly __key: K;
   readonly __date: number;
-  readonly __event: Observer<[BroadcastChannelEvent.Type] | [BroadcastChannelEvent.Type, string], BroadcastChannelEvent, any>;
+  readonly __event: Observer<[BroadcastChannelEvent.Type] | [BroadcastChannelEvent.Type, keyof this | ''], BroadcastChannelEvent<this>, any>;
   readonly __transaction: (key: K, cb: () => any, complete: (err?: DOMException | DOMError | Error) => any) => void;
 }
 export interface StoreChannelObjectMetaData<K extends string> {
@@ -33,11 +33,11 @@ export interface StoreChannelObjectMetaData<K extends string> {
   readonly key: K;
   readonly date: number;
 }
-export interface StoreChannelEvent<K extends string> {
+export interface StoreChannelEvent<K extends string, V extends StoreChannelObject<K>> {
   readonly type: StoreChannelEvent.Type;
   readonly id: number;
   readonly key: K;
-  readonly attr: string;
+  readonly attr: keyof V | '';
 }
 export namespace StoreChannelEvent {
   export type Type
@@ -54,8 +54,8 @@ export namespace StoreChannelEvent {
 export function broadcast<V extends BroadcastChannelObject>(name: string, config: BroadcastChannelConfig<V>): BroadcastChannel<V>;
 export interface BroadcastChannel<V extends BroadcastChannelObject> {
   readonly events: {
-    readonly send: Observer<never[] | [string], BroadcastChannelEvent, void>;
-    readonly recv: Observer<never[] | [string], BroadcastChannelEvent, void>;
+    readonly send: Observer<never[] | [keyof V], BroadcastChannelEvent<V>, void>;
+    readonly recv: Observer<never[] | [keyof V], BroadcastChannelEvent<V>, void>;
   };
   link(): V;
   destroy(): void;
@@ -65,14 +65,14 @@ export interface BroadcastChannelConfig<V extends BroadcastChannelObject> {
 }
 export interface BroadcastChannelObject {
   readonly __key: string;
-  readonly __event: Observer<[BroadcastChannelEvent.Type] | [BroadcastChannelEvent.Type, string], BroadcastChannelEvent, any>;
+  readonly __event: Observer<[BroadcastChannelEvent.Type] | [BroadcastChannelEvent.Type, keyof this], BroadcastChannelEvent<this>, any>;
 }
-export interface BroadcastChannelEvent {
+export interface BroadcastChannelEvent<V extends BroadcastChannelObject> {
   readonly type: BroadcastChannelEvent.Type;
   readonly key: string;
-  readonly attr: string;
-  readonly newValue: any;
-  readonly oldValue: any;
+  readonly attr: keyof V;
+  readonly newValue: V[keyof V];
+  readonly oldValue: V[keyof V];
 }
 export namespace BroadcastChannelEvent {
   export type Type

@@ -17,7 +17,7 @@ abstract class EventRecord<K extends string, V extends EventValue> {
     public readonly id: IdNumber,
     public readonly type: EventType,
     public readonly key: K,
-    public readonly value: V,
+    public readonly value: Partial<V>,
     public readonly date: number,
   ) {
     if (typeof this.id === 'number' && <number>this.id >= 0 === false || !Number.isSafeInteger(this.id)) throw new TypeError(`ClientChannel: EventRecord: Invalid event id: ${this.id}`);
@@ -27,7 +27,7 @@ abstract class EventRecord<K extends string, V extends EventValue> {
     if (typeof this.date !== 'number' || this.date >= 0 === false) throw new TypeError(`ClientChannel: EventRecord: Invalid event date: ${this.date}`);
     // put -> string, delete or snapshot -> empty string
     this.attr = this.type === EventType.put
-      ? Object.keys(value).reduce((r, p) => p.length > 0 && p[0] !== '_' && p[p.length - 1] !== '_' ? p : r, '')
+      ? <keyof V>Object.keys(value).reduce((r, p) => p.length > 0 && p[0] !== '_' && p[p.length - 1] !== '_' ? p : r, '')
       : '';
     if (typeof this.attr !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event attr: ${this.key}`);
     if (this.type === EventType.put && this.attr.length === 0) throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
@@ -56,13 +56,13 @@ abstract class EventRecord<K extends string, V extends EventValue> {
         throw new TypeError(`ClientChannel: Invalid event type: ${type}`);
     }
   }
-  public readonly attr: string;
+  public readonly attr: keyof V | '';
 }
 export class UnsavedEventRecord<K extends string, V extends EventValue> extends EventRecord<K, V> {
   private EVENT_RECORD: V;
   constructor(
     key: K,
-    value: V,
+    value: Partial<V>,
     type: EventType = EventType.put,
     date: number = Date.now()
   ) {
@@ -77,7 +77,7 @@ export class SavedEventRecord<K extends string, V extends EventValue> extends Ev
   constructor(
     id: IdNumber,
     key: K,
-    value: V,
+    value: Partial<V>,
     type: EventType,
     date: number
   ) {

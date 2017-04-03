@@ -21,17 +21,17 @@ export class Channel<V extends ChannelObject> implements BroadcastChannel<V> {
     void cache.set(name, this);
     const source: V = <any>{
       [SCHEMA.KEY.NAME]: this.name,
-      [SCHEMA.EVENT.NAME]: new Observable<[BroadcastChannelEvent.Type] | [BroadcastChannelEvent.Type, string], Channel.Event, void>(),
+      [SCHEMA.EVENT.NAME]: new Observable<[BroadcastChannelEvent.Type] | [BroadcastChannelEvent.Type, keyof V], Channel.Event<V>, void>(),
       ...<Object>parse<V>(this.storage.getItem(this.name))
     };
-    this.link_ = build(source, this.factory, (attr, newValue, oldValue) => {
+    this.link_ = build(source, this.factory, (attr: keyof V, newValue, oldValue) => {
       void this.log.update(this.name);
       void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, attr) => {
         acc[attr] = source[attr];
         return acc;
       }, {})));
-      const event = new Channel.Event(Channel.Event.Type.send, this.name, attr, newValue, oldValue);
-      void (<Observable<[BroadcastChannelEvent.Type, string], Channel.Event, any>>source.__event).emit([event.type, event.attr], event);
+      const event = new Channel.Event<V>(Channel.Event.Type.send, name, attr, newValue, oldValue);
+      void (<Observable<[BroadcastChannelEvent.Type, keyof V], Channel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
       void this.events.send.emit([event.attr], event);
     });
     const subscriber = ({newValue}: StorageEvent): void => {
@@ -39,13 +39,13 @@ export class Channel<V extends ChannelObject> implements BroadcastChannel<V> {
       void Object.keys(item)
         .filter(isValidPropertyName)
         .filter(isValidPropertyValue(item))
-        .reduce<void>((_, attr) => {
+        .reduce<void>((_, attr: keyof V) => {
           const oldVal = source[attr];
           const newVal = item[attr];
           if (newVal === oldVal) return;
           source[attr] = newVal;
-          const event = new Channel.Event(Channel.Event.Type.recv, this.name, attr, newVal, oldVal);
-          void (<Observable<[BroadcastChannelEvent.Type, string], Channel.Event, any>>source.__event).emit([event.type, event.attr], event);
+          const event = new Channel.Event<V>(Channel.Event.Type.recv, name, attr, newVal, oldVal);
+          void (<Observable<[BroadcastChannelEvent.Type, keyof V], Channel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
           void this.events.recv.emit([event.attr], event);
         }, void 0);
     };
@@ -55,8 +55,8 @@ export class Channel<V extends ChannelObject> implements BroadcastChannel<V> {
   }
   private readonly eventSource = this.storage === localStorage ? events.localStorage : events.sessionStorage;
   public readonly events = {
-    send: new Observable<never[] | [string], Channel.Event, void>(),
-    recv: new Observable<never[] | [string], Channel.Event, void>()
+    send: new Observable<never[] | [keyof V], Channel.Event<V>, void>(),
+    recv: new Observable<never[] | [keyof V], Channel.Event<V>, void>()
   };
   private readonly link_: V;
   public link(): V {
@@ -70,16 +70,15 @@ export class Channel<V extends ChannelObject> implements BroadcastChannel<V> {
   }
 }
 export namespace Channel {
-  export class Event implements BroadcastChannelEvent {
+  export class Event<V extends ChannelObject> implements BroadcastChannelEvent<V> {
     constructor(
       public readonly type: Event.Type,
       public readonly key: string,
-      public readonly attr: string,
+      public readonly attr: keyof V,
       public readonly newValue: any,
       public readonly oldValue: any
     ) {
       assert(typeof type === 'string');
-      assert(typeof key === 'string');
       assert(typeof attr === 'string');
       void Object.freeze(this);
     }
