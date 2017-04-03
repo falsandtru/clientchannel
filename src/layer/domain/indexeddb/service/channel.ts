@@ -41,7 +41,7 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
                 const newVal = cache[attr];
                 source[attr] = newVal;
                 void cast(source).__event
-                  .emit([BroadcastChannel.Event.Type.recv, attr], new BroadcastChannel.Event<V>(BroadcastChannel.Event.Type.recv, key, attr, newVal, oldVal));
+                  .emit([BroadcastChannel.Event.Type.recv, attr], new BroadcastChannel.Event<V>(BroadcastChannel.Event.Type.recv, attr, newVal, oldVal));
               }, void 0);
             return;
           }
@@ -56,7 +56,7 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
                 const newVal = cache[attr];
                 source[attr] = newVal;
                 void cast(source).__event
-                  .emit([BroadcastChannel.Event.Type.recv, attr], new BroadcastChannel.Event<V>(BroadcastChannel.Event.Type.recv, key, attr, newVal, oldVal));
+                  .emit([BroadcastChannel.Event.Type.recv, attr], new BroadcastChannel.Event<V>(BroadcastChannel.Event.Type.recv, attr, newVal, oldVal));
               }, void 0);
             return;
           }
@@ -71,7 +71,7 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
                 const newVal = cache[attr];
                 source[attr] = newVal;
                 void cast(source).__event
-                  .emit([BroadcastChannel.Event.Type.recv, attr], new BroadcastChannel.Event<V>(BroadcastChannel.Event.Type.recv, key, attr, newVal, oldVal));
+                  .emit([BroadcastChannel.Event.Type.recv, attr], new BroadcastChannel.Event<V>(BroadcastChannel.Event.Type.recv, attr, newVal, oldVal));
               }, void 0);
             return;
           }
@@ -121,7 +121,7 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
           (attr: keyof V, newValue, oldValue) => (
             void this.add(new ChannelStore.Record<K, V>(key, <V>{ [attr]: newValue })),
             void cast(this.sources.get(key)!).__event
-              .emit([BroadcastChannel.Event.Type.send, attr], new BroadcastChannel.Event<V>(BroadcastChannel.Event.Type.send, key, attr, newValue, oldValue)))))
+              .emit([BroadcastChannel.Event.Type.send, attr], new BroadcastChannel.Event<V>(BroadcastChannel.Event.Type.send, attr, newValue, oldValue)))))
         .get(key)!;
   }
   public destroy(): void {

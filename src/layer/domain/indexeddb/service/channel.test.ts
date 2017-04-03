@@ -61,7 +61,6 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       dao.__event.once(['send', 'n'], ev => {
         assert.deepEqual(ev, {
           type: 'send',
-          key: 'a',
           attr: 'n',
           newValue: 1,
           oldValue: 0

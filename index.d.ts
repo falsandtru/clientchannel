@@ -69,7 +69,6 @@ export interface BroadcastChannelObject {
 }
 export interface BroadcastChannelEvent<V extends BroadcastChannelObject> {
   readonly type: BroadcastChannelEvent.Type;
-  readonly key: string;
   readonly attr: keyof V;
   readonly newValue: V[keyof V];
   readonly oldValue: V[keyof V];

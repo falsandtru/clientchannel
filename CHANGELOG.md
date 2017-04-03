@@ -6,6 +6,7 @@
 - Rename storechannel to store function.
 - Rename broadcastchannel to broadcast function.
 - Enhance typings.
+- Remove BroadcastChannelEvent.key property.
 
 ## 0.9.1
 

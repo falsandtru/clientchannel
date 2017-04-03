@@ -30,7 +30,7 @@ export class Channel<V extends ChannelObject> implements BroadcastChannel<V> {
         acc[attr] = source[attr];
         return acc;
       }, {})));
-      const event = new Channel.Event<V>(Channel.Event.Type.send, name, attr, newValue, oldValue);
+      const event = new Channel.Event<V>(Channel.Event.Type.send, attr, newValue, oldValue);
       void (<Observable<[BroadcastChannelEvent.Type, keyof V], Channel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
       void this.events.send.emit([event.attr], event);
     });
@@ -44,7 +44,7 @@ export class Channel<V extends ChannelObject> implements BroadcastChannel<V> {
           const newVal = item[attr];
           if (newVal === oldVal) return;
           source[attr] = newVal;
-          const event = new Channel.Event<V>(Channel.Event.Type.recv, name, attr, newVal, oldVal);
+          const event = new Channel.Event<V>(Channel.Event.Type.recv, attr, newVal, oldVal);
           void (<Observable<[BroadcastChannelEvent.Type, keyof V], Channel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
           void this.events.recv.emit([event.attr], event);
         }, void 0);
@@ -73,7 +73,6 @@ export namespace Channel {
   export class Event<V extends ChannelObject> implements BroadcastChannelEvent<V> {
     constructor(
       public readonly type: Event.Type,
-      public readonly key: string,
       public readonly attr: keyof V,
       public readonly newValue: any,
       public readonly oldValue: any
