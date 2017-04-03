@@ -1,4 +1,4 @@
-/*! clientchannel v0.9.1 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.10.0 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -61,7 +61,7 @@ require = function e(t, n, r) {
             var api_2 = require('../domain/webstorage/api');
             __export(require('../domain/indexeddb/api'));
             __export(require('../domain/webstorage/api'));
-            function storechannel(name, config) {
+            function store(name, config) {
                 if (!api_2.supportWebStorage)
                     throw new Error('ClientChannel: Couldn\'t use WebStorage.');
                 var schema = config.schema, _a = config.destroy, destroy = _a === void 0 ? function () {
@@ -69,14 +69,14 @@ require = function e(t, n, r) {
                     } : _a, _b = config.expiry, expiry = _b === void 0 ? Infinity : _b;
                 return new api_1.StoreChannel(name, schema, destroy, expiry);
             }
-            exports.storechannel = storechannel;
-            function messagechannel(name, config) {
+            exports.store = store;
+            function broadcast(name, config) {
                 if (!api_2.supportWebStorage)
                     throw new Error('ClientChannel: Couldn\'t use WebStorage.');
                 var schema = config.schema;
-                return new api_2.MessageChannel(name, api_2.localStorage, schema);
+                return new api_2.BroadcastChannel(name, api_2.localStorage, schema);
             }
-            exports.messagechannel = messagechannel;
+            exports.broadcast = broadcast;
         },
         {
             '../domain/indexeddb/api': 12,
@@ -1095,9 +1095,9 @@ require = function e(t, n, r) {
                             return source[prop] === void 0 ? iniVal : source[prop];
                         },
                         set: function (newVal) {
-                            var oldVal = source[prop];
-                            if (!values_1.isValidValue(source)(prop))
+                            if (!values_1.isValidValue(source)(newVal))
                                 return;
+                            var oldVal = source[prop];
                             source[prop] = newVal === void 0 ? iniVal : newVal;
                             void update(prop, newVal, oldVal);
                         }
@@ -1164,22 +1164,6 @@ require = function e(t, n, r) {
     13: [
         function (require, module, exports) {
             'use strict';
-            var __extends = this && this.__extends || function () {
-                var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
-                    d.__proto__ = b;
-                } || function (d, b) {
-                    for (var p in b)
-                        if (b.hasOwnProperty(p))
-                            d[p] = b[p];
-                };
-                return function (d, b) {
-                    extendStatics(d, b);
-                    function __() {
-                        this.constructor = d;
-                    }
-                    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-                };
-            }();
             Object.defineProperty(exports, '__esModule', { value: true });
             var spica_1 = require('spica');
             var api_1 = require('../../../infrastructure/indexeddb/api');
@@ -1282,14 +1266,6 @@ require = function e(t, n, r) {
             (function (ChannelStore) {
                 ChannelStore.Event = data_1.DataStore.Event;
                 ChannelStore.Record = data_1.DataStore.Record;
-                var Value = function (_super) {
-                    __extends(Value, _super);
-                    function Value() {
-                        return _super !== null && _super.apply(this, arguments) || this;
-                    }
-                    return Value;
-                }(data_1.DataStore.Value);
-                ChannelStore.Value = Value;
             }(ChannelStore = exports.ChannelStore || (exports.ChannelStore = {})));
             exports.ChannelStore = ChannelStore;
             var Schema = function () {
@@ -1452,33 +1428,9 @@ require = function e(t, n, r) {
             }(event_1.EventStore);
             exports.DataStore = DataStore;
             (function (DataStore) {
-                var Event = function (_super) {
-                    __extends(Event, _super);
-                    function Event() {
-                        return _super !== null && _super.apply(this, arguments) || this;
-                    }
-                    return Event;
-                }(event_1.EventStore.Event);
-                DataStore.Event = Event;
-                (function (Event) {
-                    Event.Type = event_1.EventStore.Event.Type;
-                }(Event = DataStore.Event || (DataStore.Event = {})));
-                var Record = function (_super) {
-                    __extends(Record, _super);
-                    function Record() {
-                        return _super !== null && _super.apply(this, arguments) || this;
-                    }
-                    return Record;
-                }(event_1.EventStore.Record);
-                DataStore.Record = Record;
-                var Value = function (_super) {
-                    __extends(Value, _super);
-                    function Value() {
-                        return _super !== null && _super.apply(this, arguments) || this;
-                    }
-                    return Value;
-                }(event_1.EventStore.Value);
-                DataStore.Value = Value;
+                DataStore.Event = event_1.EventStore.Event;
+                DataStore.Record = event_1.EventStore.Record;
+                DataStore.Value = event_1.EventStore.Value;
             }(DataStore = exports.DataStore || (exports.DataStore = {})));
             exports.DataStore = DataStore;
         },
@@ -1638,25 +1590,26 @@ require = function e(t, n, r) {
                     }
                     var _this = _super.call(this, name, destroy, expiry) || this;
                     _this.factory = factory;
-                    _this.message = new api_3.MessageChannel(_this.name, api_2.localStorage, function () {
-                        return new MessageSchema();
+                    _this.broadcast = new api_3.BroadcastChannel(_this.name, api_2.localStorage, function () {
+                        return new BroadcastSchema();
                     });
                     _this.links = new Map();
                     _this.sources = new Map();
                     if (cache.has(_this))
                         return _this;
                     void cache.add(_this);
-                    void _this.message.link().__event.on([
-                        api_3.MessageChannel.Event.Type.recv,
+                    var keys = Object.keys(_this.factory());
+                    void _this.broadcast.link().__event.on([
+                        api_3.BroadcastChannel.Event.Type.recv,
                         'msgs'
                     ], function () {
-                        return void _this.message.link().recv().reduce(function (_, key) {
+                        return void _this.broadcast.link().recv().reduce(function (_, key) {
                             return void _this.schema.data.fetch(key);
                         }, void 0);
                     });
                     void _this.events.save.monitor([], function (_a) {
                         var key = _a.key, attr = _a.attr;
-                        return void _this.message.link().send(new Message(key, attr, Date.now()));
+                        return void _this.broadcast.link().send(new Message(key, attr, Date.now()));
                     });
                     void _this.events.load.monitor([], function (_a) {
                         var key = _a.key, attr = _a.attr, type = _a.type;
@@ -1665,38 +1618,43 @@ require = function e(t, n, r) {
                             return;
                         switch (type) {
                         case channel_1.ChannelStore.Event.Type.put: {
-                                var oldVal = source[attr];
-                                var newVal = _this.get(key)[attr];
-                                source[attr] = newVal;
-                                void source.__event.emit([
-                                    api_3.MessageChannel.Event.Type.recv,
-                                    attr
-                                ], new api_3.MessageChannel.Event(api_3.MessageChannel.Event.Type.recv, key, attr, newVal, oldVal));
+                                var cache_1 = _this.get(key);
+                                void keys.filter(function (attr_) {
+                                    return attr_ === attr;
+                                }).filter(api_1.isValidPropertyValue(cache_1)).sort().reduce(function (_, attr) {
+                                    var oldVal = source[attr];
+                                    var newVal = cache_1[attr];
+                                    source[attr] = newVal;
+                                    void cast(source).__event.emit([
+                                        api_3.BroadcastChannel.Event.Type.recv,
+                                        attr
+                                    ], new api_3.BroadcastChannel.Event(api_3.BroadcastChannel.Event.Type.recv, attr, newVal, oldVal));
+                                }, void 0);
                                 return;
                             }
                         case channel_1.ChannelStore.Event.Type.delete: {
-                                var cache_1 = _this.get(key);
-                                void Object.keys(cache_1).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(cache_1)).sort().reduce(function (_, attr) {
+                                var cache_2 = _this.factory();
+                                void keys.filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(cache_2)).sort().reduce(function (_, attr) {
                                     var oldVal = source[attr];
-                                    var newVal = void 0;
+                                    var newVal = cache_2[attr];
                                     source[attr] = newVal;
-                                    void source.__event.emit([
-                                        api_3.MessageChannel.Event.Type.recv,
+                                    void cast(source).__event.emit([
+                                        api_3.BroadcastChannel.Event.Type.recv,
                                         attr
-                                    ], new api_3.MessageChannel.Event(api_3.MessageChannel.Event.Type.recv, key, attr, newVal, oldVal));
+                                    ], new api_3.BroadcastChannel.Event(api_3.BroadcastChannel.Event.Type.recv, attr, newVal, oldVal));
                                 }, void 0);
                                 return;
                             }
                         case channel_1.ChannelStore.Event.Type.snapshot: {
-                                var cache_2 = _this.get(key);
-                                void Object.keys(cache_2).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(cache_2)).sort().reduce(function (_, attr) {
+                                var cache_3 = _this.get(key);
+                                void keys.filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(cache_3)).sort().reduce(function (_, attr) {
                                     var oldVal = source[attr];
-                                    var newVal = cache_2[attr];
+                                    var newVal = cache_3[attr];
                                     source[attr] = newVal;
-                                    void source.__event.emit([
-                                        api_3.MessageChannel.Event.Type.recv,
+                                    void cast(source).__event.emit([
+                                        api_3.BroadcastChannel.Event.Type.recv,
                                         attr
-                                    ], new api_3.MessageChannel.Event(api_3.MessageChannel.Event.Type.recv, key, attr, newVal, oldVal));
+                                    ], new api_3.BroadcastChannel.Event(api_3.BroadcastChannel.Event.Type.recv, attr, newVal, oldVal));
                                 }, void 0);
                                 return;
                             }
@@ -1708,7 +1666,7 @@ require = function e(t, n, r) {
                 Channel.prototype.link = function (key, expiry) {
                     var _this = this;
                     void this.expire(key, expiry);
-                    return this.links.has(key) ? this.links.get(key) : this.links.set(key, api_1.build(Object.defineProperties((void this.sources.set(key, spica_1.clone({}, this.get(key))), this.sources.get(key)), {
+                    return this.links.has(key) ? this.links.get(key) : this.links.set(key, api_1.build(Object.defineProperties(this.sources.set(key, spica_1.assign({}, this.get(key))).get(key), {
                         __meta: {
                             get: function () {
                                 return _this.meta(key);
@@ -1736,21 +1694,24 @@ require = function e(t, n, r) {
                             }
                         }
                     }), this.factory, function (attr, newValue, oldValue) {
-                        return void _this.add(new channel_1.ChannelStore.Record(key, (_a = {}, _a[attr] = newValue, _a))), void _this.sources.get(key).__event.emit([
-                            api_3.MessageChannel.Event.Type.send,
+                        return void _this.add(new channel_1.ChannelStore.Record(key, (_a = {}, _a[attr] = newValue, _a))), void cast(_this.sources.get(key)).__event.emit([
+                            api_3.BroadcastChannel.Event.Type.send,
                             attr
-                        ], new api_3.MessageChannel.Event(api_3.MessageChannel.Event.Type.send, key, attr, newValue, oldValue));
+                        ], new api_3.BroadcastChannel.Event(api_3.BroadcastChannel.Event.Type.send, attr, newValue, oldValue));
                         var _a;
                     })).get(key);
                 };
                 Channel.prototype.destroy = function () {
-                    void this.message.destroy();
+                    void this.broadcast.destroy();
                     void cache.delete(this);
                     void _super.prototype.destroy.call(this);
                 };
                 return Channel;
             }(channel_1.ChannelStore);
             exports.Channel = Channel;
+            function cast(source) {
+                return source;
+            }
             var Message = function () {
                 function Message(key, attr, date) {
                     this.key = key;
@@ -1760,12 +1721,12 @@ require = function e(t, n, r) {
                 }
                 return Message;
             }();
-            var MessageSchema = function () {
-                function MessageSchema() {
+            var BroadcastSchema = function () {
+                function BroadcastSchema() {
                     this.msgs = [];
                     this.msgLatestUpdates_ = new Map();
                 }
-                MessageSchema.prototype.recv = function () {
+                BroadcastSchema.prototype.recv = function () {
                     var _this = this;
                     return this.msgs.filter(function (msg) {
                         var received = msg.date <= _this.msgLatestUpdates_.get(msg.key);
@@ -1775,12 +1736,12 @@ require = function e(t, n, r) {
                         return msg.key;
                     });
                 };
-                MessageSchema.prototype.send = function (msg) {
+                BroadcastSchema.prototype.send = function (msg) {
                     this.msgs = this.msgs.reduceRight(function (ms, m) {
                         return m.key === ms[0].key || m.date < ms[0].date - 1000 * 1000 ? ms : spica_1.concat([m], ms);
                     }, [msg]).slice(-9);
                 };
-                return MessageSchema;
+                return BroadcastSchema;
             }();
         },
         {
@@ -1806,7 +1767,7 @@ require = function e(t, n, r) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var channel_1 = require('./service/channel');
-            exports.MessageChannel = channel_1.Channel;
+            exports.BroadcastChannel = channel_1.Channel;
             var event_1 = require('./service/event');
             exports.events = event_1.events;
             var api_1 = require('../../infrastructure/webstorage/api');
@@ -1905,7 +1866,7 @@ require = function e(t, n, r) {
                             acc[attr] = source[attr];
                             return acc;
                         }, {})));
-                        var event = new Channel.Event(Channel.Event.Type.send, _this.name, attr, newValue, oldValue);
+                        var event = new Channel.Event(Channel.Event.Type.send, attr, newValue, oldValue);
                         void source.__event.emit([
                             event.type,
                             event.attr
@@ -1921,7 +1882,7 @@ require = function e(t, n, r) {
                             if (newVal === oldVal)
                                 return;
                             source[attr] = newVal;
-                            var event = new Channel.Event(Channel.Event.Type.recv, _this.name, attr, newVal, oldVal);
+                            var event = new Channel.Event(Channel.Event.Type.recv, attr, newVal, oldVal);
                             void source.__event.emit([
                                 event.type,
                                 event.attr
@@ -1948,9 +1909,8 @@ require = function e(t, n, r) {
             exports.Channel = Channel;
             (function (Channel) {
                 var Event = function () {
-                    function Event(type, key, attr, newValue, oldValue) {
+                    function Event(type, attr, newValue, oldValue) {
                         this.type = type;
-                        this.key = key;
                         this.attr = attr;
                         this.newValue = newValue;
                         this.oldValue = oldValue;
