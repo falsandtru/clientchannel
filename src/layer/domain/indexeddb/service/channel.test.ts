@@ -1,6 +1,5 @@
 import { StoreChannelObject } from '../../../../../';
 import { Channel } from './channel';
-import { ChannelStore } from '../model/channel';
 import { listen, destroy, event, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { adjust } from '../../../data/store/event';
 
@@ -94,7 +93,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
 
       assert(dao.n === 0);
       listen('test')(db => {
-        db.transaction('data', 'readwrite').objectStore('data').put(adjust(new ChannelStore.Record('a', { n: 1 }))).onsuccess = () => {
+        db.transaction('data', 'readwrite').objectStore('data').put(adjust(new Channel.Record('a', { n: 1 }))).onsuccess = () => {
           sock['schema'].data.fetch('a');
           dao.__event.once(['recv', 'n'], () => {
             assert(dao.__id === 1);
