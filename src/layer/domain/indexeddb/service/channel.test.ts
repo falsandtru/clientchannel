@@ -41,22 +41,22 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     });
 
     it('link', () => {
-      const sock = new Channel('test', () => new Value(0, ''));
-      const dao = sock.link('a');
+      const chan = new Channel('test', () => new Value(0, ''));
+      const dao = chan.link('a');
 
-      assert(dao === sock.link('a'));
+      assert(dao === chan.link('a'));
       assert(dao.__id === 0);
       assert(dao.__key === 'a');
       assert(dao.__date === 0);
       assert(dao.n === 0);
       assert(dao.s === '');
 
-      sock.destroy();
+      chan.destroy();
     });
 
     it('send', done => {
-      const sock = new Channel('test', () => new Value(0, ''));
-      const dao = sock.link('a');
+      const chan = new Channel('test', () => new Value(0, ''));
+      const dao = chan.link('a');
 
       dao.__event.once(['send', 'n'], ev => {
         assert.deepEqual(ev, {
@@ -66,13 +66,13 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
           newValue: 1,
           oldValue: 0
         });
-        sock.events.save.once(['a', 'n', 'put'], () => {
+        chan.events.save.once(['a', 'n', 'put'], () => {
           assert(dao.__id === 1);
           assert(dao.__key === 'a');
           assert(dao.__date > 0);
           setTimeout(() => {
             assert(localStorage.getItem('test')!.replace(/\d+/, '0') === '{"msgs":[{"key":"a","attr":"n","date":0}]}');
-            sock.destroy();
+            chan.destroy();
             done();
           }, 0);
         });
@@ -88,19 +88,19 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     });
 
     it('recv', done => {
-      const sock = new Channel('test', () => new Value(0, ''));
-      const dao = sock.link('a');
+      const chan = new Channel('test', () => new Value(0, ''));
+      const dao = chan.link('a');
 
       assert(dao.n === 0);
       listen('test')(db => {
         db.transaction('data', 'readwrite').objectStore('data').put(adjust(new Channel.Record('a', { n: 1 }))).onsuccess = () => {
-          sock['schema'].data.fetch('a');
+          chan['schema'].data.fetch('a');
           dao.__event.once(['recv', 'n'], () => {
             assert(dao.__id === 1);
             assert(dao.__key === 'a');
             assert(dao.__date > 0);
             assert(dao.n === 1);
-            sock.destroy();
+            chan.destroy();
             done();
           });
         };
