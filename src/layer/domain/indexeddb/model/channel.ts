@@ -11,6 +11,7 @@ const cache = new Map<string, ChannelStore<string, StoreChannelObject<string>>>(
 export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   constructor(
     public readonly name: string,
+    attrs: string[],
     destroy: (err: DOMException | DOMError, event: Event | null) => boolean,
     private readonly expiry: number
   ) {
@@ -34,7 +35,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
             && destroy(err, ev);
       }
     });
-    this.schema = new Schema<K, V>(this, this.expiries);
+    this.schema = new Schema<K, V>(this, attrs, this.expiries);
     void event.on([name, IDBEventType.destroy], () =>
       void this.schema.bind());
   }
@@ -103,13 +104,14 @@ export namespace ChannelStore {
 class Schema<K extends string, V extends StoreChannelObject<K>> {
   constructor(
     private readonly store_: ChannelStore<K, V>,
+    private readonly attrs_: string[],
     private readonly expiries_: Map<K, number>
   ) {
     void this.bind();
   }
   public bind(): void {
     const keys = this.data ? this.data.keys() : [];
-    this.data = new DataStore<K, V>(this.store_.name);
+    this.data = new DataStore<K, V>(this.store_.name, this.attrs_);
     this.data.events.load.monitor([], ev => this.store_.events.load.emit([ev.key, ev.attr, ev.type], ev));
     this.data.events.save.monitor([], ev => this.store_.events.save.emit([ev.key, ev.attr, ev.type], ev));
     this.data.events.loss.monitor([], ev => this.store_.events.loss.emit([ev.key, ev.attr, ev.type], ev));

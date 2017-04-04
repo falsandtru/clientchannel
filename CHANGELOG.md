@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.1
+
+- Fix snapshot processing.
+
 ## 0.10.0
 
 - Rename Message to Broadcast feature.

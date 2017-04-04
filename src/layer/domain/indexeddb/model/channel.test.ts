@@ -33,12 +33,12 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
     }
 
     it('singleton', () => {
-      assert(new ChannelStore('test', () => true, Infinity) === new ChannelStore('test', () => true, Infinity));
-      new ChannelStore('test', () => true, Infinity).destroy();
+      assert(new ChannelStore('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity) === new ChannelStore('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity));
+      new ChannelStore('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity).destroy();
     });
 
     it('recent', done => {
-      const channel = new ChannelStore<string, CustomSocketValue>('test', () => true, Infinity);
+      const channel = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity);
 
       channel.recent(Infinity, (keys, err) => {
         assert(!err);
@@ -77,7 +77,7 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
     });
 
     it('clean', done => {
-      const channel = new ChannelStore<string, CustomSocketValue>('test', () => true, Infinity);
+      const channel = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity);
 
       channel.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
       channel.recent(Infinity, keys => {
@@ -102,7 +102,7 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
     });
 
     it('expiry', done => {
-      const channel = new ChannelStore<string, CustomSocketValue>('test', () => true, 3000);
+      const channel = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, 3000);
 
       channel.expire('a');
       channel.add(new ChannelStore.Record('a', new CustomSocketValue(0)));

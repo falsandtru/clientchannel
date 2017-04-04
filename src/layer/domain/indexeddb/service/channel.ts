@@ -14,11 +14,12 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
     destroy: (err: DOMException | DOMError, ev: Event | null) => boolean = () => true,
     expiry: number = Infinity
   ) {
-    super(name, destroy, expiry);
+    super(name, Object.keys(factory()).filter(isValidPropertyName).filter(isValidPropertyValue(factory())), destroy, expiry);
     if (cache.has(this)) return this;
     void cache.add(this);
     const keys = Object.keys(this.factory())
-      .filter(isValidPropertyName);
+      .filter(isValidPropertyName)
+      .filter(isValidPropertyValue(this.factory()));
     void this.broadcast.link().__event
       .on([BroadcastChannel.Event.Type.recv, 'msgs'], () =>
         void this.broadcast.link().recv()

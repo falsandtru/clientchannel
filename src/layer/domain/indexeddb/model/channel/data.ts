@@ -8,9 +8,10 @@ export class DataStore<K extends string, V extends DataStore.Value> extends Even
     return EventStore.configure(STORE_NAME);
   }
   constructor(
-    database: string
+    database: string,
+    attrs: string[]
   ) {
-    super(database, STORE_NAME);
+    super(database, STORE_NAME, attrs);
     void Object.freeze(this);
   }
 }

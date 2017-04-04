@@ -56,8 +56,10 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   }
   constructor(
     protected readonly database: string,
-    protected readonly name: string
+    protected readonly name: string,
+    protected readonly attrs: string[]
   ) {
+    assert(this.attrs.every(isValidPropertyName));
     const states = new class {
       ids = new Map<K, IdNumber>();
       dates = new Map<K, number>();
@@ -236,7 +238,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     });
   }
   public has(key: K): boolean {
-    return compose(key, this.memory.reflect([key])).type !== EventStore.Event.Type.delete;
+    return compose(key, this.attrs, this.memory.reflect([key])).type !== EventStore.Event.Type.delete;
   }
   public get(key: K): V {
     if (!this.syncState.get(key)) {
@@ -244,7 +246,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     }
     void this.events_.access
       .emit([key], new InternalEvent(InternalEventType.query, IdNumber(0), key, ''));
-    return <V>compose(key, this.memory.reflect([key]))
+    return <V>compose(key, this.attrs, this.memory.reflect([key]))
       .value;
   }
   public add(event: UnsavedEventRecord<K, V>, tx: IDBTransaction | void = this.tx): void {
@@ -349,7 +351,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         if (!cursor) {
           assert(this.snapshotCycle > 0);
           if (savedEvents.length === 0) return;
-          const composedEvent = compose(key, savedEvents);
+          const composedEvent = compose(key, this.attrs, savedEvents);
           if (composedEvent instanceof SavedEventRecord) return;
           switch (composedEvent.type) {
             case EventStore.Event.Type.snapshot:
@@ -490,8 +492,10 @@ export function adjust(record: UnsavedEventRecord<any, any>): {} {
 // input order must be asc
 export function compose<K extends string, V extends EventStore.Value>(
   key: K,
+  attrs: string[],
   events: Array<UnsavedEventRecord<K, V> | SavedEventRecord<K, V>>
 ): UnsavedEventRecord<K, V> | SavedEventRecord<K, V> {
+  assert(attrs.every(isValidPropertyName));
   assert(events.every(e => e.key === key));
   type E = UnsavedEventRecord<K, V> | SavedEventRecord<K, V>;
   return group(events)
@@ -527,7 +531,7 @@ export function compose<K extends string, V extends EventStore.Value>(
           : new UnsavedEventRecord<K, V>(
               source.key,
               Object.keys(target.value)
-                .filter(isValidPropertyName)
+                .filter(prop => attrs.indexOf(prop) !== -1)
                 .filter(isValidPropertyValue(target))
                 .reduce((value, prop) =>
                   (value[prop] = target[prop], value)
