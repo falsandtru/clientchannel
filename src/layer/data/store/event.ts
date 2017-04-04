@@ -1,6 +1,7 @@
-import { Observable, Cancelable, Tick, sqid, concat } from 'spica';
+import { Observable, Cancelable, Tick, sqid, assign, concat } from 'spica';
 import { listen, Config, IDBTransactionMode, IDBCursorDirection, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { IdNumber } from '../constraint/types';
+import { isValidName, isValidValue } from '../constraint/values';
 import { EventRecordFields, EventType, EventValue, UnsavedEventRecord, SavedEventRecord } from '../schema/event';
 import { noop } from '../../../lib/noop';
 
@@ -521,17 +522,17 @@ export function compose<K extends string, V extends EventStore.Value>(
         return source.value[source.attr] !== void 0
           ? new UnsavedEventRecord<K, V>(
               source.key,
-              Object.assign(new EventStore.Value(), target.value, source.value),
+              assign(new EventStore.Value(), target.value, source.value),
               EventStore.Event.Type.snapshot)
           : new UnsavedEventRecord<K, V>(
               source.key,
               Object.keys(target.value)
-                .reduce((value, prop) => {
-                  if (prop === source.attr) return value;
-                  value[prop] = target[prop];
-                  return value;
-                }, new EventStore.Value())
-              , EventStore.Event.Type.snapshot);
+                .filter(isValidName)
+                .filter(isValidValue(target))
+                .reduce((value, prop) =>
+                  (value[prop] = target[prop], value)
+                , new EventStore.Value()),
+              EventStore.Event.Type.snapshot);
       case EventStore.Event.Type.snapshot:
         return source;
       case EventStore.Event.Type.delete:
