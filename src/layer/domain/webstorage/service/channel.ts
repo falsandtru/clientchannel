@@ -1,6 +1,6 @@
 import { BroadcastChannel, BroadcastChannelObject as ChannelObject, BroadcastChannelEvent } from '../../../../../';
 import { Observable } from 'spica';
-import { SCHEMA, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
+import { SCHEMA, build, isValidName, isValidValue } from '../../dao/api';
 import { events } from '../service/event';
 import { localStorage, sessionStorage } from '../../../infrastructure/webstorage/api';
 import { StorageLike, fakeStorage } from '../model/storage';
@@ -26,7 +26,7 @@ export class Channel<V extends ChannelObject> implements BroadcastChannel<V> {
     };
     this.link_ = build(source, this.factory, (attr: keyof V, newValue, oldValue) => {
       void this.log.update(this.name);
-      void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, attr) => {
+      void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(isValidName).filter(isValidValue(source)).reduce((acc, attr) => {
         acc[attr] = source[attr];
         return acc;
       }, {})));
@@ -37,8 +37,8 @@ export class Channel<V extends ChannelObject> implements BroadcastChannel<V> {
     const subscriber = ({newValue}: StorageEvent): void => {
       const item: V = parse<V>(newValue);
       void Object.keys(item)
-        .filter(isValidPropertyName)
-        .filter(isValidPropertyValue(item))
+        .filter(isValidName)
+        .filter(isValidValue(item))
         .reduce<void>((_, attr: keyof V) => {
           const oldVal = source[attr];
           const newVal = item[attr];

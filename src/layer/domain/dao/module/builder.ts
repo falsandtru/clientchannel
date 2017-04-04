@@ -2,9 +2,9 @@ import { isValidName, isValidValue } from '../../../data/constraint/values';
 import { noop } from '../../../../lib/noop';
 
 export {
-  isValidName as isValidPropertyName,
-  isValidValue as isValidPropertyValue
-}
+  isValidName,
+  isValidValue
+};
 
 export const SCHEMA = {
   META: {

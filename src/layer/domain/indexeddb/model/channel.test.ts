@@ -3,7 +3,7 @@ import { ChannelStore } from './channel';
 import { destroy, event, IDBEventType } from '../../../infrastructure/indexeddb/api';
 
 describe('Unit: layers/domain/indexeddb/model/channel', function () {
-  this.timeout(5 * 1e3);
+  this.timeout(7 * 1e3);
 
   describe('spec', () => {
     before(done => {
@@ -124,7 +124,7 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
               channel.destroy();
               done();
             });
-          }, 2000);
+          }, 3000);
         });
       }, 2000);
     });

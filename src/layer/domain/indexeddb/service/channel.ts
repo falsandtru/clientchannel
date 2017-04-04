@@ -1,6 +1,6 @@
 import { StoreChannel, StoreChannelObject as ChannelObject } from '../../../../../';
 import { Observable, assign, concat } from 'spica';
-import { build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
+import { build, isValidName, isValidValue } from '../../dao/api';
 import { ChannelStore } from '../model/channel';
 import { localStorage } from '../../../infrastructure/webstorage/api';
 import { BroadcastChannel, BroadcastChannelObject, BroadcastChannelEvent } from '../../webstorage/api';
@@ -17,7 +17,8 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
     super(name, destroy, expiry);
     if (cache.has(this)) return this;
     void cache.add(this);
-    const keys = Object.keys(this.factory());
+    const keys = Object.keys(this.factory())
+      .filter(isValidName);
     void this.broadcast.link().__event
       .on([BroadcastChannel.Event.Type.recv, 'msgs'], () =>
         void this.broadcast.link().recv()
@@ -34,7 +35,7 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
             const cache = this.get(key);
             void keys
               .filter(attr_ => attr_ === attr)
-              .filter(isValidPropertyValue(cache))
+              .filter(isValidValue(cache))
               .sort()
               .reduce<void>((_, attr: keyof V) => {
                 const oldVal = source[attr];
@@ -48,8 +49,7 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
           case ChannelStore.Event.Type.delete: {
             const cache = this.factory();
             void keys
-              .filter(isValidPropertyName)
-              .filter(isValidPropertyValue(cache))
+              .filter(isValidValue(cache))
               .sort()
               .reduce<void>((_, attr: keyof V) => {
                 const oldVal = source[attr];
@@ -63,8 +63,7 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
           case ChannelStore.Event.Type.snapshot: {
             const cache = this.get(key);
             void keys
-              .filter(isValidPropertyName)
-              .filter(isValidPropertyValue(cache))
+              .filter(isValidValue(cache))
               .sort()
               .reduce<void>((_, attr: keyof V) => {
                 const oldVal = source[attr];
@@ -131,11 +130,12 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
   }
 }
 
-interface InternalChannelObject<K extends string> extends ChannelObject<K> {
-  readonly __event: Observable<[BroadcastChannelEvent.Type] | [BroadcastChannelEvent.Type, keyof this | ''], BroadcastChannelEvent<this>, any>;
-}
-function cast<K extends string, V extends ChannelObject<K>>(source: V): V & InternalChannelObject<K> {
-  return <V & InternalChannelObject<K>><any>source;
+function cast<K extends string, V extends ChannelObject<K>>(source: V) {
+  return <V & InternalChannelObject<K>>source;
+
+  interface InternalChannelObject<K extends string> extends ChannelObject<K> {
+    readonly __event: Observable<[BroadcastChannelEvent.Type] | [BroadcastChannelEvent.Type, keyof this | ''], BroadcastChannelEvent<this>, any>;
+  }
 }
 
 class Message<K extends string> {
