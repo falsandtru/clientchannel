@@ -35,19 +35,19 @@ abstract class EventRecord<K extends string, V extends EventValue> {
 
     switch (type) {
       case EventType.put: {
-        this.value = value = <V>clone(new EventValue(), <EventValue>{ [this.attr]: value[this.attr] });
+        this.value = value = clone<EventValue>(new EventValue(), <EventValue>{ [this.attr]: value[this.attr] });
         void Object.freeze(this.value);
         void Object.freeze(this);
         return;
       }
       case EventType.snapshot: {
-        this.value = value = <V>clone(new EventValue(), value);
+        this.value = value = clone<EventValue>(new EventValue(), value);
         void Object.freeze(this.value);
         void Object.freeze(this);
         return;
       }
       case EventType.delete: {
-        this.value = value = <V>new EventValue();
+        this.value = value = new EventValue();
         void Object.freeze(this.value);
         void Object.freeze(this);
         return;
