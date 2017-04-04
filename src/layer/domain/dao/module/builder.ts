@@ -1,9 +1,9 @@
-import { isValidName, isValidValue } from '../../../data/constraint/values';
+import { isValidPropertyName, isValidPropertyValue } from '../../../data/constraint/values';
 import { noop } from '../../../../lib/noop';
 
 export {
-  isValidName,
-  isValidValue
+  isValidPropertyName,
+  isValidPropertyValue
 };
 
 export const SCHEMA = {
@@ -31,8 +31,8 @@ export function build<V>(source: V, factory: () => V, update: (attr: string, new
     .reduce((_, prop) => { delete dao[prop] }, void 0);
   if (typeof source[SCHEMA.KEY.NAME] !== 'string') throw new TypeError(`ClientChannel: Invalid key: ${source[SCHEMA.KEY.NAME]}`);
   const descmap: PropertyDescriptorMap = Object.assign(Object.keys(dao)
-    .filter(isValidName)
-    .filter(isValidValue(dao))
+    .filter(isValidPropertyName)
+    .filter(isValidPropertyValue(dao))
     .reduce<PropertyDescriptorMap>((map, prop) => {
       {
         const desc = Object.getOwnPropertyDescriptor(dao, prop)
@@ -46,7 +46,7 @@ export function build<V>(source: V, factory: () => V, update: (attr: string, new
         enumerable: true,
         get: () => source[prop] === void 0 ? iniVal : source[prop],
         set: newVal => {
-          if (!isValidValue(source)(newVal)) return;
+          if (!isValidPropertyValue(source)(newVal)) return;
           const oldVal = source[prop];
           source[prop] = newVal === void 0 ? iniVal : newVal;
           void update(prop, newVal, oldVal);

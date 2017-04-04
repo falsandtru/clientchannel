@@ -1,36 +1,36 @@
-import { isValidName, isValidValue } from './values';
+import { isValidPropertyName, isValidPropertyValue } from './values';
 
 describe('Unit: layers/data/constraint/values', () => {
-  describe('isValidNameValue', () => {
+  describe('isValidPropertyName', () => {
     it('empty', () => {
-      assert(!isValidName(''));
+      assert(!isValidPropertyName(''));
     });
 
     it('prefix', () => {
-      assert(!isValidName('_v'));
-      assert(!isValidName('$v'));
+      assert(!isValidPropertyName('_v'));
+      assert(!isValidPropertyName('$v'));
     });
 
     it('postfix', () => {
-      assert(!isValidName('v_'));
-      assert(!isValidName('v$'));
+      assert(!isValidPropertyName('v_'));
+      assert(!isValidPropertyName('v$'));
     });
 
     it('symbol', () => {
-      assert(!isValidName('_'));
-      assert(!isValidName('$'));
+      assert(!isValidPropertyName('_'));
+      assert(!isValidPropertyName('$'));
     });
 
     it('constant', () => {
-      assert(!isValidName('V'));
-      assert(!isValidName('VAL'));
+      assert(!isValidPropertyName('V'));
+      assert(!isValidPropertyName('VAL'));
     });
 
     it('valid', () => {
-      assert(isValidName('v'));
-      assert(isValidName('value'));
-      assert(isValidName('Value'));
-      assert(isValidName('vAlUe'));
+      assert(isValidPropertyName('v'));
+      assert(isValidPropertyName('value'));
+      assert(isValidPropertyName('Value'));
+      assert(isValidPropertyName('vAlUe'));
     });
 
   });
@@ -46,27 +46,27 @@ describe('Unit: layers/data/constraint/values', () => {
     };
 
     it('invalid undefined', () => {
-      assert(isValidValue(dao)('undefined') === true);
+      assert(isValidPropertyValue(dao)('undefined') === true);
     });
 
     it('invalid boolean', () => {
-      assert(isValidValue(dao)('boolean') === true);
+      assert(isValidPropertyValue(dao)('boolean') === true);
     });
 
     it('invalid number', () => {
-      assert(isValidValue(dao)('number') === true);
+      assert(isValidPropertyValue(dao)('number') === true);
     });
 
     it('invalid string', () => {
-      assert(isValidValue(dao)('string') === true);
+      assert(isValidPropertyValue(dao)('string') === true);
     });
 
     it('invalid object', () => {
-      assert(isValidValue(dao)('object') === true);
+      assert(isValidPropertyValue(dao)('object') === true);
     });
 
     it('invalid function', () => {
-      assert(isValidValue(dao)('function') === false);
+      assert(isValidPropertyValue(dao)('function') === false);
     });
 
   });

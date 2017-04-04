@@ -1,6 +1,6 @@
 import { StoreChannel, StoreChannelObject as ChannelObject } from '../../../../../';
 import { Observable, assign, concat } from 'spica';
-import { build, isValidName, isValidValue } from '../../dao/api';
+import { build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { ChannelStore } from '../model/channel';
 import { localStorage } from '../../../infrastructure/webstorage/api';
 import { BroadcastChannel, BroadcastChannelObject, BroadcastChannelEvent } from '../../webstorage/api';
@@ -18,7 +18,7 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
     if (cache.has(this)) return this;
     void cache.add(this);
     const keys = Object.keys(this.factory())
-      .filter(isValidName);
+      .filter(isValidPropertyName);
     void this.broadcast.link().__event
       .on([BroadcastChannel.Event.Type.recv, 'msgs'], () =>
         void this.broadcast.link().recv()
@@ -35,7 +35,7 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
             const cache = this.get(key);
             void keys
               .filter(attr_ => attr_ === attr)
-              .filter(isValidValue(cache))
+              .filter(isValidPropertyValue(cache))
               .sort()
               .reduce<void>((_, attr: keyof V) => {
                 const oldVal = source[attr];
@@ -49,7 +49,7 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
           case ChannelStore.Event.Type.delete: {
             const cache = this.factory();
             void keys
-              .filter(isValidValue(cache))
+              .filter(isValidPropertyValue(cache))
               .sort()
               .reduce<void>((_, attr: keyof V) => {
                 const oldVal = source[attr];
@@ -63,7 +63,7 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
           case ChannelStore.Event.Type.snapshot: {
             const cache = this.get(key);
             void keys
-              .filter(isValidValue(cache))
+              .filter(isValidPropertyValue(cache))
               .sort()
               .reduce<void>((_, attr: keyof V) => {
                 const oldVal = source[attr];

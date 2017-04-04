@@ -1,7 +1,7 @@
 import { Observable, Cancelable, Tick, sqid, assign, concat } from 'spica';
 import { listen, Config, IDBTransactionMode, IDBCursorDirection, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { IdNumber } from '../constraint/types';
-import { isValidName, isValidValue } from '../constraint/values';
+import { isValidPropertyName, isValidPropertyValue } from '../constraint/values';
 import { EventRecordFields, EventType, EventValue, UnsavedEventRecord, SavedEventRecord } from '../schema/event';
 import { noop } from '../../../lib/noop';
 
@@ -527,8 +527,8 @@ export function compose<K extends string, V extends EventStore.Value>(
           : new UnsavedEventRecord<K, V>(
               source.key,
               Object.keys(target.value)
-                .filter(isValidName)
-                .filter(isValidValue(target))
+                .filter(isValidPropertyName)
+                .filter(isValidPropertyValue(target))
                 .reduce((value, prop) =>
                   (value[prop] = target[prop], value)
                 , new EventStore.Value()),
