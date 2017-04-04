@@ -1,4 +1,4 @@
-/*! clientchannel v0.10.0 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.10.1 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -100,11 +100,11 @@ require = function e(t, n, r) {
             Object.defineProperty(exports, '__esModule', { value: true });
             var RegValidValueNameFormat = /^[a-zA-Z][0-9a-zA-Z_]*$/;
             var RegInvalidValueNameFormat = /^[0-9A-Z_]+$/;
-            function isValidName(prop) {
+            function isValidPropertyName(prop) {
                 return prop.length > 0 && prop[0] !== '_' && prop[prop.length - 1] !== '_' && !RegInvalidValueNameFormat.test(prop) && RegValidValueNameFormat.test(prop);
             }
-            exports.isValidName = isValidName;
-            function isValidValue(dao) {
+            exports.isValidPropertyName = isValidPropertyName;
+            function isValidPropertyValue(dao) {
                 return function (prop) {
                     switch (typeof dao[prop]) {
                     case 'undefined':
@@ -118,7 +118,7 @@ require = function e(t, n, r) {
                     }
                 };
             }
-            exports.isValidValue = isValidValue;
+            exports.isValidPropertyValue = isValidPropertyValue;
         },
         {}
     ],
@@ -285,15 +285,17 @@ require = function e(t, n, r) {
             var spica_1 = require('spica');
             var api_1 = require('../../infrastructure/indexeddb/api');
             var types_1 = require('../constraint/types');
+            var values_1 = require('../constraint/values');
             var event_1 = require('../schema/event');
             exports.UnsavedEventRecord = event_1.UnsavedEventRecord;
             exports.SavedEventRecord = event_1.SavedEventRecord;
             var noop_1 = require('../../../lib/noop');
             var EventStore = function () {
-                function EventStore(database, name) {
+                function EventStore(database, name, attrs) {
                     var _this = this;
                     this.database = database;
                     this.name = name;
+                    this.attrs = attrs;
                     this.memory = new spica_1.Observable();
                     this.events = {
                         load: new spica_1.Observable(),
@@ -556,14 +558,14 @@ require = function e(t, n, r) {
                     });
                 };
                 EventStore.prototype.has = function (key) {
-                    return compose(key, this.memory.reflect([key])).type !== EventStore.Event.Type.delete;
+                    return compose(key, this.attrs, this.memory.reflect([key])).type !== EventStore.Event.Type.delete;
                 };
                 EventStore.prototype.get = function (key) {
                     if (!this.syncState.get(key)) {
                         void this.fetch(key);
                     }
                     void this.events_.access.emit([key], new InternalEvent(InternalEventType.query, types_1.IdNumber(0), key, ''));
-                    return compose(key, this.memory.reflect([key])).value;
+                    return compose(key, this.attrs, this.memory.reflect([key])).value;
                 };
                 EventStore.prototype.add = function (event, tx) {
                     var _this = this;
@@ -723,7 +725,7 @@ require = function e(t, n, r) {
                             if (!cursor) {
                                 if (savedEvents.length === 0)
                                     return;
-                                var composedEvent = compose(key, savedEvents);
+                                var composedEvent = compose(key, _this.attrs, savedEvents);
                                 if (composedEvent instanceof event_1.SavedEventRecord)
                                     return;
                                 switch (composedEvent.type) {
@@ -854,7 +856,7 @@ require = function e(t, n, r) {
                 return ret;
             }
             exports.adjust = adjust;
-            function compose(key, events) {
+            function compose(key, attrs, events) {
                 return group(events).map(function (events) {
                     return events.reduceRight(compose, new event_1.UnsavedEventRecord(key, new EventStore.Value(), EventStore.Event.Type.delete, 0));
                 }).reduce(function (e) {
@@ -882,11 +884,10 @@ require = function e(t, n, r) {
                 function compose(target, source) {
                     switch (source.type) {
                     case EventStore.Event.Type.put:
-                        return source.value[source.attr] !== void 0 ? new event_1.UnsavedEventRecord(source.key, Object.assign(new EventStore.Value(), target.value, source.value), EventStore.Event.Type.snapshot) : new event_1.UnsavedEventRecord(source.key, Object.keys(target.value).reduce(function (value, prop) {
-                            if (prop === source.attr)
-                                return value;
-                            value[prop] = target[prop];
-                            return value;
+                        return source.value[source.attr] !== void 0 ? new event_1.UnsavedEventRecord(source.key, spica_1.assign(new EventStore.Value(), target.value, source.value), EventStore.Event.Type.snapshot) : new event_1.UnsavedEventRecord(source.key, Object.keys(target.value).filter(function (prop) {
+                            return attrs.indexOf(prop) !== -1;
+                        }).filter(values_1.isValidPropertyValue(target)).reduce(function (value, prop) {
+                            return value[prop] = target[prop], value;
                         }, new EventStore.Value()), EventStore.Event.Type.snapshot);
                     case EventStore.Event.Type.snapshot:
                         return source;
@@ -902,6 +903,7 @@ require = function e(t, n, r) {
             '../../../lib/noop': 31,
             '../../infrastructure/indexeddb/api': 23,
             '../constraint/types': 5,
+            '../constraint/values': 6,
             '../schema/event': 7,
             'spica': undefined
         }
@@ -1057,8 +1059,8 @@ require = function e(t, n, r) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var values_1 = require('../../../data/constraint/values');
-            exports.isValidPropertyName = values_1.isValidName;
-            exports.isValidPropertyValue = values_1.isValidValue;
+            exports.isValidPropertyName = values_1.isValidPropertyName;
+            exports.isValidPropertyValue = values_1.isValidPropertyValue;
             var noop_1 = require('../../../../lib/noop');
             exports.SCHEMA = {
                 META: { NAME: '__meta' },
@@ -1079,7 +1081,7 @@ require = function e(t, n, r) {
                 }, void 0);
                 if (typeof source[exports.SCHEMA.KEY.NAME] !== 'string')
                     throw new TypeError('ClientChannel: Invalid key: ' + source[exports.SCHEMA.KEY.NAME]);
-                var descmap = Object.assign(Object.keys(dao).filter(values_1.isValidName).filter(values_1.isValidValue(dao)).reduce(function (map, prop) {
+                var descmap = Object.assign(Object.keys(dao).filter(values_1.isValidPropertyName).filter(values_1.isValidPropertyValue(dao)).reduce(function (map, prop) {
                     {
                         var desc = Object.getOwnPropertyDescriptor(dao, prop);
                         if (desc && (desc.get || desc.set))
@@ -1095,7 +1097,7 @@ require = function e(t, n, r) {
                             return source[prop] === void 0 ? iniVal : source[prop];
                         },
                         set: function (newVal) {
-                            if (!values_1.isValidValue(source)(newVal))
+                            if (!values_1.isValidPropertyValue(source)(newVal))
                                 return;
                             var oldVal = source[prop];
                             source[prop] = newVal === void 0 ? iniVal : newVal;
@@ -1173,7 +1175,7 @@ require = function e(t, n, r) {
             var noop_1 = require('../../../../lib/noop');
             var cache = new Map();
             var ChannelStore = function () {
-                function ChannelStore(name, destroy, expiry) {
+                function ChannelStore(name, attrs, destroy, expiry) {
                     var _this = this;
                     this.name = name;
                     this.expiry = expiry;
@@ -1197,7 +1199,7 @@ require = function e(t, n, r) {
                             return data_1.DataStore.configure().destroy(err, ev) && access_1.AccessStore.configure().destroy(err, ev) && expiry_1.ExpiryStore.configure().destroy(err, ev) && destroy(err, ev);
                         }
                     });
-                    this.schema = new Schema(this, this.expiries);
+                    this.schema = new Schema(this, attrs, this.expiries);
                     void api_1.event.on([
                         name,
                         api_1.IDBEventType.destroy
@@ -1269,15 +1271,16 @@ require = function e(t, n, r) {
             }(ChannelStore = exports.ChannelStore || (exports.ChannelStore = {})));
             exports.ChannelStore = ChannelStore;
             var Schema = function () {
-                function Schema(store_, expiries_) {
+                function Schema(store_, attrs_, expiries_) {
                     this.store_ = store_;
+                    this.attrs_ = attrs_;
                     this.expiries_ = expiries_;
                     void this.bind();
                 }
                 Schema.prototype.bind = function () {
                     var _this = this;
                     var keys = this.data ? this.data.keys() : [];
-                    this.data = new data_1.DataStore(this.store_.name);
+                    this.data = new data_1.DataStore(this.store_.name, this.attrs_);
                     this.data.events.load.monitor([], function (ev) {
                         return _this.store_.events.load.emit([
                             ev.key,
@@ -1416,8 +1419,8 @@ require = function e(t, n, r) {
             exports.STORE_NAME = 'data';
             var DataStore = function (_super) {
                 __extends(DataStore, _super);
-                function DataStore(database) {
-                    var _this = _super.call(this, database, exports.STORE_NAME) || this;
+                function DataStore(database, attrs) {
+                    var _this = _super.call(this, database, exports.STORE_NAME, attrs) || this;
                     void Object.freeze(_this);
                     return _this;
                 }
@@ -1588,7 +1591,7 @@ require = function e(t, n, r) {
                     if (expiry === void 0) {
                         expiry = Infinity;
                     }
-                    var _this = _super.call(this, name, destroy, expiry) || this;
+                    var _this = _super.call(this, name, Object.keys(factory()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(factory())), destroy, expiry) || this;
                     _this.factory = factory;
                     _this.broadcast = new api_3.BroadcastChannel(_this.name, api_2.localStorage, function () {
                         return new BroadcastSchema();
@@ -1598,7 +1601,7 @@ require = function e(t, n, r) {
                     if (cache.has(_this))
                         return _this;
                     void cache.add(_this);
-                    var keys = Object.keys(_this.factory());
+                    var keys = Object.keys(_this.factory()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(_this.factory()));
                     void _this.broadcast.link().__event.on([
                         api_3.BroadcastChannel.Event.Type.recv,
                         'msgs'
@@ -1634,7 +1637,7 @@ require = function e(t, n, r) {
                             }
                         case channel_1.ChannelStore.Event.Type.delete: {
                                 var cache_2 = _this.factory();
-                                void keys.filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(cache_2)).sort().reduce(function (_, attr) {
+                                void keys.filter(api_1.isValidPropertyValue(cache_2)).sort().reduce(function (_, attr) {
                                     var oldVal = source[attr];
                                     var newVal = cache_2[attr];
                                     source[attr] = newVal;
@@ -1647,7 +1650,7 @@ require = function e(t, n, r) {
                             }
                         case channel_1.ChannelStore.Event.Type.snapshot: {
                                 var cache_3 = _this.get(key);
-                                void keys.filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(cache_3)).sort().reduce(function (_, attr) {
+                                void keys.filter(api_1.isValidPropertyValue(cache_3)).sort().reduce(function (_, attr) {
                                     var oldVal = source[attr];
                                     var newVal = cache_3[attr];
                                     source[attr] = newVal;
