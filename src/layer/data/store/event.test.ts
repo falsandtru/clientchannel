@@ -2,7 +2,7 @@ import { compose, EventStore, UnsavedEventRecord, SavedEventRecord } from './eve
 import { open, destroy, event, IDBEventType } from '../../infrastructure/indexeddb/api';
 
 describe('Unit: layers/data/store/event', function () {
-  this.timeout(5 * 1e3);
+  this.timeout(7 * 1e3);
 
   describe('spec', () => {
     class Value extends EventStore.Value {
@@ -348,20 +348,16 @@ describe('Unit: layers/data/store/event', function () {
       open('test', Store.configure('test'));
       const es = new Store<string, Value>('test', 'test');
 
-      es.add(new UnsavedEventRecord('', new Value(0)));
       es.transaction('', () => {
-        assert(es.meta('').id === 0);
-        assert(es.get('').value === 0);
-        es.fetch('', err => {
-          assert(!err);
-          assert(es.meta('').id === 2);
-          assert(es.get('').value === 1);
-          done();
-        });
-        es.add(new UnsavedEventRecord('', new Value(es.get('').value + 1)));
+        es.add(new UnsavedEventRecord('', new Value(1)));
         assert(es.meta('').id === 0);
         assert(es.get('').value === 1);
-      }, err => assert(!err));
+      }, err => {
+        assert(!err);
+        assert(es.meta('').id === 1);
+        assert(es.get('').value === 1);
+        done();
+      });
     });
 
     it('clean', done => {
