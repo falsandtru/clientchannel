@@ -1,4 +1,4 @@
-/*! clientchannel v0.10.1 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.10.2 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -533,8 +533,8 @@ require = function e(t, n, r) {
                                 return void complete(tx.error);
                             });
                         } catch (e) {
-                            e = e instanceof Error || e instanceof DOMError ? e : new Error();
-                            void complete(e);
+                            void tx.abort();
+                            void complete(e instanceof Error || e instanceof DOMError ? e : new Error());
                         } finally {
                             _this.tx = void 0;
                         }
@@ -1184,7 +1184,7 @@ require = function e(t, n, r) {
                         save: new spica_1.Observable(),
                         loss: new spica_1.Observable()
                     };
-                    this.expiries = new Map();
+                    this.ages = new Map();
                     if (cache.has(name))
                         return cache.get(name);
                     void cache.set(name, this);
@@ -1199,7 +1199,7 @@ require = function e(t, n, r) {
                             return data_1.DataStore.configure().destroy(err, ev) && access_1.AccessStore.configure().destroy(err, ev) && expiry_1.ExpiryStore.configure().destroy(err, ev) && destroy(err, ev);
                         }
                     });
-                    this.schema = new Schema(this, attrs, this.expiries);
+                    this.schema = new Schema(this, attrs, this.ages);
                     void api_1.event.on([
                         name,
                         api_1.IDBEventType.destroy
@@ -1237,7 +1237,7 @@ require = function e(t, n, r) {
                     }
                     if (expiry === Infinity)
                         return;
-                    return void this.expiries.set(key, expiry);
+                    return void this.ages.set(key, expiry);
                 };
                 ChannelStore.prototype.recent = function (limit, cb) {
                     var keys = [];
@@ -1465,7 +1465,7 @@ require = function e(t, n, r) {
             exports.STORE_NAME = 'expiry';
             var ExpiryStore = function (_super) {
                 __extends(ExpiryStore, _super);
-                function ExpiryStore(database, store, access, expiries) {
+                function ExpiryStore(database, store, access, ages) {
                     var _this = _super.call(this, database, exports.STORE_NAME, ExpiryStore.fields.key) || this;
                     void Object.freeze(_this);
                     var timer = 0;
@@ -1501,9 +1501,9 @@ require = function e(t, n, r) {
                         case event_1.EventStore.Event.Type.delete:
                             return void _this.delete(key);
                         default:
-                            if (!expiries.has(key))
+                            if (!ages.has(key))
                                 return;
-                            var expiry = Date.now() + expiries.get(key);
+                            var expiry = Date.now() + ages.get(key);
                             void _this.set(key, new ExpiryRecord(key, expiry));
                             return void schedule(expiry);
                         }
