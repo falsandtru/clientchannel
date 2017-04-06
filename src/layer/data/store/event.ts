@@ -214,8 +214,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         void tx.addEventListener('error', () => void complete(tx.error));
       }
       catch (e) {
-        e = e instanceof Error || e instanceof DOMError ? e : new Error();
-        void complete(<DOMException | DOMError | Error>e);
+        void tx.abort();
+        void complete(e instanceof Error || e instanceof DOMError ? e : new Error());
       }
       finally {
         this.tx = void 0;
