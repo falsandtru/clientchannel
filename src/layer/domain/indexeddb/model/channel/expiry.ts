@@ -45,7 +45,7 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
       delete(key: K): void;
     },
     access: Observer<never[], EventStore.Event<K, any>, void>,
-    expiries: Map<K, number>
+    ages: Map<K, number>
   ) {
     super(database, STORE_NAME, ExpiryStore.fields.key);
     void Object.freeze(this);
@@ -77,9 +77,9 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
           case EventStore.Event.Type.delete:
             return void this.delete(key);
           default:
-            if (!expiries.has(key)) return;
-            assert(expiries.get(key)! < Infinity);
-            const expiry = Date.now() + expiries.get(key)!;
+            if (!ages.has(key)) return;
+            assert(ages.get(key)! < Infinity);
+            const expiry = Date.now() + ages.get(key)!;
             void this.set(key, new ExpiryRecord(key, expiry));
             return void schedule(expiry);
         }

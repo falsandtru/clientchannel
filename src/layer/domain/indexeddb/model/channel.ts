@@ -35,7 +35,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
             && destroy(err, ev);
       }
     });
-    this.schema = new Schema<K, V>(this, attrs, this.expiries);
+    this.schema = new Schema<K, V>(this, attrs, this.ages);
     void event.on([name, IDBEventType.destroy], () =>
       void this.schema.bind());
   }
@@ -66,11 +66,11 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   public delete(key: K): void {
     return this.schema.data.delete(key);
   }
-  private readonly expiries = new Map<K, number>();
+  private readonly ages = new Map<K, number>();
   public expire(key: K, expiry: number = this.expiry): void {
     assert(expiry > 0);
     if (expiry === Infinity) return;
-    return void this.expiries.set(key, expiry);
+    return void this.ages.set(key, expiry);
   }
   public recent(limit: number, cb: (keys: K[], err: DOMException | DOMError | null) => any): void {
     const keys: K[] = [];
