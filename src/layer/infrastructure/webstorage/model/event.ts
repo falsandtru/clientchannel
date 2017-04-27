@@ -1,21 +1,18 @@
 import { Observable, Observer } from 'spica';
 import { localStorage, sessionStorage } from '../module/global';
 
-const storageEvents = {
-  localStorage: new Observable<['storage'], StorageEvent, void>(),
-  sessionStorage: new Observable<['storage'], StorageEvent, void>()
-};
-export const events: {
-  localStorage: Observer<['storage'], StorageEvent, void>;
-  sessionStorage: Observer<['storage'], StorageEvent, void>;
-} = storageEvents;
+type Type = ['local' | 'session'] | ['local' | 'session', string];
+
+const storageEventStream = new Observable<Type, StorageEvent, void>();
+
+export const eventstream: Observer<Type, StorageEvent, void> = storageEventStream;
 
 void self.addEventListener('storage', event => {
   switch (event.storageArea) {
     case localStorage:
-      return void storageEvents.localStorage.emit(['storage'], event);
+      return void storageEventStream.emit(typeof event.key === 'string' ? ['local', event.key] : ['local'], event);
     case sessionStorage:
-      return void storageEvents.sessionStorage.emit(['storage'], event);
+      return void storageEventStream.emit(typeof event.key === 'string' ? ['session', event.key] : ['session'], event);
     default:
       return;
   }

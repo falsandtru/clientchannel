@@ -1,8 +1,7 @@
 import { BroadcastChannel, BroadcastChannelObject as ChannelObject, BroadcastChannelEvent } from '../../../../../';
 import { Observable } from 'spica';
 import { SCHEMA, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
-import { events } from '../service/event';
-import { localStorage, sessionStorage } from '../../../infrastructure/webstorage/api';
+import { localStorage, sessionStorage, eventstream } from '../../../infrastructure/webstorage/api';
 import { StorageLike, fakeStorage } from '../model/storage';
 
 const cache = new Map<string, Channel<ChannelObject>>();
@@ -49,11 +48,11 @@ export class Channel<V extends ChannelObject> implements BroadcastChannel<V> {
           void this.events.recv.emit([event.attr], event);
         }, void 0);
     };
-    void this.eventSource.on([this.name], subscriber);
+    void eventstream.on([this.mode, this.name], subscriber);
     void this.log.update(this.name);
     void Object.freeze(this);
   }
-  private readonly eventSource = this.storage === localStorage ? events.localStorage : events.sessionStorage;
+  private readonly mode = this.storage === localStorage ? 'local' : 'session';
   public readonly events = {
     send: new Observable<never[] | [keyof V], Channel.Event<V>, void>(),
     recv: new Observable<never[] | [keyof V], Channel.Event<V>, void>()
@@ -63,7 +62,7 @@ export class Channel<V extends ChannelObject> implements BroadcastChannel<V> {
     return this.link_;
   }
   public destroy(): void {
-    void this.eventSource.off([this.name]);
+    void eventstream.off([this.mode, this.name]);
     void this.storage.removeItem(this.name);
     void this.log.delete(this.name);
     void cache.delete(this.name);

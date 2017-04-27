@@ -1,8 +1,8 @@
 import { uuid } from 'spica';
 
-export const supportWebStorage: boolean = (() => {
+const supportsWebStorage: boolean = (() => {
   try {
-    if (!window.navigator.cookieEnabled) throw void 0;
+    if (!self.navigator.cookieEnabled) throw void 0;
     const key = 'clientchannel#' + uuid();
     void self.sessionStorage.setItem(key, key);
     if (key !== self.sessionStorage.getItem(key)) throw void 0;
@@ -14,5 +14,5 @@ export const supportWebStorage: boolean = (() => {
   }
 })();
 
-export const localStorage: Storage | undefined = supportWebStorage ? self.localStorage : void 0;
-export const sessionStorage: Storage | undefined = supportWebStorage ? self.sessionStorage : void 0;
+export const localStorage: Storage | undefined = supportsWebStorage ? self.localStorage : void 0;
+export const sessionStorage: Storage | undefined = supportsWebStorage ? self.sessionStorage : void 0;
