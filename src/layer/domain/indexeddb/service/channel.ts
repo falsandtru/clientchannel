@@ -1,9 +1,8 @@
 import { StoreChannel, StoreChannelObject as ChannelObject } from '../../../../../';
-import { Observable, assign, concat } from 'spica';
+import { Observable, assign } from 'spica';
 import { build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { ChannelStore } from '../model/channel';
-import { localStorage } from '../../../infrastructure/webstorage/api';
-import { BroadcastChannel, BroadcastChannelObject, BroadcastChannelEvent } from '../../webstorage/api';
+import { Channel as BroadcastChannel } from '../../broadcast/api';
 
 const cache = new WeakSet<Channel<string, ChannelObject<string>>>();
 
@@ -20,13 +19,11 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
     const keys = Object.keys(this.factory())
       .filter(isValidPropertyName)
       .filter(isValidPropertyValue(this.factory()));
-    void this.broadcast.link().__event
-      .on([BroadcastChannel.Event.Type.recv, 'msgs'], () =>
-        void this.broadcast.link().recv()
-          .reduce<void>((_, key) => void this.schema.data.fetch(key), void 0));
+    void this.broadcast.listen(ev =>
+      void this.schema.data.fetch(ev instanceof MessageEvent ? ev.data : ev.newValue));
     void this.events.save
-      .monitor([], ({key, attr}) =>
-        void this.broadcast.link().send(new Message(key, attr, Date.now())));
+      .monitor([], ({key}) =>
+        void this.broadcast.post(key));
     void this.events.load
       .monitor([], ({key, attr, type}) => {
         const source = this.sources.get(key);
@@ -79,7 +76,7 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
       });
     void Object.seal(this);
   }
-  private readonly broadcast = new BroadcastChannel(this.name, localStorage, () => new BroadcastSchema<K>());
+  private readonly broadcast = new BroadcastChannel(this.name);
   private readonly links = new Map<K, V>();
   private readonly sources = new Map<K, V>();
   public link(key: K, expiry?: number): V {
@@ -110,7 +107,7 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
                 }
               },
               __event: {
-                value: new Observable<[BroadcastChannelEvent.Type], BroadcastChannelEvent<V>, any>()
+                value: new Observable<[BroadcastChannel.Event.Type], BroadcastChannel.Event<V>, any>()
               },
               __transaction: {
                 value: (cb: () => any, complete: (err?: DOMException | DOMError | Error) => any) => this.transaction(key, cb, complete)
@@ -125,7 +122,7 @@ export class Channel<K extends string, V extends ChannelObject<K>> extends Chann
         .get(key)!;
   }
   public destroy(): void {
-    void this.broadcast.destroy();
+    void this.broadcast.close();
     void cache.delete(this);
     void super.destroy();
   }
@@ -135,45 +132,6 @@ function cast<K extends string, V extends ChannelObject<K>>(source: V) {
   return <V & InternalChannelObject<K>>source;
 
   interface InternalChannelObject<K extends string> extends ChannelObject<K> {
-    readonly __event: Observable<[BroadcastChannelEvent.Type] | [BroadcastChannelEvent.Type, keyof this | ''], BroadcastChannelEvent<this>, any>;
-  }
-}
-
-class Message<K extends string> {
-  constructor(
-    public readonly key: K,
-    public readonly attr: string,
-    public readonly date: number
-  ) {
-    assert(typeof key === 'string');
-    assert(typeof attr === 'string');
-    assert(typeof date === 'number');
-    void Object.freeze(this);
-  }
-}
-
-interface BroadcastSchema<K extends string> extends BroadcastChannelObject {
-}
-class BroadcastSchema<K extends string> {
-  // msgs must be sorted by asc.
-  public msgs: Message<K>[] = [];
-  private readonly msgLatestUpdates_ = new Map<string, number>();
-  public recv(): K[] {
-    return this.msgs
-      .filter(msg => {
-        const received: boolean = msg.date <= this.msgLatestUpdates_.get(msg.key)!;
-        void this.msgLatestUpdates_.set(msg.key, msg.date);
-        return !received;
-      })
-      .map(msg => msg.key);
-  }
-  public send(msg: Message<K>): void {
-    this.msgs = this.msgs
-      .reduceRight<Message<K>[]>((ms, m) =>
-        m.key === ms[0].key || m.date < ms[0].date - 1000 * 1e3
-          ? ms
-          : concat([m], ms)
-      , [msg])
-      .slice(-9);
+    readonly __event: Observable<[BroadcastChannel.Event.Type] | [BroadcastChannel.Event.Type, keyof this | ''], BroadcastChannel.Event<this>, any>;
   }
 }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.11.0
+
+- Use BroadcastChannel API.
+
 ## 0.10.2
 
 - Fix transaction processing.

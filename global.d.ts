@@ -19,4 +19,24 @@ declare global {
     IDBKeyRange: typeof IDBKeyRange;
   }
 
+  var BroadcastChannel: {
+    prototype: BroadcastChannel;
+    new (name: string): BroadcastChannel;
+  }
+
+  interface BroadcastChannel extends EventTarget {
+    name: string;
+    onmessage: (ev: MessageEvent) => any;
+    onmessageerror: (ev: MessageEvent) => any;
+    close(): void;
+    postMessage(message: any): void;
+    addEventListener<K extends keyof BroadcastChannelEventMap>(type: K, listener: (this: BroadcastChannel, ev: BroadcastChannelEventMap[K]) => any, useCapture?: boolean): void;
+    addEventListener(type: string, listener: EventListenerOrEventListenerObject, useCapture?: boolean): void;
+  }
+
+  interface BroadcastChannelEventMap {
+    message: MessageEvent;
+    messageerror: MessageEvent;
+  }
+
 }

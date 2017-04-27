@@ -69,11 +69,8 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
           assert(dao.__id === 1);
           assert(dao.__key === 'a');
           assert(dao.__date > 0);
-          setTimeout(() => {
-            assert(localStorage.getItem('test')!.replace(/\d+/, '0') === '{"msgs":[{"key":"a","attr":"n","date":0}]}');
-            chan.destroy();
-            done();
-          }, 0);
+          chan.destroy();
+          done();
         });
       });
 
