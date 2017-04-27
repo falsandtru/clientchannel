@@ -1,4 +1,4 @@
-/*! spica v0.0.59 https://github.com/falsandtru/spica | (c) 2016, falsandtru | MIT License */
+/*! spica v0.0.66 https://github.com/falsandtru/spica | (c) 2016, falsandtru | MIT License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -527,7 +527,7 @@ require = function e(t, n, r) {
                 } : curry_(f, [], ctx);
             };
             function curry_(f, xs, ctx) {
-                return f.length === xs.length ? f.apply(ctx, xs) : function () {
+                return f.length <= xs.length ? f.apply(ctx, xs.slice(0, f.length)) : function () {
                     var ys = [];
                     for (var _i = 0; _i < arguments.length; _i++) {
                         ys[_i] = arguments[_i];
@@ -3863,15 +3863,15 @@ require = function e(t, n, r) {
                     void ++this.constructor.count;
                 }
                 Supervisor.prototype.destructor = function (reason) {
+                    this.available = false;
+                    void Array.from(this.workers.values()).forEach(function (worker) {
+                        return void worker.terminate(reason);
+                    });
                     void this.deliver();
-                    try {
-                        void this.destructor_(reason);
-                    } catch (reason) {
-                        void console.error(stringify_1.stringify(reason));
-                    }
                     this.alive = false;
                     void --this.constructor.count;
                     void Object.freeze(this);
+                    void this.destructor_(reason);
                 };
                 Supervisor.prototype.validate = function () {
                     if (!this.available)
@@ -3964,16 +3964,12 @@ require = function e(t, n, r) {
                 };
                 Supervisor.prototype.terminate = function (name, reason) {
                     if (!this.available)
-                        return;
-                    if (name === void 0) {
-                        this.available = false;
-                    }
-                    void Array.from(this.workers.values()).forEach(function (worker) {
-                        return void worker.terminate(reason);
-                    });
-                    if (name === void 0) {
-                        void this.destructor(reason);
-                    }
+                        return false;
+                    return name === void 0 ? void this.destructor(reason) === void 0 : Array.from(this.workers.values()).filter(function (worker) {
+                        return worker.name === name;
+                    }).filter(function (worker) {
+                        return worker.terminate(reason);
+                    }).length > 0;
                 };
                 Supervisor.prototype.schedule = function () {
                     void tick_1.Tick(this.deliver, true);
@@ -3996,15 +3992,15 @@ require = function e(t, n, r) {
                     this.destructor_ = destructor_;
                     this.alive = true;
                     this.available = true;
-                    this.times = 0;
+                    this.called = false;
                     this.call = function (_a) {
                         var param = _a[0], timeout = _a[1];
                         if (!_this.available)
                             return;
                         try {
                             _this.available = false;
-                            void ++_this.times;
-                            if (_this.times === 1) {
+                            if (!_this.called) {
+                                _this.called = true;
                                 void _this.sv.events.init.emit([_this.name], [
                                     _this.name,
                                     _this.process,
@@ -4023,6 +4019,12 @@ require = function e(t, n, r) {
                                         return void result_1.then(resolve, reject), timeout === Infinity ? void 0 : void setTimeout(function () {
                                             return void reject(new Error());
                                         }, timeout);
+                                    }).then(function (_a) {
+                                        var reply = _a[0], state = _a[1];
+                                        return [
+                                            reply,
+                                            state
+                                        ];
                                     }).then(function (_a) {
                                         var reply = _a[0], state = _a[1];
                                         void _this.sv.schedule();
@@ -4044,31 +4046,34 @@ require = function e(t, n, r) {
                     };
                     this.terminate = function (reason) {
                         if (!_this.alive)
-                            return;
+                            return false;
                         void _this.destructor(reason);
+                        return true;
                     };
                 }
                 Worker.prototype.destructor = function (reason) {
                     this.alive = false;
                     this.available = false;
-                    void this.destructor_();
                     void Object.freeze(this);
-                    try {
-                        void this.process.exit(reason, this.state);
-                        void this.sv.events.exit.emit([this.name], [
-                            this.name,
-                            this.process,
-                            this.state,
-                            reason
-                        ]);
-                    } catch (reason) {
-                        void this.sv.events.exit.emit([this.name], [
-                            this.name,
-                            this.process,
-                            this.state,
-                            reason
-                        ]);
-                        void this.sv.terminate(void 0, reason);
+                    void this.destructor_();
+                    if (this.called) {
+                        try {
+                            void this.process.exit(reason, this.state);
+                            void this.sv.events.exit.emit([this.name], [
+                                this.name,
+                                this.process,
+                                this.state,
+                                reason
+                            ]);
+                        } catch (reason_) {
+                            void this.sv.events.exit.emit([this.name], [
+                                this.name,
+                                this.process,
+                                this.state,
+                                reason
+                            ]);
+                            void this.sv.terminate(void 0, reason_);
+                        }
                     }
                 };
                 return Worker;

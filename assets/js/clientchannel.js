@@ -1,4 +1,4 @@
-/*! clientchannel v0.10.2 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.11.0 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -46,7 +46,7 @@ require = function e(t, n, r) {
             Object.defineProperty(exports, '__esModule', { value: true });
             __export(require('./layer/interface/api'));
         },
-        { './layer/interface/api': 30 }
+        { './layer/interface/api': 31 }
     ],
     4: [
         function (require, module, exports) {
@@ -62,8 +62,6 @@ require = function e(t, n, r) {
             __export(require('../domain/indexeddb/api'));
             __export(require('../domain/webstorage/api'));
             function store(name, config) {
-                if (!api_2.supportWebStorage)
-                    throw new Error('ClientChannel: Couldn\'t use WebStorage.');
                 var schema = config.schema, _a = config.destroy, destroy = _a === void 0 ? function () {
                         return true;
                     } : _a, _b = config.expiry, expiry = _b === void 0 ? Infinity : _b;
@@ -71,16 +69,14 @@ require = function e(t, n, r) {
             }
             exports.store = store;
             function broadcast(name, config) {
-                if (!api_2.supportWebStorage)
-                    throw new Error('ClientChannel: Couldn\'t use WebStorage.');
                 var schema = config.schema;
                 return new api_2.BroadcastChannel(name, api_2.localStorage, schema);
             }
             exports.broadcast = broadcast;
         },
         {
-            '../domain/indexeddb/api': 12,
-            '../domain/webstorage/api': 19
+            '../domain/indexeddb/api': 13,
+            '../domain/webstorage/api': 20
         }
     ],
     5: [
@@ -488,7 +484,7 @@ require = function e(t, n, r) {
                                 void unbind();
                                 void after(tx);
                                 void _this.update(key);
-                                void _this.events_.access.emit([key], new InternalEvent(InternalEventType.query, types_1.IdNumber(0), key, ''));
+                                void _this.events_.access.emit([key], new EventStore.InternalEvent(EventStore.InternalEvent.Type.query, types_1.IdNumber(0), key, ''));
                                 if (savedEvents.length >= _this.snapshotCycle) {
                                     void _this.snapshot(key);
                                 }
@@ -564,7 +560,7 @@ require = function e(t, n, r) {
                     if (!this.syncState.get(key)) {
                         void this.fetch(key);
                     }
-                    void this.events_.access.emit([key], new InternalEvent(InternalEventType.query, types_1.IdNumber(0), key, ''));
+                    void this.events_.access.emit([key], new EventStore.InternalEvent(EventStore.InternalEvent.Type.query, types_1.IdNumber(0), key, ''));
                     return compose(key, this.attrs, this.memory.reflect([key])).value;
                 };
                 EventStore.prototype.add = function (event, tx) {
@@ -576,7 +572,7 @@ require = function e(t, n, r) {
                         event.key,
                         event.attr,
                         event.type
-                    ], new InternalEvent(event.type, types_1.IdNumber(0), event.key, event.attr));
+                    ], new EventStore.InternalEvent(event.type, types_1.IdNumber(0), event.key, event.attr));
                     if (!(event instanceof event_1.UnsavedEventRecord))
                         throw new Error('ClientChannel: Cannot add a saved event: ' + JSON.stringify(event));
                     if (!this.syncState.get(event.key)) {
@@ -837,19 +833,22 @@ require = function e(t, n, r) {
                     return Value;
                 }(event_1.EventValue);
                 EventStore.Value = Value;
+                var InternalEvent = function () {
+                    function InternalEvent(type, id, key, attr) {
+                        this.type = type;
+                        this.id = id;
+                        this.key = key;
+                        this.attr = attr;
+                        void Object.freeze(this);
+                    }
+                    return InternalEvent;
+                }();
+                EventStore.InternalEvent = InternalEvent;
+                (function (InternalEvent) {
+                    InternalEvent.Type = __assign({}, Event.Type, { query: 'query' });
+                }(InternalEvent = EventStore.InternalEvent || (EventStore.InternalEvent = {})));
             }(EventStore = exports.EventStore || (exports.EventStore = {})));
             exports.EventStore = EventStore;
-            var InternalEventType = __assign({}, EventStore.Event.Type, { query: 'query' });
-            var InternalEvent = function () {
-                function InternalEvent(type, id, key, attr) {
-                    this.type = type;
-                    this.id = id;
-                    this.key = key;
-                    this.attr = attr;
-                    void Object.freeze(this);
-                }
-                return InternalEvent;
-            }();
             function adjust(record) {
                 var ret = __assign({}, record);
                 delete ret.id;
@@ -900,8 +899,8 @@ require = function e(t, n, r) {
             exports.compose = compose;
         },
         {
-            '../../../lib/noop': 31,
-            '../../infrastructure/indexeddb/api': 23,
+            '../../../lib/noop': 32,
+            '../../infrastructure/indexeddb/api': 24,
             '../constraint/types': 5,
             '../constraint/values': 6,
             '../schema/event': 7,
@@ -1037,12 +1036,96 @@ require = function e(t, n, r) {
             exports.KeyValueStore = KeyValueStore;
         },
         {
-            '../../../lib/noop': 31,
-            '../../infrastructure/indexeddb/api': 23,
+            '../../../lib/noop': 32,
+            '../../infrastructure/indexeddb/api': 24,
             'spica': undefined
         }
     ],
     10: [
+        function (require, module, exports) {
+            'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
+            var api_1 = require('../../infrastructure/webstorage/api');
+            var api_2 = require('../webstorage/api');
+            var Channel = function () {
+                function Channel(name) {
+                    this.name = name;
+                    return typeof BroadcastChannel === 'function' ? new Broadcast(name) : new Storage(name);
+                }
+                Channel.prototype.listen = function (_listener) {
+                    return function () {
+                        return void 0;
+                    };
+                };
+                Channel.prototype.post = function (_message) {
+                };
+                Channel.prototype.close = function () {
+                };
+                return Channel;
+            }();
+            exports.Channel = Channel;
+            (function (Channel) {
+                Channel.Event = api_2.BroadcastChannel.Event;
+            }(Channel = exports.Channel || (exports.Channel = {})));
+            exports.Channel = Channel;
+            var Broadcast = function () {
+                function Broadcast(name) {
+                    this.name = name;
+                    this.channel = new BroadcastChannel(this.name);
+                    this.listeners = new Set();
+                }
+                Broadcast.prototype.listen = function (listener) {
+                    var _this = this;
+                    void this.listeners.add(listener);
+                    void this.channel.addEventListener('message', listener);
+                    return function () {
+                        return void _this.listeners.delete(listener), void _this.channel.removeEventListener('message', listener);
+                    };
+                };
+                Broadcast.prototype.post = function (message) {
+                    void this.channel.postMessage(message);
+                };
+                Broadcast.prototype.close = function () {
+                    var _this = this;
+                    void this.listeners.forEach(function (listener) {
+                        return void _this.channel.removeEventListener('message', listener);
+                    });
+                };
+                return Broadcast;
+            }();
+            var Storage = function () {
+                function Storage(name) {
+                    this.name = name;
+                    this.storage = api_1.localStorage;
+                    this.listeners = new Set();
+                }
+                Storage.prototype.listen = function (listener) {
+                    var _this = this;
+                    void this.listeners.add(listener);
+                    void api_1.events.localStorage.on(['storage'], listener);
+                    return function () {
+                        return void _this.listeners.delete(listener), void api_1.events.localStorage.off(['storage'], listener);
+                    };
+                };
+                Storage.prototype.post = function (message) {
+                    void this.storage.removeItem(this.name);
+                    void this.storage.setItem(this.name, message);
+                };
+                Storage.prototype.close = function () {
+                    void this.listeners.forEach(function (listener) {
+                        return void api_1.events.localStorage.off(['storage'], listener);
+                    });
+                    void this.storage.removeItem(this.name);
+                };
+                return Storage;
+            }();
+        },
+        {
+            '../../infrastructure/webstorage/api': 28,
+            '../webstorage/api': 20
+        }
+    ],
+    11: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1052,9 +1135,9 @@ require = function e(t, n, r) {
             exports.isValidPropertyName = builder_1.isValidPropertyName;
             exports.isValidPropertyValue = builder_1.isValidPropertyValue;
         },
-        { './module/builder': 11 }
+        { './module/builder': 12 }
     ],
-    11: [
+    12: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1144,11 +1227,11 @@ require = function e(t, n, r) {
             exports.build = build;
         },
         {
-            '../../../../lib/noop': 31,
+            '../../../../lib/noop': 32,
             '../../../data/constraint/values': 6
         }
     ],
-    12: [
+    13: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1159,11 +1242,11 @@ require = function e(t, n, r) {
             exports.IDBEventType = event_1.IDBEventType;
         },
         {
-            './service/channel': 17,
-            './service/event': 18
+            './service/channel': 18,
+            './service/event': 19
         }
     ],
-    13: [
+    14: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1310,15 +1393,15 @@ require = function e(t, n, r) {
             }();
         },
         {
-            '../../../../lib/noop': 31,
-            '../../../infrastructure/indexeddb/api': 23,
-            './channel/access': 14,
-            './channel/data': 15,
-            './channel/expiry': 16,
+            '../../../../lib/noop': 32,
+            '../../../infrastructure/indexeddb/api': 24,
+            './channel/access': 15,
+            './channel/data': 16,
+            './channel/expiry': 17,
             'spica': undefined
         }
     ],
-    14: [
+    15: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -1395,7 +1478,7 @@ require = function e(t, n, r) {
             '../../../../data/store/key-value': 9
         }
     ],
-    15: [
+    16: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -1439,7 +1522,7 @@ require = function e(t, n, r) {
         },
         { '../../../../data/store/event': 8 }
     ],
-    16: [
+    17: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -1551,10 +1634,10 @@ require = function e(t, n, r) {
         {
             '../../../../data/store/event': 8,
             '../../../../data/store/key-value': 9,
-            '../../../../infrastructure/indexeddb/api': 23
+            '../../../../infrastructure/indexeddb/api': 24
         }
     ],
-    17: [
+    18: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -1577,8 +1660,7 @@ require = function e(t, n, r) {
             var spica_1 = require('spica');
             var api_1 = require('../../dao/api');
             var channel_1 = require('../model/channel');
-            var api_2 = require('../../../infrastructure/webstorage/api');
-            var api_3 = require('../../webstorage/api');
+            var api_2 = require('../../broadcast/api');
             var cache = new WeakSet();
             var Channel = function (_super) {
                 __extends(Channel, _super);
@@ -1593,26 +1675,19 @@ require = function e(t, n, r) {
                     }
                     var _this = _super.call(this, name, Object.keys(factory()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(factory())), destroy, expiry) || this;
                     _this.factory = factory;
-                    _this.broadcast = new api_3.BroadcastChannel(_this.name, api_2.localStorage, function () {
-                        return new BroadcastSchema();
-                    });
+                    _this.broadcast = new api_2.Channel(_this.name);
                     _this.links = new Map();
                     _this.sources = new Map();
                     if (cache.has(_this))
                         return _this;
                     void cache.add(_this);
                     var keys = Object.keys(_this.factory()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(_this.factory()));
-                    void _this.broadcast.link().__event.on([
-                        api_3.BroadcastChannel.Event.Type.recv,
-                        'msgs'
-                    ], function () {
-                        return void _this.broadcast.link().recv().reduce(function (_, key) {
-                            return void _this.schema.data.fetch(key);
-                        }, void 0);
+                    void _this.broadcast.listen(function (ev) {
+                        return void _this.schema.data.fetch(ev instanceof MessageEvent ? ev.data : ev.newValue);
                     });
                     void _this.events.save.monitor([], function (_a) {
-                        var key = _a.key, attr = _a.attr;
-                        return void _this.broadcast.link().send(new Message(key, attr, Date.now()));
+                        var key = _a.key;
+                        return void _this.broadcast.post(key);
                     });
                     void _this.events.load.monitor([], function (_a) {
                         var key = _a.key, attr = _a.attr, type = _a.type;
@@ -1629,9 +1704,9 @@ require = function e(t, n, r) {
                                     var newVal = cache_1[attr];
                                     source[attr] = newVal;
                                     void cast(source).__event.emit([
-                                        api_3.BroadcastChannel.Event.Type.recv,
+                                        api_2.Channel.Event.Type.recv,
                                         attr
-                                    ], new api_3.BroadcastChannel.Event(api_3.BroadcastChannel.Event.Type.recv, attr, newVal, oldVal));
+                                    ], new api_2.Channel.Event(api_2.Channel.Event.Type.recv, attr, newVal, oldVal));
                                 }, void 0);
                                 return;
                             }
@@ -1642,9 +1717,9 @@ require = function e(t, n, r) {
                                     var newVal = cache_2[attr];
                                     source[attr] = newVal;
                                     void cast(source).__event.emit([
-                                        api_3.BroadcastChannel.Event.Type.recv,
+                                        api_2.Channel.Event.Type.recv,
                                         attr
-                                    ], new api_3.BroadcastChannel.Event(api_3.BroadcastChannel.Event.Type.recv, attr, newVal, oldVal));
+                                    ], new api_2.Channel.Event(api_2.Channel.Event.Type.recv, attr, newVal, oldVal));
                                 }, void 0);
                                 return;
                             }
@@ -1655,9 +1730,9 @@ require = function e(t, n, r) {
                                     var newVal = cache_3[attr];
                                     source[attr] = newVal;
                                     void cast(source).__event.emit([
-                                        api_3.BroadcastChannel.Event.Type.recv,
+                                        api_2.Channel.Event.Type.recv,
                                         attr
-                                    ], new api_3.BroadcastChannel.Event(api_3.BroadcastChannel.Event.Type.recv, attr, newVal, oldVal));
+                                    ], new api_2.Channel.Event(api_2.Channel.Event.Type.recv, attr, newVal, oldVal));
                                 }, void 0);
                                 return;
                             }
@@ -1698,14 +1773,14 @@ require = function e(t, n, r) {
                         }
                     }), this.factory, function (attr, newValue, oldValue) {
                         return void _this.add(new channel_1.ChannelStore.Record(key, (_a = {}, _a[attr] = newValue, _a))), void cast(_this.sources.get(key)).__event.emit([
-                            api_3.BroadcastChannel.Event.Type.send,
+                            api_2.Channel.Event.Type.send,
                             attr
-                        ], new api_3.BroadcastChannel.Event(api_3.BroadcastChannel.Event.Type.send, attr, newValue, oldValue));
+                        ], new api_2.Channel.Event(api_2.Channel.Event.Type.send, attr, newValue, oldValue));
                         var _a;
                     })).get(key);
                 };
                 Channel.prototype.destroy = function () {
-                    void this.broadcast.destroy();
+                    void this.broadcast.close();
                     void cache.delete(this);
                     void _super.prototype.destroy.call(this);
                 };
@@ -1715,47 +1790,15 @@ require = function e(t, n, r) {
             function cast(source) {
                 return source;
             }
-            var Message = function () {
-                function Message(key, attr, date) {
-                    this.key = key;
-                    this.attr = attr;
-                    this.date = date;
-                    void Object.freeze(this);
-                }
-                return Message;
-            }();
-            var BroadcastSchema = function () {
-                function BroadcastSchema() {
-                    this.msgs = [];
-                    this.msgLatestUpdates_ = new Map();
-                }
-                BroadcastSchema.prototype.recv = function () {
-                    var _this = this;
-                    return this.msgs.filter(function (msg) {
-                        var received = msg.date <= _this.msgLatestUpdates_.get(msg.key);
-                        void _this.msgLatestUpdates_.set(msg.key, msg.date);
-                        return !received;
-                    }).map(function (msg) {
-                        return msg.key;
-                    });
-                };
-                BroadcastSchema.prototype.send = function (msg) {
-                    this.msgs = this.msgs.reduceRight(function (ms, m) {
-                        return m.key === ms[0].key || m.date < ms[0].date - 1000 * 1000 ? ms : spica_1.concat([m], ms);
-                    }, [msg]).slice(-9);
-                };
-                return BroadcastSchema;
-            }();
         },
         {
-            '../../../infrastructure/webstorage/api': 27,
-            '../../dao/api': 10,
-            '../../webstorage/api': 19,
-            '../model/channel': 13,
+            '../../broadcast/api': 10,
+            '../../dao/api': 11,
+            '../model/channel': 14,
             'spica': undefined
         }
     ],
-    18: [
+    19: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1763,9 +1806,9 @@ require = function e(t, n, r) {
             exports.event = api_1.event;
             exports.IDBEventType = api_1.IDBEventType;
         },
-        { '../../../infrastructure/indexeddb/api': 23 }
+        { '../../../infrastructure/indexeddb/api': 24 }
     ],
-    19: [
+    20: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1779,12 +1822,12 @@ require = function e(t, n, r) {
             exports.supportWebStorage = api_1.supportWebStorage;
         },
         {
-            '../../infrastructure/webstorage/api': 27,
-            './service/channel': 21,
-            './service/event': 22
+            '../../infrastructure/webstorage/api': 28,
+            './service/channel': 22,
+            './service/event': 23
         }
     ],
-    20: [
+    21: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1817,7 +1860,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    21: [
+    22: [
         function (require, module, exports) {
             'use strict';
             var __assign = this && this.__assign || Object.assign || function (t) {
@@ -1940,14 +1983,14 @@ require = function e(t, n, r) {
             }
         },
         {
-            '../../../infrastructure/webstorage/api': 27,
-            '../../dao/api': 10,
-            '../model/storage': 20,
-            '../service/event': 22,
+            '../../../infrastructure/webstorage/api': 28,
+            '../../dao/api': 11,
+            '../model/storage': 21,
+            '../service/event': 23,
             'spica': undefined
         }
     ],
-    22: [
+    23: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1966,11 +2009,11 @@ require = function e(t, n, r) {
             }
         },
         {
-            '../../../infrastructure/webstorage/api': 27,
+            '../../../infrastructure/webstorage/api': 28,
             'spica': undefined
         }
     ],
-    23: [
+    24: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1990,12 +2033,12 @@ require = function e(t, n, r) {
             exports.IDBEventType = event_1.IDBEventType;
         },
         {
-            './model/access': 24,
-            './model/event': 25,
-            './module/global': 26
+            './model/access': 25,
+            './model/event': 26,
+            './module/global': 27
         }
     ],
-    24: [
+    25: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2381,12 +2424,12 @@ require = function e(t, n, r) {
             }
         },
         {
-            '../module/global': 26,
-            './event': 25,
+            '../module/global': 27,
+            './event': 26,
             'spica': undefined
         }
     ],
-    25: [
+    26: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2413,7 +2456,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    26: [
+    27: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2434,7 +2477,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    27: [
+    28: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2446,11 +2489,11 @@ require = function e(t, n, r) {
             exports.events = event_1.events;
         },
         {
-            './model/event': 28,
-            './module/global': 29
+            './model/event': 29,
+            './module/global': 30
         }
     ],
-    28: [
+    29: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2473,11 +2516,11 @@ require = function e(t, n, r) {
             });
         },
         {
-            '../module/global': 29,
+            '../module/global': 30,
             'spica': undefined
         }
     ],
-    29: [
+    30: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2501,7 +2544,7 @@ require = function e(t, n, r) {
         },
         { 'spica': undefined }
     ],
-    30: [
+    31: [
         function (require, module, exports) {
             'use strict';
             function __export(m) {
@@ -2514,7 +2557,7 @@ require = function e(t, n, r) {
         },
         { '../application/api': 4 }
     ],
-    31: [
+    32: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
