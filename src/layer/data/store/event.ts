@@ -108,7 +108,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   };
   public readonly events_ = {
     update: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', string], UnsavedEventRecord<K, V> | SavedEventRecord<K, V>, void>(),
-    access: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', InternalEventType], InternalEvent<K>, void>()
+    access: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.InternalEvent.Type], EventStore.InternalEvent<K>, void>()
   };
   private update(key: K, attr?: string, id?: string): void {
     return typeof id === 'string' && typeof attr === 'string'
@@ -184,7 +184,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           void after(tx);
           void this.update(key);
           void this.events_.access
-            .emit([key], new InternalEvent(InternalEventType.query, IdNumber(0), key, ''));
+            .emit([key], new EventStore.InternalEvent(EventStore.InternalEvent.Type.query, IdNumber(0), key, ''));
           if (savedEvents.length >= this.snapshotCycle) {
             void this.snapshot(key);
           }
@@ -245,7 +245,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       void this.fetch(key);
     }
     void this.events_.access
-      .emit([key], new InternalEvent(InternalEventType.query, IdNumber(0), key, ''));
+      .emit([key], new EventStore.InternalEvent(EventStore.InternalEvent.Type.query, IdNumber(0), key, ''));
     return <V>compose(key, this.attrs, this.memory.reflect([key]))
       .value;
   }
@@ -253,7 +253,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     assert(event.type === EventStore.Event.Type.snapshot ? tx : true);
     assert(!tx || tx.db.name === this.database && tx.mode === IDBTransactionMode.readwrite)
     void this.events_.access
-      .emit([event.key, event.attr, event.type], new InternalEvent(event.type, IdNumber(0), event.key, event.attr));
+      .emit([event.key, event.attr, event.type], new EventStore.InternalEvent(event.type, IdNumber(0), event.key, event.attr));
     if (!(event instanceof UnsavedEventRecord)) throw new Error(`ClientChannel: Cannot add a saved event: ${JSON.stringify(event)}`);
     if (!this.syncState.get(event.key)) {
       void this.fetch(event.key);
@@ -455,26 +455,27 @@ export namespace EventStore {
   export class Record<K extends string, V extends Value> extends UnsavedEventRecord<K, V> { }
   export class Value extends EventValue {
   }
+  export class InternalEvent<K extends string> {
+    constructor(
+      public readonly type: InternalEvent.Type,
+      public readonly id: IdNumber,
+      public readonly key: K,
+      public readonly attr: string
+    ) {
+      void Object.freeze(this);
+    }
+  }
+  export namespace InternalEvent {
+    export const Type = {
+      ...Event.Type,
+      query: <'query'>'query'
+    };
+    export type Type = Event.Type | typeof Type.query;
+  }
 }
 export {
   UnsavedEventRecord,
   SavedEventRecord
-}
-
-const InternalEventType = {
-  ...EventStore.Event.Type,
-  query: <'query'>'query'
-};
-type InternalEventType = EventStore.Event.Type | typeof InternalEventType.query;
-class InternalEvent<K extends string> {
-  constructor(
-    public readonly type: InternalEventType,
-    public readonly id: IdNumber,
-    public readonly key: K,
-    public readonly attr: string
-  ) {
-    void Object.freeze(this);
-  }
 }
 
 interface MetaData<K extends string> {
