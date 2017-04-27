@@ -49,6 +49,9 @@ class Storage<M extends string> implements Channel<M> {
   constructor(
     public name: string
   ) {
+    void self.addEventListener('unload', () =>
+      void this.storage.removeItem(this.name)
+    , true);
   }
   private storage = localStorage!;
   private listeners = new Set<(_: StorageEvent) => void>();

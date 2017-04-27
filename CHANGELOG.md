@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.11.1
+
+- Clean localStorage when leaving the session.
+
 ## 0.11.0
 
 - Use BroadcastChannel API.
