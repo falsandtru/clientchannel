@@ -20,7 +20,7 @@ abstract class EventRecord<K extends string, V extends EventValue> {
     public readonly value: Partial<V>,
     public readonly date: number,
   ) {
-    if (typeof this.id === 'number' && <number>this.id >= 0 === false || !Number.isSafeInteger(this.id)) throw new TypeError(`ClientChannel: EventRecord: Invalid event id: ${this.id}`);
+    if (typeof this.id === 'number' && this.id >= 0 === false || !Number.isInteger(this.id)) throw new TypeError(`ClientChannel: EventRecord: Invalid event id: ${this.id}`);
     if (typeof this.type !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event type: ${this.type}`);
     if (typeof this.key !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event key: ${this.key}`);
     if (typeof this.value !== 'object' || !this.value) throw new TypeError(`ClientChannel: EventRecord: Invalid event value: ${this.value}`);
@@ -83,7 +83,7 @@ export class SavedEventRecord<K extends string, V extends EventValue> extends Ev
   ) {
     super(id, type, key, value, date);
     this.EVENT_RECORD;
-    if (<number>this.id > 0 === false) throw new TypeError(`ClientChannel: SavedEventRecord: Invalid event id: ${this.id}`);
+    if (this.id > 0 === false) throw new TypeError(`ClientChannel: SavedEventRecord: Invalid event id: ${this.id}`);
   }
 }
 

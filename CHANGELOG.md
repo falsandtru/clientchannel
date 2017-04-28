@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.11.2
+
+- Improve polyfillability.
+
 ## 0.11.1
 
 - Clean localStorage when leaving the session.

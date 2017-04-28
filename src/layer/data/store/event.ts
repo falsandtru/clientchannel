@@ -64,7 +64,6 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       ids = new Map<K, IdNumber>();
       dates = new Map<K, number>();
       update(event: EventStore.Event<K, V>): void {
-        assert(Number.isSafeInteger(event.id));
         void this.ids.set(event.key, IdNumber(Math.max(event.id, this.ids.get(event.key) || 0)));
         assert(event.date >= 0);
         void this.dates.set(event.key, Math.max(event.date, this.dates.get(event.key) || 0));
