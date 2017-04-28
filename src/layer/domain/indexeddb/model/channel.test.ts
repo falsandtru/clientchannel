@@ -39,31 +39,31 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
     });
 
     it('recent', done => {
-      const channel = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity);
+      const chan = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity);
 
-      channel.recent(Infinity, (keys, err) => {
+      chan.recent(Infinity, (keys, err) => {
         assert(!err);
         assert.deepStrictEqual(keys, []);
-        channel.recent(Infinity, () => {
-          channel.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
+        chan.recent(Infinity, () => {
+          chan.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
           setTimeout(() => {
-            channel.recent(Infinity, (keys, err) => {
+            chan.recent(Infinity, (keys, err) => {
               assert(!err);
               assert.deepStrictEqual(keys, ['a']);
               setTimeout(() => {
-                channel.recent(0, (keys, err) => {
+                chan.recent(0, (keys, err) => {
                   assert(!err);
                   assert.deepStrictEqual(keys, []);
                   setTimeout(() => {
-                    channel.recent(Infinity, (keys, err) => {
+                    chan.recent(Infinity, (keys, err) => {
                       assert(!err);
                       assert.deepStrictEqual(keys, ['a']);
-                      channel.add(new ChannelStore.Record('b', new CustomSocketValue(0)));
+                      chan.add(new ChannelStore.Record('b', new CustomSocketValue(0)));
                       setTimeout(() => {
-                        channel.recent(Infinity, (keys, err) => {
+                        chan.recent(Infinity, (keys, err) => {
                           assert(!err);
                           assert.deepStrictEqual(keys, ['b', 'a']);
-                          channel.destroy();
+                          chan.destroy();
                           done();
                         });
                       }, 100);
@@ -78,24 +78,24 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
     });
 
     it('clean', done => {
-      const channel = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity);
+      const chan = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity);
 
-      channel.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
-      channel.recent(Infinity, keys => {
+      chan.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
+      chan.recent(Infinity, keys => {
         assert.deepStrictEqual(keys, ['a']);
-        assert(channel.has('a') === true);
-        channel.delete('a');
-        channel.add(new ChannelStore.Record('b', new CustomSocketValue(0)));
-        channel.recent(Infinity, keys => {
+        assert(chan.has('a') === true);
+        chan.delete('a');
+        chan.add(new ChannelStore.Record('b', new CustomSocketValue(0)));
+        chan.recent(Infinity, keys => {
           assert.deepStrictEqual(keys, ['b']);
-          assert(channel.has('a') === false);
-          assert(channel.has('b') === true);
-          channel.delete('b');
-          channel.recent(Infinity, keys => {
+          assert(chan.has('a') === false);
+          assert(chan.has('b') === true);
+          chan.delete('b');
+          chan.recent(Infinity, keys => {
             assert.deepStrictEqual(keys, []);
-            assert(channel.has('a') === false);
-            assert(channel.has('b') === false);
-            channel.destroy();
+            assert(chan.has('a') === false);
+            assert(chan.has('b') === false);
+            chan.destroy();
             done();
           });
         });
@@ -103,26 +103,26 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
     });
 
     it('expiry', done => {
-      const channel = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, 4000);
+      const chan = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, 4000);
 
-      channel.expire('a');
-      channel.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
-      channel.expire('b', 1000);
-      channel.add(new ChannelStore.Record('b', new CustomSocketValue(0)));
-      channel.add(new ChannelStore.Record('c', new CustomSocketValue(0)));
+      chan.expire('a');
+      chan.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
+      chan.expire('b', 1000);
+      chan.add(new ChannelStore.Record('b', new CustomSocketValue(0)));
+      chan.add(new ChannelStore.Record('c', new CustomSocketValue(0)));
       setTimeout(() => {
-        channel.recent(Infinity, keys => {
+        chan.recent(Infinity, keys => {
           assert.deepStrictEqual(keys, ['c', 'a']);
-          assert(channel.has('a') === true);
-          assert(channel.has('b') === false);
-          assert(channel.has('c') === true);
+          assert(chan.has('a') === true);
+          assert(chan.has('b') === false);
+          assert(chan.has('c') === true);
           setTimeout(() => {
-            channel.recent(Infinity, keys => {
+            chan.recent(Infinity, keys => {
               assert.deepStrictEqual(keys, ['c']);
-              assert(channel.has('a') === false);
-              assert(channel.has('b') === false);
-              assert(channel.has('c') === true);
-              channel.destroy();
+              assert(chan.has('a') === false);
+              assert(chan.has('b') === false);
+              assert(chan.has('c') === true);
+              chan.destroy();
               done();
             });
           }, 3000);

@@ -28,14 +28,14 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
 
     it('make/destroy', () => {
       assert(sessionStorage.getItem('test') === null);
-      const repo = new Channel('test', sessionStorage, factory);
-      const dao = repo.link();
+      const chan = new Channel('test', sessionStorage, factory);
+      const dao = chan.link();
       assert(dao.n === 0);
       assert(sessionStorage.getItem('test') === null);
       dao.n = 1;
       assert(dao.n === 1);
       assert(sessionStorage.getItem('test') === '{\"n\":1}');
-      repo.destroy();
+      chan.destroy();
       assert(dao.n === 1);
       assert(sessionStorage.getItem('test') === null);
     });
@@ -51,8 +51,8 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
     });
 
     it('update', () => {
-      const repo = new Channel('test', sessionStorage, factory);
-      const dao = repo.link();
+      const chan = new Channel('test', sessionStorage, factory);
+      const dao = chan.link();
       assert(dao.n === 0);
       dao.n = 1;
       assert(dao.n === 1);
@@ -60,7 +60,7 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
       dao.n = 0;
       assert(dao.n === 0);
       assert(JSON.parse(sessionStorage.getItem('test')!).n === 0);
-      repo.destroy();
+      chan.destroy();
     });
 
   });
