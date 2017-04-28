@@ -3,7 +3,7 @@ import { ChannelStore } from './channel';
 import { destroy, event, IDBEventType } from '../../../infrastructure/indexeddb/api';
 
 describe('Unit: layers/domain/indexeddb/model/channel', function () {
-  this.timeout(7 * 1e3);
+  this.timeout(9 * 1e3);
 
   describe('spec', () => {
     before(done => {
@@ -102,7 +102,7 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
     });
 
     it('expiry', done => {
-      const channel = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, 3000);
+      const channel = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, 4000);
 
       channel.expire('a');
       channel.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
@@ -126,7 +126,7 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
             });
           }, 3000);
         });
-      }, 2000);
+      }, 3000);
     });
 
   });
