@@ -1,7 +1,7 @@
 ﻿import { Observer, Subscriber } from 'spica';
 
-export function store<K extends string, V extends StoreChannelObject<K>>(name: string, config: StoreChannelConfig<K, V>): StoreChannel<K, V>;
-export interface StoreChannel<K extends string, V extends StoreChannelObject<K>> {
+export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
+  constructor(name: string, config: StoreChannelConfig<K, V>);
   readonly events: {
     readonly load: Observer<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', StoreChannelEvent.Type], StoreChannelEvent<K, V>, void>,
     readonly save: Observer<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', StoreChannelEvent.Type], StoreChannelEvent<K, V>, void>,
@@ -51,8 +51,8 @@ export namespace StoreChannelEvent {
   }
 }
 
-export function broadcast<V extends BroadcastChannelObject>(name: string, config: BroadcastChannelConfig<V>): BroadcastChannel<V>;
-export interface BroadcastChannel<V extends BroadcastChannelObject> {
+export class BroadcastChannel<V extends BroadcastChannelObject> {
+  constructor(name: string, config: BroadcastChannelConfig<V>);
   readonly events: {
     readonly send: Observer<never[] | [keyof V], BroadcastChannelEvent<V>, void>;
     readonly recv: Observer<never[] | [keyof V], BroadcastChannelEvent<V>, void>;

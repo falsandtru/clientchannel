@@ -2,6 +2,7 @@
 
 ## 0.12.0
 
+- Refine APIs.
 - Change resource control strategy.
 
 ## 0.11.2

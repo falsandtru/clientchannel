@@ -34,7 +34,7 @@ Data that assigned to a property of Linked object will be saved to the storage.
 When data was updated on other threads(tabs), own thread's property value will be updated automatically.
 
 ```ts
-import { store, StoreChannelObject } from 'clientchannel';
+import { StoreChannel, StoreChannelObject } from 'clientchannel';
 
 interface Schema extends StoreChannelObject<string> {
 }
@@ -54,7 +54,7 @@ class Schema {
 	}
 }
 
-const chan = store('domain', {
+const chan = new StoreChannel('domain', {
 	// delete linked records 3 days later since last access.
 	expiry: 3 * 24 * 60 * 60 * 1e3,
 	schema() {
@@ -75,7 +75,7 @@ Linked object provedes send/recv events.
 `recv` event will be emitted when linked object was updated by other threads(tabs).
 
 ```ts
-import { broadcast, BroadcastChannelObject } from 'clientchannel';
+import { BroadcastChannel, BroadcastChannelObject } from 'clientchannel';
 
 interface Schema extends BroadcastChannelObject {
 }
@@ -86,7 +86,7 @@ class Schema {
 	version = 0;
 }
 
-const chan = broadcast('version', {
+const chan = new BroadcastChannel('version', {
 	schema() {
 		return new Schema();
 	}

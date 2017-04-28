@@ -26,7 +26,8 @@
   var width = 400, height = 500;
   $(function () {
     // connect to database
-    var chan = require('clientchannel').store('demo', {
+    var StoreChannel = require('clientchannel').StoreChannel;
+    var chan = new StoreChannel('demo', {
       schema: function () {
         // define schema
         return {
@@ -38,6 +39,7 @@
         };
       },
       destroy: function (err) {
+        console.error(err);
         return err.name !== 'InvalidStateError';
       }
     });

@@ -1,13 +1,13 @@
-import { store, broadcast } from '../../index';
+import { StoreChannel, BroadcastChannel } from '../../index';
 
 describe('Interface: Package', function () {
   describe('clientchannel', function () {
-    it('store', function () {
-      assert(typeof store === 'function');
+    it('StoreChannel', function () {
+      assert(typeof StoreChannel === 'function');
     });
 
-    it('broadcast', function () {
-      assert(typeof broadcast === 'function');
+    it('BroadcastChannel', function () {
+      assert(typeof BroadcastChannel === 'function');
     });
 
   });

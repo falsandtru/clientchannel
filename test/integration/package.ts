@@ -1,5 +1,5 @@
-import { store, StoreChannelObject } from '../../index';
-import { broadcast, BroadcastChannelObject } from '../../index';
+import { StoreChannel, StoreChannelObject } from '../../index';
+import { BroadcastChannel, BroadcastChannelObject } from '../../index';
 
 describe('Integration: Package', function () {
   describe('usage', function () {
@@ -22,7 +22,7 @@ describe('Integration: Package', function () {
         }
       }
 
-      const chan = store('domain', {
+      const chan = new StoreChannel('domain', {
         // delete linked record 3 days later since last access.
         expiry: 3 * 24 * 60 * 60 * 1e3,
         schema() {
@@ -47,7 +47,7 @@ describe('Integration: Package', function () {
         version = 0;
       }
 
-      const chan = broadcast('version', {
+      const chan = new BroadcastChannel('version', {
         schema() {
           return new Schema();
         }
