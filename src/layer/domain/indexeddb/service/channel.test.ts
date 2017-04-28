@@ -35,9 +35,10 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       }
     }
 
-    it('singleton', () => {
-      assert(new Channel('test', () => new Value(0, '')) === new Channel('test', () => new Value(0, '')));
-      new Channel('test', () => new Value(0, '')).destroy();
+    it('resource', () => {
+      const chan = new Channel('test', () => new Value(0, ''));
+      assert.throws(() => new Channel('test', () => new Value(0, '')));
+      chan.destroy();
     });
 
     it('link', () => {

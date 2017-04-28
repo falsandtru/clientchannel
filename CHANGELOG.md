@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.0
+
+- Change resource control strategy.
+
 ## 0.11.2
 
 - Improve polyfillability.

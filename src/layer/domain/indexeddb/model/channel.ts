@@ -15,7 +15,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     destroy: (err: DOMException | DOMError, event: Event | null) => boolean,
     private readonly expiry: number
   ) {
-    if (cache.has(name)) return <ChannelStore<K, V>>cache.get(name)!;
+    if (cache.has(name)) throw new Error(`ClientChannel: IndexedDB: Specified channel ${name} is already created.`);
     void cache.set(name, this);
     void open(name, {
       make(db) {

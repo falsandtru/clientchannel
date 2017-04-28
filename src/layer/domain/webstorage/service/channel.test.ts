@@ -20,9 +20,10 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
       sessionStorage.removeItem('test');
     });
 
-    it('singleton', () => {
-      assert(new Channel('test', sessionStorage, factory) === new Channel('test', sessionStorage, factory));
-      new Channel('test', sessionStorage, factory).destroy();
+    it('resource', () => {
+      const chan = new Channel('test', sessionStorage, factory);
+      assert.throws(() => new Channel('test', sessionStorage, factory));
+      chan.destroy();
     });
 
     it('make/destroy', () => {
@@ -41,11 +42,11 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
 
     it('remake', () => {
       assert(sessionStorage.getItem('test') === null);
-      assert.equal(
-        new Channel('test', sessionStorage, factory).link(),
-        new Channel('test', sessionStorage, factory).link()
-      );
-      new Channel('test', sessionStorage, factory).destroy();
+      const chan = new Channel('test', sessionStorage, factory);
+      assert(chan.link() === chan.link());
+      chan.destroy();
+      new Channel('test', sessionStorage, factory);
+      chan.destroy();
       assert(sessionStorage.getItem('test') === null);
     });
 

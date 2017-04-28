@@ -16,7 +16,7 @@ export class Channel<V extends ChannelObject> implements BroadcastChannel<V> {
       delete(_name: string) { }
     }
   ) {
-    if (cache.has(name)) return <Channel<V>>cache.get(name)!;
+    if (cache.has(name)) throw new Error(`ClientChannel: WebStorage: Specified channel ${name} is already created.`);
     void cache.set(name, this);
     const source: V = <any>{
       [SCHEMA.KEY.NAME]: this.name,

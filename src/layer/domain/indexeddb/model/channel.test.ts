@@ -32,9 +32,10 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
       }
     }
 
-    it('singleton', () => {
-      assert(new ChannelStore('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity) === new ChannelStore('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity));
-      new ChannelStore('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity).destroy();
+    it('resource', () => {
+      const chan = new ChannelStore('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity);
+      assert.throws(() => new ChannelStore('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity));
+      chan.destroy();
     });
 
     it('recent', done => {
