@@ -25,7 +25,7 @@ export interface StoreChannelObject<K extends string> {
   readonly __id: number;
   readonly __key: K;
   readonly __date: number;
-  readonly __event: Observer<[BroadcastChannelEvent.Type] | [BroadcastChannelEvent.Type, keyof this | ''], BroadcastChannelEvent<this>, any>;
+  readonly __event: Observer<[StorageChannelEvent.Type] | [StorageChannelEvent.Type, keyof this | ''], StorageChannelEvent<this>, any>;
   readonly __transaction: (key: K, cb: () => any, complete: (err?: DOMException | DOMError | Error) => any) => void;
 }
 export interface StoreChannelObjectMetaData<K extends string> {
@@ -51,28 +51,28 @@ export namespace StoreChannelEvent {
   }
 }
 
-export class BroadcastChannel<V extends BroadcastChannelObject> {
-  constructor(name: string, config: BroadcastChannelConfig<V>);
+export class StorageChannel<V extends StorageChannelObject> {
+  constructor(name: string, config: StorageChannelConfig<V>);
   readonly events: {
-    readonly send: Observer<never[] | [keyof V], BroadcastChannelEvent<V>, void>;
-    readonly recv: Observer<never[] | [keyof V], BroadcastChannelEvent<V>, void>;
+    readonly send: Observer<never[] | [keyof V], StorageChannelEvent<V>, void>;
+    readonly recv: Observer<never[] | [keyof V], StorageChannelEvent<V>, void>;
   };
   link(): V;
   destroy(): void;
 }
-export interface BroadcastChannelConfig<V extends BroadcastChannelObject> {
+export interface StorageChannelConfig<V extends StorageChannelObject> {
   schema(): V;
 }
-export interface BroadcastChannelObject {
-  readonly __event: Observer<[BroadcastChannelEvent.Type] | [BroadcastChannelEvent.Type, keyof this], BroadcastChannelEvent<this>, any>;
+export interface StorageChannelObject {
+  readonly __event: Observer<[StorageChannelEvent.Type] | [StorageChannelEvent.Type, keyof this], StorageChannelEvent<this>, any>;
 }
-export interface BroadcastChannelEvent<V extends BroadcastChannelObject> {
-  readonly type: BroadcastChannelEvent.Type;
+export interface StorageChannelEvent<V extends StorageChannelObject> {
+  readonly type: StorageChannelEvent.Type;
   readonly attr: keyof V;
   readonly newValue: V[keyof V];
   readonly oldValue: V[keyof V];
 }
-export namespace BroadcastChannelEvent {
+export namespace StorageChannelEvent {
   export type Type
     = Type.Send
     | Type.Recv;

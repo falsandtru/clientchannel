@@ -1,12 +1,12 @@
-import { BroadcastChannel, BroadcastChannelObject as ChannelObject, BroadcastChannelEvent } from '../../../../../';
+import { StorageChannel as IStorageChannel, StorageChannelObject as ChannelObject, StorageChannelEvent } from '../../../../../';
 import { Observable } from 'spica';
 import { SCHEMA, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { localStorage, sessionStorage, eventstream } from '../../../infrastructure/webstorage/api';
 import { StorageLike, fakeStorage } from '../model/storage';
 
-const cache = new Map<string, Channel<ChannelObject>>();
+const cache = new Map<string, StorageChannel<ChannelObject>>();
 
-export class Channel<V extends ChannelObject> implements BroadcastChannel<V> {
+export class StorageChannel<V extends ChannelObject> implements IStorageChannel<V> {
   constructor(
     public readonly name: string,
     private readonly storage: StorageLike = sessionStorage || fakeStorage,
@@ -20,7 +20,7 @@ export class Channel<V extends ChannelObject> implements BroadcastChannel<V> {
     void cache.set(name, this);
     const source: V = <any>{
       [SCHEMA.KEY.NAME]: this.name,
-      [SCHEMA.EVENT.NAME]: new Observable<[BroadcastChannelEvent.Type] | [BroadcastChannelEvent.Type, keyof V], Channel.Event<V>, void>(),
+      [SCHEMA.EVENT.NAME]: new Observable<[StorageChannelEvent.Type] | [StorageChannelEvent.Type, keyof V], StorageChannel.Event<V>, void>(),
       ...<Object>parse<V>(this.storage.getItem(this.name))
     };
     this.link_ = build(source, this.factory, (attr: keyof V, newValue, oldValue) => {
@@ -29,8 +29,8 @@ export class Channel<V extends ChannelObject> implements BroadcastChannel<V> {
         acc[attr] = source[attr];
         return acc;
       }, {})));
-      const event = new Channel.Event<V>(Channel.Event.Type.send, attr, newValue, oldValue);
-      void (<Observable<[BroadcastChannelEvent.Type, keyof V], Channel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
+      const event = new StorageChannel.Event<V>(StorageChannel.Event.Type.send, attr, newValue, oldValue);
+      void (<Observable<[StorageChannelEvent.Type, keyof V], StorageChannel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
       void this.events.send.emit([event.attr], event);
     });
     const subscriber = ({newValue}: StorageEvent): void => {
@@ -43,8 +43,8 @@ export class Channel<V extends ChannelObject> implements BroadcastChannel<V> {
           const newVal = item[attr];
           if (newVal === oldVal) return;
           source[attr] = newVal;
-          const event = new Channel.Event<V>(Channel.Event.Type.recv, attr, newVal, oldVal);
-          void (<Observable<[BroadcastChannelEvent.Type, keyof V], Channel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
+          const event = new StorageChannel.Event<V>(StorageChannel.Event.Type.recv, attr, newVal, oldVal);
+          void (<Observable<[StorageChannelEvent.Type, keyof V], StorageChannel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
           void this.events.recv.emit([event.attr], event);
         }, void 0);
     };
@@ -54,8 +54,8 @@ export class Channel<V extends ChannelObject> implements BroadcastChannel<V> {
   }
   private readonly mode = this.storage === localStorage ? 'local' : 'session';
   public readonly events = {
-    send: new Observable<never[] | [keyof V], Channel.Event<V>, void>(),
-    recv: new Observable<never[] | [keyof V], Channel.Event<V>, void>()
+    send: new Observable<never[] | [keyof V], StorageChannel.Event<V>, void>(),
+    recv: new Observable<never[] | [keyof V], StorageChannel.Event<V>, void>()
   };
   private readonly link_: V;
   public link(): V {
@@ -68,8 +68,8 @@ export class Channel<V extends ChannelObject> implements BroadcastChannel<V> {
     void cache.delete(this.name);
   }
 }
-export namespace Channel {
-  export class Event<V extends ChannelObject> implements BroadcastChannelEvent<V> {
+export namespace StorageChannel {
+  export class Event<V extends ChannelObject> implements StorageChannelEvent<V> {
     constructor(
       public readonly type: Event.Type,
       public readonly attr: keyof V,
@@ -82,10 +82,10 @@ export namespace Channel {
     }
   }
   export namespace Event {
-    export type Type = BroadcastChannelEvent.Type;
+    export type Type = StorageChannelEvent.Type;
     export namespace Type {
-      export const send: BroadcastChannelEvent.Type.Send = 'send';
-      export const recv: BroadcastChannelEvent.Type.Recv = 'recv';
+      export const send: StorageChannelEvent.Type.Send = 'send';
+      export const recv: StorageChannelEvent.Type.Recv = 'recv';
     }
   }
 }

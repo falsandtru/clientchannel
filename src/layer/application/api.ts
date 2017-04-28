@@ -1,11 +1,11 @@
 import { StoreChannelObject, StoreChannelConfig } from '../../../';
-import { BroadcastChannelObject, BroadcastChannelConfig } from '../../../';
-import { StoreChannel as IDBChannel } from '../domain/indexeddb/api';
-import { BroadcastChannel as WebStorage, localStorage } from '../domain/webstorage/api';
+import { StorageChannelObject, StorageChannelConfig } from '../../../';
+import { StoreChannel as BaseStoreChannel } from '../domain/indexeddb/api';
+import { StorageChannel as BaseStorageChannel, localStorage } from '../domain/webstorage/api';
 export * from '../domain/indexeddb/api';
 export * from '../domain/webstorage/api';
 
-export class StoreChannel<K extends string, V extends StoreChannelObject<K>> extends IDBChannel<K, V> {
+export class StoreChannel<K extends string, V extends StoreChannelObject<K>> extends BaseStoreChannel<K, V> {
   constructor(
     name: string,
     {
@@ -18,12 +18,12 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
   }
 }
 
-export class BroadcastChannel<V extends BroadcastChannelObject> extends WebStorage<V> {
+export class StorageChannel<V extends StorageChannelObject> extends BaseStorageChannel<V> {
   constructor(
     name: string,
     {
       schema
-    }: BroadcastChannelConfig<V>
+    }: StorageChannelConfig<V>
   ) {
     super(name, localStorage, schema);
   }

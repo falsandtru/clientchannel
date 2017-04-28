@@ -75,9 +75,9 @@ Linked object provedes send/recv events.
 `recv` event will be emitted when linked object was updated by other threads(tabs).
 
 ```ts
-import { BroadcastChannel, BroadcastChannelObject } from 'clientchannel';
+import { StorageChannel, StorageChannelObject } from 'clientchannel';
 
-interface Schema extends BroadcastChannelObject {
+interface Schema extends StorageChannelObject {
 }
 class Schema {
 	get event() {
@@ -86,7 +86,7 @@ class Schema {
 	version = 0;
 }
 
-const chan = new BroadcastChannel('version', {
+const chan = new StorageChannel('version', {
 	schema() {
 		return new Schema();
 	}

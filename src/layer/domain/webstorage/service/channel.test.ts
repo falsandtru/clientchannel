@@ -1,9 +1,9 @@
-import { BroadcastChannelObject } from '../../../../../';
-import { Channel } from './channel';
+import { StorageChannelObject } from '../../../../../';
+import { StorageChannel } from './channel';
 
 describe('Unit: layers/domain/webstorage/service/channel', () => {
   describe('spec', () => {
-    interface DAO extends BroadcastChannelObject {
+    interface DAO extends StorageChannelObject {
     }
     class DAO {
       n = 0;
@@ -21,14 +21,14 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
     });
 
     it('resource', () => {
-      const chan = new Channel('test', sessionStorage, factory);
-      assert.throws(() => new Channel('test', sessionStorage, factory));
+      const chan = new StorageChannel('test', sessionStorage, factory);
+      assert.throws(() => new StorageChannel('test', sessionStorage, factory));
       chan.destroy();
     });
 
     it('make/destroy', () => {
       assert(sessionStorage.getItem('test') === null);
-      const chan = new Channel('test', sessionStorage, factory);
+      const chan = new StorageChannel('test', sessionStorage, factory);
       const dao = chan.link();
       assert(dao.n === 0);
       assert(sessionStorage.getItem('test') === null);
@@ -42,16 +42,16 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
 
     it('remake', () => {
       assert(sessionStorage.getItem('test') === null);
-      const chan = new Channel('test', sessionStorage, factory);
+      const chan = new StorageChannel('test', sessionStorage, factory);
       assert(chan.link() === chan.link());
       chan.destroy();
-      new Channel('test', sessionStorage, factory);
+      new StorageChannel('test', sessionStorage, factory);
       chan.destroy();
       assert(sessionStorage.getItem('test') === null);
     });
 
     it('update', () => {
-      const chan = new Channel('test', sessionStorage, factory);
+      const chan = new StorageChannel('test', sessionStorage, factory);
       const dao = chan.link();
       assert(dao.n === 0);
       dao.n = 1;

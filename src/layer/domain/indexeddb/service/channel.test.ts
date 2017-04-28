@@ -1,5 +1,5 @@
 import { StoreChannelObject } from '../../../../../';
-import { Channel } from './channel';
+import { StoreChannel } from './channel';
 import { listen, destroy, event, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { adjust } from '../../../data/store/event';
 
@@ -36,13 +36,13 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     }
 
     it('resource', () => {
-      const chan = new Channel('test', () => new Value(0, ''));
-      assert.throws(() => new Channel('test', () => new Value(0, '')));
+      const chan = new StoreChannel('test', () => new Value(0, ''));
+      assert.throws(() => new StoreChannel('test', () => new Value(0, '')));
       chan.destroy();
     });
 
     it('link', () => {
-      const chan = new Channel('test', () => new Value(0, ''));
+      const chan = new StoreChannel('test', () => new Value(0, ''));
       const dao = chan.link('a');
 
       assert(dao === chan.link('a'));
@@ -56,7 +56,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     });
 
     it('send', done => {
-      const chan = new Channel('test', () => new Value(0, ''));
+      const chan = new StoreChannel('test', () => new Value(0, ''));
       const dao = chan.link('a');
 
       dao.__event.once(['send', 'n'], ev => {
@@ -85,12 +85,12 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     });
 
     it('recv', done => {
-      const chan = new Channel('test', () => new Value(0, ''));
+      const chan = new StoreChannel('test', () => new Value(0, ''));
       const dao = chan.link('a');
 
       assert(dao.n === 0);
       listen('test')(db => {
-        db.transaction('data', 'readwrite').objectStore('data').put(adjust(new Channel.Record('a', { n: 1 }))).onsuccess = () => {
+        db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { n: 1 }))).onsuccess = () => {
           chan['schema'].data.fetch('a');
           dao.__event.once(['recv', 'n'], () => {
             assert(dao.__id === 1);

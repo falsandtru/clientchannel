@@ -1,5 +1,5 @@
 import { StoreChannel, StoreChannelObject } from '../../index';
-import { BroadcastChannel, BroadcastChannelObject } from '../../index';
+import { StorageChannel, StorageChannelObject } from '../../index';
 
 describe('Integration: Package', function () {
   describe('usage', function () {
@@ -38,7 +38,7 @@ describe('Integration: Package', function () {
     });
 
     it('communicate', () => {
-      interface Schema extends BroadcastChannelObject {
+      interface Schema extends StorageChannelObject {
       }
       class Schema {
         get event() {
@@ -47,7 +47,7 @@ describe('Integration: Package', function () {
         version = 0;
       }
 
-      const chan = new BroadcastChannel('version', {
+      const chan = new StorageChannel('version', {
         schema() {
           return new Schema();
         }

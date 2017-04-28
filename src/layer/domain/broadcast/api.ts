@@ -1,7 +1,6 @@
 import { localStorage, eventstream } from '../../infrastructure/webstorage/api';
-import { BroadcastChannel as BC } from '../webstorage/api';
 
-export class Channel<M extends string> {
+class Channel<M extends string> {
   constructor(
     public name: string
   ) {
@@ -17,9 +16,7 @@ export class Channel<M extends string> {
   public close(): void {
   }
 }
-export namespace Channel {
-  export import Event = BC.Event;
-}
+export { Channel as BroadcastChannel };
 
 class Broadcast<M extends string> implements Channel<M> {
   constructor(
