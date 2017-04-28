@@ -1,4 +1,4 @@
-/*! clientchannel v0.11.0 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.11.1 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -46,7 +46,7 @@ require = function e(t, n, r) {
             Object.defineProperty(exports, '__esModule', { value: true });
             __export(require('./layer/interface/api'));
         },
-        { './layer/interface/api': 31 }
+        { './layer/interface/api': 29 }
     ],
     4: [
         function (require, module, exports) {
@@ -76,7 +76,7 @@ require = function e(t, n, r) {
         },
         {
             '../domain/indexeddb/api': 13,
-            '../domain/webstorage/api': 20
+            '../domain/webstorage/api': 19
         }
     ],
     5: [
@@ -899,8 +899,8 @@ require = function e(t, n, r) {
             exports.compose = compose;
         },
         {
-            '../../../lib/noop': 32,
-            '../../infrastructure/indexeddb/api': 24,
+            '../../../lib/noop': 30,
+            '../../infrastructure/indexeddb/api': 22,
             '../constraint/types': 5,
             '../constraint/values': 6,
             '../schema/event': 7,
@@ -1036,8 +1036,8 @@ require = function e(t, n, r) {
             exports.KeyValueStore = KeyValueStore;
         },
         {
-            '../../../lib/noop': 32,
-            '../../infrastructure/indexeddb/api': 24,
+            '../../../lib/noop': 30,
+            '../../infrastructure/indexeddb/api': 22,
             'spica': undefined
         }
     ],
@@ -1095,16 +1095,26 @@ require = function e(t, n, r) {
             }();
             var Storage = function () {
                 function Storage(name) {
+                    var _this = this;
                     this.name = name;
                     this.storage = api_1.localStorage;
                     this.listeners = new Set();
+                    void self.addEventListener('unload', function () {
+                        return void _this.storage.removeItem(_this.name);
+                    }, true);
                 }
                 Storage.prototype.listen = function (listener) {
                     var _this = this;
                     void this.listeners.add(listener);
-                    void api_1.events.localStorage.on(['storage'], listener);
+                    void api_1.eventstream.on([
+                        'local',
+                        this.name
+                    ], listener);
                     return function () {
-                        return void _this.listeners.delete(listener), void api_1.events.localStorage.off(['storage'], listener);
+                        return void _this.listeners.delete(listener), void api_1.eventstream.off([
+                            'local',
+                            _this.name
+                        ], listener);
                     };
                 };
                 Storage.prototype.post = function (message) {
@@ -1112,8 +1122,12 @@ require = function e(t, n, r) {
                     void this.storage.setItem(this.name, message);
                 };
                 Storage.prototype.close = function () {
+                    var _this = this;
                     void this.listeners.forEach(function (listener) {
-                        return void api_1.events.localStorage.off(['storage'], listener);
+                        return void api_1.eventstream.off([
+                            'local',
+                            _this.name
+                        ], listener);
                     });
                     void this.storage.removeItem(this.name);
                 };
@@ -1121,8 +1135,8 @@ require = function e(t, n, r) {
             }();
         },
         {
-            '../../infrastructure/webstorage/api': 28,
-            '../webstorage/api': 20
+            '../../infrastructure/webstorage/api': 26,
+            '../webstorage/api': 19
         }
     ],
     11: [
@@ -1227,7 +1241,7 @@ require = function e(t, n, r) {
             exports.build = build;
         },
         {
-            '../../../../lib/noop': 32,
+            '../../../../lib/noop': 30,
             '../../../data/constraint/values': 6
         }
     ],
@@ -1237,14 +1251,8 @@ require = function e(t, n, r) {
             Object.defineProperty(exports, '__esModule', { value: true });
             var channel_1 = require('./service/channel');
             exports.StoreChannel = channel_1.Channel;
-            var event_1 = require('./service/event');
-            exports.event = event_1.event;
-            exports.IDBEventType = event_1.IDBEventType;
         },
-        {
-            './service/channel': 18,
-            './service/event': 19
-        }
+        { './service/channel': 18 }
     ],
     14: [
         function (require, module, exports) {
@@ -1393,8 +1401,8 @@ require = function e(t, n, r) {
             }();
         },
         {
-            '../../../../lib/noop': 32,
-            '../../../infrastructure/indexeddb/api': 24,
+            '../../../../lib/noop': 30,
+            '../../../infrastructure/indexeddb/api': 22,
             './channel/access': 15,
             './channel/data': 16,
             './channel/expiry': 17,
@@ -1634,7 +1642,7 @@ require = function e(t, n, r) {
         {
             '../../../../data/store/event': 8,
             '../../../../data/store/key-value': 9,
-            '../../../../infrastructure/indexeddb/api': 24
+            '../../../../infrastructure/indexeddb/api': 22
         }
     ],
     18: [
@@ -1802,32 +1810,18 @@ require = function e(t, n, r) {
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            var api_1 = require('../../../infrastructure/indexeddb/api');
-            exports.event = api_1.event;
-            exports.IDBEventType = api_1.IDBEventType;
-        },
-        { '../../../infrastructure/indexeddb/api': 24 }
-    ],
-    20: [
-        function (require, module, exports) {
-            'use strict';
-            Object.defineProperty(exports, '__esModule', { value: true });
             var channel_1 = require('./service/channel');
             exports.BroadcastChannel = channel_1.Channel;
-            var event_1 = require('./service/event');
-            exports.events = event_1.events;
             var api_1 = require('../../infrastructure/webstorage/api');
             exports.localStorage = api_1.localStorage;
             exports.sessionStorage = api_1.sessionStorage;
-            exports.supportWebStorage = api_1.supportWebStorage;
         },
         {
-            '../../infrastructure/webstorage/api': 28,
-            './service/channel': 22,
-            './service/event': 23
+            '../../infrastructure/webstorage/api': 26,
+            './service/channel': 21
         }
     ],
-    21: [
+    20: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1860,7 +1854,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    22: [
+    21: [
         function (require, module, exports) {
             'use strict';
             var __assign = this && this.__assign || Object.assign || function (t) {
@@ -1875,7 +1869,6 @@ require = function e(t, n, r) {
             Object.defineProperty(exports, '__esModule', { value: true });
             var spica_1 = require('spica');
             var api_1 = require('../../dao/api');
-            var event_1 = require('../service/event');
             var api_2 = require('../../../infrastructure/webstorage/api');
             var storage_1 = require('../model/storage');
             var cache = new Map();
@@ -1897,7 +1890,7 @@ require = function e(t, n, r) {
                     this.storage = storage;
                     this.factory = factory;
                     this.log = log;
-                    this.eventSource = this.storage === api_2.localStorage ? event_1.events.localStorage : event_1.events.sessionStorage;
+                    this.mode = this.storage === api_2.localStorage ? 'local' : 'session';
                     this.events = {
                         send: new spica_1.Observable(),
                         recv: new spica_1.Observable()
@@ -1936,7 +1929,10 @@ require = function e(t, n, r) {
                             void _this.events.recv.emit([event.attr], event);
                         }, void 0);
                     };
-                    void this.eventSource.on([this.name], subscriber);
+                    void api_2.eventstream.on([
+                        this.mode,
+                        this.name
+                    ], subscriber);
                     void this.log.update(this.name);
                     void Object.freeze(this);
                     var _a;
@@ -1945,7 +1941,10 @@ require = function e(t, n, r) {
                     return this.link_;
                 };
                 Channel.prototype.destroy = function () {
-                    void this.eventSource.off([this.name]);
+                    void api_2.eventstream.off([
+                        this.mode,
+                        this.name
+                    ]);
                     void this.storage.removeItem(this.name);
                     void this.log.delete(this.name);
                     void cache.delete(this.name);
@@ -1983,37 +1982,13 @@ require = function e(t, n, r) {
             }
         },
         {
-            '../../../infrastructure/webstorage/api': 28,
+            '../../../infrastructure/webstorage/api': 26,
             '../../dao/api': 11,
-            '../model/storage': 21,
-            '../service/event': 23,
+            '../model/storage': 20,
             'spica': undefined
         }
     ],
-    23: [
-        function (require, module, exports) {
-            'use strict';
-            Object.defineProperty(exports, '__esModule', { value: true });
-            var spica_1 = require('spica');
-            var api_1 = require('../../../infrastructure/webstorage/api');
-            exports.events = {
-                localStorage: subscribe(api_1.events.localStorage),
-                sessionStorage: subscribe(api_1.events.sessionStorage)
-            };
-            function subscribe(source) {
-                var observer = new spica_1.Observable();
-                void source.on(['storage'], function (event) {
-                    return void observer.emit([event.key], event);
-                });
-                return observer;
-            }
-        },
-        {
-            '../../../infrastructure/webstorage/api': 28,
-            'spica': undefined
-        }
-    ],
-    24: [
+    22: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2033,12 +2008,12 @@ require = function e(t, n, r) {
             exports.IDBEventType = event_1.IDBEventType;
         },
         {
-            './model/access': 25,
-            './model/event': 26,
-            './module/global': 27
+            './model/access': 23,
+            './model/event': 24,
+            './module/global': 25
         }
     ],
-    25: [
+    23: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2424,12 +2399,12 @@ require = function e(t, n, r) {
             }
         },
         {
-            '../module/global': 27,
-            './event': 26,
+            '../module/global': 25,
+            './event': 24,
             'spica': undefined
         }
     ],
-    26: [
+    24: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2456,7 +2431,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    27: [
+    25: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2477,57 +2452,59 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    28: [
+    26: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var global_1 = require('./module/global');
             exports.localStorage = global_1.localStorage;
             exports.sessionStorage = global_1.sessionStorage;
-            exports.supportWebStorage = global_1.supportWebStorage;
             var event_1 = require('./model/event');
-            exports.events = event_1.events;
+            exports.eventstream = event_1.eventstream;
         },
         {
-            './model/event': 29,
-            './module/global': 30
+            './model/event': 27,
+            './module/global': 28
         }
     ],
-    29: [
+    27: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var spica_1 = require('spica');
             var global_1 = require('../module/global');
-            var storageEvents = {
-                localStorage: new spica_1.Observable(),
-                sessionStorage: new spica_1.Observable()
-            };
-            exports.events = storageEvents;
+            var storageEventStream = new spica_1.Observable();
+            exports.eventstream = storageEventStream;
             void self.addEventListener('storage', function (event) {
                 switch (event.storageArea) {
                 case global_1.localStorage:
-                    return void storageEvents.localStorage.emit(['storage'], event);
+                    return void storageEventStream.emit(typeof event.key === 'string' ? [
+                        'local',
+                        event.key
+                    ] : ['local'], event);
                 case global_1.sessionStorage:
-                    return void storageEvents.sessionStorage.emit(['storage'], event);
+                    return void storageEventStream.emit(typeof event.key === 'string' ? [
+                        'session',
+                        event.key
+                    ] : ['session'], event);
                 default:
                     return;
                 }
             });
         },
         {
-            '../module/global': 30,
+            '../module/global': 28,
             'spica': undefined
         }
     ],
-    30: [
+    28: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var spica_1 = require('spica');
-            exports.supportWebStorage = function () {
+            var supportsWebStorage = function () {
                 try {
-                    if (!window.navigator.cookieEnabled)
+                    if (!self.navigator.cookieEnabled)
                         throw void 0;
                     var key = 'clientchannel#' + spica_1.uuid();
                     void self.sessionStorage.setItem(key, key);
@@ -2539,12 +2516,12 @@ require = function e(t, n, r) {
                     return false;
                 }
             }();
-            exports.localStorage = exports.supportWebStorage ? self.localStorage : void 0;
-            exports.sessionStorage = exports.supportWebStorage ? self.sessionStorage : void 0;
+            exports.localStorage = supportsWebStorage ? self.localStorage : void 0;
+            exports.sessionStorage = supportsWebStorage ? self.sessionStorage : void 0;
         },
         { 'spica': undefined }
     ],
-    31: [
+    29: [
         function (require, module, exports) {
             'use strict';
             function __export(m) {
@@ -2557,7 +2534,7 @@ require = function e(t, n, r) {
         },
         { '../application/api': 4 }
     ],
-    32: [
+    30: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
