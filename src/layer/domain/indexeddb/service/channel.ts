@@ -86,22 +86,20 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
             this.sources.set(key, assign<V>({}, this.get(key))).get(key)!,
             {
               __meta: {
-                get: () => this.meta(key)
+                get: () =>
+                  this.meta(key)
               },
               __id: {
-                get(this: ChannelObject<K>): number {
-                  return this.__meta.id;
-                }
+                get: () =>
+                  this.meta(key).id
               },
               __key: {
-                get(this: ChannelObject<K>): string {
-                  return this.__meta.key;
-                }
+                get: () =>
+                  this.meta(key).key
               },
               __date: {
-                get(this: ChannelObject<K>): number {
-                  return this.__meta.date;
-                }
+                get: () =>
+                  this.meta(key).date
               },
               __event: {
                 value: new Observable<[StorageChannel.Event.Type], StorageChannel.Event<V>, any>()
