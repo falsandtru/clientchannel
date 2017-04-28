@@ -1,4 +1,4 @@
-/*! clientchannel v0.11.1 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.11.2 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -157,7 +157,7 @@ require = function e(t, n, r) {
                     this.key = key;
                     this.value = value;
                     this.date = date;
-                    if (typeof this.id === 'number' && this.id >= 0 === false || !Number.isSafeInteger(this.id))
+                    if (typeof this.id === 'number' && this.id >= 0 === false || !Number.isInteger(this.id))
                         throw new TypeError('ClientChannel: EventRecord: Invalid event id: ' + this.id);
                     if (typeof this.type !== 'string')
                         throw new TypeError('ClientChannel: EventRecord: Invalid event type: ' + this.type);
