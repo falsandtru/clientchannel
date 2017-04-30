@@ -1,5 +1,5 @@
 import { Observable } from 'spica';
-import { listen, Config, IDBTransactionMode, IDBCursorDirection } from '../../infrastructure/indexeddb/api';
+import { listen, Config } from '../../infrastructure/indexeddb/api';
 import { noop } from '../../../lib/noop';
 
 export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
@@ -30,7 +30,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
   public get(key: K, cb: (value: V | void, error: DOMException | DOMError) => any = noop): V | undefined {
     void this.events.access.emit([key], [[key], KeyValueStore.EventType.get]);
     void listen(this.database)(db => {
-      const tx = db.transaction(this.name, IDBTransactionMode.readonly);
+      const tx = db.transaction(this.name, 'readonly');
       const req = this.index
         ? tx
           .objectStore(this.name)
@@ -57,7 +57,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     void this.events.access.emit([key], [[key], KeyValueStore.EventType.put]);
     void listen(this.database)(db => {
       if (!this.cache.has(key)) return;
-      const tx = db.transaction(this.name, IDBTransactionMode.readwrite);
+      const tx = db.transaction(this.name, 'readwrite');
       this.index
         ? tx
           .objectStore(this.name)
@@ -73,7 +73,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     void this.cache.delete(key);
     void this.events.access.emit([key], [[key], KeyValueStore.EventType.delete]);
     void listen(this.database)(db => {
-      const tx = db.transaction(this.name, IDBTransactionMode.readwrite);
+      const tx = db.transaction(this.name, 'readwrite');
       void tx
         .objectStore(this.name)
         .delete(key);

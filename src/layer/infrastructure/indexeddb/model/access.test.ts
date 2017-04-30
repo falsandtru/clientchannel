@@ -1,6 +1,5 @@
 import { Config, event, open, listen, close, destroy } from './access';
 import { IDBEventType } from './event';
-import { IDBTransactionMode } from '../module/global';
 
 describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
   describe('database', function () {
@@ -35,7 +34,7 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
       open('test', config);
       listen('test')
         (db => {
-          db.transaction('test', IDBTransactionMode.readonly).objectStore('test').count().onsuccess = event => {
+          db.transaction('test', 'readonly').objectStore('test').count().onsuccess = event => {
             assert(event.target['result'] === 0);
             done();
           };
@@ -120,21 +119,21 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
       open('test', config);
       listen('test')
         (db => {
-          db.transaction('test', IDBTransactionMode.readwrite).objectStore('test').count().onsuccess = () => {
+          db.transaction('test', 'readwrite').objectStore('test').count().onsuccess = () => {
             assert(++cnt === 1);
           };
         });
       open('test', config);
       listen('test')
         (db => {
-          db.transaction('test', IDBTransactionMode.readwrite).objectStore('test').count().onsuccess = () => {
+          db.transaction('test', 'readwrite').objectStore('test').count().onsuccess = () => {
             assert(++cnt === 2);
           };
         });
       open('test', config);
       listen('test')
         (db => {
-          db.transaction('test', IDBTransactionMode.readwrite).objectStore('test').count().onsuccess = () => {
+          db.transaction('test', 'readwrite').objectStore('test').count().onsuccess = () => {
             assert(++cnt === 3);
             event
               .once(['test', IDBEventType.disconnect], () => done());

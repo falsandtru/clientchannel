@@ -1,5 +1,5 @@
 import { Observable, Cancelable, Tick, sqid, assign, concat } from 'spica';
-import { listen, Config, IDBTransactionMode, IDBCursorDirection, IDBKeyRange } from '../../infrastructure/indexeddb/api';
+import { listen, Config, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { IdNumber } from '../constraint/types';
 import { isValidPropertyName, isValidPropertyValue } from '../constraint/values';
 import { EventRecordFields, EventType, EventValue, UnsavedEventRecord, SavedEventRecord } from '../schema/event';
@@ -141,11 +141,11 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     const savedEvents: SavedEventRecord<K, V>[] = [];
     return void listen(this.database)(db => {
       const tx = db
-        .transaction(this.name, after ? IDBTransactionMode.readwrite : IDBTransactionMode.readonly);
+        .transaction(this.name, after ? 'readwrite' : 'readonly');
       const req = tx
         .objectStore(this.name)
         .index(EventRecordFields.key)
-        .openCursor(key, IDBCursorDirection.prev);
+        .openCursor(key, 'prev');
       const unbind = () => {
         req.onsuccess = tx.onerror = tx.onabort = <any>null;
       };
@@ -250,7 +250,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   }
   public add(event: UnsavedEventRecord<K, V>, tx: IDBTransaction | void = this.tx): void {
     assert(event.type === EventStore.Event.Type.snapshot ? tx : true);
-    assert(!tx || tx.db.name === this.database && tx.mode === IDBTransactionMode.readwrite)
+    assert(!tx || tx.db.name === this.database && tx.mode === 'readwrite')
     void this.events_.access
       .emit([event.key, event.attr, event.type], new EventStore.InternalEvent(event.type, IdNumber(0), event.key, event.attr));
     if (!(event instanceof UnsavedEventRecord)) throw new Error(`ClientChannel: Cannot add a saved event: ${JSON.stringify(event)}`);
@@ -322,7 +322,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         void listen(this.database)(db => (
           void cancelable.listeners.clear(),
           void cancelable.maybe(db)
-            .fmap(db => void cont(db.transaction(this.name, IDBTransactionMode.readwrite)))
+            .fmap(db => void cont(db.transaction(this.name, 'readwrite')))
             .extract(() => void 0)))));
     })
       .catch(() =>
@@ -335,11 +335,11 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   private snapshot(key: K): void {
     return void listen(this.database)(db => {
       if (!this.syncState.get(key)) return;
-      const tx = db.transaction(this.name, IDBTransactionMode.readwrite);
+      const tx = db.transaction(this.name, 'readwrite');
       const store = tx.objectStore(this.name);
       const req = store
         .index(EventRecordFields.key)
-        .openCursor(key, IDBCursorDirection.prev);
+        .openCursor(key, 'prev');
       const savedEvents: SavedEventRecord<K, V>[] = [];
       req.onsuccess = (): void => {
         const cursor: IDBCursorWithValue | null = req.result;
@@ -379,8 +379,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     return void this.cursor(
       key ? IDBKeyRange.bound(key, key) : IDBKeyRange.upperBound(Infinity),
       key ? EventRecordFields.key : EventRecordFields.date,
-      IDBCursorDirection.prev,
-      IDBTransactionMode.readwrite,
+      'prev',
+      'readwrite',
       cursor => {
         if (!cursor) {
           return void removedEvents

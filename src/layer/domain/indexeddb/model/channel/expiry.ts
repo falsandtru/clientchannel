@@ -1,5 +1,5 @@
 import { Observer } from 'spica';
-import { event, IDBEventType, Config, IDBCursorDirection, IDBTransactionMode } from '../../../../infrastructure/indexeddb/api';
+import { event, IDBEventType, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/store/key-value';
 import { EventStore } from '../../../../data/store/event';
 
@@ -59,7 +59,7 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
       scheduled = date;
       timer = setTimeout(() => {
         scheduled = Infinity;
-        void this.cursor(null, ExpiryStore.fields.expiry, IDBCursorDirection.next, IDBTransactionMode.readonly, cursor => {
+        void this.cursor(null, ExpiryStore.fields.expiry, 'next', 'readonly', cursor => {
           if (!cursor) return;
           const record: ExpiryRecord<K> = cursor.value;
           if (record.expiry > Date.now()) return void schedule(record.expiry);

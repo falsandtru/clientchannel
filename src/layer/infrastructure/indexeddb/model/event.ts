@@ -7,13 +7,13 @@ export type IDBEventType
   | typeof IDBEventType.crash
   | typeof IDBEventType.destroy;
 export namespace IDBEventType {
-  export const connect: 'connect' = 'connect';
-  export const disconnect: 'disconnect' = 'disconnect';
-  export const block: 'block' = 'block';
-  export const error: 'error' = 'error';
-  export const abort: 'abort' = 'abort';
-  export const crash: 'crash' = 'crash';
-  export const destroy: 'destroy' = 'destroy';
+  export const connect = 'connect';
+  export const disconnect = 'disconnect';
+  export const block = 'block';
+  export const error = 'error';
+  export const abort = 'abort';
+  export const crash = 'crash';
+  export const destroy = 'destroy';
 }
 
 export class IDBEvent {

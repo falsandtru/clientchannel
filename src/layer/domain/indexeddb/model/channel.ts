@@ -1,6 +1,6 @@
 import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../';
 import { Observable } from 'spica';
-import { open, close, destroy, event, IDBEventType, IDBTransactionMode, IDBCursorDirection } from '../../../infrastructure/indexeddb/api';
+import { open, close, destroy, event, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { DataStore } from './channel/data';
 import { AccessStore } from './channel/access';
 import { ExpiryStore } from './channel/expiry';
@@ -77,8 +77,8 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     return void this.schema.access.cursor(
       null,
       AccessStore.fields.date,
-      IDBCursorDirection.prev,
-      IDBTransactionMode.readonly,
+      'prev',
+      'readonly',
       (cursor, err): void => {
         if (!cursor) return void cb(keys, err);
         if (--limit < 0) return;

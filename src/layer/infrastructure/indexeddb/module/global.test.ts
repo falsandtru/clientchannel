@@ -1,4 +1,4 @@
-import { indexedDB, IDBKeyRange, IDBTransactionMode } from './global';
+import { indexedDB, IDBKeyRange } from './global';
 
 describe('Unit: layers/infrastructure/indexeddb/module/global', () => {
   describe('indexedDB', () => {
@@ -11,17 +11,6 @@ describe('Unit: layers/infrastructure/indexeddb/module/global', () => {
   describe('IDBKeyRange', () => {
     it('exist', () => {
       assert(IDBKeyRange);
-    });
-
-  });
-
-  describe('IDBTransactionMode', () => {
-    it('readonly', () => {
-      assert(IDBTransactionMode.readonly === 'readonly');
-    });
-
-    it('readwrite', () => {
-      assert(IDBTransactionMode.readwrite === 'readwrite');
     });
 
   });
