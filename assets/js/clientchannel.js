@@ -1,4 +1,4 @@
-/*! clientchannel v0.11.2 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.12.0 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -51,6 +51,22 @@ require = function e(t, n, r) {
     4: [
         function (require, module, exports) {
             'use strict';
+            var __extends = this && this.__extends || function () {
+                var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
+                    d.__proto__ = b;
+                } || function (d, b) {
+                    for (var p in b)
+                        if (b.hasOwnProperty(p))
+                            d[p] = b[p];
+                };
+                return function (d, b) {
+                    extendStatics(d, b);
+                    function __() {
+                        this.constructor = d;
+                    }
+                    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+                };
+            }();
             function __export(m) {
                 for (var p in m)
                     if (!exports.hasOwnProperty(p))
@@ -61,18 +77,26 @@ require = function e(t, n, r) {
             var api_2 = require('../domain/webstorage/api');
             __export(require('../domain/indexeddb/api'));
             __export(require('../domain/webstorage/api'));
-            function store(name, config) {
-                var schema = config.schema, _a = config.destroy, destroy = _a === void 0 ? function () {
-                        return true;
-                    } : _a, _b = config.expiry, expiry = _b === void 0 ? Infinity : _b;
-                return new api_1.StoreChannel(name, schema, destroy, expiry);
-            }
-            exports.store = store;
-            function broadcast(name, config) {
-                var schema = config.schema;
-                return new api_2.BroadcastChannel(name, api_2.localStorage, schema);
-            }
-            exports.broadcast = broadcast;
+            var StoreChannel = function (_super) {
+                __extends(StoreChannel, _super);
+                function StoreChannel(name, _a) {
+                    var schema = _a.schema, _b = _a.destroy, destroy = _b === void 0 ? function () {
+                            return true;
+                        } : _b, _c = _a.expiry, expiry = _c === void 0 ? Infinity : _c;
+                    return _super.call(this, name, schema, destroy, expiry) || this;
+                }
+                return StoreChannel;
+            }(api_1.StoreChannel);
+            exports.StoreChannel = StoreChannel;
+            var StorageChannel = function (_super) {
+                __extends(StorageChannel, _super);
+                function StorageChannel(name, _a) {
+                    var schema = _a.schema;
+                    return _super.call(this, name, api_2.localStorage, schema) || this;
+                }
+                return StorageChannel;
+            }(api_2.StorageChannel);
+            exports.StorageChannel = StorageChannel;
         },
         {
             '../domain/indexeddb/api': 13,
@@ -1046,7 +1070,6 @@ require = function e(t, n, r) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var api_1 = require('../../infrastructure/webstorage/api');
-            var api_2 = require('../webstorage/api');
             var Channel = function () {
                 function Channel(name) {
                     this.name = name;
@@ -1063,11 +1086,7 @@ require = function e(t, n, r) {
                 };
                 return Channel;
             }();
-            exports.Channel = Channel;
-            (function (Channel) {
-                Channel.Event = api_2.BroadcastChannel.Event;
-            }(Channel = exports.Channel || (exports.Channel = {})));
-            exports.Channel = Channel;
+            exports.BroadcastChannel = Channel;
             var Broadcast = function () {
                 function Broadcast(name) {
                     this.name = name;
@@ -1134,10 +1153,7 @@ require = function e(t, n, r) {
                 return Storage;
             }();
         },
-        {
-            '../../infrastructure/webstorage/api': 26,
-            '../webstorage/api': 19
-        }
+        { '../../infrastructure/webstorage/api': 26 }
     ],
     11: [
         function (require, module, exports) {
@@ -1250,7 +1266,7 @@ require = function e(t, n, r) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var channel_1 = require('./service/channel');
-            exports.StoreChannel = channel_1.Channel;
+            exports.StoreChannel = channel_1.StoreChannel;
         },
         { './service/channel': 18 }
     ],
@@ -1277,7 +1293,7 @@ require = function e(t, n, r) {
                     };
                     this.ages = new Map();
                     if (cache.has(name))
-                        return cache.get(name);
+                        throw new Error('ClientChannel: IndexedDB: Specified channel ' + name + ' is already created.');
                     void cache.set(name, this);
                     void api_1.open(name, {
                         make: function (db) {
@@ -1668,11 +1684,11 @@ require = function e(t, n, r) {
             var spica_1 = require('spica');
             var api_1 = require('../../dao/api');
             var channel_1 = require('../model/channel');
-            var api_2 = require('../../broadcast/api');
-            var cache = new WeakSet();
-            var Channel = function (_super) {
-                __extends(Channel, _super);
-                function Channel(name, factory, destroy, expiry) {
+            var api_2 = require('../../webstorage/api');
+            var api_3 = require('../../broadcast/api');
+            var StoreChannel = function (_super) {
+                __extends(StoreChannel, _super);
+                function StoreChannel(name, factory, destroy, expiry) {
                     if (destroy === void 0) {
                         destroy = function () {
                             return true;
@@ -1683,12 +1699,9 @@ require = function e(t, n, r) {
                     }
                     var _this = _super.call(this, name, Object.keys(factory()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(factory())), destroy, expiry) || this;
                     _this.factory = factory;
-                    _this.broadcast = new api_2.Channel(_this.name);
+                    _this.broadcast = new api_3.BroadcastChannel(_this.name);
                     _this.links = new Map();
                     _this.sources = new Map();
-                    if (cache.has(_this))
-                        return _this;
-                    void cache.add(_this);
                     var keys = Object.keys(_this.factory()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(_this.factory()));
                     void _this.broadcast.listen(function (ev) {
                         return void _this.schema.data.fetch(ev instanceof MessageEvent ? ev.data : ev.newValue);
@@ -1712,9 +1725,9 @@ require = function e(t, n, r) {
                                     var newVal = cache_1[attr];
                                     source[attr] = newVal;
                                     void cast(source).__event.emit([
-                                        api_2.Channel.Event.Type.recv,
+                                        api_2.StorageChannel.Event.Type.recv,
                                         attr
-                                    ], new api_2.Channel.Event(api_2.Channel.Event.Type.recv, attr, newVal, oldVal));
+                                    ], new api_2.StorageChannel.Event(api_2.StorageChannel.Event.Type.recv, attr, newVal, oldVal));
                                 }, void 0);
                                 return;
                             }
@@ -1725,9 +1738,9 @@ require = function e(t, n, r) {
                                     var newVal = cache_2[attr];
                                     source[attr] = newVal;
                                     void cast(source).__event.emit([
-                                        api_2.Channel.Event.Type.recv,
+                                        api_2.StorageChannel.Event.Type.recv,
                                         attr
-                                    ], new api_2.Channel.Event(api_2.Channel.Event.Type.recv, attr, newVal, oldVal));
+                                    ], new api_2.StorageChannel.Event(api_2.StorageChannel.Event.Type.recv, attr, newVal, oldVal));
                                 }, void 0);
                                 return;
                             }
@@ -1738,9 +1751,9 @@ require = function e(t, n, r) {
                                     var newVal = cache_3[attr];
                                     source[attr] = newVal;
                                     void cast(source).__event.emit([
-                                        api_2.Channel.Event.Type.recv,
+                                        api_2.StorageChannel.Event.Type.recv,
                                         attr
-                                    ], new api_2.Channel.Event(api_2.Channel.Event.Type.recv, attr, newVal, oldVal));
+                                    ], new api_2.StorageChannel.Event(api_2.StorageChannel.Event.Type.recv, attr, newVal, oldVal));
                                 }, void 0);
                                 return;
                             }
@@ -1749,7 +1762,7 @@ require = function e(t, n, r) {
                     void Object.seal(_this);
                     return _this;
                 }
-                Channel.prototype.link = function (key, expiry) {
+                StoreChannel.prototype.link = function (key, expiry) {
                     var _this = this;
                     void this.expire(key, expiry);
                     return this.links.has(key) ? this.links.get(key) : this.links.set(key, api_1.build(Object.defineProperties(this.sources.set(key, spica_1.assign({}, this.get(key))).get(key), {
@@ -1760,17 +1773,17 @@ require = function e(t, n, r) {
                         },
                         __id: {
                             get: function () {
-                                return this.__meta.id;
+                                return _this.meta(key).id;
                             }
                         },
                         __key: {
                             get: function () {
-                                return this.__meta.key;
+                                return _this.meta(key).key;
                             }
                         },
                         __date: {
                             get: function () {
-                                return this.__meta.date;
+                                return _this.meta(key).date;
                             }
                         },
                         __event: { value: new spica_1.Observable() },
@@ -1781,20 +1794,19 @@ require = function e(t, n, r) {
                         }
                     }), this.factory, function (attr, newValue, oldValue) {
                         return void _this.add(new channel_1.ChannelStore.Record(key, (_a = {}, _a[attr] = newValue, _a))), void cast(_this.sources.get(key)).__event.emit([
-                            api_2.Channel.Event.Type.send,
+                            api_2.StorageChannel.Event.Type.send,
                             attr
-                        ], new api_2.Channel.Event(api_2.Channel.Event.Type.send, attr, newValue, oldValue));
+                        ], new api_2.StorageChannel.Event(api_2.StorageChannel.Event.Type.send, attr, newValue, oldValue));
                         var _a;
                     })).get(key);
                 };
-                Channel.prototype.destroy = function () {
+                StoreChannel.prototype.destroy = function () {
                     void this.broadcast.close();
-                    void cache.delete(this);
                     void _super.prototype.destroy.call(this);
                 };
-                return Channel;
+                return StoreChannel;
             }(channel_1.ChannelStore);
-            exports.Channel = Channel;
+            exports.StoreChannel = StoreChannel;
             function cast(source) {
                 return source;
             }
@@ -1802,6 +1814,7 @@ require = function e(t, n, r) {
         {
             '../../broadcast/api': 10,
             '../../dao/api': 11,
+            '../../webstorage/api': 19,
             '../model/channel': 14,
             'spica': undefined
         }
@@ -1811,7 +1824,7 @@ require = function e(t, n, r) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var channel_1 = require('./service/channel');
-            exports.BroadcastChannel = channel_1.Channel;
+            exports.StorageChannel = channel_1.StorageChannel;
             var api_1 = require('../../infrastructure/webstorage/api');
             exports.localStorage = api_1.localStorage;
             exports.sessionStorage = api_1.sessionStorage;
@@ -1872,8 +1885,8 @@ require = function e(t, n, r) {
             var api_2 = require('../../../infrastructure/webstorage/api');
             var storage_1 = require('../model/storage');
             var cache = new Map();
-            var Channel = function () {
-                function Channel(name, storage, factory, log) {
+            var StorageChannel = function () {
+                function StorageChannel(name, storage, factory, log) {
                     if (storage === void 0) {
                         storage = api_2.sessionStorage || storage_1.fakeStorage;
                     }
@@ -1896,7 +1909,7 @@ require = function e(t, n, r) {
                         recv: new spica_1.Observable()
                     };
                     if (cache.has(name))
-                        return cache.get(name);
+                        throw new Error('ClientChannel: WebStorage: Specified channel ' + name + ' is already created.');
                     void cache.set(name, this);
                     var source = __assign((_a = {}, _a[api_1.SCHEMA.KEY.NAME] = this.name, _a[api_1.SCHEMA.EVENT.NAME] = new spica_1.Observable(), _a), parse(this.storage.getItem(this.name)));
                     this.link_ = api_1.build(source, this.factory, function (attr, newValue, oldValue) {
@@ -1905,7 +1918,7 @@ require = function e(t, n, r) {
                             acc[attr] = source[attr];
                             return acc;
                         }, {})));
-                        var event = new Channel.Event(Channel.Event.Type.send, attr, newValue, oldValue);
+                        var event = new StorageChannel.Event(StorageChannel.Event.Type.send, attr, newValue, oldValue);
                         void source.__event.emit([
                             event.type,
                             event.attr
@@ -1921,7 +1934,7 @@ require = function e(t, n, r) {
                             if (newVal === oldVal)
                                 return;
                             source[attr] = newVal;
-                            var event = new Channel.Event(Channel.Event.Type.recv, attr, newVal, oldVal);
+                            var event = new StorageChannel.Event(StorageChannel.Event.Type.recv, attr, newVal, oldVal);
                             void source.__event.emit([
                                 event.type,
                                 event.attr
@@ -1937,10 +1950,10 @@ require = function e(t, n, r) {
                     void Object.freeze(this);
                     var _a;
                 }
-                Channel.prototype.link = function () {
+                StorageChannel.prototype.link = function () {
                     return this.link_;
                 };
-                Channel.prototype.destroy = function () {
+                StorageChannel.prototype.destroy = function () {
                     void api_2.eventstream.off([
                         this.mode,
                         this.name
@@ -1949,10 +1962,10 @@ require = function e(t, n, r) {
                     void this.log.delete(this.name);
                     void cache.delete(this.name);
                 };
-                return Channel;
+                return StorageChannel;
             }();
-            exports.Channel = Channel;
-            (function (Channel) {
+            exports.StorageChannel = StorageChannel;
+            (function (StorageChannel) {
                 var Event = function () {
                     function Event(type, attr, newValue, oldValue) {
                         this.type = type;
@@ -1963,16 +1976,16 @@ require = function e(t, n, r) {
                     }
                     return Event;
                 }();
-                Channel.Event = Event;
+                StorageChannel.Event = Event;
                 (function (Event) {
                     var Type;
                     (function (Type) {
                         Type.send = 'send';
                         Type.recv = 'recv';
                     }(Type = Event.Type || (Event.Type = {})));
-                }(Event = Channel.Event || (Channel.Event = {})));
-            }(Channel = exports.Channel || (exports.Channel = {})));
-            exports.Channel = Channel;
+                }(Event = StorageChannel.Event || (StorageChannel.Event = {})));
+            }(StorageChannel = exports.StorageChannel || (exports.StorageChannel = {})));
+            exports.StorageChannel = StorageChannel;
             function parse(item) {
                 try {
                     return JSON.parse(item || '{}') || {};
