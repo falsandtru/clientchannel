@@ -1,4 +1,4 @@
-import { StorageChannel as IStorageChannel, StorageChannelObject as ChannelObject, StorageChannelEvent } from '../../../../../';
+import { StorageChannel as IStorageChannel, StorageChannelObject as ChannelObject, StorageChannelEvent, StorageChannelEventType } from '../../../../../';
 import { Observable } from 'spica';
 import { SCHEMA, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { localStorage, sessionStorage, eventstream } from '../../../infrastructure/webstorage/api';
@@ -20,7 +20,7 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
     void cache.set(name, this);
     const source: V = <any>{
       [SCHEMA.KEY.NAME]: this.name,
-      [SCHEMA.EVENT.NAME]: new Observable<[StorageChannelEvent.Type] | [StorageChannelEvent.Type, keyof V], StorageChannel.Event<V>, void>(),
+      [SCHEMA.EVENT.NAME]: new Observable<[StorageChannelEventType] | [StorageChannelEventType, keyof V], StorageChannel.Event<V>, void>(),
       ...<Object>parse<V>(this.storage.getItem(this.name))
     };
     this.link_ = build(source, this.factory, (attr: keyof V, newValue, oldValue) => {
@@ -29,8 +29,8 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
         acc[attr] = source[attr];
         return acc;
       }, {})));
-      const event = new StorageChannel.Event<V>(StorageChannel.Event.Type.send, attr, newValue, oldValue);
-      void (<Observable<[StorageChannelEvent.Type, keyof V], StorageChannel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
+      const event = new StorageChannel.Event<V>(StorageChannel.EventType.send, attr, newValue, oldValue);
+      void (<Observable<[StorageChannelEventType, keyof V], StorageChannel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
       void this.events.send.emit([event.attr], event);
     });
     const subscriber = ({newValue}: StorageEvent): void => {
@@ -43,8 +43,8 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
           const newVal = item[attr];
           if (newVal === oldVal) return;
           source[attr] = newVal;
-          const event = new StorageChannel.Event<V>(StorageChannel.Event.Type.recv, attr, newVal, oldVal);
-          void (<Observable<[StorageChannelEvent.Type, keyof V], StorageChannel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
+          const event = new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, newVal, oldVal);
+          void (<Observable<[StorageChannelEventType, keyof V], StorageChannel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
           void this.events.recv.emit([event.attr], event);
         }, void 0);
     };
@@ -71,7 +71,7 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
 export namespace StorageChannel {
   export class Event<V extends ChannelObject> implements StorageChannelEvent<V> {
     constructor(
-      public readonly type: Event.Type,
+      public readonly type: EventType,
       public readonly attr: keyof V,
       public readonly newValue: any,
       public readonly oldValue: any
@@ -81,12 +81,10 @@ export namespace StorageChannel {
       void Object.freeze(this);
     }
   }
-  export namespace Event {
-    export type Type = StorageChannelEvent.Type;
-    export namespace Type {
-      export const send: StorageChannelEvent.Type.Send = 'send';
-      export const recv: StorageChannelEvent.Type.Recv = 'recv';
-    }
+  export type EventType = StorageChannelEventType;
+  export namespace EventType {
+    export const send: StorageChannelEventType.Send = 'send';
+    export const recv: StorageChannelEventType.Recv = 'recv';
   }
 }
 

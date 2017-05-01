@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.13.0
+
+- Unwrap event types.
+
 ## 0.12.0
 
 - Refine APIs.

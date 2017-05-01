@@ -48,7 +48,7 @@ export class AccessStore<K extends string> extends KeyValueStore<K, AccessRecord
 
     void access
       .monitor([], ({key, type}) =>
-        type === EventStore.Event.Type.delete
+        type === EventStore.EventType.delete
           ? void this.delete(key)
           : void this.set(key, new AccessRecord(key, Date.now()))
       );

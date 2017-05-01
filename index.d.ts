@@ -3,9 +3,9 @@
 export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
   constructor(name: string, config: StoreChannelConfig<K, V>);
   readonly events: {
-    readonly load: Observer<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', StoreChannelEvent.Type], StoreChannelEvent<K, V>, void>,
-    readonly save: Observer<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', StoreChannelEvent.Type], StoreChannelEvent<K, V>, void>,
-    readonly loss: Observer<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', StoreChannelEvent.Type], StoreChannelEvent<K, V>, void>
+    readonly load: Observer<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', StoreChannelEventType], StoreChannelEvent<K, V>, void>,
+    readonly save: Observer<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', StoreChannelEventType], StoreChannelEvent<K, V>, void>,
+    readonly loss: Observer<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', StoreChannelEventType], StoreChannelEvent<K, V>, void>
   };
   sync(keys: K[], cb?: (errs: [K, DOMException | DOMError][]) => any): void;
   transaction(key: K, cb: () => any, complete: (err?: DOMException | DOMError | Error) => any): void;
@@ -25,7 +25,7 @@ export interface StoreChannelObject<K extends string> {
   readonly __id: number;
   readonly __key: K;
   readonly __date: number;
-  readonly __event: Observer<[StorageChannelEvent.Type] | [StorageChannelEvent.Type, keyof this | ''], StorageChannelEvent<this>, any>;
+  readonly __event: Observer<[StorageChannelEventType] | [StorageChannelEventType, keyof this | ''], StorageChannelEvent<this>, any>;
   readonly __transaction: (key: K, cb: () => any, complete: (err?: DOMException | DOMError | Error) => any) => void;
 }
 export interface StoreChannelObjectMetaData<K extends string> {
@@ -34,21 +34,19 @@ export interface StoreChannelObjectMetaData<K extends string> {
   readonly date: number;
 }
 export interface StoreChannelEvent<K extends string, V extends StoreChannelObject<K>> {
-  readonly type: StoreChannelEvent.Type;
+  readonly type: StoreChannelEventType;
   readonly id: number;
   readonly key: K;
   readonly attr: keyof V | '';
 }
-export namespace StoreChannelEvent {
-  export type Type
-    = Type.Put
-    | Type.Delete
-    | Type.Snapshot;
-  export namespace Type {
-    export type Put = 'put';
-    export type Delete = 'delete';
-    export type Snapshot = 'snapshot';
-  }
+export type StoreChannelEventType
+  = StoreChannelEventType.Put
+  | StoreChannelEventType.Delete
+  | StoreChannelEventType.Snapshot;
+export namespace StoreChannelEventType {
+  export type Put = 'put';
+  export type Delete = 'delete';
+  export type Snapshot = 'snapshot';
 }
 
 export class StorageChannel<V extends StorageChannelObject> {
@@ -64,20 +62,18 @@ export interface StorageChannelConfig<V extends StorageChannelObject> {
   schema(): V;
 }
 export interface StorageChannelObject {
-  readonly __event: Observer<[StorageChannelEvent.Type] | [StorageChannelEvent.Type, keyof this], StorageChannelEvent<this>, any>;
+  readonly __event: Observer<[StorageChannelEventType] | [StorageChannelEventType, keyof this], StorageChannelEvent<this>, any>;
 }
 export interface StorageChannelEvent<V extends StorageChannelObject> {
-  readonly type: StorageChannelEvent.Type;
+  readonly type: StorageChannelEventType;
   readonly attr: keyof V;
   readonly newValue: V[keyof V];
   readonly oldValue: V[keyof V];
 }
-export namespace StorageChannelEvent {
-  export type Type
-    = Type.Send
-    | Type.Recv;
-  export namespace Type {
-    export type Send = 'send';
-    export type Recv = 'recv';
-  }
+export type StorageChannelEventType
+  = StorageChannelEventType.Send
+  | StorageChannelEventType.Recv;
+export namespace StorageChannelEventType {
+  export type Send = 'send';
+  export type Recv = 'recv';
 }

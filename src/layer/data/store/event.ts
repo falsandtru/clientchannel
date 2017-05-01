@@ -2,7 +2,7 @@ import { Observable, Cancelable, Tick, sqid, assign, concat } from 'spica';
 import { listen, Config, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { IdNumber } from '../constraint/types';
 import { isValidPropertyName, isValidPropertyValue } from '../constraint/values';
-import { EventRecordFields, EventType, EventValue, UnsavedEventRecord, SavedEventRecord } from '../schema/event';
+import { EventRecordFields, EventRecordType, EventRecordValue, UnsavedEventRecord, SavedEventRecord } from '../schema/event';
 import { noop } from '../../../lib/noop';
 
 export abstract class EventStore<K extends string, V extends EventStore.Value> {
@@ -93,21 +93,21 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     void this.events.save
       .monitor([], event => {
         switch (event.type) {
-          case EventStore.Event.Type.delete:
-          case EventStore.Event.Type.snapshot:
+          case EventStore.EventType.delete:
+          case EventStore.EventType.snapshot:
             void this.clean(event.key);
         }
       });
   }
   private readonly memory = new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', string], void, UnsavedEventRecord<K, V> | SavedEventRecord<K, V>>();
   public readonly events = {
-    load: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.Event.Type], EventStore.Event<K, V>, void>(),
-    save: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.Event.Type], EventStore.Event<K, V>, void>(),
-    loss: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.Event.Type], EventStore.Event<K, V>, void>(),
+    load: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
+    save: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
+    loss: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
   };
   public readonly events_ = {
     update: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', string], UnsavedEventRecord<K, V> | SavedEventRecord<K, V>, void>(),
-    access: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.InternalEvent.Type], EventStore.InternalEvent<K>, void>()
+    access: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.InternalEventType], EventStore.InternalEvent<K>, void>()
   };
   private update(key: K, attr?: string, id?: string): void {
     return typeof id === 'string' && typeof attr === 'string'
@@ -160,7 +160,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             savedEvents
               // remove overridable event
               .reduceRight<SavedEventRecord<K, V>[]>((acc, e) =>
-                acc.length === 0 || acc[0].type === EventStore.Event.Type.put
+                acc.length === 0 || acc[0].type === EventStore.EventType.put
                   ? concat(acc, [e])
                   : acc
               , [])
@@ -183,7 +183,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           void after(tx);
           void this.update(key);
           void this.events_.access
-            .emit([key], new EventStore.InternalEvent(EventStore.InternalEvent.Type.query, IdNumber(0), key, ''));
+            .emit([key], new EventStore.InternalEvent(EventStore.InternalEventType.query, IdNumber(0), key, ''));
           if (savedEvents.length >= this.snapshotCycle) {
             void this.snapshot(key);
           }
@@ -193,7 +193,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           const event: SavedEventRecord<K, V> = cursor.value;
           if (this.memory.refs([event.key, event.attr, sqid(event.id)]).length > 0) return void proc(null, err);
           void savedEvents.unshift(new SavedEventRecord(event.id, event.key, event.value, event.type, event.date));
-          if (event.type !== EventStore.Event.Type.put) return void proc(null, err);
+          if (event.type !== EventStore.EventType.put) return void proc(null, err);
           return void cursor.continue();
         }
       };
@@ -237,19 +237,19 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     });
   }
   public has(key: K): boolean {
-    return compose(key, this.attrs, this.memory.reflect([key])).type !== EventStore.Event.Type.delete;
+    return compose(key, this.attrs, this.memory.reflect([key])).type !== EventStore.EventType.delete;
   }
   public get(key: K): V {
     if (!this.syncState.get(key)) {
       void this.fetch(key);
     }
     void this.events_.access
-      .emit([key], new EventStore.InternalEvent(EventStore.InternalEvent.Type.query, IdNumber(0), key, ''));
+      .emit([key], new EventStore.InternalEvent(EventStore.InternalEventType.query, IdNumber(0), key, ''));
     return <V>compose(key, this.attrs, this.memory.reflect([key]))
       .value;
   }
   public add(event: UnsavedEventRecord<K, V>, tx: IDBTransaction | void = this.tx): void {
-    assert(event.type === EventStore.Event.Type.snapshot ? tx : true);
+    assert(event.type === EventStore.EventType.snapshot ? tx : true);
     assert(!tx || tx.db.name === this.database && tx.mode === 'readwrite')
     void this.events_.access
       .emit([event.key, event.attr, event.type], new EventStore.InternalEvent(event.type, IdNumber(0), event.key, event.attr));
@@ -258,13 +258,13 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       void this.fetch(event.key);
     }
     switch (event.type) {
-      case EventStore.Event.Type.put: {
+      case EventStore.EventType.put: {
         void this.memory
           .off([event.key, event.attr, sqid(0)]);
         break;
       }
-      case EventStore.Event.Type.delete:
-      case EventStore.Event.Type.snapshot: {
+      case EventStore.EventType.delete:
+      case EventStore.EventType.snapshot: {
         void this.memory
           .refs([event.key])
           .filter(([[, , id]]) => id === sqid(0))
@@ -329,7 +329,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         void this.events.loss.emit([event.key, event.attr, event.type], new EventStore.Event<K, V>(event.type, IdNumber(0), event.key, event.attr, event.date)));
   }
   public delete(key: K): void {
-    return void this.add(new UnsavedEventRecord<K, V>(key, new EventStore.Value(), EventStore.Event.Type.delete));
+    return void this.add(new UnsavedEventRecord<K, V>(key, new EventStore.Value(), EventStore.EventType.delete));
   }
   private readonly snapshotCycle: number = 9;
   private snapshot(key: K): void {
@@ -353,7 +353,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           const composedEvent = compose(key, this.attrs, savedEvents);
           if (composedEvent instanceof SavedEventRecord) return;
           switch (composedEvent.type) {
-            case EventStore.Event.Type.snapshot:
+            case EventStore.EventType.snapshot:
               // snapshot's date must not be later than unsaved event's date.
               return void this.add(
                 new UnsavedEventRecord(
@@ -362,7 +362,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
                   composedEvent.type,
                   savedEvents.reduce((date, e) => e.date > date ? e.date : date, 0)),
                 tx);
-            case EventStore.Event.Type.delete:
+            case EventStore.EventType.delete:
               return;
           }
           throw new TypeError(`ClientChannel: Invalid event type: ${composedEvent.type}`);
@@ -391,11 +391,11 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         else {
           const event: SavedEventRecord<K, V> = cursor.value;
           switch (event.type) {
-            case EventStore.Event.Type.put: {
+            case EventStore.EventType.put: {
               void cleanState.set(event.key, cleanState.get(event.key) || false);
               break;
             }
-            case EventStore.Event.Type.snapshot: {
+            case EventStore.EventType.snapshot: {
               if (!cleanState.get(event.key)) {
                 void cleanState.set(event.key, true);
                 void cursor.continue();
@@ -403,7 +403,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
               }
               break;
             }
-            case EventStore.Event.Type.delete: {
+            case EventStore.EventType.delete: {
               void cleanState.set(event.key, true);
               break;
             }
@@ -438,7 +438,7 @@ export namespace EventStore {
   export class Event<K extends string, V extends Value> {
     private EVENT: K;
     constructor(
-      public readonly type: Event.Type,
+      public readonly type: EventType,
       public readonly id: IdNumber,
       public readonly key: K,
       public readonly attr: keyof V | '',
@@ -448,15 +448,13 @@ export namespace EventStore {
       void Object.freeze(this);
     }
   }
-  export namespace Event {
-    export import Type = EventType;
-  }
+  export import EventType = EventRecordType;
   export class Record<K extends string, V extends Value> extends UnsavedEventRecord<K, V> { }
-  export class Value extends EventValue {
+  export class Value extends EventRecordValue {
   }
   export class InternalEvent<K extends string> {
     constructor(
-      public readonly type: InternalEvent.Type,
+      public readonly type: InternalEventType,
       public readonly id: IdNumber,
       public readonly key: K,
       public readonly attr: string
@@ -464,13 +462,11 @@ export namespace EventStore {
       void Object.freeze(this);
     }
   }
-  export namespace InternalEvent {
-    export const Type = {
-      ...Event.Type,
-      query: <'query'>'query'
-    };
-    export type Type = Event.Type | typeof Type.query;
-  }
+  export const InternalEventType = {
+    ...EventRecordType,
+    query: <'query'>'query'
+  };
+  export type InternalEventType = EventType | typeof InternalEventType.query;
 }
 export {
   UnsavedEventRecord,
@@ -501,7 +497,7 @@ export function compose<K extends string, V extends EventStore.Value>(
   return group(events)
     .map(events =>
       events
-        .reduceRight(compose, new UnsavedEventRecord<K, V>(key, new EventStore.Value(), EventStore.Event.Type.delete, 0)))
+        .reduceRight(compose, new UnsavedEventRecord<K, V>(key, new EventStore.Value(), EventStore.EventType.delete, 0)))
     .reduce(e => e);
 
   function group(events: E[]): E[][] {
@@ -522,12 +518,12 @@ export function compose<K extends string, V extends EventStore.Value>(
     assert(target instanceof UnsavedEventRecord || target instanceof SavedEventRecord);
     assert(source instanceof UnsavedEventRecord || source instanceof SavedEventRecord);
     switch (source.type) {
-      case EventStore.Event.Type.put:
+      case EventStore.EventType.put:
         return source.value[source.attr] !== void 0
           ? new UnsavedEventRecord<K, V>(
               source.key,
               assign(new EventStore.Value(), target.value, source.value),
-              EventStore.Event.Type.snapshot)
+              EventStore.EventType.snapshot)
           : new UnsavedEventRecord<K, V>(
               source.key,
               Object.keys(target.value)
@@ -536,10 +532,10 @@ export function compose<K extends string, V extends EventStore.Value>(
                 .reduce((value, prop) =>
                   (value[prop] = target[prop], value)
                 , new EventStore.Value()),
-              EventStore.Event.Type.snapshot);
-      case EventStore.Event.Type.snapshot:
+              EventStore.EventType.snapshot);
+      case EventStore.EventType.snapshot:
         return source;
-      case EventStore.Event.Type.delete:
+      case EventStore.EventType.delete:
         return source;
     }
     throw new TypeError(`ClientChannel: Invalid event type: ${source}`);

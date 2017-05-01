@@ -26,7 +26,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
         const source = this.sources.get(key);
         if (!source) return;
         switch (type) {
-          case ChannelStore.Event.Type.put: {
+          case ChannelStore.EventType.put: {
             const cache = this.get(key);
             void keys
               .filter(attr_ => attr_ === attr)
@@ -37,11 +37,11 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
                 const newVal = cache[attr];
                 source[attr] = newVal;
                 void cast(source).__event
-                  .emit([StorageChannel.Event.Type.recv, attr], new StorageChannel.Event<V>(StorageChannel.Event.Type.recv, attr, newVal, oldVal));
+                  .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, newVal, oldVal));
               }, void 0);
             return;
           }
-          case ChannelStore.Event.Type.delete: {
+          case ChannelStore.EventType.delete: {
             const cache = this.factory();
             void keys
               .filter(isValidPropertyValue(cache))
@@ -51,11 +51,11 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
                 const newVal = cache[attr];
                 source[attr] = newVal;
                 void cast(source).__event
-                  .emit([StorageChannel.Event.Type.recv, attr], new StorageChannel.Event<V>(StorageChannel.Event.Type.recv, attr, newVal, oldVal));
+                  .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, newVal, oldVal));
               }, void 0);
             return;
           }
-          case ChannelStore.Event.Type.snapshot: {
+          case ChannelStore.EventType.snapshot: {
             const cache = this.get(key);
             void keys
               .filter(isValidPropertyValue(cache))
@@ -65,7 +65,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
                 const newVal = cache[attr];
                 source[attr] = newVal;
                 void cast(source).__event
-                  .emit([StorageChannel.Event.Type.recv, attr], new StorageChannel.Event<V>(StorageChannel.Event.Type.recv, attr, newVal, oldVal));
+                  .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, newVal, oldVal));
               }, void 0);
             return;
           }
@@ -102,7 +102,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
                   this.meta(key).date
               },
               __event: {
-                value: new Observable<[StorageChannel.Event.Type], StorageChannel.Event<V>, any>()
+                value: new Observable<[StorageChannel.EventType], StorageChannel.Event<V>, any>()
               },
               __transaction: {
                 value: (cb: () => any, complete: (err?: DOMException | DOMError | Error) => any) => this.transaction(key, cb, complete)
@@ -113,7 +113,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
           (attr: keyof V, newValue, oldValue) => (
             void this.add(new ChannelStore.Record<K, V>(key, <V>{ [attr]: newValue })),
             void cast(this.sources.get(key)!).__event
-              .emit([StorageChannel.Event.Type.send, attr], new StorageChannel.Event<V>(StorageChannel.Event.Type.send, attr, newValue, oldValue)))))
+              .emit([StorageChannel.EventType.send, attr], new StorageChannel.Event<V>(StorageChannel.EventType.send, attr, newValue, oldValue)))))
         .get(key)!;
   }
   public destroy(): void {
@@ -126,6 +126,6 @@ function cast<K extends string, V extends ChannelObject<K>>(source: V) {
   return <V & InternalChannelObject<K>>source;
 
   interface InternalChannelObject<K extends string> extends ChannelObject<K> {
-    readonly __event: Observable<[StorageChannel.Event.Type] | [StorageChannel.Event.Type, keyof this | ''], StorageChannel.Event<this>, any>;
+    readonly __event: Observable<[StorageChannel.EventType] | [StorageChannel.EventType, keyof this | ''], StorageChannel.Event<this>, any>;
   }
 }
