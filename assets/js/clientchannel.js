@@ -1,4 +1,4 @@
-/*! clientchannel v0.12.0 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.13.0 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -191,30 +191,30 @@ require = function e(t, n, r) {
                         throw new TypeError('ClientChannel: EventRecord: Invalid event value: ' + this.value);
                     if (typeof this.date !== 'number' || this.date >= 0 === false)
                         throw new TypeError('ClientChannel: EventRecord: Invalid event date: ' + this.date);
-                    this.attr = this.type === exports.EventType.put ? Object.keys(value).reduce(function (r, p) {
+                    this.attr = this.type === exports.EventRecordType.put ? Object.keys(value).reduce(function (r, p) {
                         return p.length > 0 && p[0] !== '_' && p[p.length - 1] !== '_' ? p : r;
                     }, '') : '';
                     if (typeof this.attr !== 'string')
                         throw new TypeError('ClientChannel: EventRecord: Invalid event attr: ' + this.key);
-                    if (this.type === exports.EventType.put && this.attr.length === 0)
+                    if (this.type === exports.EventRecordType.put && this.attr.length === 0)
                         throw new TypeError('ClientChannel: EventRecord: Invalid event attr with ' + this.type + ': ' + this.attr);
-                    if (this.type !== exports.EventType.put && this.attr.length !== 0)
+                    if (this.type !== exports.EventRecordType.put && this.attr.length !== 0)
                         throw new TypeError('ClientChannel: EventRecord: Invalid event attr with ' + this.type + ': ' + this.attr);
                     switch (type) {
-                    case exports.EventType.put: {
-                            this.value = value = spica_1.clone(new EventValue(), (_a = {}, _a[this.attr] = value[this.attr], _a));
+                    case exports.EventRecordType.put: {
+                            this.value = value = spica_1.clone(new EventRecordValue(), (_a = {}, _a[this.attr] = value[this.attr], _a));
                             void Object.freeze(this.value);
                             void Object.freeze(this);
                             return;
                         }
-                    case exports.EventType.snapshot: {
-                            this.value = value = spica_1.clone(new EventValue(), value);
+                    case exports.EventRecordType.snapshot: {
+                            this.value = value = spica_1.clone(new EventRecordValue(), value);
                             void Object.freeze(this.value);
                             void Object.freeze(this);
                             return;
                         }
-                    case exports.EventType.delete: {
-                            this.value = value = new EventValue();
+                    case exports.EventRecordType.delete: {
+                            this.value = value = new EventRecordValue();
                             void Object.freeze(this.value);
                             void Object.freeze(this);
                             return;
@@ -230,7 +230,7 @@ require = function e(t, n, r) {
                 __extends(UnsavedEventRecord, _super);
                 function UnsavedEventRecord(key, value, type, date) {
                     if (type === void 0) {
-                        type = exports.EventType.put;
+                        type = exports.EventRecordType.put;
                     }
                     if (date === void 0) {
                         date = Date.now();
@@ -256,17 +256,17 @@ require = function e(t, n, r) {
                 return SavedEventRecord;
             }(EventRecord);
             exports.SavedEventRecord = SavedEventRecord;
-            exports.EventType = {
+            exports.EventRecordType = {
                 put: 'put',
                 delete: 'delete',
                 snapshot: 'snapshot'
             };
-            var EventValue = function () {
-                function EventValue() {
+            var EventRecordValue = function () {
+                function EventRecordValue() {
                 }
-                return EventValue;
+                return EventRecordValue;
             }();
-            exports.EventValue = EventValue;
+            exports.EventRecordValue = EventRecordValue;
         },
         {
             '../constraint/types': 5,
@@ -362,8 +362,8 @@ require = function e(t, n, r) {
                     });
                     void this.events.save.monitor([], function (event) {
                         switch (event.type) {
-                        case EventStore.Event.Type.delete:
-                        case EventStore.Event.Type.snapshot:
+                        case EventStore.EventType.delete:
+                        case EventStore.EventType.snapshot:
                             void _this.clean(event.key);
                         }
                     });
@@ -472,8 +472,8 @@ require = function e(t, n, r) {
                     void this.syncState.set(key, this.syncState.get(key) === true);
                     var savedEvents = [];
                     return void api_1.listen(this.database)(function (db) {
-                        var tx = db.transaction(_this.name, after ? api_1.IDBTransactionMode.readwrite : api_1.IDBTransactionMode.readonly);
-                        var req = tx.objectStore(_this.name).index(event_1.EventRecordFields.key).openCursor(key, api_1.IDBCursorDirection.prev);
+                        var tx = db.transaction(_this.name, after ? 'readwrite' : 'readonly');
+                        var req = tx.objectStore(_this.name).index(event_1.EventRecordFields.key).openCursor(key, 'prev');
                         var unbind = function () {
                             req.onsuccess = tx.onerror = tx.onabort = null;
                         };
@@ -482,7 +482,7 @@ require = function e(t, n, r) {
                                 return void cb(err), void unbind(), void after(tx, err);
                             if (!cursor || cursor.value.date < _this.meta(key).date) {
                                 void Array.from(savedEvents.reduceRight(function (acc, e) {
-                                    return acc.length === 0 || acc[0].type === EventStore.Event.Type.put ? spica_1.concat(acc, [e]) : acc;
+                                    return acc.length === 0 || acc[0].type === EventStore.EventType.put ? spica_1.concat(acc, [e]) : acc;
                                 }, []).reduceRight(function (dict, e) {
                                     return dict.set(e.attr, e);
                                 }, new Map()).values()).sort(function (a, b) {
@@ -508,7 +508,7 @@ require = function e(t, n, r) {
                                 void unbind();
                                 void after(tx);
                                 void _this.update(key);
-                                void _this.events_.access.emit([key], new EventStore.InternalEvent(EventStore.InternalEvent.Type.query, types_1.IdNumber(0), key, ''));
+                                void _this.events_.access.emit([key], new EventStore.InternalEvent(EventStore.InternalEventType.query, types_1.IdNumber(0), key, ''));
                                 if (savedEvents.length >= _this.snapshotCycle) {
                                     void _this.snapshot(key);
                                 }
@@ -522,7 +522,7 @@ require = function e(t, n, r) {
                                     ]).length > 0)
                                     return void proc(null, err);
                                 void savedEvents.unshift(new event_1.SavedEventRecord(event_2.id, event_2.key, event_2.value, event_2.type, event_2.date));
-                                if (event_2.type !== EventStore.Event.Type.put)
+                                if (event_2.type !== EventStore.EventType.put)
                                     return void proc(null, err);
                                 return void cursor.continue();
                             }
@@ -578,13 +578,13 @@ require = function e(t, n, r) {
                     });
                 };
                 EventStore.prototype.has = function (key) {
-                    return compose(key, this.attrs, this.memory.reflect([key])).type !== EventStore.Event.Type.delete;
+                    return compose(key, this.attrs, this.memory.reflect([key])).type !== EventStore.EventType.delete;
                 };
                 EventStore.prototype.get = function (key) {
                     if (!this.syncState.get(key)) {
                         void this.fetch(key);
                     }
-                    void this.events_.access.emit([key], new EventStore.InternalEvent(EventStore.InternalEvent.Type.query, types_1.IdNumber(0), key, ''));
+                    void this.events_.access.emit([key], new EventStore.InternalEvent(EventStore.InternalEventType.query, types_1.IdNumber(0), key, ''));
                     return compose(key, this.attrs, this.memory.reflect([key])).value;
                 };
                 EventStore.prototype.add = function (event, tx) {
@@ -603,7 +603,7 @@ require = function e(t, n, r) {
                         void this.fetch(event.key);
                     }
                     switch (event.type) {
-                    case EventStore.Event.Type.put: {
+                    case EventStore.EventType.put: {
                             void this.memory.off([
                                 event.key,
                                 event.attr,
@@ -611,8 +611,8 @@ require = function e(t, n, r) {
                             ]);
                             break;
                         }
-                    case EventStore.Event.Type.delete:
-                    case EventStore.Event.Type.snapshot: {
+                    case EventStore.EventType.delete:
+                    case EventStore.EventType.snapshot: {
                             void this.memory.refs([event.key]).filter(function (_a) {
                                 var _b = _a[0], id = _b[2];
                                 return id === spica_1.sqid(0);
@@ -710,7 +710,7 @@ require = function e(t, n, r) {
                         void spica_1.Tick(function () {
                             return void setTimeout(cancelable.cancel, 1000), void api_1.listen(_this.database)(function (db) {
                                 return void cancelable.listeners.clear(), void cancelable.maybe(db).fmap(function (db) {
-                                    return void cont(db.transaction(_this.name, api_1.IDBTransactionMode.readwrite));
+                                    return void cont(db.transaction(_this.name, 'readwrite'));
                                 }).extract(function () {
                                     return void 0;
                                 });
@@ -725,16 +725,16 @@ require = function e(t, n, r) {
                     });
                 };
                 EventStore.prototype.delete = function (key) {
-                    return void this.add(new event_1.UnsavedEventRecord(key, new EventStore.Value(), EventStore.Event.Type.delete));
+                    return void this.add(new event_1.UnsavedEventRecord(key, new EventStore.Value(), EventStore.EventType.delete));
                 };
                 EventStore.prototype.snapshot = function (key) {
                     var _this = this;
                     return void api_1.listen(this.database)(function (db) {
                         if (!_this.syncState.get(key))
                             return;
-                        var tx = db.transaction(_this.name, api_1.IDBTransactionMode.readwrite);
+                        var tx = db.transaction(_this.name, 'readwrite');
                         var store = tx.objectStore(_this.name);
-                        var req = store.index(event_1.EventRecordFields.key).openCursor(key, api_1.IDBCursorDirection.prev);
+                        var req = store.index(event_1.EventRecordFields.key).openCursor(key, 'prev');
                         var savedEvents = [];
                         req.onsuccess = function () {
                             var cursor = req.result;
@@ -749,11 +749,11 @@ require = function e(t, n, r) {
                                 if (composedEvent instanceof event_1.SavedEventRecord)
                                     return;
                                 switch (composedEvent.type) {
-                                case EventStore.Event.Type.snapshot:
+                                case EventStore.EventType.snapshot:
                                     return void _this.add(new event_1.UnsavedEventRecord(composedEvent.key, composedEvent.value, composedEvent.type, savedEvents.reduce(function (date, e) {
                                         return e.date > date ? e.date : date;
                                     }, 0)), tx);
-                                case EventStore.Event.Type.delete:
+                                case EventStore.EventType.delete:
                                     return;
                                 }
                                 throw new TypeError('ClientChannel: Invalid event type: ' + composedEvent.type);
@@ -767,7 +767,7 @@ require = function e(t, n, r) {
                     var _this = this;
                     var removedEvents = [];
                     var cleanState = new Map();
-                    return void this.cursor(key ? api_1.IDBKeyRange.bound(key, key) : api_1.IDBKeyRange.upperBound(Infinity), key ? event_1.EventRecordFields.key : event_1.EventRecordFields.date, api_1.IDBCursorDirection.prev, api_1.IDBTransactionMode.readwrite, function (cursor) {
+                    return void this.cursor(key ? api_1.IDBKeyRange.bound(key, key) : api_1.IDBKeyRange.upperBound(Infinity), key ? event_1.EventRecordFields.key : event_1.EventRecordFields.date, 'prev', 'readwrite', function (cursor) {
                         if (!cursor) {
                             return void removedEvents.reduce(function (_, event) {
                                 return void _this.memory.off([
@@ -779,11 +779,11 @@ require = function e(t, n, r) {
                         } else {
                             var event_4 = cursor.value;
                             switch (event_4.type) {
-                            case EventStore.Event.Type.put: {
+                            case EventStore.EventType.put: {
                                     void cleanState.set(event_4.key, cleanState.get(event_4.key) || false);
                                     break;
                                 }
-                            case EventStore.Event.Type.snapshot: {
+                            case EventStore.EventType.snapshot: {
                                     if (!cleanState.get(event_4.key)) {
                                         void cleanState.set(event_4.key, true);
                                         void cursor.continue();
@@ -791,7 +791,7 @@ require = function e(t, n, r) {
                                     }
                                     break;
                                 }
-                            case EventStore.Event.Type.delete: {
+                            case EventStore.EventType.delete: {
                                     void cleanState.set(event_4.key, true);
                                     break;
                                 }
@@ -838,9 +838,7 @@ require = function e(t, n, r) {
                     return Event;
                 }();
                 EventStore.Event = Event;
-                (function (Event) {
-                    Event.Type = event_1.EventType;
-                }(Event = EventStore.Event || (EventStore.Event = {})));
+                EventStore.EventType = event_1.EventRecordType;
                 var Record = function (_super) {
                     __extends(Record, _super);
                     function Record() {
@@ -855,7 +853,7 @@ require = function e(t, n, r) {
                         return _super !== null && _super.apply(this, arguments) || this;
                     }
                     return Value;
-                }(event_1.EventValue);
+                }(event_1.EventRecordValue);
                 EventStore.Value = Value;
                 var InternalEvent = function () {
                     function InternalEvent(type, id, key, attr) {
@@ -868,9 +866,7 @@ require = function e(t, n, r) {
                     return InternalEvent;
                 }();
                 EventStore.InternalEvent = InternalEvent;
-                (function (InternalEvent) {
-                    InternalEvent.Type = __assign({}, Event.Type, { query: 'query' });
-                }(InternalEvent = EventStore.InternalEvent || (EventStore.InternalEvent = {})));
+                EventStore.InternalEventType = __assign({}, event_1.EventRecordType, { query: 'query' });
             }(EventStore = exports.EventStore || (exports.EventStore = {})));
             exports.EventStore = EventStore;
             function adjust(record) {
@@ -881,7 +877,7 @@ require = function e(t, n, r) {
             exports.adjust = adjust;
             function compose(key, attrs, events) {
                 return group(events).map(function (events) {
-                    return events.reduceRight(compose, new event_1.UnsavedEventRecord(key, new EventStore.Value(), EventStore.Event.Type.delete, 0));
+                    return events.reduceRight(compose, new event_1.UnsavedEventRecord(key, new EventStore.Value(), EventStore.EventType.delete, 0));
                 }).reduce(function (e) {
                     return e;
                 });
@@ -906,15 +902,15 @@ require = function e(t, n, r) {
                 }
                 function compose(target, source) {
                     switch (source.type) {
-                    case EventStore.Event.Type.put:
-                        return source.value[source.attr] !== void 0 ? new event_1.UnsavedEventRecord(source.key, spica_1.assign(new EventStore.Value(), target.value, source.value), EventStore.Event.Type.snapshot) : new event_1.UnsavedEventRecord(source.key, Object.keys(target.value).filter(function (prop) {
+                    case EventStore.EventType.put:
+                        return source.value[source.attr] !== void 0 ? new event_1.UnsavedEventRecord(source.key, spica_1.assign(new EventStore.Value(), target.value, source.value), EventStore.EventType.snapshot) : new event_1.UnsavedEventRecord(source.key, Object.keys(target.value).filter(function (prop) {
                             return attrs.indexOf(prop) !== -1;
                         }).filter(values_1.isValidPropertyValue(target)).reduce(function (value, prop) {
                             return value[prop] = target[prop], value;
-                        }, new EventStore.Value()), EventStore.Event.Type.snapshot);
-                    case EventStore.Event.Type.snapshot:
+                        }, new EventStore.Value()), EventStore.EventType.snapshot);
+                    case EventStore.EventType.snapshot:
                         return source;
-                    case EventStore.Event.Type.delete:
+                    case EventStore.EventType.delete:
                         return source;
                     }
                     throw new TypeError('ClientChannel: Invalid event type: ' + source);
@@ -971,7 +967,7 @@ require = function e(t, n, r) {
                         KeyValueStore.EventType.get
                     ]);
                     void api_1.listen(this.database)(function (db) {
-                        var tx = db.transaction(_this.name, api_1.IDBTransactionMode.readonly);
+                        var tx = db.transaction(_this.name, 'readonly');
                         var req = _this.index ? tx.objectStore(_this.name).index(_this.index).get(key) : tx.objectStore(_this.name).get(key);
                         var result;
                         req.onsuccess = function () {
@@ -1005,7 +1001,7 @@ require = function e(t, n, r) {
                     void api_1.listen(this.database)(function (db) {
                         if (!_this.cache.has(key))
                             return;
-                        var tx = db.transaction(_this.name, api_1.IDBTransactionMode.readwrite);
+                        var tx = db.transaction(_this.name, 'readwrite');
                         _this.index ? tx.objectStore(_this.name).put(_this.cache.get(key)) : tx.objectStore(_this.name).put(_this.cache.get(key), key);
                         tx.oncomplete = tx.onerror = tx.onabort = function () {
                             return void cb(key, tx.error);
@@ -1024,7 +1020,7 @@ require = function e(t, n, r) {
                         KeyValueStore.EventType.delete
                     ]);
                     void api_1.listen(this.database)(function (db) {
-                        var tx = db.transaction(_this.name, api_1.IDBTransactionMode.readwrite);
+                        var tx = db.transaction(_this.name, 'readwrite');
                         void tx.objectStore(_this.name).delete(key);
                         tx.oncomplete = tx.onerror = tx.onabort = function () {
                             return void cb(tx.error);
@@ -1348,7 +1344,7 @@ require = function e(t, n, r) {
                 };
                 ChannelStore.prototype.recent = function (limit, cb) {
                     var keys = [];
-                    return void this.schema.access.cursor(null, access_1.AccessStore.fields.date, api_1.IDBCursorDirection.prev, api_1.IDBTransactionMode.readonly, function (cursor, err) {
+                    return void this.schema.access.cursor(null, access_1.AccessStore.fields.date, 'prev', 'readonly', function (cursor, err) {
                         if (!cursor)
                             return void cb(keys, err);
                         if (--limit < 0)
@@ -1374,6 +1370,7 @@ require = function e(t, n, r) {
             exports.ChannelStore = ChannelStore;
             (function (ChannelStore) {
                 ChannelStore.Event = data_1.DataStore.Event;
+                ChannelStore.EventType = data_1.DataStore.EventType;
                 ChannelStore.Record = data_1.DataStore.Record;
             }(ChannelStore = exports.ChannelStore || (exports.ChannelStore = {})));
             exports.ChannelStore = ChannelStore;
@@ -1455,7 +1452,7 @@ require = function e(t, n, r) {
                     void Object.freeze(_this);
                     void access.monitor([], function (_a) {
                         var key = _a.key, type = _a.type;
-                        return type === event_1.EventStore.Event.Type.delete ? void _this.delete(key) : void _this.set(key, new AccessRecord(key, Date.now()));
+                        return type === event_1.EventStore.EventType.delete ? void _this.delete(key) : void _this.set(key, new AccessRecord(key, Date.now()));
                     });
                     return _this;
                 }
@@ -1539,6 +1536,7 @@ require = function e(t, n, r) {
             exports.DataStore = DataStore;
             (function (DataStore) {
                 DataStore.Event = event_1.EventStore.Event;
+                DataStore.EventType = event_1.EventStore.EventType;
                 DataStore.Record = event_1.EventStore.Record;
                 DataStore.Value = event_1.EventStore.Value;
             }(DataStore = exports.DataStore || (exports.DataStore = {})));
@@ -1584,7 +1582,7 @@ require = function e(t, n, r) {
                         scheduled = date;
                         timer = setTimeout(function () {
                             scheduled = Infinity;
-                            void _this.cursor(null, ExpiryStore.fields.expiry, api_1.IDBCursorDirection.next, api_1.IDBTransactionMode.readonly, function (cursor) {
+                            void _this.cursor(null, ExpiryStore.fields.expiry, 'next', 'readonly', function (cursor) {
                                 if (!cursor)
                                     return;
                                 var record = cursor.value;
@@ -1605,7 +1603,7 @@ require = function e(t, n, r) {
                     void access.monitor([], function (_a) {
                         var key = _a.key, type = _a.type;
                         switch (type) {
-                        case event_1.EventStore.Event.Type.delete:
+                        case event_1.EventStore.EventType.delete:
                             return void _this.delete(key);
                         default:
                             if (!ages.has(key))
@@ -1716,7 +1714,7 @@ require = function e(t, n, r) {
                         if (!source)
                             return;
                         switch (type) {
-                        case channel_1.ChannelStore.Event.Type.put: {
+                        case channel_1.ChannelStore.EventType.put: {
                                 var cache_1 = _this.get(key);
                                 void keys.filter(function (attr_) {
                                     return attr_ === attr;
@@ -1725,35 +1723,35 @@ require = function e(t, n, r) {
                                     var newVal = cache_1[attr];
                                     source[attr] = newVal;
                                     void cast(source).__event.emit([
-                                        api_2.StorageChannel.Event.Type.recv,
+                                        api_2.StorageChannel.EventType.recv,
                                         attr
-                                    ], new api_2.StorageChannel.Event(api_2.StorageChannel.Event.Type.recv, attr, newVal, oldVal));
+                                    ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.recv, attr, newVal, oldVal));
                                 }, void 0);
                                 return;
                             }
-                        case channel_1.ChannelStore.Event.Type.delete: {
+                        case channel_1.ChannelStore.EventType.delete: {
                                 var cache_2 = _this.factory();
                                 void keys.filter(api_1.isValidPropertyValue(cache_2)).sort().reduce(function (_, attr) {
                                     var oldVal = source[attr];
                                     var newVal = cache_2[attr];
                                     source[attr] = newVal;
                                     void cast(source).__event.emit([
-                                        api_2.StorageChannel.Event.Type.recv,
+                                        api_2.StorageChannel.EventType.recv,
                                         attr
-                                    ], new api_2.StorageChannel.Event(api_2.StorageChannel.Event.Type.recv, attr, newVal, oldVal));
+                                    ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.recv, attr, newVal, oldVal));
                                 }, void 0);
                                 return;
                             }
-                        case channel_1.ChannelStore.Event.Type.snapshot: {
+                        case channel_1.ChannelStore.EventType.snapshot: {
                                 var cache_3 = _this.get(key);
                                 void keys.filter(api_1.isValidPropertyValue(cache_3)).sort().reduce(function (_, attr) {
                                     var oldVal = source[attr];
                                     var newVal = cache_3[attr];
                                     source[attr] = newVal;
                                     void cast(source).__event.emit([
-                                        api_2.StorageChannel.Event.Type.recv,
+                                        api_2.StorageChannel.EventType.recv,
                                         attr
-                                    ], new api_2.StorageChannel.Event(api_2.StorageChannel.Event.Type.recv, attr, newVal, oldVal));
+                                    ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.recv, attr, newVal, oldVal));
                                 }, void 0);
                                 return;
                             }
@@ -1794,9 +1792,9 @@ require = function e(t, n, r) {
                         }
                     }), this.factory, function (attr, newValue, oldValue) {
                         return void _this.add(new channel_1.ChannelStore.Record(key, (_a = {}, _a[attr] = newValue, _a))), void cast(_this.sources.get(key)).__event.emit([
-                            api_2.StorageChannel.Event.Type.send,
+                            api_2.StorageChannel.EventType.send,
                             attr
-                        ], new api_2.StorageChannel.Event(api_2.StorageChannel.Event.Type.send, attr, newValue, oldValue));
+                        ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.send, attr, newValue, oldValue));
                         var _a;
                     })).get(key);
                 };
@@ -1918,7 +1916,7 @@ require = function e(t, n, r) {
                             acc[attr] = source[attr];
                             return acc;
                         }, {})));
-                        var event = new StorageChannel.Event(StorageChannel.Event.Type.send, attr, newValue, oldValue);
+                        var event = new StorageChannel.Event(StorageChannel.EventType.send, attr, newValue, oldValue);
                         void source.__event.emit([
                             event.type,
                             event.attr
@@ -1934,7 +1932,7 @@ require = function e(t, n, r) {
                             if (newVal === oldVal)
                                 return;
                             source[attr] = newVal;
-                            var event = new StorageChannel.Event(StorageChannel.Event.Type.recv, attr, newVal, oldVal);
+                            var event = new StorageChannel.Event(StorageChannel.EventType.recv, attr, newVal, oldVal);
                             void source.__event.emit([
                                 event.type,
                                 event.attr
@@ -1977,13 +1975,11 @@ require = function e(t, n, r) {
                     return Event;
                 }();
                 StorageChannel.Event = Event;
-                (function (Event) {
-                    var Type;
-                    (function (Type) {
-                        Type.send = 'send';
-                        Type.recv = 'recv';
-                    }(Type = Event.Type || (Event.Type = {})));
-                }(Event = StorageChannel.Event || (StorageChannel.Event = {})));
+                var EventType;
+                (function (EventType) {
+                    EventType.send = 'send';
+                    EventType.recv = 'recv';
+                }(EventType = StorageChannel.EventType || (StorageChannel.EventType = {})));
             }(StorageChannel = exports.StorageChannel || (exports.StorageChannel = {})));
             exports.StorageChannel = StorageChannel;
             function parse(item) {
@@ -2008,8 +2004,6 @@ require = function e(t, n, r) {
             var global_1 = require('./module/global');
             exports.indexedDB = global_1.indexedDB;
             exports.IDBKeyRange = global_1.IDBKeyRange;
-            exports.IDBTransactionMode = global_1.IDBTransactionMode;
-            exports.IDBCursorDirection = global_1.IDBCursorDirection;
             var access_1 = require('./model/access');
             exports.open = access_1.open;
             exports.listen = access_1.listen;
@@ -2450,18 +2444,6 @@ require = function e(t, n, r) {
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.indexedDB = self.indexedDB;
             exports.IDBKeyRange = self.IDBKeyRange;
-            var IDBTransactionMode;
-            (function (IDBTransactionMode) {
-                IDBTransactionMode.readonly = 'readonly';
-                IDBTransactionMode.readwrite = 'readwrite';
-            }(IDBTransactionMode = exports.IDBTransactionMode || (exports.IDBTransactionMode = {})));
-            var IDBCursorDirection;
-            (function (IDBCursorDirection) {
-                IDBCursorDirection.next = 'next';
-                IDBCursorDirection.nextunique = 'nextunique';
-                IDBCursorDirection.prev = 'prev';
-                IDBCursorDirection.prevunique = 'prevunique';
-            }(IDBCursorDirection = exports.IDBCursorDirection || (exports.IDBCursorDirection = {})));
         },
         {}
     ],
