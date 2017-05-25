@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.14.0
+
+- Add store size limitation feature.
+
 ## 0.13.0
 
 - Unwrap event types.

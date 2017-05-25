@@ -17,6 +17,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
 }
 export interface StoreChannelConfig<K extends string, V extends StoreChannelObject<K>> {
   schema(): V;
+  size?: number;
   expiry?: number;
   destroy?(error: DOMException | DOMError, event: Event | null): boolean;
 }

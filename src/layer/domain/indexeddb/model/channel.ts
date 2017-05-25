@@ -1,5 +1,5 @@
 import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../';
-import { Observable } from 'spica';
+import { Observable, Cache } from 'spica';
 import { open, close, destroy, event, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { DataStore } from './channel/data';
 import { AccessStore } from './channel/access';
@@ -13,7 +13,8 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     public readonly name: string,
     attrs: string[],
     destroy: (err: DOMException | DOMError, event: Event | null) => boolean,
-    private readonly expiry: number
+    private readonly size: number,
+    private readonly expiry: number,
   ) {
     if (cache.has(name)) throw new Error(`ClientChannel: IndexedDB: Specified channel ${name} is already created.`);
     void cache.set(name, this);
@@ -38,7 +39,23 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     this.schema = new Schema<K, V>(this, attrs, this.ages);
     void event.on([name, IDBEventType.destroy], () =>
       void this.schema.bind());
+    if (size < Infinity) {
+      void this.events.load.monitor([], ({ key, type }) =>
+        type === ChannelStore.EventType.delete
+          ? void this.keys.delete(key)
+          : void this.keys.put(key, void 0));
+      void this.events.save.monitor([], ({ key, type }) =>
+        type === ChannelStore.EventType.delete
+          ? void this.keys.delete(key)
+          : void this.keys.put(key, void 0));
+      const limit = () =>
+        void this.recent(Infinity, (_, e) =>
+          e && cache.has(name) && void setTimeout(limit, 1000));
+      void limit();
+    }
   }
+  private readonly keys: Cache<K, void> = new Cache<K, void>(this.size, k =>
+    void this.delete(k));
   protected readonly schema: Schema<K, V>;
   public readonly events = {
     load: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),

@@ -10,9 +10,10 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
     name: string,
     private readonly factory: () => V,
     destroy: (err: DOMException | DOMError, ev: Event | null) => boolean = () => true,
-    expiry: number = Infinity
+    size: number = Infinity,
+    expiry: number = Infinity,
   ) {
-    super(name, Object.keys(factory()).filter(isValidPropertyName).filter(isValidPropertyValue(factory())), destroy, expiry);
+    super(name, Object.keys(factory()).filter(isValidPropertyName).filter(isValidPropertyValue(factory())), destroy, size, expiry);
     const keys = Object.keys(this.factory())
       .filter(isValidPropertyName)
       .filter(isValidPropertyValue(this.factory()));
