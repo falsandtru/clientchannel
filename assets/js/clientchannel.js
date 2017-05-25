@@ -1,4 +1,4 @@
-/*! clientchannel v0.13.0 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.14.0 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -82,8 +82,8 @@ require = function e(t, n, r) {
                 function StoreChannel(name, _a) {
                     var schema = _a.schema, _b = _a.destroy, destroy = _b === void 0 ? function () {
                             return true;
-                        } : _b, _c = _a.expiry, expiry = _c === void 0 ? Infinity : _c;
-                    return _super.call(this, name, schema, destroy, expiry) || this;
+                        } : _b, _c = _a.size, size = _c === void 0 ? Infinity : _c, _d = _a.expiry, expiry = _d === void 0 ? Infinity : _d;
+                    return _super.call(this, name, schema, destroy, size, expiry) || this;
                 }
                 return StoreChannel;
             }(api_1.StoreChannel);
@@ -700,13 +700,14 @@ require = function e(t, n, r) {
                                 }
                             };
                             tx.onerror = tx.onabort = function () {
-                                return active() ? void reject() : void resolve();
+                                return active() ? void reject() : void resolve(), void terminate();
                             };
                         };
                         if (tx)
                             return void cont(tx);
                         var cancelable = new spica_1.Cancelable();
                         void cancelable.listeners.add(reject);
+                        void cancelable.listeners.add(terminate);
                         void spica_1.Tick(function () {
                             return void setTimeout(cancelable.cancel, 1000), void api_1.listen(_this.database)(function (db) {
                                 return void cancelable.listeners.clear(), void cancelable.maybe(db).fmap(function (db) {
@@ -1278,10 +1279,14 @@ require = function e(t, n, r) {
             var noop_1 = require('../../../../lib/noop');
             var cache = new Map();
             var ChannelStore = function () {
-                function ChannelStore(name, attrs, destroy, expiry) {
+                function ChannelStore(name, attrs, destroy, size, expiry) {
                     var _this = this;
                     this.name = name;
+                    this.size = size;
                     this.expiry = expiry;
+                    this.keys = new spica_1.Cache(this.size, function (k) {
+                        return void _this.delete(k);
+                    });
                     this.events = {
                         load: new spica_1.Observable(),
                         save: new spica_1.Observable(),
@@ -1309,6 +1314,22 @@ require = function e(t, n, r) {
                     ], function () {
                         return void _this.schema.bind();
                     });
+                    if (size < Infinity) {
+                        void this.events.load.monitor([], function (_a) {
+                            var key = _a.key, type = _a.type;
+                            return type === ChannelStore.EventType.delete ? void _this.keys.delete(key) : void _this.keys.put(key, void 0);
+                        });
+                        void this.events.save.monitor([], function (_a) {
+                            var key = _a.key, type = _a.type;
+                            return type === ChannelStore.EventType.delete ? void _this.keys.delete(key) : void _this.keys.put(key, void 0);
+                        });
+                        var limit_1 = function () {
+                            return void _this.recent(Infinity, function (_, e) {
+                                return e && cache.has(name) && void setTimeout(limit_1, 1000);
+                            });
+                        };
+                        void limit_1();
+                    }
                 }
                 ChannelStore.prototype.sync = function (keys, cb) {
                     if (cb === void 0) {
@@ -1686,16 +1707,19 @@ require = function e(t, n, r) {
             var api_3 = require('../../broadcast/api');
             var StoreChannel = function (_super) {
                 __extends(StoreChannel, _super);
-                function StoreChannel(name, factory, destroy, expiry) {
+                function StoreChannel(name, factory, destroy, size, expiry) {
                     if (destroy === void 0) {
                         destroy = function () {
                             return true;
                         };
                     }
+                    if (size === void 0) {
+                        size = Infinity;
+                    }
                     if (expiry === void 0) {
                         expiry = Infinity;
                     }
-                    var _this = _super.call(this, name, Object.keys(factory()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(factory())), destroy, expiry) || this;
+                    var _this = _super.call(this, name, Object.keys(factory()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(factory())), destroy, size, expiry) || this;
                     _this.factory = factory;
                     _this.broadcast = new api_3.BroadcastChannel(_this.name);
                     _this.links = new Map();
