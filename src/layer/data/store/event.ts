@@ -309,14 +309,16 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         };
         assert(!tx.onerror);
         assert(!tx.onabort);
-        tx.onerror = tx.onabort = () =>
+        tx.onerror = tx.onabort = () => (
           active()
             ? void reject()
-            : void resolve();
+            : void resolve(),
+          void terminate());
       };
       if (tx) return void cont(tx);
       const cancelable = new Cancelable<void>();
       void cancelable.listeners.add(reject);
+      void cancelable.listeners.add(terminate);
       void Tick(() => (
         void setTimeout(cancelable.cancel, 1000),
         void listen(this.database)(db => (

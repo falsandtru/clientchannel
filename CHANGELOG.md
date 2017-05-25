@@ -3,6 +3,7 @@
 ## 0.14.0
 
 - Add store size limitation feature.
+- Fix failed operation handling.
 
 ## 0.13.0
 
