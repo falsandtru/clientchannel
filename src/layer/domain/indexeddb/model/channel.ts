@@ -50,7 +50,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
           : void this.keys.put(key, void 0));
       const limit = () =>
         void this.recent(Infinity, (_, e) =>
-          e && cache.has(name) && void setTimeout(limit, 1000));
+          e && cache.get(name) === this && void setTimeout(limit, 1000));
       void limit();
     }
   }
