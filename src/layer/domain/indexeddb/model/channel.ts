@@ -49,8 +49,9 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
           ? void this.keys.delete(key)
           : void this.keys.put(key, void 0));
       const limit = () =>
+        cache.get(name) === this && 
         void this.recent(Infinity, (_, e) =>
-          e && cache.get(name) === this && void setTimeout(limit, 1000));
+          e && void setTimeout(limit, 1000));
       void limit();
     }
   }

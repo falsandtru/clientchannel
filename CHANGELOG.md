@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.14.2
+
+- Fix store destruct processing.
+
 ## 0.14.1
 
 - Fix store destruct processing.
