@@ -1,4 +1,4 @@
-/*! clientchannel v0.14.0 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.14.1 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -1325,7 +1325,7 @@ require = function e(t, n, r) {
                         });
                         var limit_1 = function () {
                             return void _this.recent(Infinity, function (_, e) {
-                                return e && cache.has(name) && void setTimeout(limit_1, 1000);
+                                return e && cache.get(name) === _this && void setTimeout(limit_1, 1000);
                             });
                         };
                         void limit_1();
