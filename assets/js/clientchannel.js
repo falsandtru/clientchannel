@@ -1,4 +1,4 @@
-/*! clientchannel v0.14.1 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.14.2 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -1312,7 +1312,7 @@ require = function e(t, n, r) {
                         name,
                         api_1.IDBEventType.destroy
                     ], function () {
-                        return void _this.schema.bind();
+                        return cache.get(name) === _this && void _this.schema.rebuild();
                     });
                     if (size < Infinity) {
                         void this.events.load.monitor([], function (_a) {
@@ -1324,8 +1324,14 @@ require = function e(t, n, r) {
                             return type === ChannelStore.EventType.delete ? void _this.keys.delete(key) : void _this.keys.put(key, void 0);
                         });
                         var limit_1 = function () {
-                            return void _this.recent(Infinity, function (_, e) {
-                                return e && cache.get(name) === _this && void setTimeout(limit_1, 1000);
+                            return cache.get(name) === _this && void _this.recent(Infinity, function (ks, err) {
+                                if (cache.get(name) !== _this)
+                                    return;
+                                if (err)
+                                    return void setTimeout(limit_1, 1000);
+                                return void ks.reverse().forEach(function (k) {
+                                    return void _this.keys.put(k, void 0);
+                                });
                             });
                         };
                         void limit_1();
@@ -1336,6 +1342,12 @@ require = function e(t, n, r) {
                         cb = noop_1.noop;
                     }
                     return this.schema.data.sync(keys, cb);
+                };
+                ChannelStore.prototype.fetch = function (key, cb) {
+                    if (cb === void 0) {
+                        cb = noop_1.noop;
+                    }
+                    return this.schema.data.fetch(key, cb);
                 };
                 ChannelStore.prototype.transaction = function (key, cb, complete) {
                     return this.schema.data.transaction(key, cb, complete);
@@ -1374,16 +1386,16 @@ require = function e(t, n, r) {
                         void cursor.continue();
                     });
                 };
-                ChannelStore.prototype.close = function () {
+                ChannelStore.prototype.release = function () {
                     void cache.delete(this.name);
+                    void this.schema.close();
+                };
+                ChannelStore.prototype.close = function () {
+                    void this.release();
                     return void api_1.close(this.name);
                 };
                 ChannelStore.prototype.destroy = function () {
-                    void api_1.event.off([
-                        this.name,
-                        api_1.IDBEventType.destroy
-                    ]);
-                    void cache.delete(this.name);
+                    void this.release();
                     return void api_1.destroy(this.name);
                 };
                 return ChannelStore;
@@ -1400,27 +1412,28 @@ require = function e(t, n, r) {
                     this.store_ = store_;
                     this.attrs_ = attrs_;
                     this.expiries_ = expiries_;
-                    void this.bind();
+                    this.cancelable_ = new spica_1.Cancelable();
+                    void this.build();
                 }
-                Schema.prototype.bind = function () {
+                Schema.prototype.build = function () {
                     var _this = this;
                     var keys = this.data ? this.data.keys() : [];
                     this.data = new data_1.DataStore(this.store_.name, this.attrs_);
-                    this.data.events.load.monitor([], function (ev) {
+                    void this.data.events.load.monitor([], function (ev) {
                         return _this.store_.events.load.emit([
                             ev.key,
                             ev.attr,
                             ev.type
                         ], ev);
                     });
-                    this.data.events.save.monitor([], function (ev) {
+                    void this.data.events.save.monitor([], function (ev) {
                         return _this.store_.events.save.emit([
                             ev.key,
                             ev.attr,
                             ev.type
                         ], ev);
                     });
-                    this.data.events.loss.monitor([], function (ev) {
+                    void this.data.events.loss.monitor([], function (ev) {
                         return _this.store_.events.loss.emit([
                             ev.key,
                             ev.attr,
@@ -1428,8 +1441,16 @@ require = function e(t, n, r) {
                         ], ev);
                     });
                     this.access = new access_1.AccessStore(this.store_.name, this.data.events_.access);
-                    this.expire = new expiry_1.ExpiryStore(this.store_.name, this.store_, this.data.events_.access, this.expiries_);
+                    this.expire = new expiry_1.ExpiryStore(this.store_.name, this.store_, this.data.events_.access, this.expiries_, this.cancelable_);
                     void this.data.sync(keys);
+                };
+                Schema.prototype.rebuild = function () {
+                    void this.close();
+                    void this.build();
+                };
+                Schema.prototype.close = function () {
+                    void this.cancelable_.cancel();
+                    this.cancelable_ = new spica_1.Cancelable();
                 };
                 return Schema;
             }();
@@ -1585,13 +1606,12 @@ require = function e(t, n, r) {
                 };
             }();
             Object.defineProperty(exports, '__esModule', { value: true });
-            var api_1 = require('../../../../infrastructure/indexeddb/api');
             var key_value_1 = require('../../../../data/store/key-value');
             var event_1 = require('../../../../data/store/event');
             exports.STORE_NAME = 'expiry';
             var ExpiryStore = function (_super) {
                 __extends(ExpiryStore, _super);
-                function ExpiryStore(database, store, access, ages) {
+                function ExpiryStore(database, store, access, ages, cancelable) {
                     var _this = _super.call(this, database, exports.STORE_NAME, ExpiryStore.fields.key) || this;
                     void Object.freeze(_this);
                     var timer = 0;
@@ -1613,13 +1633,10 @@ require = function e(t, n, r) {
                                 return void cursor.continue();
                             });
                         }, date - Date.now());
-                        void api_1.event.once([
-                            database,
-                            api_1.IDBEventType.destroy
-                        ], function () {
-                            return void clearTimeout(timer);
-                        });
                     };
+                    void cancelable.listeners.add(function () {
+                        return void clearTimeout(timer);
+                    });
                     void schedule(Date.now());
                     void access.monitor([], function (_a) {
                         var key = _a.key, type = _a.type;
@@ -1676,8 +1693,7 @@ require = function e(t, n, r) {
         },
         {
             '../../../../data/store/event': 8,
-            '../../../../data/store/key-value': 9,
-            '../../../../infrastructure/indexeddb/api': 22
+            '../../../../data/store/key-value': 9
         }
     ],
     18: [
@@ -1726,7 +1742,7 @@ require = function e(t, n, r) {
                     _this.sources = new Map();
                     var keys = Object.keys(_this.factory()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(_this.factory()));
                     void _this.broadcast.listen(function (ev) {
-                        return void _this.schema.data.fetch(ev instanceof MessageEvent ? ev.data : ev.newValue);
+                        return void _this.fetch(ev instanceof MessageEvent ? ev.data : ev.newValue);
                     });
                     void _this.events.save.monitor([], function (_a) {
                         var key = _a.key;
