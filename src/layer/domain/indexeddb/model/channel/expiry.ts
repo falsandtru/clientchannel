@@ -1,5 +1,5 @@
-import { Observer } from 'spica';
-import { event, IDBEventType, Config } from '../../../../infrastructure/indexeddb/api';
+import { Observer, Cancelable } from 'spica';
+import { Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/store/key-value';
 import { EventStore } from '../../../../data/store/event';
 
@@ -45,7 +45,8 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
       delete(key: K): void;
     },
     access: Observer<never[], EventStore.InternalEvent<K>, void>,
-    ages: Map<K, number>
+    ages: Map<K, number>,
+    cancelable: Cancelable<void>,
   ) {
     super(database, STORE_NAME, ExpiryStore.fields.key);
     void Object.freeze(this);
@@ -67,8 +68,8 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
           return void cursor.continue();
         });
       }, date - Date.now());
-      void event.once([database, IDBEventType.destroy], () => void clearTimeout(timer));
     };
+    void cancelable.listeners.add(() => void clearTimeout(timer))
 
     void schedule(Date.now());
     void access

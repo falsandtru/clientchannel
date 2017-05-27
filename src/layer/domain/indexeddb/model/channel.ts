@@ -1,5 +1,5 @@
 import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../';
-import { Observable, Cache } from 'spica';
+import { Observable, Cancelable, Cache } from 'spica';
 import { open, close, destroy, event, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { DataStore } from './channel/data';
 import { AccessStore } from './channel/access';
@@ -38,7 +38,8 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     });
     this.schema = new Schema<K, V>(this, attrs, this.ages);
     void event.on([name, IDBEventType.destroy], () =>
-      void this.schema.bind());
+      cache.get(name) === this &&
+      void this.schema.rebuild());
     if (size < Infinity) {
       void this.events.load.monitor([], ({ key, type }) =>
         type === ChannelStore.EventType.delete
@@ -63,7 +64,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   }
   private readonly keys: Cache<K, void> = new Cache<K, void>(this.size, k =>
     void this.delete(k));
-  protected readonly schema: Schema<K, V>;
+  private readonly schema: Schema<K, V>;
   public readonly events = {
     load: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
     save: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
@@ -71,6 +72,9 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   };
   public sync(keys: K[], cb: (errs: [K, DOMException | DOMError][]) => any = noop): void {
     return this.schema.data.sync(keys, cb);
+  }
+  public fetch(key: K, cb: (err?: DOMException | DOMError) => any = noop): void {
+    return this.schema.data.fetch(key, cb);
   }
   public transaction(key: K, cb: () => any, complete: (err?: DOMException | DOMError | Error) => any): void {
     return this.schema.data.transaction(key, cb, complete);
@@ -110,13 +114,16 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
         void cursor.continue();
       });
   }
-  public close(): void {
+  private release(): void {
     void cache.delete(this.name);
+    void this.schema.close();
+  }
+  public close(): void {
+    void this.release();
     return void close(this.name);
   }
   public destroy(): void {
-    void event.off([this.name, IDBEventType.destroy]);
-    void cache.delete(this.name);
+    void this.release();
     return void destroy(this.name);
   }
 }
@@ -132,20 +139,30 @@ class Schema<K extends string, V extends StoreChannelObject<K>> {
     private readonly attrs_: string[],
     private readonly expiries_: Map<K, number>
   ) {
-    void this.bind();
+    void this.build();
   }
-  public bind(): void {
+  private cancelable_ = new Cancelable<void>();
+  private build(): void {
     const keys = this.data ? this.data.keys() : [];
+
     this.data = new DataStore<K, V>(this.store_.name, this.attrs_);
-    this.data.events.load.monitor([], ev => this.store_.events.load.emit([ev.key, ev.attr, ev.type], ev));
-    this.data.events.save.monitor([], ev => this.store_.events.save.emit([ev.key, ev.attr, ev.type], ev));
-    this.data.events.loss.monitor([], ev => this.store_.events.loss.emit([ev.key, ev.attr, ev.type], ev));
+    void this.data.events.load.monitor([], ev => this.store_.events.load.emit([ev.key, ev.attr, ev.type], ev));
+    void this.data.events.save.monitor([], ev => this.store_.events.save.emit([ev.key, ev.attr, ev.type], ev));
+    void this.data.events.loss.monitor([], ev => this.store_.events.loss.emit([ev.key, ev.attr, ev.type], ev));
     this.access = new AccessStore<K>(this.store_.name, this.data.events_.access);
-    this.expire = new ExpiryStore<K>(this.store_.name, this.store_, this.data.events_.access, this.expiries_);
+    this.expire = new ExpiryStore<K>(this.store_.name, this.store_, this.data.events_.access, this.expiries_, this.cancelable_);
 
     void this.data.sync(keys);
+  }
+  public rebuild(): void {
+    void this.close();
+    void this.build();
   }
   public data: DataStore<K, V>;
   public access: AccessStore<K>;
   public expire: ExpiryStore<K>;
+  public close(): void {
+    void this.cancelable_.cancel();
+    this.cancelable_ = new Cancelable<void>();
+  }
 }

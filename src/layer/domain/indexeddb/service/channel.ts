@@ -18,7 +18,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
       .filter(isValidPropertyName)
       .filter(isValidPropertyValue(this.factory()));
     void this.broadcast.listen(ev =>
-      void this.schema.data.fetch(ev instanceof MessageEvent ? ev.data : ev.newValue));
+      void this.fetch(ev instanceof MessageEvent ? <K>ev.data : <K>ev.newValue));
     void this.events.save
       .monitor([], ({key}) =>
         void this.broadcast.post(key));
@@ -74,7 +74,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
       });
     void Object.seal(this);
   }
-  private readonly broadcast = new BroadcastChannel(this.name);
+  private readonly broadcast = new BroadcastChannel<K>(this.name);
   private readonly links = new Map<K, V>();
   private readonly sources = new Map<K, V>();
   public link(key: K, expiry?: number): V {

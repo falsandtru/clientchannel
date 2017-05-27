@@ -4,6 +4,7 @@
 
 - Fix store size limitation processing with initial loading.
 - Fix store destruct processing.
+- Fix store resource management.
 
 ## 0.14.1
 
