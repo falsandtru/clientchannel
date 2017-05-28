@@ -53,6 +53,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
             })
             .filter(({ newVal, oldVal }) =>
               newVal !== oldVal);
+          if (changes.length === 0) return;
           void migrate(link);
           void changes
             .forEach(({ attr, oldVal }) =>
