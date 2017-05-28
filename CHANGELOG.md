@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.0
+
+- Add storage value migration feature.
+
 ## 0.14.2
 
 - Fix store size limitation processing with initial loading.

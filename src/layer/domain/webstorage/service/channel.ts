@@ -11,6 +11,7 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
     public readonly name: string,
     private readonly storage: StorageLike = sessionStorage || fakeStorage,
     private readonly factory: () => V,
+    migrate: (link: V) => void = () => void 0,
     private readonly log = {
       update(_name: string) { },
       delete(_name: string) { }
@@ -33,7 +34,8 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
       void (<Observable<[StorageChannelEventType, keyof V], StorageChannel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
       void this.events.send.emit([event.attr], event);
     });
-    const subscriber = ({newValue}: StorageEvent): void => {
+    void migrate(this.link_);
+    void eventstream.on([this.mode, this.name], ({ newValue }: StorageEvent): void => {
       const item: V = parse<V>(newValue);
       void Object.keys(item)
         .filter(isValidPropertyName)
@@ -43,12 +45,12 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
           const newVal = item[attr];
           if (newVal === oldVal) return;
           source[attr] = newVal;
-          const event = new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, newVal, oldVal);
+          void migrate(this.link_);
+          const event = new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, source[attr], oldVal);
           void (<Observable<[StorageChannelEventType, keyof V], StorageChannel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
           void this.events.recv.emit([event.attr], event);
         }, void 0);
-    };
-    void eventstream.on([this.mode, this.name], subscriber);
+    });
     void this.log.update(this.name);
     void Object.freeze(this);
   }

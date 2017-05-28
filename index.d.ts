@@ -61,6 +61,7 @@ export class StorageChannel<V extends StorageChannelObject> {
 }
 export interface StorageChannelConfig<V extends StorageChannelObject> {
   schema(): V;
+  migrate?(link: V): void;
 }
 export interface StorageChannelObject {
   readonly __event: Observer<[StorageChannelEventType] | [StorageChannelEventType, keyof this], StorageChannelEvent<this>, any>;

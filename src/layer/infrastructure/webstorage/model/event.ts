@@ -6,6 +6,7 @@ type Type = ['local' | 'session'] | ['local' | 'session', string];
 const storageEventStream = new Observable<Type, StorageEvent, void>();
 
 export const eventstream: Observer<Type, StorageEvent, void> = storageEventStream;
+export const eventstream_ = storageEventStream;
 
 void self.addEventListener('storage', event => {
   switch (event.storageArea) {
