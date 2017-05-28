@@ -43,11 +43,11 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     if (size < Infinity) {
       const keys = new Cache<K>(this.size, k =>
         void this.delete(k));
-      void this.events.load.monitor([], ({ key, type }) =>
+      void this.events_.load.monitor([], ({ key, type }) =>
         type === ChannelStore.EventType.delete
           ? void keys.delete(key)
           : void keys.put(key));
-      void this.events.save.monitor([], ({ key, type }) =>
+      void this.events_.save.monitor([], ({ key, type }) =>
         type === ChannelStore.EventType.delete
           ? void keys.delete(key)
           : void keys.put(key));
@@ -68,7 +68,6 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   public readonly events_ = {
     load: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
     save: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
-    loss: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>()
   };
   public readonly events = {
     load: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
@@ -151,14 +150,14 @@ class Schema<K extends string, V extends StoreChannelObject<K>> {
     const keys = this.data ? this.data.keys() : [];
 
     this.data = new DataStore<K, V>(this.store_.name, this.attrs_);
-    void this.data.events.load.monitor([], ev => this.store_.events_.load.emit([ev.key, ev.attr, ev.type], ev));
-    void this.data.events.load.monitor([], ev => this.store_.events.load.emit([ev.key, ev.attr, ev.type], ev));
-    void this.data.events.save.monitor([], ev => this.store_.events_.save.emit([ev.key, ev.attr, ev.type], ev));
-    void this.data.events.save.monitor([], ev => this.store_.events.save.emit([ev.key, ev.attr, ev.type], ev));
-    void this.data.events.loss.monitor([], ev => this.store_.events_.loss.emit([ev.key, ev.attr, ev.type], ev));
-    void this.data.events.loss.monitor([], ev => this.store_.events.loss.emit([ev.key, ev.attr, ev.type], ev));
     this.access = new AccessStore<K>(this.store_.name, this.data.events_.access);
     this.expire = new ExpiryStore<K>(this.store_.name, this.store_, this.data.events_.access, this.expiries_, this.cancelable_);
+    void this.cancelable_.listeners
+      .add(this.store_.events_.load.relay(this.data.events.load))
+      .add(this.store_.events_.save.relay(this.data.events.save))
+      .add(this.store_.events.load.relay(this.data.events.load))
+      .add(this.store_.events.save.relay(this.data.events.save))
+      .add(this.store_.events.loss.relay(this.data.events.loss));
 
     void this.data.sync(keys);
   }

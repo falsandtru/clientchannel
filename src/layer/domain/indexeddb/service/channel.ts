@@ -116,6 +116,6 @@ function cast<K extends string, V extends ChannelObject<K>>(source: V) {
   return <V & InternalChannelObject<K>>source;
 
   interface InternalChannelObject<K extends string> extends ChannelObject<K> {
-    readonly __event: Observable<[StorageChannel.EventType] | [StorageChannel.EventType, keyof this | ''], StorageChannel.Event<this>, any>;
+    readonly __event: Observable<[StorageChannel.EventType] | [StorageChannel.EventType, keyof this], StorageChannel.Event<this>, any>;
   }
 }

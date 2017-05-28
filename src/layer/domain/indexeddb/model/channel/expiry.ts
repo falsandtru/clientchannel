@@ -44,7 +44,7 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
     store: {
       delete(key: K): void;
     },
-    access: Observer<never[], EventStore.InternalEvent<K>, void>,
+    access: Observer<any[], EventStore.InternalEvent<K>, void>,
     ages: Map<K, number>,
     cancelable: Cancelable<void>,
   ) {

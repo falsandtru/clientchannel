@@ -27,7 +27,7 @@ export interface StoreChannelObject<K extends string> {
   readonly __id: number;
   readonly __key: K;
   readonly __date: number;
-  readonly __event: Observer<[StorageChannelEventType] | [StorageChannelEventType, keyof this | ''], StorageChannelEvent<this>, any>;
+  readonly __event: Observer<[StorageChannelEventType] | [StorageChannelEventType, keyof this], StorageChannelEvent<this>, any>;
   readonly __transaction: (key: K, cb: () => any, complete: (err?: DOMException | DOMError | Error) => any) => void;
 }
 export interface StoreChannelObjectMetaData<K extends string> {
