@@ -27,22 +27,22 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
     void this.events_.load
       .monitor([], ({key, attr, type}) => {
         const source = this.sources.get(key);
-        const buffer = this.get(key);
+        const memory = this.get(key);
         const link = this.link(key);
         if (!source) return;
         switch (type) {
           case ChannelStore.EventType.put:
-            return void update(attrs.filter(a => a === attr), source, buffer, link);
+            return void update(attrs.filter(a => a === attr), source, memory, link);
           case ChannelStore.EventType.delete:
           case ChannelStore.EventType.snapshot:
-            return void update(attrs, source, buffer, link);
+            return void update(attrs, source, memory, link);
         }
         return;
 
-        function update(attrs: (keyof V)[], source: V, buffer: V, link: V): void {
+        function update(attrs: (keyof V)[], source: V, memory: V, link: V): void {
           const changes = attrs
             .map((attr: keyof V) => {
-              const newVal = buffer[attr];
+              const newVal = memory[attr];
               const oldVal = source[attr];
               source[attr] = newVal;
               return {
@@ -58,7 +58,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
           void changes
             .forEach(({ attr, oldVal }) =>
               void cast(source).__event
-                .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, buffer[attr], oldVal)));
+                .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, memory[attr], oldVal)));
         }
       });
     void Object.seal(this);
