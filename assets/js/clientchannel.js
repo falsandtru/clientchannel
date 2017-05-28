@@ -1,4 +1,4 @@
-/*! clientchannel v0.14.2 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.15.0 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -80,10 +80,12 @@ require = function e(t, n, r) {
             var StoreChannel = function (_super) {
                 __extends(StoreChannel, _super);
                 function StoreChannel(name, _a) {
-                    var schema = _a.schema, _b = _a.destroy, destroy = _b === void 0 ? function () {
+                    var schema = _a.schema, _b = _a.migrate, migrate = _b === void 0 ? function () {
+                            return void 0;
+                        } : _b, _c = _a.destroy, destroy = _c === void 0 ? function () {
                             return true;
-                        } : _b, _c = _a.size, size = _c === void 0 ? Infinity : _c, _d = _a.expiry, expiry = _d === void 0 ? Infinity : _d;
-                    return _super.call(this, name, schema, destroy, size, expiry) || this;
+                        } : _c, _d = _a.size, size = _d === void 0 ? Infinity : _d, _e = _a.expiry, expiry = _e === void 0 ? Infinity : _e;
+                    return _super.call(this, name, schema, migrate, destroy, size, expiry) || this;
                 }
                 return StoreChannel;
             }(api_1.StoreChannel);
@@ -91,8 +93,10 @@ require = function e(t, n, r) {
             var StorageChannel = function (_super) {
                 __extends(StorageChannel, _super);
                 function StorageChannel(name, _a) {
-                    var schema = _a.schema;
-                    return _super.call(this, name, api_2.localStorage, schema) || this;
+                    var schema = _a.schema, _b = _a.migrate, migrate = _b === void 0 ? function () {
+                            return void 0;
+                        } : _b;
+                    return _super.call(this, name, api_2.localStorage, schema, migrate) || this;
                 }
                 return StorageChannel;
             }(api_2.StorageChannel);
@@ -565,6 +569,12 @@ require = function e(t, n, r) {
                         return keys.length === 0 || keys[keys.length - 1] !== e.key ? spica_1.concat(keys, [e.key]) : keys;
                     }, []).sort();
                 };
+                EventStore.prototype.observes = function (key) {
+                    return this.syncState.has(key);
+                };
+                EventStore.prototype.has = function (key) {
+                    return compose(key, this.attrs, this.memory.reflect([key])).type !== EventStore.EventType.delete;
+                };
                 EventStore.prototype.meta = function (key) {
                     var events = this.memory.reflect([key]);
                     return Object.freeze({
@@ -577,11 +587,8 @@ require = function e(t, n, r) {
                         }, 0)
                     });
                 };
-                EventStore.prototype.has = function (key) {
-                    return compose(key, this.attrs, this.memory.reflect([key])).type !== EventStore.EventType.delete;
-                };
                 EventStore.prototype.get = function (key) {
-                    if (!this.syncState.get(key)) {
+                    if (!this.observes(key)) {
                         void this.fetch(key);
                     }
                     void this.events_.access.emit([key], new EventStore.InternalEvent(EventStore.InternalEventType.query, types_1.IdNumber(0), key, ''));
@@ -599,7 +606,7 @@ require = function e(t, n, r) {
                     ], new EventStore.InternalEvent(event.type, types_1.IdNumber(0), event.key, event.attr));
                     if (!(event instanceof event_1.UnsavedEventRecord))
                         throw new Error('ClientChannel: Cannot add a saved event: ' + JSON.stringify(event));
-                    if (!this.syncState.get(event.key)) {
+                    if (!this.observes(event.key)) {
                         void this.fetch(event.key);
                     }
                     switch (event.type) {
@@ -731,7 +738,7 @@ require = function e(t, n, r) {
                 EventStore.prototype.snapshot = function (key) {
                     var _this = this;
                     return void api_1.listen(this.database)(function (db) {
-                        if (!_this.syncState.get(key))
+                        if (!_this.observes(key))
                             return;
                         var tx = db.transaction(_this.name, 'readwrite');
                         var store = tx.objectStore(_this.name);
@@ -1352,11 +1359,11 @@ require = function e(t, n, r) {
                 ChannelStore.prototype.transaction = function (key, cb, complete) {
                     return this.schema.data.transaction(key, cb, complete);
                 };
-                ChannelStore.prototype.meta = function (key) {
-                    return this.schema.data.meta(key);
-                };
                 ChannelStore.prototype.has = function (key) {
                     return this.schema.data.has(key);
+                };
+                ChannelStore.prototype.meta = function (key) {
+                    return this.schema.data.meta(key);
                 };
                 ChannelStore.prototype.get = function (key) {
                     return this.schema.data.get(key);
@@ -1723,7 +1730,12 @@ require = function e(t, n, r) {
             var api_3 = require('../../broadcast/api');
             var StoreChannel = function (_super) {
                 __extends(StoreChannel, _super);
-                function StoreChannel(name, factory, destroy, size, expiry) {
+                function StoreChannel(name, factory, migrate, destroy, size, expiry) {
+                    if (migrate === void 0) {
+                        migrate = function () {
+                            return void 0;
+                        };
+                    }
                     if (destroy === void 0) {
                         destroy = function () {
                             return true;
@@ -1751,50 +1763,51 @@ require = function e(t, n, r) {
                     void _this.events.load.monitor([], function (_a) {
                         var key = _a.key, attr = _a.attr, type = _a.type;
                         var source = _this.sources.get(key);
+                        var buffer = _this.get(key);
+                        var link = _this.link(key);
                         if (!source)
                             return;
                         switch (type) {
                         case channel_1.ChannelStore.EventType.put: {
-                                var cache_1 = _this.get(key);
-                                void keys.filter(function (attr_) {
+                                var attrs = keys.filter(function (attr_) {
                                     return attr_ === attr;
-                                }).filter(api_1.isValidPropertyValue(cache_1)).sort().reduce(function (_, attr) {
-                                    var oldVal = source[attr];
-                                    var newVal = cache_1[attr];
-                                    source[attr] = newVal;
-                                    void cast(source).__event.emit([
-                                        api_2.StorageChannel.EventType.recv,
-                                        attr
-                                    ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.recv, attr, newVal, oldVal));
-                                }, void 0);
+                                }).filter(api_1.isValidPropertyValue(buffer)).sort();
+                                void update(attrs, source, buffer, link);
                                 return;
                             }
                         case channel_1.ChannelStore.EventType.delete: {
-                                var cache_2 = _this.factory();
-                                void keys.filter(api_1.isValidPropertyValue(cache_2)).sort().reduce(function (_, attr) {
-                                    var oldVal = source[attr];
-                                    var newVal = cache_2[attr];
-                                    source[attr] = newVal;
-                                    void cast(source).__event.emit([
-                                        api_2.StorageChannel.EventType.recv,
-                                        attr
-                                    ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.recv, attr, newVal, oldVal));
-                                }, void 0);
+                                var attrs = keys.filter(api_1.isValidPropertyValue(buffer)).sort();
+                                void update(attrs, source, buffer, link);
                                 return;
                             }
                         case channel_1.ChannelStore.EventType.snapshot: {
-                                var cache_3 = _this.get(key);
-                                void keys.filter(api_1.isValidPropertyValue(cache_3)).sort().reduce(function (_, attr) {
-                                    var oldVal = source[attr];
-                                    var newVal = cache_3[attr];
-                                    source[attr] = newVal;
-                                    void cast(source).__event.emit([
-                                        api_2.StorageChannel.EventType.recv,
-                                        attr
-                                    ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.recv, attr, newVal, oldVal));
-                                }, void 0);
+                                var attrs = keys.filter(api_1.isValidPropertyValue(buffer)).sort();
+                                void update(attrs, source, buffer, link);
                                 return;
                             }
+                        }
+                        function update(attrs, source, buffer, link) {
+                            var changes = attrs.map(function (attr) {
+                                var newVal = buffer[attr];
+                                var oldVal = source[attr];
+                                source[attr] = newVal;
+                                return {
+                                    attr: attr,
+                                    newVal: newVal,
+                                    oldVal: oldVal
+                                };
+                            }).filter(function (_a) {
+                                var newVal = _a.newVal, oldVal = _a.oldVal;
+                                return newVal !== oldVal;
+                            });
+                            void migrate(link);
+                            void changes.forEach(function (_a) {
+                                var attr = _a.attr, oldVal = _a.oldVal;
+                                return void cast(source).__event.emit([
+                                    api_2.StorageChannel.EventType.recv,
+                                    attr
+                                ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.recv, attr, buffer[attr], oldVal));
+                            });
                         }
                     });
                     void Object.seal(_this);
@@ -1924,9 +1937,14 @@ require = function e(t, n, r) {
             var storage_1 = require('../model/storage');
             var cache = new Map();
             var StorageChannel = function () {
-                function StorageChannel(name, storage, factory, log) {
+                function StorageChannel(name, storage, factory, migrate, log) {
                     if (storage === void 0) {
                         storage = api_2.sessionStorage || storage_1.fakeStorage;
+                    }
+                    if (migrate === void 0) {
+                        migrate = function () {
+                            return void 0;
+                        };
                     }
                     if (log === void 0) {
                         log = {
@@ -1963,7 +1981,11 @@ require = function e(t, n, r) {
                         ], event);
                         void _this.events.send.emit([event.attr], event);
                     });
-                    var subscriber = function (_a) {
+                    void migrate(this.link_);
+                    void api_2.eventstream.on([
+                        this.mode,
+                        this.name
+                    ], function (_a) {
                         var newValue = _a.newValue;
                         var item = parse(newValue);
                         void Object.keys(item).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(item)).reduce(function (_, attr) {
@@ -1972,18 +1994,15 @@ require = function e(t, n, r) {
                             if (newVal === oldVal)
                                 return;
                             source[attr] = newVal;
-                            var event = new StorageChannel.Event(StorageChannel.EventType.recv, attr, newVal, oldVal);
+                            void migrate(_this.link_);
+                            var event = new StorageChannel.Event(StorageChannel.EventType.recv, attr, source[attr], oldVal);
                             void source.__event.emit([
                                 event.type,
                                 event.attr
                             ], event);
                             void _this.events.recv.emit([event.attr], event);
                         }, void 0);
-                    };
-                    void api_2.eventstream.on([
-                        this.mode,
-                        this.name
-                    ], subscriber);
+                    });
                     void this.log.update(this.name);
                     void Object.freeze(this);
                     var _a;
@@ -2496,6 +2515,7 @@ require = function e(t, n, r) {
             exports.sessionStorage = global_1.sessionStorage;
             var event_1 = require('./model/event');
             exports.eventstream = event_1.eventstream;
+            exports.eventstream_ = event_1.eventstream_;
         },
         {
             './model/event': 27,
@@ -2510,6 +2530,7 @@ require = function e(t, n, r) {
             var global_1 = require('../module/global');
             var storageEventStream = new spica_1.Observable();
             exports.eventstream = storageEventStream;
+            exports.eventstream_ = storageEventStream;
             void self.addEventListener('storage', function (event) {
                 switch (event.storageArea) {
                 case global_1.localStorage:
