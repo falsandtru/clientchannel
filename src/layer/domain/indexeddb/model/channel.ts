@@ -41,7 +41,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
       cache.get(name) === this &&
       void this.schema.rebuild());
     if (size < Infinity) {
-      const keys: Cache<K, undefined> = new Cache<K, undefined>(this.size, k =>
+      const keys = new Cache<K>(this.size, k =>
         void this.delete(k));
       void this.events.load.monitor([], ({ key, type }) =>
         type === ChannelStore.EventType.delete
