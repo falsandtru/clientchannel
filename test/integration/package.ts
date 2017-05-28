@@ -4,9 +4,9 @@ import { StorageChannel, StorageChannelObject } from '../../index';
 describe('Integration: Package', function () {
   describe('usage', function () {
     it('persistence', () => {
-      interface Schema extends StoreChannelObject<string> {
+      interface Value extends StoreChannelObject<string> {
       }
-      class Schema {
+      class Value {
         // getter/setter will be excluded in schema.
         get key() {
           return this.__key;
@@ -26,21 +26,21 @@ describe('Integration: Package', function () {
         // delete linked record 3 days later since last access.
         expiry: 3 * 24 * 60 * 60 * 1e3,
         schema() {
-          return new Schema();
+          return new Value();
         }
       });
       // load data from indexeddb a little later.
-      const link: Schema = chan.link('path');
+      const link = chan.link('path');
       // save data to indexeddb, and sync data between all tabs.
       link.firstName = 'john';
       link.lastName = 'smith';
       chan.destroy();
     });
 
-    it('communicate', () => {
-      interface Schema extends StorageChannelObject {
+    it('communication', () => {
+      interface Value extends StorageChannelObject {
       }
-      class Schema {
+      class Value {
         get event() {
           return this.__event;
         }
@@ -49,12 +49,12 @@ describe('Integration: Package', function () {
 
       const chan = new StorageChannel('version', {
         schema() {
-          return new Schema();
+          return new Value();
         }
       });
-      const link: Schema = chan.link();
+      const link = chan.link();
       const VERSION = 1;
-      link.event.on(['recv', 'version'], ({newValue}) => {
+      link.event.on(['recv', 'version'], ({ newValue }) => {
         if (newValue === VERSION) return;
         if (newValue > VERSION) {
           location.reload(true);

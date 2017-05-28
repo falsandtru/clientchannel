@@ -36,39 +36,39 @@ When data was updated on other threads(tabs), own thread's property value will b
 ```ts
 import { StoreChannel, StoreChannelObject } from 'clientchannel';
 
-interface Schema extends StoreChannelObject<string> {
+interface Value extends StoreChannelObject<string> {
 }
-class Schema {
-	// getter/setter will be excluded in schema.
-	get key() {
-		return this.__key;
-	}
-	// property names that has underscore prefix or postfix will be excluded in schema.
-	private _separator = ' ';
-	// basic property names will be included in schema.
-	firstName = '';
-	lastName = '';
-	// property names that has unpersistable values will be excluded in schema.
-	name() {
-		return this.firstName + this._separator + this.lastName;
-	}
+class Value {
+  // getter/setter will be excluded in schema.
+  get key() {
+    return this.__key;
+  }
+  // property names that has underscore prefix or postfix will be excluded in schema.
+  private _separator = ' ';
+  // basic property names will be included in schema.
+  firstName = '';
+  lastName = '';
+  // invalid value types will be excluded in schema.
+  name() {
+    return this.firstName + this._separator + this.lastName;
+  }
 }
 
 const chan = new StoreChannel('domain', {
-	// delete linked records 3 days later since last access.
-	expiry: 3 * 24 * 60 * 60 * 1e3,
-	schema() {
-		return new Schema();
-	}
+  // delete linked record 3 days later since last access.
+  expiry: 3 * 24 * 60 * 60 * 1e3,
+  schema() {
+    return new Value();
+  }
 });
 // load data from indexeddb a little later.
-const link: Schema = chan.link('path');
+const link = chan.link('path');
 // save data to indexeddb, and sync data between all tabs.
 link.firstName = 'john';
 link.lastName = 'smith';
 ```
 
-### Communicate and Synchronize
+### Communication and Synchronization
 
 Linked object provedes send/recv events.
 `send` event will be emitted when linked object was updated by own thread(tab).
@@ -77,30 +77,30 @@ Linked object provedes send/recv events.
 ```ts
 import { StorageChannel, StorageChannelObject } from 'clientchannel';
 
-interface Schema extends StorageChannelObject {
+interface Value extends StorageChannelObject {
 }
-class Schema {
-	get event() {
-		return this.__event;
-	}
-	version = 0;
+class Value {
+  get event() {
+    return this.__event;
+  }
+  version = 0;
 }
 
 const chan = new StorageChannel('version', {
-	schema() {
-		return new Schema();
-	}
+  schema() {
+    return new Value();
+  },
 });
-const link: Schema = chan.link();
+const link = chan.link();
 const VERSION = 1;
-link.event.on(['recv', 'version'], ({newValue}) => {
-	if (newValue === VERSION) return;
-	if (newValue > VERSION) {
-		location.reload(true);
-	}
-	else {
-		link.version = VERSION;
-	}
+link.event.on(['recv', 'version'], ({ newValue }) => {
+  if (newValue === VERSION) return;
+  if (newValue > VERSION) {
+    location.reload(true);
+  }
+  else {
+    link.version = VERSION;
+  }
 });
 link.version = VERSION;
 ```
