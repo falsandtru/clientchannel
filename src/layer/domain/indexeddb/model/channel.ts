@@ -41,14 +41,16 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
       cache.get(name) === this &&
       void this.schema.rebuild());
     if (size < Infinity) {
+      const keys: Cache<K, undefined> = new Cache<K, undefined>(this.size, k =>
+        void this.delete(k));
       void this.events.load.monitor([], ({ key, type }) =>
         type === ChannelStore.EventType.delete
-          ? void this.keys.delete(key)
-          : void this.keys.put(key, void 0));
+          ? void keys.delete(key)
+          : void keys.put(key));
       void this.events.save.monitor([], ({ key, type }) =>
         type === ChannelStore.EventType.delete
-          ? void this.keys.delete(key)
-          : void this.keys.put(key, void 0));
+          ? void keys.delete(key)
+          : void keys.put(key));
       const limit = () =>
         cache.get(name) === this &&
         void this.recent(Infinity, (ks, err) => {
@@ -57,13 +59,11 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
           return void ks
             .reverse()
             .forEach(k =>
-              void this.keys.put(k, void 0));
+              void keys.put(k));
         });
       void limit();
     }
   }
-  private readonly keys: Cache<K, void> = new Cache<K, void>(this.size, k =>
-    void this.delete(k));
   private readonly schema: Schema<K, V>;
   public readonly events = {
     load: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
