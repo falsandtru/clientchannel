@@ -226,6 +226,12 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       .reduce((keys, e) => keys.length === 0 || keys[keys.length - 1] !== e.key ? concat(keys, [e.key]) : keys, <K[]>[])
       .sort();
   }
+  public observes(key: K): boolean {
+    return this.syncState.has(key);
+  }
+  public has(key: K): boolean {
+    return compose(key, this.attrs, this.memory.reflect([key])).type !== EventStore.EventType.delete;
+  }
   public meta(key: K): MetaData<K> {
     const events = this.memory.reflect([key]);
     return Object.freeze({
@@ -236,11 +242,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         e.date > date ? e.date : date, 0)
     });
   }
-  public has(key: K): boolean {
-    return compose(key, this.attrs, this.memory.reflect([key])).type !== EventStore.EventType.delete;
-  }
   public get(key: K): V {
-    if (!this.syncState.get(key)) {
+    if (!this.observes(key)) {
       void this.fetch(key);
     }
     void this.events_.access
@@ -254,7 +257,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     void this.events_.access
       .emit([event.key, event.attr, event.type], new EventStore.InternalEvent(event.type, IdNumber(0), event.key, event.attr));
     if (!(event instanceof UnsavedEventRecord)) throw new Error(`ClientChannel: Cannot add a saved event: ${JSON.stringify(event)}`);
-    if (!this.syncState.get(event.key)) {
+    if (!this.observes(event.key)) {
       void this.fetch(event.key);
     }
     switch (event.type) {
@@ -336,7 +339,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   private readonly snapshotCycle: number = 9;
   private snapshot(key: K): void {
     return void listen(this.database)(db => {
-      if (!this.syncState.get(key)) return;
+      if (!this.observes(key)) return;
       const tx = db.transaction(this.name, 'readwrite');
       const store = tx.objectStore(this.name);
       const req = store

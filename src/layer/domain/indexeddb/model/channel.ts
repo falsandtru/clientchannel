@@ -79,11 +79,11 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   public transaction(key: K, cb: () => any, complete: (err?: DOMException | DOMError | Error) => any): void {
     return this.schema.data.transaction(key, cb, complete);
   }
-  public meta(key: K): StoreChannelObjectMetaData<K> {
-    return this.schema.data.meta(key);
-  }
   public has(key: K): boolean {
     return this.schema.data.has(key);
+  }
+  public meta(key: K): StoreChannelObjectMetaData<K> {
+    return this.schema.data.meta(key);
   }
   public get(key: K): V {
     return this.schema.data.get(key);

@@ -288,36 +288,41 @@ describe('Unit: layers/data/store/event', function () {
       open('test', Store.configure('test'));
       const es = new Store<string, Value>('test', 'test');
 
+      assert(es.observes('a') === false);
+      assert(es.has('a') === false);
       assert(es.meta('a').id === 0);
       assert(es.meta('a').key === 'a');
       assert(es.meta('a').date === 0);
-      assert(es.has('a') === false);
       assert(es.get('a').value === void 0);
       es.add(new UnsavedEventRecord('a', new Value(0)));
+      assert(es.observes('a') === true);
+      assert(es.has('a') === true);
       assert(es.meta('a').id === 0);
       assert(es.meta('a').key === 'a');
       assert(es.meta('a').date > 0);
-      assert(es.has('a') === true);
       assert(es.get('a').value === 0);
       es.events.save
         .once(['a', 'value', 'put'], () => {
+          assert(es.observes('a') === true);
+          assert(es.has('a') === true);
           assert(es.meta('a').id === 1);
           assert(es.meta('a').key === 'a');
           assert(es.meta('a').date > 0);
-          assert(es.has('a') === true);
           assert(es.get('a').value === 0);
           es.delete('a');
+          assert(es.observes('a') === true);
+          assert(es.has('a') === false);
           assert(es.meta('a').id === 1);
           assert(es.meta('a').key === 'a');
           assert(es.meta('a').date > 0);
-          assert(es.has('a') === false);
           assert(es.get('a').value === void 0);
           es.events.save
             .once(['a', '', 'delete'], () => {
+              assert(es.observes('a') === true);
+              assert(es.has('a') === false);
               assert(es.meta('a').id === 2);
               assert(es.meta('a').key === 'a');
               assert(es.meta('a').date > 0);
-              assert(es.has('a') === false);
               assert(es.get('a').value === void 0);
               done();
             });
@@ -349,7 +354,11 @@ describe('Unit: layers/data/store/event', function () {
       const es = new Store<string, Value>('test', 'test');
 
       es.transaction('', () => {
+        assert(es.observes('') === true);
+        assert(es.has('') === false);
         es.add(new UnsavedEventRecord('', new Value(1)));
+        assert(es.observes('') === true);
+        assert(es.has('') === true);
         assert(es.meta('').id === 0);
         assert(es.get('').value === 1);
       }, err => {
@@ -371,17 +380,21 @@ describe('Unit: layers/data/store/event', function () {
           es.delete('a');
           es.events.save
             .once(['a', '', 'delete'], () => {
-              assert(es.meta('a').id === 3);
+              assert(es.observes('a') === true);
               assert(es.has('a') === false);
+              assert(es.meta('a').id === 3);
               assert(es.get('a').value === void 0);
-              assert(es.meta('b').id === 2);
+              assert(es.observes('b') === true);
               assert(es.has('b') === true);
+              assert(es.meta('b').id === 2);
               assert(es.get('b').value === 0);
               setTimeout(() => {
-                assert(es.meta('a').id === 0);
+                assert(es.observes('a') === true);
                 assert(es.has('a') === false);
-                assert(es.meta('b').id === 2);
+                assert(es.meta('a').id === 0);
+                assert(es.observes('b') === true);
                 assert(es.has('b') === true);
+                assert(es.meta('b').id === 2);
                 done();
               }, 1000);
             });
