@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.1
+
+- Fix store value migration processing.
+
 ## 0.15.0
 
 - Add store value migration feature.

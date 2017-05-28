@@ -21,10 +21,10 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
       .sort();
     void this.broadcast.listen(ev =>
       void this.fetch(ev instanceof MessageEvent ? <K>ev.data : <K>ev.newValue));
-    void this.events.save
+    void this.events_.save
       .monitor([], ({key}) =>
         void this.broadcast.post(key));
-    void this.events.load
+    void this.events_.load
       .monitor([], ({key, attr, type}) => {
         const source = this.sources.get(key);
         const buffer = this.get(key);

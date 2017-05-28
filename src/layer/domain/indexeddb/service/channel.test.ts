@@ -104,6 +104,29 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       });
     });
 
+    it('migrate', (done) => {
+      let chan = new StoreChannel('test', () => new Value(0, ''));
+      const dao = chan.link('a');
+      dao.n = 1;
+      chan.events.save.once(['a', 'n', 'put'], () => {
+        chan.close();
+        chan = new StoreChannel('test', () => new Value(0, ''), dao => {
+          assert(dao.__id === 1);
+          assert(dao.n === 1);
+          dao.n = 2;
+        });
+        const dao = chan.link('a');
+        chan.events.load.once(['a', 'n', 'put'], () => {
+          assert(dao.n === 2);
+          chan.events.save.once(['a', 'n', 'put'], () => {
+            assert(dao.__id === 2);
+            chan.destroy();
+            done();
+          });
+        });
+      });
+    });
+
   });
 
 });
