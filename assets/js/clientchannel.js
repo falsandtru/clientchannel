@@ -1,4 +1,4 @@
-/*! clientchannel v0.15.0 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.15.1 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -665,7 +665,11 @@ require = function e(t, n, r) {
                                     spica_1.sqid(0)
                                 ]).some(function (_a) {
                                     var s = _a[1];
-                                    return s(void 0) === event;
+                                    return s(void 0, [
+                                        event.key,
+                                        event.attr,
+                                        spica_1.sqid(0)
+                                    ]) === event;
                                 });
                             };
                             if (!active())
@@ -701,7 +705,7 @@ require = function e(t, n, r) {
                                 void resolve();
                                 if (_this.memory.refs([savedEvent.key]).filter(function (_a) {
                                         var sub = _a[1];
-                                        return sub(void 0) instanceof event_1.SavedEventRecord;
+                                        return sub(void 0, [savedEvent.key]) instanceof event_1.SavedEventRecord;
                                     }).length >= _this.snapshotCycle) {
                                     void _this.snapshot(savedEvent.key);
                                 }
@@ -1291,9 +1295,10 @@ require = function e(t, n, r) {
                     this.name = name;
                     this.size = size;
                     this.expiry = expiry;
-                    this.keys = new spica_1.Cache(this.size, function (k) {
-                        return void _this.delete(k);
-                    });
+                    this.events_ = {
+                        load: new spica_1.Observable(),
+                        save: new spica_1.Observable()
+                    };
                     this.events = {
                         load: new spica_1.Observable(),
                         save: new spica_1.Observable(),
@@ -1322,13 +1327,16 @@ require = function e(t, n, r) {
                         return cache.get(name) === _this && void _this.schema.rebuild();
                     });
                     if (size < Infinity) {
-                        void this.events.load.monitor([], function (_a) {
-                            var key = _a.key, type = _a.type;
-                            return type === ChannelStore.EventType.delete ? void _this.keys.delete(key) : void _this.keys.put(key, void 0);
+                        var keys_1 = new spica_1.Cache(this.size, function (k) {
+                            return void _this.delete(k);
                         });
-                        void this.events.save.monitor([], function (_a) {
+                        void this.events_.load.monitor([], function (_a) {
                             var key = _a.key, type = _a.type;
-                            return type === ChannelStore.EventType.delete ? void _this.keys.delete(key) : void _this.keys.put(key, void 0);
+                            return type === ChannelStore.EventType.delete ? void keys_1.delete(key) : void keys_1.put(key);
+                        });
+                        void this.events_.save.monitor([], function (_a) {
+                            var key = _a.key, type = _a.type;
+                            return type === ChannelStore.EventType.delete ? void keys_1.delete(key) : void keys_1.put(key);
                         });
                         var limit_1 = function () {
                             return cache.get(name) === _this && void _this.recent(Infinity, function (ks, err) {
@@ -1337,7 +1345,7 @@ require = function e(t, n, r) {
                                 if (err)
                                     return void setTimeout(limit_1, 1000);
                                 return void ks.reverse().forEach(function (k) {
-                                    return void _this.keys.put(k, void 0);
+                                    return void keys_1.put(k);
                                 });
                             });
                         };
@@ -1423,32 +1431,11 @@ require = function e(t, n, r) {
                     void this.build();
                 }
                 Schema.prototype.build = function () {
-                    var _this = this;
                     var keys = this.data ? this.data.keys() : [];
                     this.data = new data_1.DataStore(this.store_.name, this.attrs_);
-                    void this.data.events.load.monitor([], function (ev) {
-                        return _this.store_.events.load.emit([
-                            ev.key,
-                            ev.attr,
-                            ev.type
-                        ], ev);
-                    });
-                    void this.data.events.save.monitor([], function (ev) {
-                        return _this.store_.events.save.emit([
-                            ev.key,
-                            ev.attr,
-                            ev.type
-                        ], ev);
-                    });
-                    void this.data.events.loss.monitor([], function (ev) {
-                        return _this.store_.events.loss.emit([
-                            ev.key,
-                            ev.attr,
-                            ev.type
-                        ], ev);
-                    });
                     this.access = new access_1.AccessStore(this.store_.name, this.data.events_.access);
                     this.expire = new expiry_1.ExpiryStore(this.store_.name, this.store_, this.data.events_.access, this.expiries_, this.cancelable_);
+                    void this.cancelable_.listeners.add(this.store_.events_.load.relay(this.data.events.load)).add(this.store_.events_.save.relay(this.data.events.save)).add(this.store_.events.load.relay(this.data.events.load)).add(this.store_.events.save.relay(this.data.events.save)).add(this.store_.events.loss.relay(this.data.events.loss));
                     void this.data.sync(keys);
                 };
                 Schema.prototype.rebuild = function () {
@@ -1752,15 +1739,15 @@ require = function e(t, n, r) {
                     _this.broadcast = new api_3.BroadcastChannel(_this.name);
                     _this.links = new Map();
                     _this.sources = new Map();
-                    var keys = Object.keys(_this.factory()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(_this.factory()));
+                    var attrs = Object.keys(_this.factory()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(_this.factory())).sort();
                     void _this.broadcast.listen(function (ev) {
                         return void _this.fetch(ev instanceof MessageEvent ? ev.data : ev.newValue);
                     });
-                    void _this.events.save.monitor([], function (_a) {
+                    void _this.events_.save.monitor([], function (_a) {
                         var key = _a.key;
                         return void _this.broadcast.post(key);
                     });
-                    void _this.events.load.monitor([], function (_a) {
+                    void _this.events_.load.monitor([], function (_a) {
                         var key = _a.key, attr = _a.attr, type = _a.type;
                         var source = _this.sources.get(key);
                         var buffer = _this.get(key);
@@ -1768,24 +1755,15 @@ require = function e(t, n, r) {
                         if (!source)
                             return;
                         switch (type) {
-                        case channel_1.ChannelStore.EventType.put: {
-                                var attrs = keys.filter(function (attr_) {
-                                    return attr_ === attr;
-                                }).filter(api_1.isValidPropertyValue(buffer)).sort();
-                                void update(attrs, source, buffer, link);
-                                return;
-                            }
-                        case channel_1.ChannelStore.EventType.delete: {
-                                var attrs = keys.filter(api_1.isValidPropertyValue(buffer)).sort();
-                                void update(attrs, source, buffer, link);
-                                return;
-                            }
-                        case channel_1.ChannelStore.EventType.snapshot: {
-                                var attrs = keys.filter(api_1.isValidPropertyValue(buffer)).sort();
-                                void update(attrs, source, buffer, link);
-                                return;
-                            }
+                        case channel_1.ChannelStore.EventType.put:
+                            return void update(attrs.filter(function (a) {
+                                return a === attr;
+                            }), source, buffer, link);
+                        case channel_1.ChannelStore.EventType.delete:
+                        case channel_1.ChannelStore.EventType.snapshot:
+                            return void update(attrs, source, buffer, link);
                         }
+                        return;
                         function update(attrs, source, buffer, link) {
                             var changes = attrs.map(function (attr) {
                                 var newVal = buffer[attr];
@@ -1800,6 +1778,8 @@ require = function e(t, n, r) {
                                 var newVal = _a.newVal, oldVal = _a.oldVal;
                                 return newVal !== oldVal;
                             });
+                            if (changes.length === 0)
+                                return;
                             void migrate(link);
                             void changes.forEach(function (_a) {
                                 var attr = _a.attr, oldVal = _a.oldVal;

@@ -1,4 +1,4 @@
-/*! spica v0.0.69 https://github.com/falsandtru/spica | (c) 2016, falsandtru | MIT License */
+/*! spica v0.0.72 https://github.com/falsandtru/spica | (c) 2016, falsandtru | MIT License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -180,25 +180,31 @@ require = function e(t, n, r) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var Cache = function () {
-                function Cache(size, callback) {
+                function Cache(size, callback, _a) {
                     if (callback === void 0) {
                         callback = function () {
                             return void 0;
                         };
                     }
+                    var _b = _a === void 0 ? {} : _a, _c = _b.stats, stats = _c === void 0 ? [
+                            [],
+                            []
+                        ] : _c, _d = _b.entries, entries = _d === void 0 ? [] : _d;
                     this.size = size;
                     this.callback = callback;
-                    this.store = new Map();
-                    this.stats = {
-                        LRU: [],
-                        LFU: []
-                    };
                     if (size > 0 === false)
                         throw new Error('Spica: Cache: Cache size must be greater than 0.');
+                    var LFU = stats[1].slice(0, size);
+                    var LRU = stats[0].slice(0, size - LFU.length);
+                    this.stats = {
+                        LRU: LRU,
+                        LFU: LFU
+                    };
+                    this.store = new Map(entries.slice(0, size));
                 }
                 Cache.prototype.put = function (key, value) {
                     if (key !== key)
-                        throw new TypeError('Spica: Cache: Cannot use NaN for key.');
+                        throw new TypeError('Spica: Cache: Cannot use NaN for keys.');
                     if (this.access(key))
                         return void this.store.set(key, value), true;
                     var _a = this.stats, LRU = _a.LRU, LFU = _a.LFU;
@@ -235,6 +241,8 @@ require = function e(t, n, r) {
                         var index = log.indexOf(key);
                         if (index === -1)
                             continue;
+                        if (!this.store.has(key))
+                            return false;
                         var val = this.store.get(key);
                         void this.store.delete(log.splice(index, 1)[0]);
                         void this.callback(key, val);
@@ -243,32 +251,39 @@ require = function e(t, n, r) {
                     return false;
                 };
                 Cache.prototype.clear = function () {
-                    var _a = this.stats, LRU = _a.LRU, LFU = _a.LFU;
-                    for (var _i = 0, _b = [
-                                LFU,
-                                LRU
-                            ]; _i < _b.length; _i++) {
-                        var log = _b[_i];
-                        while (log.length > 0) {
-                            var key = log.shift();
-                            var val = this.store.get(key);
-                            void this.store.delete(key);
-                            void this.callback(key, val);
-                        }
-                    }
+                    var _this = this;
+                    var entries = Array.from(this);
+                    this.store = new Map();
+                    this.stats = {
+                        LRU: [],
+                        LFU: []
+                    };
+                    return void entries.forEach(function (_a) {
+                        var key = _a[0], val = _a[1];
+                        return void _this.callback(key, val);
+                    });
                 };
                 Cache.prototype[Symbol.iterator] = function () {
                     return this.store[Symbol.iterator]();
                 };
+                Cache.prototype.export = function () {
+                    return {
+                        stats: [
+                            this.stats.LRU.slice(),
+                            this.stats.LFU.slice()
+                        ],
+                        entries: Array.from(this)
+                    };
+                };
                 Cache.prototype.inspect = function () {
                     var _a = this.stats, LRU = _a.LRU, LFU = _a.LFU;
                     return [
-                        LRU,
-                        LFU
+                        LRU.slice(),
+                        LFU.slice()
                     ];
                 };
                 Cache.prototype.access = function (key) {
-                    return this.accessLRU(key) || this.accessLFU(key);
+                    return this.accessLFU(key) || this.accessLRU(key);
                 };
                 Cache.prototype.accessLRU = function (key) {
                     var LRU = this.stats.LRU;
@@ -3540,7 +3555,7 @@ require = function e(t, n, r) {
                         identifier,
                         false,
                         function (data) {
-                            return subscriber(data);
+                            return subscriber(data, namespace);
                         }
                     ]);
                     return function () {
@@ -3578,7 +3593,7 @@ require = function e(t, n, r) {
                     var _this = this;
                     void this.throwTypeErrorIfInvalidSubscriber_(subscriber, namespace);
                     return this.on(namespace, function (data) {
-                        return void _this.off(namespace, subscriber), subscriber(data);
+                        return void _this.off(namespace, subscriber), subscriber(data, namespace);
                     }, subscriber);
                 };
                 Observable.prototype.emit = function (namespace, data, tracker) {
@@ -3591,14 +3606,20 @@ require = function e(t, n, r) {
                     });
                     return results;
                 };
-                Observable.prototype.drain_ = function (types, data, tracker) {
+                Observable.prototype.relay = function (source) {
+                    var _this = this;
+                    return source.monitor([], function (data, namespace) {
+                        return void _this.emit(namespace, data);
+                    });
+                };
+                Observable.prototype.drain_ = function (namespace, data, tracker) {
                     var results = [];
-                    void this.refsBelow_(this.seekNode_(types)).reduce(function (_, sub) {
+                    void this.refsBelow_(this.seekNode_(namespace)).reduce(function (_, sub) {
                         var monitor = sub[2], subscriber = sub[3];
                         if (monitor)
                             return;
                         try {
-                            var result = subscriber(data);
+                            var result = subscriber(data, namespace);
                             if (tracker) {
                                 results[results.length] = result;
                             }
@@ -3608,12 +3629,12 @@ require = function e(t, n, r) {
                             }
                         }
                     }, void 0);
-                    void this.refsAbove_(this.seekNode_(types)).reduce(function (_, sub) {
+                    void this.refsAbove_(this.seekNode_(namespace)).reduce(function (_, sub) {
                         var monitor = sub[2], subscriber = sub[3];
                         if (!monitor)
                             return;
                         try {
-                            void subscriber(data);
+                            void subscriber(data, namespace);
                         } catch (reason) {
                             if (reason !== void 0 && reason !== null) {
                                 void console.error(stringify_1.stringify(reason));
