@@ -15,9 +15,10 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
     expiry: number = Infinity,
   ) {
     super(name, Object.keys(factory()).filter(isValidPropertyName).filter(isValidPropertyValue(factory())), destroy, size, expiry);
-    const keys = Object.keys(this.factory())
+    const attrs = <(keyof V)[]>Object.keys(this.factory())
       .filter(isValidPropertyName)
-      .filter(isValidPropertyValue(this.factory()));
+      .filter(isValidPropertyValue(this.factory()))
+      .sort();
     void this.broadcast.listen(ev =>
       void this.fetch(ev instanceof MessageEvent ? <K>ev.data : <K>ev.newValue));
     void this.events.save
@@ -30,29 +31,13 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
         const link = this.link(key);
         if (!source) return;
         switch (type) {
-          case ChannelStore.EventType.put: {
-            const attrs = <(keyof V)[]>keys
-              .filter(attr_ => attr_ === attr)
-              .filter(isValidPropertyValue(buffer))
-              .sort();
-            void update(attrs, source, buffer, link);
-            return;
-          }
-          case ChannelStore.EventType.delete: {
-            const attrs = <(keyof V)[]>keys
-              .filter(isValidPropertyValue(buffer))
-              .sort();
-            void update(attrs, source, buffer, link);
-            return;
-          }
-          case ChannelStore.EventType.snapshot: {
-            const attrs = <(keyof V)[]>keys
-              .filter(isValidPropertyValue(buffer))
-              .sort();
-            void update(attrs, source, buffer, link);
-            return;
-          }
+          case ChannelStore.EventType.put:
+            return void update(attrs.filter(a => a === attr), source, buffer, link);
+          case ChannelStore.EventType.delete:
+          case ChannelStore.EventType.snapshot:
+            return void update(attrs, source, buffer, link);
         }
+        return;
 
         function update(attrs: (keyof V)[], source: V, buffer: V, link: V): void {
           const changes = attrs
