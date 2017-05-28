@@ -17,8 +17,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
     super(name, Object.keys(factory()).filter(isValidPropertyName).filter(isValidPropertyValue(factory())), destroy, size, expiry);
     const attrs = <(keyof V)[]>Object.keys(this.factory())
       .filter(isValidPropertyName)
-      .filter(isValidPropertyValue(this.factory()))
-      .sort();
+      .filter(isValidPropertyValue(this.factory()));
     void this.broadcast.listen(ev =>
       void this.fetch(ev instanceof MessageEvent ? <K>ev.data : <K>ev.newValue));
     void this.events_.save

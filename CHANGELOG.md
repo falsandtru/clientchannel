@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.2
+
+- Fix store event order.
+
 ## 0.15.1
 
 - Fix store value migration processing.
