@@ -9,6 +9,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
   constructor(
     name: string,
     private readonly factory: () => V,
+    migrate: (link: V) => void = () => void 0,
     destroy: (err: DOMException | DOMError, ev: Event | null) => boolean = () => true,
     size: number = Infinity,
     expiry: number = Infinity,
@@ -25,51 +26,53 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
     void this.events.load
       .monitor([], ({key, attr, type}) => {
         const source = this.sources.get(key);
+        const buffer = this.get(key);
+        const link = this.link(key);
         if (!source) return;
         switch (type) {
           case ChannelStore.EventType.put: {
-            const cache = this.get(key);
-            void keys
+            const attrs = <(keyof V)[]>keys
               .filter(attr_ => attr_ === attr)
-              .filter(isValidPropertyValue(cache))
-              .sort()
-              .reduce<void>((_, attr: keyof V) => {
-                const oldVal = source[attr];
-                const newVal = cache[attr];
-                source[attr] = newVal;
-                void cast(source).__event
-                  .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, newVal, oldVal));
-              }, void 0);
+              .filter(isValidPropertyValue(buffer))
+              .sort();
+            void update(attrs, source, buffer, link);
             return;
           }
           case ChannelStore.EventType.delete: {
-            const cache = this.factory();
-            void keys
-              .filter(isValidPropertyValue(cache))
-              .sort()
-              .reduce<void>((_, attr: keyof V) => {
-                const oldVal = source[attr];
-                const newVal = cache[attr];
-                source[attr] = newVal;
-                void cast(source).__event
-                  .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, newVal, oldVal));
-              }, void 0);
+            const attrs = <(keyof V)[]>keys
+              .filter(isValidPropertyValue(buffer))
+              .sort();
+            void update(attrs, source, buffer, link);
             return;
           }
           case ChannelStore.EventType.snapshot: {
-            const cache = this.get(key);
-            void keys
-              .filter(isValidPropertyValue(cache))
-              .sort()
-              .reduce<void>((_, attr: keyof V) => {
-                const oldVal = source[attr];
-                const newVal = cache[attr];
-                source[attr] = newVal;
-                void cast(source).__event
-                  .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, newVal, oldVal));
-              }, void 0);
+            const attrs = <(keyof V)[]>keys
+              .filter(isValidPropertyValue(buffer))
+              .sort();
+            void update(attrs, source, buffer, link);
             return;
           }
+        }
+
+        function update(attrs: (keyof V)[], source: V, buffer: V, link: V): void {
+          const changes = attrs
+            .map((attr: keyof V) => {
+              const newVal = buffer[attr];
+              const oldVal = source[attr];
+              source[attr] = newVal;
+              return {
+                attr,
+                newVal,
+                oldVal,
+              };
+            })
+            .filter(({ newVal, oldVal }) =>
+              newVal !== oldVal);
+          void migrate(link);
+          void changes
+            .forEach(({ attr, oldVal }) =>
+              void cast(source).__event
+                .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, buffer[attr], oldVal)));
         }
       });
     void Object.seal(this);

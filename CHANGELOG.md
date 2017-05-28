@@ -2,6 +2,7 @@
 
 ## 0.15.0
 
+- Add store value migration feature.
 - Add storage value migration feature.
 
 ## 0.14.2
