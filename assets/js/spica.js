@@ -1,4 +1,4 @@
-/*! spica v0.0.72 https://github.com/falsandtru/spica | (c) 2016, falsandtru | MIT License */
+/*! spica v0.0.74 https://github.com/falsandtru/spica | (c) 2016, falsandtru | MIT License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -3541,7 +3541,7 @@ require = function e(t, n, r) {
                         subscriber
                     ]);
                     return function () {
-                        return _this.off(namespace, identifier);
+                        return _this.off(namespace, identifier, true);
                     };
                 };
                 Observable.prototype.on = function (namespace, subscriber, identifier) {
@@ -3562,12 +3562,18 @@ require = function e(t, n, r) {
                         return _this.off(namespace, identifier);
                     };
                 };
-                Observable.prototype.off = function (namespace, subscriber) {
+                Observable.prototype.off = function (namespace, subscriber, monitor) {
+                    var _this = this;
+                    if (monitor === void 0) {
+                        monitor = false;
+                    }
                     switch (typeof subscriber) {
                     case 'function':
                         return void this.seekNode_(namespace).registers.some(function (_a, i, registers) {
-                            var identifier = _a[1];
+                            var identifier = _a[1], monitor_ = _a[2];
                             if (subscriber !== identifier)
+                                return false;
+                            if (monitor_ !== monitor)
                                 return false;
                             switch (i) {
                             case 0:
@@ -3579,10 +3585,23 @@ require = function e(t, n, r) {
                             }
                         });
                     case 'undefined': {
-                            var node = this.seekNode_(namespace);
-                            node.children = new Map();
-                            node.childrenNames = [];
-                            node.registers = [];
+                            var node_1 = this.seekNode_(namespace);
+                            void node_1.childrenNames.slice().forEach(function (name) {
+                                void _this.off(namespace.concat([name]));
+                                var child = node_1.children.get(name);
+                                if (!child)
+                                    return;
+                                if (child.registers.length + child.childrenNames.length > 0)
+                                    return;
+                                void node_1.children.delete(name);
+                                void node_1.childrenNames.splice(node_1.childrenNames.findIndex(function (value) {
+                                    return value === name || name !== name && value !== value;
+                                }), 1);
+                            });
+                            node_1.registers = node_1.registers.filter(function (_a) {
+                                var monitor = _a[2];
+                                return monitor;
+                            });
                             return;
                         }
                     default:
@@ -3771,7 +3790,7 @@ require = function e(t, n, r) {
             Object.defineProperty(exports, '__esModule', { value: true });
             function stringify(target) {
                 try {
-                    return target instanceof Error && typeof target.stack === 'string' ? target.stack : 'toString' in target && typeof target.toString === 'function' ? target + '' : Object.prototype.toString.call(target);
+                    return target instanceof Error && typeof target.stack === 'string' ? target.stack : target !== void 0 && target !== null && typeof target.toString === 'function' ? target + '' : Object.prototype.toString.call(target);
                 } catch (reason) {
                     return stringify(reason);
                 }

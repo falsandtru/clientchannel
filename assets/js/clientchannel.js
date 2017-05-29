@@ -1,4 +1,4 @@
-/*! clientchannel v0.15.1 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.15.2 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -1295,6 +1295,7 @@ require = function e(t, n, r) {
                     this.name = name;
                     this.size = size;
                     this.expiry = expiry;
+                    this.cancelable = new spica_1.Cancelable();
                     this.events_ = {
                         load: new spica_1.Observable(),
                         save: new spica_1.Observable()
@@ -1308,6 +1309,9 @@ require = function e(t, n, r) {
                     if (cache.has(name))
                         throw new Error('ClientChannel: IndexedDB: Specified channel ' + name + ' is already created.');
                     void cache.set(name, this);
+                    void this.cancelable.listeners.add(function () {
+                        return void cache.delete(name);
+                    });
                     void api_1.open(name, {
                         make: function (db) {
                             return data_1.DataStore.configure().make(db) && access_1.AccessStore.configure().make(db) && expiry_1.ExpiryStore.configure().make(db);
@@ -1320,12 +1324,15 @@ require = function e(t, n, r) {
                         }
                     });
                     this.schema = new Schema(this, attrs, this.ages);
-                    void api_1.event.on([
+                    void this.cancelable.listeners.add(function () {
+                        return void _this.schema.close();
+                    });
+                    void this.cancelable.listeners.add(api_1.event.on([
                         name,
                         api_1.IDBEventType.destroy
                     ], function () {
                         return cache.get(name) === _this && void _this.schema.rebuild();
-                    });
+                    }));
                     if (size < Infinity) {
                         var keys_1 = new spica_1.Cache(this.size, function (k) {
                             return void _this.delete(k);
@@ -1401,16 +1408,12 @@ require = function e(t, n, r) {
                         void cursor.continue();
                     });
                 };
-                ChannelStore.prototype.release = function () {
-                    void cache.delete(this.name);
-                    void this.schema.close();
-                };
                 ChannelStore.prototype.close = function () {
-                    void this.release();
+                    void this.cancelable.cancel();
                     return void api_1.close(this.name);
                 };
                 ChannelStore.prototype.destroy = function () {
-                    void this.release();
+                    void this.cancelable.cancel();
                     return void api_1.destroy(this.name);
                 };
                 return ChannelStore;
@@ -1739,7 +1742,7 @@ require = function e(t, n, r) {
                     _this.broadcast = new api_3.BroadcastChannel(_this.name);
                     _this.links = new Map();
                     _this.sources = new Map();
-                    var attrs = Object.keys(_this.factory()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(_this.factory())).sort();
+                    var attrs = Object.keys(_this.factory()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(_this.factory()));
                     void _this.broadcast.listen(function (ev) {
                         return void _this.fetch(ev instanceof MessageEvent ? ev.data : ev.newValue);
                     });
@@ -1750,7 +1753,7 @@ require = function e(t, n, r) {
                     void _this.events_.load.monitor([], function (_a) {
                         var key = _a.key, attr = _a.attr, type = _a.type;
                         var source = _this.sources.get(key);
-                        var buffer = _this.get(key);
+                        var memory = _this.get(key);
                         var link = _this.link(key);
                         if (!source)
                             return;
@@ -1758,15 +1761,15 @@ require = function e(t, n, r) {
                         case channel_1.ChannelStore.EventType.put:
                             return void update(attrs.filter(function (a) {
                                 return a === attr;
-                            }), source, buffer, link);
+                            }), source, memory, link);
                         case channel_1.ChannelStore.EventType.delete:
                         case channel_1.ChannelStore.EventType.snapshot:
-                            return void update(attrs, source, buffer, link);
+                            return void update(attrs, source, memory, link);
                         }
                         return;
-                        function update(attrs, source, buffer, link) {
+                        function update(attrs, source, memory, link) {
                             var changes = attrs.map(function (attr) {
-                                var newVal = buffer[attr];
+                                var newVal = memory[attr];
                                 var oldVal = source[attr];
                                 source[attr] = newVal;
                                 return {
@@ -1786,11 +1789,11 @@ require = function e(t, n, r) {
                                 return void cast(source).__event.emit([
                                     api_2.StorageChannel.EventType.recv,
                                     attr
-                                ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.recv, attr, buffer[attr], oldVal));
+                                ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.recv, attr, memory[attr], oldVal));
                             });
                         }
                     });
-                    void Object.seal(_this);
+                    void Object.freeze(_this);
                     return _this;
                 }
                 StoreChannel.prototype.link = function (key, expiry) {
@@ -1939,6 +1942,7 @@ require = function e(t, n, r) {
                     this.storage = storage;
                     this.factory = factory;
                     this.log = log;
+                    this.cancelable = new spica_1.Cancelable();
                     this.mode = this.storage === api_2.localStorage ? 'local' : 'session';
                     this.events = {
                         send: new spica_1.Observable(),
@@ -1947,6 +1951,9 @@ require = function e(t, n, r) {
                     if (cache.has(name))
                         throw new Error('ClientChannel: WebStorage: Specified channel ' + name + ' is already created.');
                     void cache.set(name, this);
+                    void this.cancelable.listeners.add(function () {
+                        return void cache.delete(name);
+                    });
                     var source = __assign((_a = {}, _a[api_1.SCHEMA.KEY.NAME] = this.name, _a[api_1.SCHEMA.EVENT.NAME] = new spica_1.Observable(), _a), parse(this.storage.getItem(this.name)));
                     this.link_ = api_1.build(source, this.factory, function (attr, newValue, oldValue) {
                         void _this.log.update(_this.name);
@@ -1962,7 +1969,7 @@ require = function e(t, n, r) {
                         void _this.events.send.emit([event.attr], event);
                     });
                     void migrate(this.link_);
-                    void api_2.eventstream.on([
+                    void this.cancelable.listeners.add(api_2.eventstream.on([
                         this.mode,
                         this.name
                     ], function (_a) {
@@ -1982,8 +1989,14 @@ require = function e(t, n, r) {
                             ], event);
                             void _this.events.recv.emit([event.attr], event);
                         }, void 0);
-                    });
+                    }));
                     void this.log.update(this.name);
+                    void this.cancelable.listeners.add(function () {
+                        return void _this.log.delete(_this.name);
+                    });
+                    void this.cancelable.listeners.add(function () {
+                        return void _this.storage.removeItem(_this.name);
+                    });
                     void Object.freeze(this);
                     var _a;
                 }
@@ -1991,13 +2004,7 @@ require = function e(t, n, r) {
                     return this.link_;
                 };
                 StorageChannel.prototype.destroy = function () {
-                    void api_2.eventstream.off([
-                        this.mode,
-                        this.name
-                    ]);
-                    void this.storage.removeItem(this.name);
-                    void this.log.delete(this.name);
-                    void cache.delete(this.name);
+                    void this.cancelable.cancel();
                 };
                 return StorageChannel;
             }();
