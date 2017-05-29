@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.3
+
+- Enhance robustness for invalid data.
+
 ## 0.15.2
 
 - Fix store event order.

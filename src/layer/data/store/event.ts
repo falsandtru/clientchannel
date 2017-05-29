@@ -192,7 +192,13 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         else {
           const event: SavedEventRecord<K, V> = cursor.value;
           if (this.memory.refs([event.key, event.attr, sqid(event.id)]).length > 0) return void proc(null, err);
-          void savedEvents.unshift(new SavedEventRecord(event.id, event.key, event.value, event.type, event.date));
+          try {
+            void savedEvents.unshift(new SavedEventRecord(event.id, event.key, event.value, event.type, event.date));
+          }
+          catch (err) {
+            void tx.objectStore(this.name).delete(cursor.primaryKey);
+            void console.error(err);
+          }
           if (event.type !== EventStore.EventType.put) return void proc(null, err);
           return void cursor.continue();
         }
@@ -350,7 +356,13 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         const cursor: IDBCursorWithValue | null = req.result;
         if (cursor) {
           const event: SavedEventRecord<K, V> = cursor.value;
-          void savedEvents.unshift(new SavedEventRecord(event.id, event.key, event.value, event.type, event.date));
+          try {
+            void savedEvents.unshift(new SavedEventRecord(event.id, event.key, event.value, event.type, event.date));
+          }
+          catch (err) {
+            void cursor.delete();
+            void console.error(err);
+          }
         }
         if (!cursor) {
           assert(this.snapshotCycle > 0);
