@@ -18,6 +18,8 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   ) {
     if (cache.has(name)) throw new Error(`ClientChannel: IndexedDB: Specified channel ${name} is already created.`);
     void cache.set(name, this);
+    void this.cancelable.listeners.add(() =>
+      void cache.delete(name));
     void open(name, {
       make(db) {
         return DataStore.configure().make(db)
@@ -37,9 +39,12 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
       }
     });
     this.schema = new Schema<K, V>(this, attrs, this.ages);
-    void event.on([name, IDBEventType.destroy], () =>
-      cache.get(name) === this &&
-      void this.schema.rebuild());
+    void this.cancelable.listeners.add(() =>
+      void this.schema.close());
+    void this.cancelable.listeners
+      .add(event.on([name, IDBEventType.destroy], () =>
+        cache.get(name) === this &&
+        void this.schema.rebuild()));
     if (size < Infinity) {
       const keys = new Cache<K>(this.size, k =>
         void this.delete(k));
@@ -64,6 +69,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
       void limit();
     }
   }
+  private cancelable = new Cancelable<void>();
   private readonly schema: Schema<K, V>;
   public readonly events_ = {
     load: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
@@ -118,16 +124,12 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
         void cursor.continue();
       });
   }
-  private release(): void {
-    void cache.delete(this.name);
-    void this.schema.close();
-  }
   public close(): void {
-    void this.release();
+    void this.cancelable.cancel();
     return void close(this.name);
   }
   public destroy(): void {
-    void this.release();
+    void this.cancelable.cancel();
     return void destroy(this.name);
   }
 }

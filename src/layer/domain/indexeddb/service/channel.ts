@@ -60,7 +60,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
                 .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, memory[attr], oldVal)));
         }
       });
-    void Object.seal(this);
+    void Object.freeze(this);
   }
   private readonly broadcast = new BroadcastChannel<K>(this.name);
   private readonly links = new Map<K, V>();

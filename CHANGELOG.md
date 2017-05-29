@@ -3,6 +3,7 @@
 ## 0.15.2
 
 - Fix store event order.
+- Fix store resource management.
 
 ## 0.15.1
 
