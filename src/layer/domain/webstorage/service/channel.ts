@@ -1,5 +1,5 @@
 import { StorageChannel as IStorageChannel, StorageChannelObject as ChannelObject, StorageChannelEvent, StorageChannelEventType } from '../../../../../';
-import { Observable } from 'spica';
+import { Observable, Cancelable } from 'spica';
 import { SCHEMA, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { localStorage, sessionStorage, eventstream } from '../../../infrastructure/webstorage/api';
 import { StorageLike, fakeStorage } from '../model/storage';
@@ -19,6 +19,8 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
   ) {
     if (cache.has(name)) throw new Error(`ClientChannel: WebStorage: Specified channel ${name} is already created.`);
     void cache.set(name, this);
+    void this.cancelable.listeners.add(() =>
+      void cache.delete(name));
     const source: V = <any>{
       [SCHEMA.KEY.NAME]: this.name,
       [SCHEMA.EVENT.NAME]: new Observable<[StorageChannelEventType] | [StorageChannelEventType, keyof V], StorageChannel.Event<V>, void>(),
@@ -35,25 +37,31 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
       void this.events.send.emit([event.attr], event);
     });
     void migrate(this.link_);
-    void eventstream.on([this.mode, this.name], ({ newValue }: StorageEvent): void => {
-      const item: V = parse<V>(newValue);
-      void Object.keys(item)
-        .filter(isValidPropertyName)
-        .filter(isValidPropertyValue(item))
-        .reduce<void>((_, attr: keyof V) => {
-          const oldVal = source[attr];
-          const newVal = item[attr];
-          if (newVal === oldVal) return;
-          source[attr] = newVal;
-          void migrate(this.link_);
-          const event = new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, source[attr], oldVal);
-          void (<Observable<[StorageChannelEventType, keyof V], StorageChannel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
-          void this.events.recv.emit([event.attr], event);
-        }, void 0);
-    });
+    void this.cancelable.listeners
+      .add(eventstream.on([this.mode, this.name], ({ newValue }: StorageEvent): void => {
+        const item: V = parse<V>(newValue);
+        void Object.keys(item)
+          .filter(isValidPropertyName)
+          .filter(isValidPropertyValue(item))
+          .reduce<void>((_, attr: keyof V) => {
+            const oldVal = source[attr];
+            const newVal = item[attr];
+            if (newVal === oldVal) return;
+            source[attr] = newVal;
+            void migrate(this.link_);
+            const event = new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, source[attr], oldVal);
+            void (<Observable<[StorageChannelEventType, keyof V], StorageChannel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
+            void this.events.recv.emit([event.attr], event);
+          }, void 0);
+      }));
     void this.log.update(this.name);
+    void this.cancelable.listeners.add(() =>
+      void this.log.delete(this.name));
+    void this.cancelable.listeners.add(() =>
+      void this.storage.removeItem(this.name));
     void Object.freeze(this);
   }
+  private cancelable = new Cancelable<void>();
   private readonly mode = this.storage === localStorage ? 'local' : 'session';
   public readonly events = {
     send: new Observable<never[] | [keyof V], StorageChannel.Event<V>, void>(),
@@ -64,10 +72,7 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
     return this.link_;
   }
   public destroy(): void {
-    void eventstream.off([this.mode, this.name]);
-    void this.storage.removeItem(this.name);
-    void this.log.delete(this.name);
-    void cache.delete(this.name);
+    void this.cancelable.cancel();
   }
 }
 export namespace StorageChannel {

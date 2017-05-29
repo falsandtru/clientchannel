@@ -46,8 +46,8 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
       const chan = new StorageChannel('test', sessionStorage, factory);
       assert(chan.link() === chan.link());
       chan.destroy();
-      new StorageChannel('test', sessionStorage, factory);
-      chan.destroy();
+      new StorageChannel('test', sessionStorage, factory)
+        .destroy();
       assert(sessionStorage.getItem('test') === null);
     });
 
