@@ -1,4 +1,4 @@
-/*! clientchannel v0.15.2 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.15.3 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -193,7 +193,7 @@ require = function e(t, n, r) {
                         throw new TypeError('ClientChannel: EventRecord: Invalid event key: ' + this.key);
                     if (typeof this.value !== 'object' || !this.value)
                         throw new TypeError('ClientChannel: EventRecord: Invalid event value: ' + this.value);
-                    if (typeof this.date !== 'number' || this.date >= 0 === false)
+                    if (typeof this.date !== 'number' || !isFinite(this.date) || this.date >= 0 === false)
                         throw new TypeError('ClientChannel: EventRecord: Invalid event date: ' + this.date);
                     this.attr = this.type === exports.EventRecordType.put ? Object.keys(value).reduce(function (r, p) {
                         return p.length > 0 && p[0] !== '_' && p[p.length - 1] !== '_' ? p : r;
@@ -525,7 +525,12 @@ require = function e(t, n, r) {
                                         spica_1.sqid(event_2.id)
                                     ]).length > 0)
                                     return void proc(null, err);
-                                void savedEvents.unshift(new event_1.SavedEventRecord(event_2.id, event_2.key, event_2.value, event_2.type, event_2.date));
+                                try {
+                                    void savedEvents.unshift(new event_1.SavedEventRecord(event_2.id, event_2.key, event_2.value, event_2.type, event_2.date));
+                                } catch (err) {
+                                    void tx.objectStore(_this.name).delete(cursor.primaryKey);
+                                    void console.error(err);
+                                }
                                 if (event_2.type !== EventStore.EventType.put)
                                     return void proc(null, err);
                                 return void cursor.continue();
@@ -752,7 +757,12 @@ require = function e(t, n, r) {
                             var cursor = req.result;
                             if (cursor) {
                                 var event_3 = cursor.value;
-                                void savedEvents.unshift(new event_1.SavedEventRecord(event_3.id, event_3.key, event_3.value, event_3.type, event_3.date));
+                                try {
+                                    void savedEvents.unshift(new event_1.SavedEventRecord(event_3.id, event_3.key, event_3.value, event_3.type, event_3.date));
+                                } catch (err) {
+                                    void cursor.delete();
+                                    void console.error(err);
+                                }
                             }
                             if (!cursor) {
                                 if (savedEvents.length === 0)
@@ -1130,8 +1140,11 @@ require = function e(t, n, r) {
                         return void _this.storage.removeItem(_this.name);
                     }, true);
                 }
-                Storage.prototype.listen = function (listener) {
+                Storage.prototype.listen = function (listener_) {
                     var _this = this;
+                    var listener = function (ev) {
+                        return typeof ev.newValue === 'string' && void listener_(ev);
+                    };
                     void this.listeners.add(listener);
                     void api_1.eventstream.on([
                         'local',
@@ -1389,13 +1402,13 @@ require = function e(t, n, r) {
                 ChannelStore.prototype.delete = function (key) {
                     return this.schema.data.delete(key);
                 };
-                ChannelStore.prototype.expire = function (key, expiry) {
-                    if (expiry === void 0) {
-                        expiry = this.expiry;
+                ChannelStore.prototype.expire = function (key, age) {
+                    if (age === void 0) {
+                        age = this.expiry;
                     }
-                    if (expiry === Infinity)
+                    if (!isFinite(age) || isNaN(age))
                         return;
-                    return void this.ages.set(key, expiry);
+                    return void this.ages.set(key, age);
                 };
                 ChannelStore.prototype.recent = function (limit, cb) {
                     var keys = [];
@@ -1624,7 +1637,7 @@ require = function e(t, n, r) {
                                 if (!cursor)
                                     return;
                                 var record = cursor.value;
-                                if (record.expiry > Date.now())
+                                if (record.expiry > Date.now() && isFinite(record.expiry))
                                     return void schedule(record.expiry);
                                 void store.delete(record.key);
                                 return void cursor.continue();
