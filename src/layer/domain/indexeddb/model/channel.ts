@@ -105,10 +105,10 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     return this.schema.data.delete(key);
   }
   private readonly ages = new Map<K, number>();
-  public expire(key: K, expiry: number = this.expiry): void {
-    assert(expiry > 0);
-    if (expiry === Infinity) return;
-    return void this.ages.set(key, expiry);
+  public expire(key: K, age: number = this.expiry): void {
+    assert(age > 0);
+    if (!isFinite(age) || isNaN(age)) return;
+    return void this.ages.set(key, age);
   }
   public recent(limit: number, cb: (keys: K[], err: DOMException | DOMError | null) => any): void {
     const keys: K[] = [];

@@ -63,7 +63,7 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
         void this.cursor(null, ExpiryStore.fields.expiry, 'next', 'readonly', cursor => {
           if (!cursor) return;
           const record: ExpiryRecord<K> = cursor.value;
-          if (record.expiry > Date.now()) return void schedule(record.expiry);
+          if (record.expiry > Date.now() && isFinite(record.expiry)) return void schedule(record.expiry);
           void store.delete(record.key);
           return void cursor.continue();
         });
