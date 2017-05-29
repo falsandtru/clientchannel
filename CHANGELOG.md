@@ -3,6 +3,7 @@
 ## 0.15.3
 
 - Enhance robustness for invalid data.
+- Fix store sync processing.
 
 ## 0.15.2
 

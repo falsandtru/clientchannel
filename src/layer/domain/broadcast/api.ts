@@ -52,7 +52,10 @@ class Storage<M extends string> implements Channel<M> {
   }
   private storage = localStorage!;
   private listeners = new Set<(_: StorageEvent) => void>();
-  public listen(listener: (ev: StorageEvent) => void): () => void {
+  public listen(listener_: (ev: StorageEvent) => void): () => void {
+    const listener: typeof listener_ = ev =>
+      typeof ev.newValue === 'string' &&
+      void listener_(ev);
     void this.listeners.add(listener);
     void eventstream.on(['local', this.name], listener);
     return () => (
