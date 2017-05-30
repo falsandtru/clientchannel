@@ -27,7 +27,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
   public readonly events = {
     access: new Observable<[K], [[K], KeyValueStore.EventType], void>()
   };
-  public get(key: K, cb: (value: V | void, error: DOMException | DOMError) => any = noop): V | undefined {
+  public get(key: K, cb: (value: V | void, error: DOMException | DOMError) => void = noop): V | undefined {
     void this.events.access.emit([key], [[key], KeyValueStore.EventType.get]);
     void listen(this.database)(db => {
       const tx = db.transaction(this.name, 'readonly');
@@ -49,10 +49,10 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     });
     return this.cache.get(key);
   }
-  public set(key: K, value: V, cb: (key: K, error: DOMException | DOMError) => any = noop): V | undefined {
+  public set(key: K, value: V, cb: (key: K, error: DOMException | DOMError) => void = noop): V | undefined {
     return this.put(value, key, cb);
   }
-  private put(value: V, key: K, cb: (key: K, error: DOMException | DOMError) => any = noop): V | undefined {
+  private put(value: V, key: K, cb: (key: K, error: DOMException | DOMError) => void = noop): V | undefined {
     void this.cache.set(key, value);
     void this.events.access.emit([key], [[key], KeyValueStore.EventType.put]);
     void listen(this.database)(db => {
@@ -69,7 +69,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     });
     return this.cache.get(key);
   }
-  public delete(key: K, cb: (error: DOMException | DOMError) => any = noop): void {
+  public delete(key: K, cb: (error: DOMException | DOMError) => void = noop): void {
     void this.cache.delete(key);
     void this.events.access.emit([key], [[key], KeyValueStore.EventType.delete]);
     void listen(this.database)(db => {
@@ -80,7 +80,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
       tx.oncomplete = tx.onerror = tx.onabort = () => void cb(tx.error);
     });
   }
-  public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMException | DOMError | null) => any): void {
+  public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMException | DOMError | null) => void): void {
     void listen(this.database)(db => {
       const tx = db
         .transaction(this.name, mode);

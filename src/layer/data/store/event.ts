@@ -118,7 +118,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   }
   private readonly syncState = new Map<K, boolean>();
   private readonly syncWaits = new Observable<[K], DOMException | DOMError | void, any>();
-  public sync(keys: K[], cb: (errs: [K, DOMException | DOMError][]) => any = noop): void {
+  public sync(keys: K[], cb: (errs: [K, DOMException | DOMError][]) => void = noop): void {
     return void keys
       .map<Promise<[K, DOMException | DOMError] | void>>(key => {
         switch (this.syncState.get(key)) {
@@ -136,7 +136,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       .reduce<Promise<([K, DOMException | DOMError] | void)[]>>((ps, p) => ps.then(es => p.then(e => es.concat([e]))), Promise.resolve<([K, DOMException | DOMError] | void)[]>([]))
       .then(es => void cb(<[K, DOMException | DOMError][]>es.filter(e => !!e)));
   }
-  public fetch(key: K, cb: (err?: DOMException | DOMError) => any = noop, after: (tx: IDBTransaction, err?: DOMException | DOMError) => any = noop): void {
+  public fetch(key: K, cb: (err?: DOMException | DOMError) => void = noop, after: (tx: IDBTransaction, err?: DOMException | DOMError) => void = noop): void {
     void this.syncState.set(key, this.syncState.get(key) === true);
     const savedEvents: SavedEventRecord<K, V>[] = [];
     return void listen(this.database)(db => {
@@ -208,7 +208,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     });
   }
   private tx: IDBTransaction | void;
-  public transaction(key: K, cb: () => any, complete: (err?: DOMException | DOMError | Error) => any): void {
+  public transaction(key: K, cb: () => void, complete: (err?: DOMException | DOMError | Error) => void): void {
     return void this.fetch(key, noop, (tx, err) => {
       try {
         if (err) throw err;
@@ -433,7 +433,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         }
       });
   }
-  public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMException | DOMError | null) => any): void {
+  public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMException | DOMError | null) => void): void {
     return void listen(this.database)(db => {
       const tx = db
         .transaction(this.name, mode);

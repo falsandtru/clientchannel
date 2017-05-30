@@ -7,11 +7,11 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
     readonly save: Observer<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', StoreChannelEventType], StoreChannelEvent<K, V>, void>,
     readonly loss: Observer<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', StoreChannelEventType], StoreChannelEvent<K, V>, void>
   };
-  sync(keys: K[], cb?: (errs: [K, DOMException | DOMError][]) => any): void;
-  transaction(key: K, cb: () => any, complete: (err?: DOMException | DOMError | Error) => any): void;
+  sync(keys: K[], cb?: (errs: [K, DOMException | DOMError][]) => void): void;
+  transaction(key: K, cb: () => void, complete: (err?: DOMException | DOMError | Error) => void): void;
   link(key: K, expiry?: number): V;
   delete(key: K): void;
-  recent(limit: number, cb: (keys: K[], err?: DOMException | DOMError | null) => any): void;
+  recent(limit: number, cb: (keys: K[], err?: DOMException | DOMError | null) => void): void;
   close(): void;
   destroy(): void;
 }
@@ -28,7 +28,7 @@ export interface StoreChannelObject<K extends string> {
   readonly __key: K;
   readonly __date: number;
   readonly __event: Observer<[StorageChannelEventType] | [StorageChannelEventType, keyof this], StorageChannelEvent<this>, any>;
-  readonly __transaction: (key: K, cb: () => any, complete: (err?: DOMException | DOMError | Error) => any) => void;
+  readonly __transaction: (key: K, cb: () => void, complete: (err?: DOMException | DOMError | Error) => void) => void;
 }
 export interface StoreChannelObjectMetaData<K extends string> {
   readonly id: number;

@@ -134,7 +134,7 @@ namespace State {
 }
 
 const requests = new Map<string, Request[]>();
-type Request = (db: IDBDatabase) => any;
+type Request = (db: IDBDatabase) => void;
 
 export function open(name: string, config: Config): void {
   assert(config);
@@ -143,7 +143,7 @@ export function open(name: string, config: Config): void {
   if (states.has(name)) return;
   void handleFromInitialState(new State.Initial(name));
 }
-export function listen(name: string): (req: Request) => any {
+export function listen(name: string): (req: Request) => void {
   return (req: Request) => {
     const queue = requests.get(name) || requests.set(name, []).get(name)!;
     void queue.push(req);

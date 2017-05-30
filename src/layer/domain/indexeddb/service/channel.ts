@@ -94,7 +94,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
                 value: new Observable<[StorageChannel.EventType], StorageChannel.Event<V>, any>()
               },
               __transaction: {
-                value: (cb: () => any, complete: (err?: DOMException | DOMError | Error) => any) => this.transaction(key, cb, complete)
+                value: (cb: () => void, complete: (err?: DOMException | DOMError | Error) => void) => this.transaction(key, cb, complete)
               }
             }
           ),

@@ -80,13 +80,13 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     save: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
     loss: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>()
   };
-  public sync(keys: K[], cb: (errs: [K, DOMException | DOMError][]) => any = noop): void {
+  public sync(keys: K[], cb: (errs: [K, DOMException | DOMError][]) => void = noop): void {
     return this.schema.data.sync(keys, cb);
   }
-  public fetch(key: K, cb: (err?: DOMException | DOMError) => any = noop): void {
+  public fetch(key: K, cb: (err?: DOMException | DOMError) => void = noop): void {
     return this.schema.data.fetch(key, cb);
   }
-  public transaction(key: K, cb: () => any, complete: (err?: DOMException | DOMError | Error) => any): void {
+  public transaction(key: K, cb: () => void, complete: (err?: DOMException | DOMError | Error) => void): void {
     return this.schema.data.transaction(key, cb, complete);
   }
   public has(key: K): boolean {
@@ -110,7 +110,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     if (!isFinite(age) || isNaN(age)) return;
     return void this.ages.set(key, age);
   }
-  public recent(limit: number, cb: (keys: K[], err: DOMException | DOMError | null) => any): void {
+  public recent(limit: number, cb: (keys: K[], err: DOMException | DOMError | null) => void): void {
     const keys: K[] = [];
     return void this.schema.access.cursor(
       null,

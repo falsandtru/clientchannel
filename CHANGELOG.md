@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.4
+
+- Improve typings.
+
 ## 0.15.3
 
 - Enhance robustness for invalid data.
