@@ -1,4 +1,4 @@
-import { Observable, Cancelable, Tick, sqid, assign, concat } from 'spica';
+import { Observable, Cancelable, tick, sqid, assign, concat } from 'spica';
 import { listen, Config, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { IdNumber } from '../constraint/types';
 import { isValidPropertyName, isValidPropertyValue } from '../constraint/values';
@@ -329,7 +329,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       const cancelable = new Cancelable<void>();
       void cancelable.listeners.add(reject);
       void cancelable.listeners.add(terminate);
-      void Tick(() => (
+      void tick(() => (
         void setTimeout(cancelable.cancel, 1000),
         void listen(this.database)(db => (
           void cancelable.listeners.clear(),
