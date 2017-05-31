@@ -295,14 +295,9 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
         }
       }
       catch (err) {
-        if (err instanceof DOMException || err instanceof DOMError) {
-          void console.warn(err);
-          assert(!console.debug(err + ''));
-        }
-        else {
-          void console.error(err);
-          assert(!console.debug(err + ''));
-        }
+        assert(!console.debug(err + ''));
+        void new Promise((_, reject) =>
+          void reject(err));
         void clear();
         void handleFromCrashState(new State.Crash(database, err));
       }
