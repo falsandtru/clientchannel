@@ -197,7 +197,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           }
           catch (err) {
             void tx.objectStore(this.name).delete(cursor.primaryKey);
-            void console.error(err);
+            void new Promise((_, reject) =>
+              void reject(err));
           }
           if (event.type !== EventStore.EventType.put) return void proc(null, err);
           return void cursor.continue();
@@ -361,7 +362,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           }
           catch (err) {
             void cursor.delete();
-            void console.error(err);
+            void new Promise((_, reject) =>
+              void reject(err));
           }
         }
         if (!cursor) {
