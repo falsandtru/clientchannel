@@ -1,8 +1,8 @@
-import { Observable, Observer } from 'spica';
+import { Observation, Observer } from 'spica';
 import { indexedDB } from '../module/global';
 import { IDBEvent, IDBEventType } from './event';
 
-const IDBEventObserver = new Observable<[string] | [string, IDBEventType], IDBEvent, void>();
+const IDBEventObserver = new Observation<[string] | [string, IDBEventType], IDBEvent, void>();
 export const event: Observer<[string] | [string, IDBEventType], IDBEvent, void> = IDBEventObserver;
 
 const configs = new Map<string, Config>();

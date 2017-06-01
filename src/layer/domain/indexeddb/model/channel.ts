@@ -1,5 +1,5 @@
 import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../';
-import { Observable, Cancelable, Cache } from 'spica';
+import { Observation, Cancellation, Cache } from 'spica';
 import { open, close, destroy, event, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { DataStore } from './channel/data';
 import { AccessStore } from './channel/access';
@@ -18,8 +18,8 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   ) {
     if (cache.has(name)) throw new Error(`ClientChannel: IndexedDB: Specified channel ${name} is already created.`);
     void cache.set(name, this);
-    void this.cancelable.listeners.add(() =>
-      void cache.delete(name));
+    void this.cancellation.register(() =>
+        void cache.delete(name));
     void open(name, {
       make(db) {
         return DataStore.configure().make(db)
@@ -39,10 +39,10 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
       }
     });
     this.schema = new Schema<K, V>(this, attrs, this.ages);
-    void this.cancelable.listeners.add(() =>
-      void this.schema.close());
-    void this.cancelable.listeners
-      .add(event.on([name, IDBEventType.destroy], () =>
+    void this.cancellation.register(() =>
+        void this.schema.close());
+    void this.cancellation.register(
+      event.on([name, IDBEventType.destroy], () =>
         cache.get(name) === this &&
         void this.schema.rebuild()));
     if (size < Infinity) {
@@ -69,16 +69,16 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
       void limit();
     }
   }
-  private cancelable = new Cancelable<void>();
+  private cancellation = new Cancellation();
   private readonly schema: Schema<K, V>;
   public readonly events_ = {
-    load: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
-    save: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
+    load: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
+    save: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
   };
   public readonly events = {
-    load: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
-    save: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
-    loss: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>()
+    load: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
+    save: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
+    loss: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>()
   };
   public sync(keys: K[], cb: (errs: [K, DOMException | DOMError][]) => void = noop): void {
     return this.schema.data.sync(keys, cb);
@@ -125,11 +125,11 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
       });
   }
   public close(): void {
-    void this.cancelable.cancel();
+    void this.cancellation.cancel();
     return void close(this.name);
   }
   public destroy(): void {
-    void this.cancelable.cancel();
+    void this.cancellation.cancel();
     return void destroy(this.name);
   }
 }
@@ -147,19 +147,18 @@ class Schema<K extends string, V extends StoreChannelObject<K>> {
   ) {
     void this.build();
   }
-  private cancelable_ = new Cancelable<void>();
+  private cancellation_ = new Cancellation();
   private build(): void {
     const keys = this.data ? this.data.keys() : [];
 
     this.data = new DataStore<K, V>(this.store_.name, this.attrs_);
     this.access = new AccessStore<K>(this.store_.name, this.data.events_.access);
-    this.expire = new ExpiryStore<K>(this.store_.name, this.store_, this.data.events_.access, this.expiries_, this.cancelable_);
-    void this.cancelable_.listeners
-      .add(this.store_.events_.load.relay(this.data.events.load))
-      .add(this.store_.events_.save.relay(this.data.events.save))
-      .add(this.store_.events.load.relay(this.data.events.load))
-      .add(this.store_.events.save.relay(this.data.events.save))
-      .add(this.store_.events.loss.relay(this.data.events.loss));
+    this.expire = new ExpiryStore<K>(this.store_.name, this.store_, this.data.events_.access, this.expiries_, this.cancellation_);
+    void this.cancellation_.register(this.store_.events_.load.relay(this.data.events.load));
+    void this.cancellation_.register(this.store_.events_.save.relay(this.data.events.save));
+    void this.cancellation_.register(this.store_.events.load.relay(this.data.events.load));
+    void this.cancellation_.register(this.store_.events.save.relay(this.data.events.save));
+    void this.cancellation_.register(this.store_.events.loss.relay(this.data.events.loss));
 
     void this.data.sync(keys);
   }
@@ -171,7 +170,7 @@ class Schema<K extends string, V extends StoreChannelObject<K>> {
   public access: AccessStore<K>;
   public expire: ExpiryStore<K>;
   public close(): void {
-    void this.cancelable_.cancel();
-    this.cancelable_ = new Cancelable<void>();
+    void this.cancellation_.cancel();
+    this.cancellation_ = new Cancellation();
   }
 }

@@ -1,4 +1,4 @@
-import { Observable } from 'spica';
+import { Observation } from 'spica';
 import { listen, Config } from '../../infrastructure/indexeddb/api';
 import { noop } from '../../../lib/noop';
 
@@ -25,7 +25,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
   }
   private readonly cache = new Map<K, V>();
   public readonly events = {
-    access: new Observable<[K], [[K], KeyValueStore.EventType], void>()
+    access: new Observation<[K], [[K], KeyValueStore.EventType], void>()
   };
   public get(key: K, cb: (value: V | void, error: DOMException | DOMError) => void = noop): V | undefined {
     void this.events.access.emit([key], [[key], KeyValueStore.EventType.get]);

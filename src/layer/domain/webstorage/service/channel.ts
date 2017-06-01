@@ -1,5 +1,5 @@
 import { StorageChannel as IStorageChannel, StorageChannelObject as ChannelObject, StorageChannelEvent, StorageChannelEventType } from '../../../../../';
-import { Observable, Cancelable } from 'spica';
+import { Observation, Cancellation } from 'spica';
 import { SCHEMA, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { localStorage, sessionStorage, eventstream } from '../../../infrastructure/webstorage/api';
 import { StorageLike, fakeStorage } from '../model/storage';
@@ -19,11 +19,11 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
   ) {
     if (cache.has(name)) throw new Error(`ClientChannel: WebStorage: Specified channel ${name} is already created.`);
     void cache.set(name, this);
-    void this.cancelable.listeners.add(() =>
+    void this.cancellation.register(() =>
       void cache.delete(name));
     const source: V = <any>{
       [SCHEMA.KEY.NAME]: this.name,
-      [SCHEMA.EVENT.NAME]: new Observable<[StorageChannelEventType] | [StorageChannelEventType, keyof V], StorageChannel.Event<V>, void>(),
+      [SCHEMA.EVENT.NAME]: new Observation<[StorageChannelEventType] | [StorageChannelEventType, keyof V], StorageChannel.Event<V>, void>(),
       ...<Object>parse<V>(this.storage.getItem(this.name))
     };
     this.link_ = build(source, this.factory, (attr: keyof V, newValue, oldValue) => {
@@ -33,12 +33,12 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
         return acc;
       }, {})));
       const event = new StorageChannel.Event<V>(StorageChannel.EventType.send, attr, newValue, oldValue);
-      void (<Observable<[StorageChannelEventType, keyof V], StorageChannel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
+      void (<Observation<[StorageChannelEventType, keyof V], StorageChannel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
       void this.events.send.emit([event.attr], event);
     });
     void migrate(this.link_);
-    void this.cancelable.listeners
-      .add(eventstream.on([this.mode, this.name], ({ newValue }: StorageEvent): void => {
+    void this.cancellation.register(
+      eventstream.on([this.mode, this.name], ({ newValue }: StorageEvent): void => {
         const item: V = parse<V>(newValue);
         void Object.keys(item)
           .filter(isValidPropertyName)
@@ -50,29 +50,29 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
             source[attr] = newVal;
             void migrate(this.link_);
             const event = new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, source[attr], oldVal);
-            void (<Observable<[StorageChannelEventType, keyof V], StorageChannel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
+            void (<Observation<[StorageChannelEventType, keyof V], StorageChannel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
             void this.events.recv.emit([event.attr], event);
           }, void 0);
       }));
     void this.log.update(this.name);
-    void this.cancelable.listeners.add(() =>
+    void this.cancellation.register(() =>
       void this.log.delete(this.name));
-    void this.cancelable.listeners.add(() =>
-      void this.storage.removeItem(this.name));
+    void this.cancellation.register(() =>
+        void this.storage.removeItem(this.name));
     void Object.freeze(this);
   }
-  private cancelable = new Cancelable<void>();
+  private cancellation = new Cancellation();
   private readonly mode = this.storage === localStorage ? 'local' : 'session';
   public readonly events = {
-    send: new Observable<never[] | [keyof V], StorageChannel.Event<V>, void>(),
-    recv: new Observable<never[] | [keyof V], StorageChannel.Event<V>, void>()
+    send: new Observation<never[] | [keyof V], StorageChannel.Event<V>, void>(),
+    recv: new Observation<never[] | [keyof V], StorageChannel.Event<V>, void>()
   };
   private readonly link_: V;
   public link(): V {
     return this.link_;
   }
   public destroy(): void {
-    void this.cancelable.cancel();
+    void this.cancellation.cancel();
   }
 }
 export namespace StorageChannel {

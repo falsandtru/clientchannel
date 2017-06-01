@@ -3,6 +3,7 @@
 ## 0.15.4
 
 - Improve typings.
+- Update dependencies.
 
 ## 0.15.3
 

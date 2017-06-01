@@ -1,4 +1,4 @@
-import { Observer, Cancelable } from 'spica';
+import { Observer, Cancellatee } from 'spica';
 import { Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/store/key-value';
 import { EventStore } from '../../../../data/store/event';
@@ -46,7 +46,7 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
     },
     access: Observer<any[], EventStore.InternalEvent<K>, void>,
     ages: Map<K, number>,
-    cancelable: Cancelable<void>,
+    cancellation: Cancellatee<void>,
   ) {
     super(database, STORE_NAME, ExpiryStore.fields.key);
     void Object.freeze(this);
@@ -69,7 +69,7 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
         });
       }, date - Date.now());
     };
-    void cancelable.listeners.add(() => void clearTimeout(timer))
+    void cancellation.register(() => void clearTimeout(timer))
 
     void schedule(Date.now());
     void access

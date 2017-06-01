@@ -1,5 +1,5 @@
 import { StoreChannel as IStoreChannel, StoreChannelObject as ChannelObject } from '../../../../../';
-import { Observable, assign } from 'spica';
+import { Observation, assign } from 'spica';
 import { build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { ChannelStore } from '../model/channel';
 import { StorageChannel } from '../../webstorage/api';
@@ -91,7 +91,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
                   this.meta(key).date
               },
               __event: {
-                value: new Observable<[StorageChannel.EventType], StorageChannel.Event<V>, any>()
+                value: new Observation<[StorageChannel.EventType], StorageChannel.Event<V>, any>()
               },
               __transaction: {
                 value: (cb: () => void, complete: (err?: DOMException | DOMError | Error) => void) => this.transaction(key, cb, complete)
@@ -115,6 +115,6 @@ function cast<K extends string, V extends ChannelObject<K>>(source: V) {
   return <V & InternalChannelObject<K>>source;
 
   interface InternalChannelObject<K extends string> extends ChannelObject<K> {
-    readonly __event: Observable<[StorageChannel.EventType] | [StorageChannel.EventType, keyof this], StorageChannel.Event<this>, any>;
+    readonly __event: Observation<[StorageChannel.EventType] | [StorageChannel.EventType, keyof this], StorageChannel.Event<this>, any>;
   }
 }

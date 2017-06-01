@@ -1,9 +1,9 @@
-import { Observable, Observer } from 'spica';
+import { Observation, Observer } from 'spica';
 import { localStorage, sessionStorage } from '../module/global';
 
 type Type = ['local' | 'session'] | ['local' | 'session', string];
 
-const storageEventStream = new Observable<Type, StorageEvent, void>();
+const storageEventStream = new Observation<Type, StorageEvent, void>();
 
 export const eventstream: Observer<Type, StorageEvent, void> = storageEventStream;
 export const eventstream_ = storageEventStream;

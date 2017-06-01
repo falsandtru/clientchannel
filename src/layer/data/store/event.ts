@@ -1,4 +1,4 @@
-import { Observable, Cancelable, tick, sqid, assign, concat } from 'spica';
+import { Observation, Cancellation, tick, sqid, assign, concat } from 'spica';
 import { listen, Config, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { IdNumber } from '../constraint/types';
 import { isValidPropertyName, isValidPropertyValue } from '../constraint/values';
@@ -99,15 +99,15 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         }
       });
   }
-  private readonly memory = new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', string], void, UnsavedEventRecord<K, V> | SavedEventRecord<K, V>>();
+  private readonly memory = new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', string], void, UnsavedEventRecord<K, V> | SavedEventRecord<K, V>>();
   public readonly events = {
-    load: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
-    save: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
-    loss: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
+    load: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
+    save: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
+    loss: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
   };
   public readonly events_ = {
-    update: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', string], UnsavedEventRecord<K, V> | SavedEventRecord<K, V>, void>(),
-    access: new Observable<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.InternalEventType], EventStore.InternalEvent<K>, void>()
+    update: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', string], UnsavedEventRecord<K, V> | SavedEventRecord<K, V>, void>(),
+    access: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.InternalEventType], EventStore.InternalEvent<K>, void>()
   };
   private update(key: K, attr?: string, id?: string): void {
     return typeof id === 'string' && typeof attr === 'string'
@@ -117,7 +117,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         : void this.memory.emit([key]);
   }
   private readonly syncState = new Map<K, boolean>();
-  private readonly syncWaits = new Observable<[K], DOMException | DOMError | void, any>();
+  private readonly syncWaits = new Observation<[K], DOMException | DOMError | void, any>();
   public sync(keys: K[], cb: (errs: [K, DOMException | DOMError][]) => void = noop): void {
     return void keys
       .map<Promise<[K, DOMException | DOMError] | void>>(key => {
@@ -326,14 +326,14 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           void terminate());
       };
       if (tx) return void cont(tx);
-      const cancelable = new Cancelable<void>();
-      void cancelable.listeners.add(reject);
-      void cancelable.listeners.add(terminate);
+      const cancellation = new Cancellation();
+      void cancellation.register(reject);
+      void cancellation.register(terminate);
       void tick(() => (
-        void setTimeout(cancelable.cancel, 1000),
+        void setTimeout(cancellation.cancel, 1000),
         void listen(this.database)(db => (
-          void cancelable.listeners.clear(),
-          void cancelable.maybe(db)
+          void cancellation.close(),
+          void cancellation.maybe(db)
             .fmap(db => void cont(db.transaction(this.name, 'readwrite')))
             .extract(() => void 0)))));
     })
