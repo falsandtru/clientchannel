@@ -1,4 +1,4 @@
-/*! clientchannel v0.15.3 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.15.4 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -320,18 +320,18 @@ require = function e(t, n, r) {
                     this.database = database;
                     this.name = name;
                     this.attrs = attrs;
-                    this.memory = new spica_1.Observable();
+                    this.memory = new spica_1.Observation();
                     this.events = {
-                        load: new spica_1.Observable(),
-                        save: new spica_1.Observable(),
-                        loss: new spica_1.Observable()
+                        load: new spica_1.Observation(),
+                        save: new spica_1.Observation(),
+                        loss: new spica_1.Observation()
                     };
                     this.events_ = {
-                        update: new spica_1.Observable(),
-                        access: new spica_1.Observable()
+                        update: new spica_1.Observation(),
+                        access: new spica_1.Observation()
                     };
                     this.syncState = new Map();
-                    this.syncWaits = new spica_1.Observable();
+                    this.syncWaits = new spica_1.Observation();
                     this.snapshotCycle = 9;
                     var states = new (function () {
                         function class_1() {
@@ -529,7 +529,9 @@ require = function e(t, n, r) {
                                     void savedEvents.unshift(new event_1.SavedEventRecord(event_2.id, event_2.key, event_2.value, event_2.type, event_2.date));
                                 } catch (err) {
                                     void tx.objectStore(_this.name).delete(cursor.primaryKey);
-                                    void console.error(err);
+                                    void new Promise(function (_, reject) {
+                                        return void reject(err);
+                                    });
                                 }
                                 if (event_2.type !== EventStore.EventType.put)
                                     return void proc(null, err);
@@ -721,12 +723,12 @@ require = function e(t, n, r) {
                         };
                         if (tx)
                             return void cont(tx);
-                        var cancelable = new spica_1.Cancelable();
-                        void cancelable.listeners.add(reject);
-                        void cancelable.listeners.add(terminate);
-                        void spica_1.Tick(function () {
-                            return void setTimeout(cancelable.cancel, 1000), void api_1.listen(_this.database)(function (db) {
-                                return void cancelable.listeners.clear(), void cancelable.maybe(db).fmap(function (db) {
+                        var cancellation = new spica_1.Cancellation();
+                        void cancellation.register(reject);
+                        void cancellation.register(terminate);
+                        void spica_1.tick(function () {
+                            return void setTimeout(cancellation.cancel, 1000), void api_1.listen(_this.database)(function (db) {
+                                return void cancellation.close(), void cancellation.maybe(db).fmap(function (db) {
                                     return void cont(db.transaction(_this.name, 'readwrite'));
                                 }).extract(function () {
                                     return void 0;
@@ -761,7 +763,9 @@ require = function e(t, n, r) {
                                     void savedEvents.unshift(new event_1.SavedEventRecord(event_3.id, event_3.key, event_3.value, event_3.type, event_3.date));
                                 } catch (err) {
                                     void cursor.delete();
-                                    void console.error(err);
+                                    void new Promise(function (_, reject) {
+                                        return void reject(err);
+                                    });
                                 }
                             }
                             if (!cursor) {
@@ -962,7 +966,7 @@ require = function e(t, n, r) {
                     this.name = name;
                     this.index = index;
                     this.cache = new Map();
-                    this.events = { access: new spica_1.Observable() };
+                    this.events = { access: new spica_1.Observation() };
                     if (typeof index !== 'string')
                         throw new TypeError();
                 }
@@ -1308,21 +1312,21 @@ require = function e(t, n, r) {
                     this.name = name;
                     this.size = size;
                     this.expiry = expiry;
-                    this.cancelable = new spica_1.Cancelable();
+                    this.cancellation = new spica_1.Cancellation();
                     this.events_ = {
-                        load: new spica_1.Observable(),
-                        save: new spica_1.Observable()
+                        load: new spica_1.Observation(),
+                        save: new spica_1.Observation()
                     };
                     this.events = {
-                        load: new spica_1.Observable(),
-                        save: new spica_1.Observable(),
-                        loss: new spica_1.Observable()
+                        load: new spica_1.Observation(),
+                        save: new spica_1.Observation(),
+                        loss: new spica_1.Observation()
                     };
                     this.ages = new Map();
                     if (cache.has(name))
                         throw new Error('ClientChannel: IndexedDB: Specified channel ' + name + ' is already created.');
                     void cache.set(name, this);
-                    void this.cancelable.listeners.add(function () {
+                    void this.cancellation.register(function () {
                         return void cache.delete(name);
                     });
                     void api_1.open(name, {
@@ -1337,10 +1341,10 @@ require = function e(t, n, r) {
                         }
                     });
                     this.schema = new Schema(this, attrs, this.ages);
-                    void this.cancelable.listeners.add(function () {
+                    void this.cancellation.register(function () {
                         return void _this.schema.close();
                     });
-                    void this.cancelable.listeners.add(api_1.event.on([
+                    void this.cancellation.register(api_1.event.on([
                         name,
                         api_1.IDBEventType.destroy
                     ], function () {
@@ -1422,11 +1426,11 @@ require = function e(t, n, r) {
                     });
                 };
                 ChannelStore.prototype.close = function () {
-                    void this.cancelable.cancel();
+                    void this.cancellation.cancel();
                     return void api_1.close(this.name);
                 };
                 ChannelStore.prototype.destroy = function () {
-                    void this.cancelable.cancel();
+                    void this.cancellation.cancel();
                     return void api_1.destroy(this.name);
                 };
                 return ChannelStore;
@@ -1443,15 +1447,19 @@ require = function e(t, n, r) {
                     this.store_ = store_;
                     this.attrs_ = attrs_;
                     this.expiries_ = expiries_;
-                    this.cancelable_ = new spica_1.Cancelable();
+                    this.cancellation_ = new spica_1.Cancellation();
                     void this.build();
                 }
                 Schema.prototype.build = function () {
                     var keys = this.data ? this.data.keys() : [];
                     this.data = new data_1.DataStore(this.store_.name, this.attrs_);
                     this.access = new access_1.AccessStore(this.store_.name, this.data.events_.access);
-                    this.expire = new expiry_1.ExpiryStore(this.store_.name, this.store_, this.data.events_.access, this.expiries_, this.cancelable_);
-                    void this.cancelable_.listeners.add(this.store_.events_.load.relay(this.data.events.load)).add(this.store_.events_.save.relay(this.data.events.save)).add(this.store_.events.load.relay(this.data.events.load)).add(this.store_.events.save.relay(this.data.events.save)).add(this.store_.events.loss.relay(this.data.events.loss));
+                    this.expire = new expiry_1.ExpiryStore(this.store_.name, this.store_, this.data.events_.access, this.expiries_, this.cancellation_);
+                    void this.cancellation_.register(this.store_.events_.load.relay(this.data.events.load));
+                    void this.cancellation_.register(this.store_.events_.save.relay(this.data.events.save));
+                    void this.cancellation_.register(this.store_.events.load.relay(this.data.events.load));
+                    void this.cancellation_.register(this.store_.events.save.relay(this.data.events.save));
+                    void this.cancellation_.register(this.store_.events.loss.relay(this.data.events.loss));
                     void this.data.sync(keys);
                 };
                 Schema.prototype.rebuild = function () {
@@ -1459,8 +1467,8 @@ require = function e(t, n, r) {
                     void this.build();
                 };
                 Schema.prototype.close = function () {
-                    void this.cancelable_.cancel();
-                    this.cancelable_ = new spica_1.Cancelable();
+                    void this.cancellation_.cancel();
+                    this.cancellation_ = new spica_1.Cancellation();
                 };
                 return Schema;
             }();
@@ -1621,7 +1629,7 @@ require = function e(t, n, r) {
             exports.STORE_NAME = 'expiry';
             var ExpiryStore = function (_super) {
                 __extends(ExpiryStore, _super);
-                function ExpiryStore(database, store, access, ages, cancelable) {
+                function ExpiryStore(database, store, access, ages, cancellation) {
                     var _this = _super.call(this, database, exports.STORE_NAME, ExpiryStore.fields.key) || this;
                     void Object.freeze(_this);
                     var timer = 0;
@@ -1644,7 +1652,7 @@ require = function e(t, n, r) {
                             });
                         }, date - Date.now());
                     };
-                    void cancelable.listeners.add(function () {
+                    void cancellation.register(function () {
                         return void clearTimeout(timer);
                     });
                     void schedule(Date.now());
@@ -1833,7 +1841,7 @@ require = function e(t, n, r) {
                                 return _this.meta(key).date;
                             }
                         },
-                        __event: { value: new spica_1.Observable() },
+                        __event: { value: new spica_1.Observation() },
                         __transaction: {
                             value: function (cb, complete) {
                                 return _this.transaction(key, cb, complete);
@@ -1955,19 +1963,19 @@ require = function e(t, n, r) {
                     this.storage = storage;
                     this.factory = factory;
                     this.log = log;
-                    this.cancelable = new spica_1.Cancelable();
+                    this.cancellation = new spica_1.Cancellation();
                     this.mode = this.storage === api_2.localStorage ? 'local' : 'session';
                     this.events = {
-                        send: new spica_1.Observable(),
-                        recv: new spica_1.Observable()
+                        send: new spica_1.Observation(),
+                        recv: new spica_1.Observation()
                     };
                     if (cache.has(name))
                         throw new Error('ClientChannel: WebStorage: Specified channel ' + name + ' is already created.');
                     void cache.set(name, this);
-                    void this.cancelable.listeners.add(function () {
+                    void this.cancellation.register(function () {
                         return void cache.delete(name);
                     });
-                    var source = __assign((_a = {}, _a[api_1.SCHEMA.KEY.NAME] = this.name, _a[api_1.SCHEMA.EVENT.NAME] = new spica_1.Observable(), _a), parse(this.storage.getItem(this.name)));
+                    var source = __assign((_a = {}, _a[api_1.SCHEMA.KEY.NAME] = this.name, _a[api_1.SCHEMA.EVENT.NAME] = new spica_1.Observation(), _a), parse(this.storage.getItem(this.name)));
                     this.link_ = api_1.build(source, this.factory, function (attr, newValue, oldValue) {
                         void _this.log.update(_this.name);
                         void _this.storage.setItem(_this.name, JSON.stringify(Object.keys(source).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(source)).reduce(function (acc, attr) {
@@ -1982,7 +1990,7 @@ require = function e(t, n, r) {
                         void _this.events.send.emit([event.attr], event);
                     });
                     void migrate(this.link_);
-                    void this.cancelable.listeners.add(api_2.eventstream.on([
+                    void this.cancellation.register(api_2.eventstream.on([
                         this.mode,
                         this.name
                     ], function (_a) {
@@ -2004,10 +2012,10 @@ require = function e(t, n, r) {
                         }, void 0);
                     }));
                     void this.log.update(this.name);
-                    void this.cancelable.listeners.add(function () {
+                    void this.cancellation.register(function () {
                         return void _this.log.delete(_this.name);
                     });
-                    void this.cancelable.listeners.add(function () {
+                    void this.cancellation.register(function () {
                         return void _this.storage.removeItem(_this.name);
                     });
                     void Object.freeze(this);
@@ -2017,7 +2025,7 @@ require = function e(t, n, r) {
                     return this.link_;
                 };
                 StorageChannel.prototype.destroy = function () {
-                    void this.cancelable.cancel();
+                    void this.cancellation.cancel();
                 };
                 return StorageChannel;
             }();
@@ -2086,7 +2094,7 @@ require = function e(t, n, r) {
             var spica_1 = require('spica');
             var global_1 = require('../module/global');
             var event_1 = require('./event');
-            var IDBEventObserver = new spica_1.Observable();
+            var IDBEventObserver = new spica_1.Observation();
             exports.event = IDBEventObserver;
             var configs = new Map();
             var commands = new Map();
@@ -2355,11 +2363,9 @@ require = function e(t, n, r) {
                                 void reqs.shift();
                             }
                         } catch (err) {
-                            if (err instanceof DOMException || err instanceof DOMError) {
-                                void console.warn(err);
-                            } else {
-                                void console.error(err);
-                            }
+                            void new Promise(function (_, reject) {
+                                return void reject(err);
+                            });
                             void clear();
                             void handleFromCrashState(new State.Crash(database, err));
                         }
@@ -2528,7 +2534,7 @@ require = function e(t, n, r) {
             Object.defineProperty(exports, '__esModule', { value: true });
             var spica_1 = require('spica');
             var global_1 = require('../module/global');
-            var storageEventStream = new spica_1.Observable();
+            var storageEventStream = new spica_1.Observation();
             exports.eventstream = storageEventStream;
             exports.eventstream_ = storageEventStream;
             void self.addEventListener('storage', function (event) {
