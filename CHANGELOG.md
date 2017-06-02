@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.5
+
+- Fix database connection management.
+
 ## 0.15.4
 
 - Improve typings.

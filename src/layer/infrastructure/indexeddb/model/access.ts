@@ -253,65 +253,72 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
 
   function handleFromSuccessState(state: State.Success): void {
     const {database, connection} = state;
-    const clear = () => (
+    let closed = false;
+    const close = () => (
+      void connection.close(),
+      closed = true,
       connection.onversionchange = () => void connection.close(),
       connection.onerror = <any>void 0,
       connection.onabort = <any>void 0,
-      connection.onclose = <any>void 0)
-    connection.onversionchange = ({newVersion}) => {
-      void clear();
-      void connection.close();
-      if (!newVersion) {
-        void requests.delete(database);
-        void IDBEventObserver.emit([database, IDBEventType.destroy], new IDBEvent(IDBEventType.destroy, database));
-      }
+      connection.onclose = <any>void 0,
+      state.drain = () => void 0,
+      state.destroy = () => void 0,
+      state.end = () => void 0)
+    connection.onversionchange = ({ newVersion }) => {
+      assert(newVersion === null);
+      void close();
+      void requests.delete(database);
+      void IDBEventObserver.emit([database, IDBEventType.destroy], new IDBEvent(IDBEventType.destroy, database));
       if (states.get(database) !== state) return;
       void handleFromEndState(new State.End(database));
     };
     connection.onerror = event => (
-      void clear(),
+      void close(),
       void handleFromErrorState(new State.Error(database, (<any>event.target).error, event)));
     connection.onabort = event => (
-      void clear(),
+      void close(),
       void handleFromAbortState(new State.Abort(database, (<any>event.target).error, event)));
     connection.onclose = () => (
-      void clear(),
-      void IDBEventObserver.emit([database, IDBEventType.destroy], new IDBEvent(IDBEventType.destroy, database)),
+      void close(),
       void handleFromEndState(new State.End(database)));
     state.destroy = () => (
-      void clear(),
-      void connection.close(),
+      void close(),
       void handleFromDestroyState(new State.Destroy(database)));
     state.end = () => (
-      void clear(),
-      void connection.close(),
+      void close(),
       void handleFromEndState(new State.End(database)));
     state.drain = () => {
       const reqs = requests.get(database) || [];
       try {
-        while (reqs.length > 0 && commands.get(database) === Command.open) {
-          void reqs[0](connection);
-          void reqs.shift();
+        while (reqs.length > 0 && !closed) {
+          assert(commands.get(database) === Command.open);
+          assert(states.get(database) === state);
+          void reqs.shift()!(connection);
         }
       }
       catch (err) {
         assert(!console.debug(err + ''));
         void new Promise((_, reject) =>
           void reject(err));
-        void clear();
+        void close();
+        if (states.get(database) !== state) return;
         void handleFromCrashState(new State.Crash(database, err));
       }
     };
 
-
     switch (commands.get(database)) {
       case Command.open: {
         const {verify} = configs.get(database)!;
-        try {
-          if (!verify(connection)) return void handleFromEndState(new State.End(database), connection.version + 1);
-        }
-        catch (err) {
-          return void handleFromCrashState(new State.Crash(database, err));
+        VERIFY: {
+          try {
+            if (verify(connection)) break VERIFY;
+            void close();
+            return void handleFromEndState(new State.End(database), connection.version + 1);
+          }
+          catch (err) {
+            void close();
+            return void handleFromCrashState(new State.Crash(database, err));
+          }
         }
         void IDBEventObserver.emit([database, IDBEventType.connect], new IDBEvent(IDBEventType.connect, database));
         return void state.drain();
@@ -374,7 +381,10 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
     switch (commands.get(database)) {
       case Command.open:
         return (
-          void handleFromInitialState(new State.Initial(database), version));
+          void IDBEventObserver.emit([database, IDBEventType.disconnect], new IDBEvent(IDBEventType.disconnect, database)),
+          states.has(database)
+            ? void 0
+            : void handleFromInitialState(new State.Initial(database), version));
       case Command.close:
         return (
           void commands.delete(database),
@@ -384,6 +394,7 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
         return (
           void commands.delete(database),
           void configs.delete(database),
+          void requests.delete(database),
           void IDBEventObserver.emit([database, IDBEventType.disconnect], new IDBEvent(IDBEventType.disconnect, database)));
     }
     throw new TypeError(`ClientChannel: Invalid command ${commands.get(database)}.`);
