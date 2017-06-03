@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.0
+
+- Throw an error when an invalid value was assigned to linked object properties.
+- Fix value validation.
+
 ## 0.15.5
 
 - Fix database connection management.

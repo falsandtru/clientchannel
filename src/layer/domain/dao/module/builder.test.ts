@@ -127,6 +127,14 @@ describe('Unit: layers/domain/dao/module/build', () => {
       assert(source.p === 9);
     });
 
+    it('invalid values', () => {
+      const source = <DAO><any>{__key: 'test', m: 1};
+      const dao = build(source, factory);
+
+      // function
+      assert.throws(() => dao.m = <any>Date);
+    });
+
   });
 
 });
