@@ -1,4 +1,4 @@
-/*! clientchannel v0.15.4 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.15.5 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -2317,67 +2317,74 @@ require = function e(t, n, r) {
                 }
                 function handleFromSuccessState(state) {
                     var database = state.database, connection = state.connection;
-                    var clear = function () {
-                        return connection.onversionchange = function () {
+                    var closed = false;
+                    var close = function () {
+                        return void connection.close(), closed = true, connection.onversionchange = function () {
                             return void connection.close();
-                        }, connection.onerror = void 0, connection.onabort = void 0, connection.onclose = void 0;
+                        }, connection.onerror = void 0, connection.onabort = void 0, connection.onclose = void 0, state.drain = function () {
+                            return void 0;
+                        }, state.destroy = function () {
+                            return void 0;
+                        }, state.end = function () {
+                            return void 0;
+                        };
                     };
                     connection.onversionchange = function (_a) {
                         var newVersion = _a.newVersion;
-                        void clear();
-                        void connection.close();
-                        if (!newVersion) {
-                            void requests.delete(database);
-                            void IDBEventObserver.emit([
-                                database,
-                                event_1.IDBEventType.destroy
-                            ], new event_1.IDBEvent(event_1.IDBEventType.destroy, database));
-                        }
+                        void close();
+                        void requests.delete(database);
+                        void IDBEventObserver.emit([
+                            database,
+                            event_1.IDBEventType.destroy
+                        ], new event_1.IDBEvent(event_1.IDBEventType.destroy, database));
                         if (states.get(database) !== state)
                             return;
                         void handleFromEndState(new State.End(database));
                     };
                     connection.onerror = function (event) {
-                        return void clear(), void handleFromErrorState(new State.Error(database, event.target.error, event));
+                        return void close(), void handleFromErrorState(new State.Error(database, event.target.error, event));
                     };
                     connection.onabort = function (event) {
-                        return void clear(), void handleFromAbortState(new State.Abort(database, event.target.error, event));
+                        return void close(), void handleFromAbortState(new State.Abort(database, event.target.error, event));
                     };
                     connection.onclose = function () {
-                        return void clear(), void IDBEventObserver.emit([
-                            database,
-                            event_1.IDBEventType.destroy
-                        ], new event_1.IDBEvent(event_1.IDBEventType.destroy, database)), void handleFromEndState(new State.End(database));
+                        return void close(), void handleFromEndState(new State.End(database));
                     };
                     state.destroy = function () {
-                        return void clear(), void connection.close(), void handleFromDestroyState(new State.Destroy(database));
+                        return void close(), void handleFromDestroyState(new State.Destroy(database));
                     };
                     state.end = function () {
-                        return void clear(), void connection.close(), void handleFromEndState(new State.End(database));
+                        return void close(), void handleFromEndState(new State.End(database));
                     };
                     state.drain = function () {
                         var reqs = requests.get(database) || [];
                         try {
-                            while (reqs.length > 0 && commands.get(database) === 0) {
-                                void reqs[0](connection);
-                                void reqs.shift();
+                            while (reqs.length > 0 && !closed) {
+                                void reqs.shift()(connection);
                             }
                         } catch (err) {
                             void new Promise(function (_, reject) {
                                 return void reject(err);
                             });
-                            void clear();
+                            void close();
+                            if (states.get(database) !== state)
+                                return;
                             void handleFromCrashState(new State.Crash(database, err));
                         }
                     };
                     switch (commands.get(database)) {
                     case 0: {
                             var verify = configs.get(database).verify;
-                            try {
-                                if (!verify(connection))
+                            VERIFY: {
+                                try {
+                                    if (verify(connection))
+                                        break VERIFY;
+                                    void close();
                                     return void handleFromEndState(new State.End(database), connection.version + 1);
-                            } catch (err) {
-                                return void handleFromCrashState(new State.Crash(database, err));
+                                } catch (err) {
+                                    void close();
+                                    return void handleFromCrashState(new State.Crash(database, err));
+                                }
                             }
                             void IDBEventObserver.emit([
                                 database,
@@ -2454,14 +2461,17 @@ require = function e(t, n, r) {
                     void states.delete(database);
                     switch (commands.get(database)) {
                     case 0:
-                        return void handleFromInitialState(new State.Initial(database), version);
+                        return void IDBEventObserver.emit([
+                            database,
+                            event_1.IDBEventType.disconnect
+                        ], new event_1.IDBEvent(event_1.IDBEventType.disconnect, database)), states.has(database) ? void 0 : void handleFromInitialState(new State.Initial(database), version);
                     case 1:
                         return void commands.delete(database), void configs.delete(database), void IDBEventObserver.emit([
                             database,
                             event_1.IDBEventType.disconnect
                         ], new event_1.IDBEvent(event_1.IDBEventType.disconnect, database));
                     case 2:
-                        return void commands.delete(database), void configs.delete(database), void IDBEventObserver.emit([
+                        return void commands.delete(database), void configs.delete(database), void requests.delete(database), void IDBEventObserver.emit([
                             database,
                             event_1.IDBEventType.disconnect
                         ], new event_1.IDBEvent(event_1.IDBEventType.disconnect, database));
