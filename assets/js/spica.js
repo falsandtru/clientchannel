@@ -1,4 +1,4 @@
-/*! spica v0.0.80 https://github.com/falsandtru/spica | (c) 2016, falsandtru | MIT License */
+/*! spica v0.0.81 https://github.com/falsandtru/spica | (c) 2016, falsandtru | MIT License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -318,7 +318,10 @@ require = function e(t, n, r) {
             var maybe_1 = require('./monad/maybe');
             var either_1 = require('./monad/either');
             var Cancellation = function () {
-                function Cancellation() {
+                function Cancellation(cancelees) {
+                    if (cancelees === void 0) {
+                        cancelees = [];
+                    }
                     var _this = this;
                     this.done = false;
                     this.listeners = new Set();
@@ -372,6 +375,9 @@ require = function e(t, n, r) {
                     this.either = function (val) {
                         return _this.canceled ? either_1.Left(_this.reason) : either_1.Right(val);
                     };
+                    void Array.from(cancelees).forEach(function (cancellee) {
+                        return void cancellee.register(_this.cancel);
+                    });
                 }
                 return Cancellation;
             }();
@@ -854,9 +860,7 @@ require = function e(t, n, r) {
             var Either = function (_super) {
                 __extends(Either, _super);
                 function Either(thunk) {
-                    var _this = _super.call(this, thunk) || this;
-                    void _this.EITHER;
-                    return _this;
+                    return _super.call(this, thunk) || this;
                 }
                 Either.prototype.fmap = function (f) {
                     return this.bind(function (b) {
@@ -1047,9 +1051,7 @@ require = function e(t, n, r) {
             var Maybe = function (_super) {
                 __extends(Maybe, _super);
                 function Maybe(thunk) {
-                    var _this = _super.call(this, thunk) || this;
-                    void _this.MAYBE;
-                    return _this;
+                    return _super.call(this, thunk) || this;
                 }
                 Maybe.prototype.fmap = function (f) {
                     return this.bind(function (a) {

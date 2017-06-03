@@ -1,4 +1,4 @@
-/*! clientchannel v0.15.5 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.16.0 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -135,8 +135,14 @@ require = function e(t, n, r) {
                     case 'boolean':
                     case 'number':
                     case 'string':
-                    case 'object':
                         return true;
+                    case 'object':
+                        try {
+                            void JSON.stringify(dao[prop]);
+                            return true;
+                        } catch (_) {
+                            return false;
+                        }
                     default:
                         return false;
                     }
@@ -168,6 +174,7 @@ require = function e(t, n, r) {
             Object.defineProperty(exports, '__esModule', { value: true });
             var spica_1 = require('spica');
             var types_1 = require('../constraint/types');
+            var values_1 = require('../constraint/values');
             var EventRecordFields;
             (function (EventRecordFields) {
                 EventRecordFields.id = 'id';
@@ -185,7 +192,7 @@ require = function e(t, n, r) {
                     this.key = key;
                     this.value = value;
                     this.date = date;
-                    if (typeof this.id === 'number' && this.id >= 0 === false || !Number.isInteger(this.id))
+                    if (typeof this.id !== 'number' || !isFinite(this.id) || this.id >= 0 === false || !Number.isInteger(this.id))
                         throw new TypeError('ClientChannel: EventRecord: Invalid event id: ' + this.id);
                     if (typeof this.type !== 'string')
                         throw new TypeError('ClientChannel: EventRecord: Invalid event type: ' + this.type);
@@ -195,9 +202,7 @@ require = function e(t, n, r) {
                         throw new TypeError('ClientChannel: EventRecord: Invalid event value: ' + this.value);
                     if (typeof this.date !== 'number' || !isFinite(this.date) || this.date >= 0 === false)
                         throw new TypeError('ClientChannel: EventRecord: Invalid event date: ' + this.date);
-                    this.attr = this.type === exports.EventRecordType.put ? Object.keys(value).reduce(function (r, p) {
-                        return p.length > 0 && p[0] !== '_' && p[p.length - 1] !== '_' ? p : r;
-                    }, '') : '';
+                    this.attr = this.type === exports.EventRecordType.put ? Object.keys(value).filter(values_1.isValidPropertyName)[0] : '';
                     if (typeof this.attr !== 'string')
                         throw new TypeError('ClientChannel: EventRecord: Invalid event attr: ' + this.key);
                     if (this.type === exports.EventRecordType.put && this.attr.length === 0)
@@ -205,24 +210,21 @@ require = function e(t, n, r) {
                     if (this.type !== exports.EventRecordType.put && this.attr.length !== 0)
                         throw new TypeError('ClientChannel: EventRecord: Invalid event attr with ' + this.type + ': ' + this.attr);
                     switch (type) {
-                    case exports.EventRecordType.put: {
-                            this.value = value = spica_1.clone(new EventRecordValue(), (_a = {}, _a[this.attr] = value[this.attr], _a));
-                            void Object.freeze(this.value);
-                            void Object.freeze(this);
-                            return;
-                        }
-                    case exports.EventRecordType.snapshot: {
-                            this.value = value = spica_1.clone(new EventRecordValue(), value);
-                            void Object.freeze(this.value);
-                            void Object.freeze(this);
-                            return;
-                        }
-                    case exports.EventRecordType.delete: {
-                            this.value = value = new EventRecordValue();
-                            void Object.freeze(this.value);
-                            void Object.freeze(this);
-                            return;
-                        }
+                    case exports.EventRecordType.put:
+                        this.value = value = new EventRecordValue((_a = {}, _a[this.attr] = value[this.attr], _a));
+                        void Object.freeze(this.value);
+                        void Object.freeze(this);
+                        return;
+                    case exports.EventRecordType.snapshot:
+                        this.value = value = new EventRecordValue(value);
+                        void Object.freeze(this.value);
+                        void Object.freeze(this);
+                        return;
+                    case exports.EventRecordType.delete:
+                        this.value = value = new EventRecordValue();
+                        void Object.freeze(this.value);
+                        void Object.freeze(this);
+                        return;
                     default:
                         throw new TypeError('ClientChannel: Invalid event type: ' + type);
                     }
@@ -267,6 +269,11 @@ require = function e(t, n, r) {
             };
             var EventRecordValue = function () {
                 function EventRecordValue() {
+                    var sources = [];
+                    for (var _i = 0; _i < arguments.length; _i++) {
+                        sources[_i] = arguments[_i];
+                    }
+                    void spica_1.clone.apply(void 0, [this].concat(sources));
                 }
                 return EventRecordValue;
             }();
@@ -274,6 +281,7 @@ require = function e(t, n, r) {
         },
         {
             '../constraint/types': 5,
+            '../constraint/values': 6,
             'spica': undefined
         }
     ],
@@ -428,7 +436,7 @@ require = function e(t, n, r) {
                     if (cb === void 0) {
                         cb = noop_1.noop;
                     }
-                    return void keys.map(function (key) {
+                    return void Promise.all(keys.map(function (key) {
                         switch (_this.syncState.get(key)) {
                         case true:
                             return Promise.resolve();
@@ -453,15 +461,9 @@ require = function e(t, n, r) {
                                 }));
                             });
                         }
-                    }).reduce(function (ps, p) {
-                        return ps.then(function (es) {
-                            return p.then(function (e) {
-                                return es.concat([e]);
-                            });
-                        });
-                    }, Promise.resolve([])).then(function (es) {
-                        return void cb(es.filter(function (e) {
-                            return !!e;
+                    })).then(function (rs) {
+                        return void cb(rs.filter(function (r) {
+                            return r;
                         }));
                     });
                 };
@@ -599,7 +601,7 @@ require = function e(t, n, r) {
                         void this.fetch(key);
                     }
                     void this.events_.access.emit([key], new EventStore.InternalEvent(EventStore.InternalEventType.query, types_1.IdNumber(0), key, ''));
-                    return compose(key, this.attrs, this.memory.reflect([key])).value;
+                    return Object.assign({}, compose(key, this.attrs, this.memory.reflect([key])).value);
                 };
                 EventStore.prototype.add = function (event, tx) {
                     var _this = this;
@@ -895,8 +897,8 @@ require = function e(t, n, r) {
                 EventStore.InternalEventType = __assign({}, event_1.EventRecordType, { query: 'query' });
             }(EventStore = exports.EventStore || (exports.EventStore = {})));
             exports.EventStore = EventStore;
-            function adjust(record) {
-                var ret = __assign({}, record);
+            function adjust(event) {
+                var ret = __assign({}, event);
                 delete ret.id;
                 return ret;
             }
@@ -929,17 +931,14 @@ require = function e(t, n, r) {
                 function compose(target, source) {
                     switch (source.type) {
                     case EventStore.EventType.put:
-                        return source.value[source.attr] !== void 0 ? new event_1.UnsavedEventRecord(source.key, spica_1.assign(new EventStore.Value(), target.value, source.value), EventStore.EventType.snapshot) : new event_1.UnsavedEventRecord(source.key, Object.keys(target.value).filter(function (prop) {
-                            return attrs.indexOf(prop) !== -1;
-                        }).filter(values_1.isValidPropertyValue(target)).reduce(function (value, prop) {
-                            return value[prop] = target[prop], value;
-                        }, new EventStore.Value()), EventStore.EventType.snapshot);
+                        return new event_1.UnsavedEventRecord(source.key, new EventStore.Value(target.value, (_a = {}, _a[source.attr] = source.value[source.attr], _a)), EventStore.EventType.snapshot);
                     case EventStore.EventType.snapshot:
                         return source;
                     case EventStore.EventType.delete:
                         return source;
                     }
                     throw new TypeError('ClientChannel: Invalid event type: ' + source);
+                    var _a;
                 }
             }
             exports.compose = compose;
@@ -1235,11 +1234,12 @@ require = function e(t, n, r) {
                             return source[prop] === void 0 ? iniVal : source[prop];
                         },
                         set: function (newVal) {
-                            if (!values_1.isValidPropertyValue(source)(newVal))
-                                return;
+                            if (!values_1.isValidPropertyValue((_a = {}, _a[prop] = newVal, _a))(prop))
+                                throw new TypeError('ClientChannel: Invalid value: ' + JSON.stringify(newVal));
                             var oldVal = source[prop];
                             source[prop] = newVal === void 0 ? iniVal : newVal;
                             void update(prop, newVal, oldVal);
+                            var _a;
                         }
                     };
                     return map;
@@ -1410,7 +1410,7 @@ require = function e(t, n, r) {
                     if (age === void 0) {
                         age = this.expiry;
                     }
-                    if (!isFinite(age) || isNaN(age))
+                    if (!isFinite(age))
                         return;
                     return void this.ages.set(key, age);
                 };
@@ -1820,7 +1820,7 @@ require = function e(t, n, r) {
                 StoreChannel.prototype.link = function (key, expiry) {
                     var _this = this;
                     void this.expire(key, expiry);
-                    return this.links.has(key) ? this.links.get(key) : this.links.set(key, api_1.build(Object.defineProperties(this.sources.set(key, spica_1.assign({}, this.get(key))).get(key), {
+                    return this.links.has(key) ? this.links.get(key) : this.links.set(key, api_1.build(Object.defineProperties(this.sources.set(key, this.get(key)).get(key), {
                         __meta: {
                             get: function () {
                                 return _this.meta(key);
