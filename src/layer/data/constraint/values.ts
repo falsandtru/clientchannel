@@ -16,8 +16,15 @@ export function isValidPropertyValue(dao: any) {
       case 'boolean':
       case 'number':
       case 'string':
-      case 'object':
         return true;
+      case 'object':
+        try {
+          void JSON.stringify(dao[prop]);
+          return true;
+        }
+        catch (_) {
+          return false;
+        }
       default:
         return false;
     }

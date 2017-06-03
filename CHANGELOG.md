@@ -3,6 +3,7 @@
 ## 0.16.0
 
 - Throw an error when an invalid value was assigned to linked object properties.
+- Add validation for circular references.
 - Fix value validation.
 
 ## 0.15.5

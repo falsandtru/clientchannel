@@ -133,6 +133,10 @@ describe('Unit: layers/domain/dao/module/build', () => {
 
       // function
       assert.throws(() => dao.m = <any>Date);
+      // circular reference
+      const a: any[] = [];
+      a.push(a);
+      assert.throws(() => dao.m = <any>a);
     });
 
   });
