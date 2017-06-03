@@ -1,5 +1,5 @@
 import { StoreChannel as IStoreChannel, StoreChannelObject as ChannelObject } from '../../../../../';
-import { Observation, assign } from 'spica';
+import { Observation } from 'spica';
 import { build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { ChannelStore } from '../model/channel';
 import { StorageChannel } from '../../webstorage/api';
@@ -72,7 +72,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
       : this.links
         .set(key, build(
           Object.defineProperties(
-            this.sources.set(key, assign({}, this.get(key))).get(key)!,
+            this.sources.set(key, this.get(key)).get(key)!,
             {
               __meta: {
                 get: () =>

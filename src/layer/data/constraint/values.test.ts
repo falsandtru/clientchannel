@@ -45,27 +45,27 @@ describe('Unit: layers/data/constraint/values', () => {
       function: () => 0
     };
 
-    it('invalid undefined', () => {
+    it('undefined', () => {
       assert(isValidPropertyValue(dao)('undefined') === true);
     });
 
-    it('invalid boolean', () => {
+    it('boolean', () => {
       assert(isValidPropertyValue(dao)('boolean') === true);
     });
 
-    it('invalid number', () => {
+    it('number', () => {
       assert(isValidPropertyValue(dao)('number') === true);
     });
 
-    it('invalid string', () => {
+    it('string', () => {
       assert(isValidPropertyValue(dao)('string') === true);
     });
 
-    it('invalid object', () => {
+    it('object', () => {
       assert(isValidPropertyValue(dao)('object') === true);
     });
 
-    it('invalid function', () => {
+    it('function', () => {
       assert(isValidPropertyValue(dao)('function') === false);
     });
 

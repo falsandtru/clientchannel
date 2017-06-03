@@ -1,6 +1,7 @@
 import { StoreChannelEventType } from '../../../../';
 import { clone } from 'spica';
 import { IdNumber } from '../constraint/types';
+import { isValidPropertyName, isValidPropertyValue } from '../constraint/values';
 
 export namespace EventRecordFields {
   export const id: 'id' = 'id';
@@ -20,38 +21,41 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
     public readonly value: Partial<V>,
     public readonly date: number,
   ) {
-    if (typeof this.id === 'number' && this.id >= 0 === false || !Number.isInteger(this.id)) throw new TypeError(`ClientChannel: EventRecord: Invalid event id: ${this.id}`);
+    if (typeof this.id !== 'number' || !isFinite(this.id) || this.id >= 0 === false || !Number.isInteger(this.id)) throw new TypeError(`ClientChannel: EventRecord: Invalid event id: ${this.id}`);
     if (typeof this.type !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event type: ${this.type}`);
     if (typeof this.key !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event key: ${this.key}`);
     if (typeof this.value !== 'object' || !this.value) throw new TypeError(`ClientChannel: EventRecord: Invalid event value: ${this.value}`);
     if (typeof this.date !== 'number' || !isFinite(this.date) || this.date >= 0 === false) throw new TypeError(`ClientChannel: EventRecord: Invalid event date: ${this.date}`);
     // put -> string, delete or snapshot -> empty string
     this.attr = this.type === EventRecordType.put
-      ? <keyof V>Object.keys(value).reduce((r, p) => p.length > 0 && p[0] !== '_' && p[p.length - 1] !== '_' ? p : r, '')
+      ? <keyof V>Object.keys(value).filter(isValidPropertyName)[0]
       : '';
     if (typeof this.attr !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event attr: ${this.key}`);
     if (this.type === EventRecordType.put && this.attr.length === 0) throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
     if (this.type !== EventRecordType.put && this.attr.length !== 0) throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
 
     switch (type) {
-      case EventRecordType.put: {
-        this.value = value = clone<EventRecordValue>(new EventRecordValue(), <EventRecordValue>{ [this.attr]: value[this.attr] });
+      case EventRecordType.put:
+        assert(this.attr !== '' && isValidPropertyName(this.attr));
+        this.value = value = new EventRecordValue({ [this.attr]: value[this.attr] });
         void Object.freeze(this.value);
         void Object.freeze(this);
         return;
-      }
-      case EventRecordType.snapshot: {
-        this.value = value = clone<EventRecordValue>(new EventRecordValue(), value);
+      case EventRecordType.snapshot:
+        assert(this.attr === '');
+        this.value = value = new EventRecordValue(value);
+        assert(Object.keys(this.value).every(isValidPropertyName));
+        assert(Object.keys(this.value).every(isValidPropertyValue(this.value)));
         void Object.freeze(this.value);
         void Object.freeze(this);
         return;
-      }
-      case EventRecordType.delete: {
+      case EventRecordType.delete:
+        assert(this.attr === '');
         this.value = value = new EventRecordValue();
+        assert.deepStrictEqual(Object.keys(this.value), []);
         void Object.freeze(this.value);
         void Object.freeze(this);
         return;
-      }
       default:
         throw new TypeError(`ClientChannel: Invalid event type: ${type}`);
     }
@@ -100,4 +104,9 @@ export namespace EventRecordType {
 }
 
 export class EventRecordValue {
+  constructor(...sources: object[]) {
+    void clone(this, ...sources);
+    assert(Object.keys(this).every(isValidPropertyName));
+    assert(Object.keys(this).every(isValidPropertyValue(this)));
+  }
 }

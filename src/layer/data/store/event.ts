@@ -1,7 +1,7 @@
-import { Observation, Cancellation, tick, sqid, assign, concat } from 'spica';
+import { Observation, Cancellation, tick, sqid, concat } from 'spica';
 import { listen, Config, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { IdNumber } from '../constraint/types';
-import { isValidPropertyName, isValidPropertyValue } from '../constraint/values';
+import { isValidPropertyName } from '../constraint/values';
 import { EventRecordFields, EventRecordType, EventRecordValue, UnsavedEventRecord, SavedEventRecord } from '../schema/event';
 import { noop } from '../../../lib/noop';
 
@@ -89,7 +89,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     void this.events.save
       .monitor([], event =>
         void states.update(event));
-    // clean records
+    // clean events
     void this.events.save
       .monitor([], event => {
         switch (event.type) {
@@ -119,22 +119,23 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   private readonly syncState = new Map<K, boolean>();
   private readonly syncWaits = new Observation<[K], DOMException | DOMError | void, any>();
   public sync(keys: K[], cb: (errs: [K, DOMException | DOMError][]) => void = noop): void {
-    return void keys
-      .map<Promise<[K, DOMException | DOMError] | void>>(key => {
+    type SyncErrorInfo = [K, DOMException | DOMError];
+    return void Promise.all(keys
+      .map<Promise<SyncErrorInfo | void>>(key => {
         switch (this.syncState.get(key)) {
           case true:
             return Promise.resolve();
           case false:
-            return new Promise<[K, DOMException | DOMError] | void>(resolve => void (
+            return new Promise<SyncErrorInfo | void>(resolve => void (
               void this.syncWaits.once([key], err => void resolve(err ? [key, err] : void 0))));
           default:
-            return new Promise<[K, DOMException | DOMError] | void>(resolve => void (
+            return new Promise<SyncErrorInfo | void>(resolve => void (
               void this.syncWaits.once([key], err => void resolve(err ? [key, err] : void 0)),
               void this.fetch(key, err => void this.syncWaits.emit([key], err))));
         }
-      })
-      .reduce<Promise<([K, DOMException | DOMError] | void)[]>>((ps, p) => ps.then(es => p.then(e => es.concat([e]))), Promise.resolve<([K, DOMException | DOMError] | void)[]>([]))
-      .then(es => void cb(<[K, DOMException | DOMError][]>es.filter(e => !!e)));
+      }))
+      .then(rs =>
+        void cb(<SyncErrorInfo[]>rs.filter(r => r)));
   }
   public fetch(key: K, cb: (err?: DOMException | DOMError) => void = noop, after: (tx: IDBTransaction, err?: DOMException | DOMError) => void = noop): void {
     void this.syncState.set(key, this.syncState.get(key) === true);
@@ -230,7 +231,11 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   }
   public keys(): K[] {
     return this.memory.reflect([])
-      .reduce((keys, e) => keys.length === 0 || keys[keys.length - 1] !== e.key ? concat(keys, [e.key]) : keys, <K[]>[])
+      .reduce<K[]>((keys, e) =>
+        keys.length === 0 || keys[keys.length - 1] !== e.key
+          ? concat(keys, [e.key])
+          : keys
+      , [])
       .sort();
   }
   public observes(key: K): boolean {
@@ -243,10 +248,12 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     const events = this.memory.reflect([key]);
     return Object.freeze({
       key: key,
-      id: events.reduce<number>((id, e) =>
-        e.id > id ? e.id! : id, 0),
-      date: events.reduce<number>((date, e) =>
-        e.date > date ? e.date : date, 0)
+      id: events.reduce((id, e) => (
+        e.id > id ? e.id : id
+      ), 0),
+      date: events.reduce((date, e) => (
+        e.date > date ? e.date : date
+      ), 0),
     });
   }
   public get(key: K): Partial<V> {
@@ -255,7 +262,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     }
     void this.events_.access
       .emit([key], new EventStore.InternalEvent(EventStore.InternalEventType.query, IdNumber(0), key, ''));
-    return compose(key, this.attrs, this.memory.reflect([key])).value;
+    return Object.assign({}, compose(key, this.attrs, this.memory.reflect([key])).value);
   }
   public add(event: UnsavedEventRecord<K, V>, tx: IDBTransaction | void = this.tx): void {
     assert(event.type === EventStore.EventType.snapshot ? tx : true);
@@ -497,8 +504,8 @@ interface MetaData<K extends string> {
   readonly date: number;
 }
 
-export function adjust(record: UnsavedEventRecord<any, any>): {} {
-  const ret = { ...record };
+export function adjust(event: UnsavedEventRecord<any, any>): {} {
+  const ret = { ...event };
   delete (<{ id: IdNumber; }>ret).id;
   return ret;
 }
@@ -510,20 +517,20 @@ export function compose<K extends string, V extends EventStore.Value>(
   events: Array<UnsavedEventRecord<K, V> | SavedEventRecord<K, V>>
 ): UnsavedEventRecord<K, V> | SavedEventRecord<K, V> {
   assert(attrs.every(isValidPropertyName));
-  assert(events.every(e => e.key === key));
-  type E = UnsavedEventRecord<K, V> | SavedEventRecord<K, V>;
+  assert(events.every(event => event.key === key));
+  assert(events.every(event => event instanceof UnsavedEventRecord || event instanceof SavedEventRecord));
+  type Event = UnsavedEventRecord<K, V> | SavedEventRecord<K, V>;
   return group(events)
     .map(events =>
       events
         .reduceRight(compose, new UnsavedEventRecord<K, V>(key, new EventStore.Value(), EventStore.EventType.delete, 0)))
     .reduce(e => e);
 
-  function group(events: E[]): E[][] {
+  function group(events: Event[]): Event[][] {
     return events
-      .map<[E, number]>((e, i) => [e, i])
+      .map<[Event, number]>((e, i) => [e, i])
       .sort(([a, ai], [b, bi]) => indexedDB.cmp(a.key, b.key) || b.date - a.date || b.id - a.id || bi - ai)
-      .reduceRight<E[][]>(([head, ...tail], [event]) => {
-        assert(event instanceof UnsavedEventRecord || event instanceof SavedEventRecord);
+      .reduceRight<Event[][]>(([head, ...tail], [event]) => {
         const prev = head[0];
         if (!prev) return [[event]];
         assert(prev.key === event.key);
@@ -532,25 +539,15 @@ export function compose<K extends string, V extends EventStore.Value>(
           : concat([[event]], concat([head], tail));
       }, [[]]);
   }
-  function compose(target: E, source: E): E {
-    assert(target instanceof UnsavedEventRecord || target instanceof SavedEventRecord);
-    assert(source instanceof UnsavedEventRecord || source instanceof SavedEventRecord);
+  function compose(target: Event, source: Event): Event {
     switch (source.type) {
       case EventStore.EventType.put:
-        return source.value[source.attr] !== void 0
-          ? new UnsavedEventRecord<K, V>(
-              source.key,
-              assign(new EventStore.Value(), target.value, source.value),
-              EventStore.EventType.snapshot)
-          : new UnsavedEventRecord<K, V>(
-              source.key,
-              Object.keys(target.value)
-                .filter(prop => attrs.indexOf(prop) !== -1)
-                .filter(isValidPropertyValue(target))
-                .reduce((value, prop) =>
-                  (value[prop] = target[prop], value)
-                , new EventStore.Value()),
-              EventStore.EventType.snapshot);
+        return new UnsavedEventRecord<K, V>(
+          source.key,
+          new EventStore.Value(target.value, {
+            [source.attr]: source.value[source.attr]
+          }),
+          EventStore.EventType.snapshot);
       case EventStore.EventType.snapshot:
         return source;
       case EventStore.EventType.delete:
