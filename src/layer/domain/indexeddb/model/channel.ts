@@ -95,7 +95,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   public meta(key: K): StoreChannelObjectMetaData<K> {
     return this.schema.data.meta(key);
   }
-  public get(key: K): V {
+  public get(key: K): Partial<V> {
     return this.schema.data.get(key);
   }
   public add(record: DataStore.Record<K, V>): void {

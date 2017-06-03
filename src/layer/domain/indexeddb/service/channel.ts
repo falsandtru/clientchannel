@@ -38,7 +38,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
         }
         return;
 
-        function update(attrs: (keyof V)[], source: V, memory: V, link: V): void {
+        function update(attrs: (keyof V)[], source: Partial<V>, memory: Partial<V>, link: V): void {
           const changes = attrs
             .map((attr: keyof V) => {
               const newVal = memory[attr];
@@ -64,7 +64,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
   }
   private readonly broadcast = new BroadcastChannel<K>(this.name);
   private readonly links = new Map<K, V>();
-  private readonly sources = new Map<K, V>();
+  private readonly sources = new Map<K, Partial<V>>();
   public link(key: K, expiry?: number): V {
     void this.expire(key, expiry);
     return this.links.has(key)
@@ -72,7 +72,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
       : this.links
         .set(key, build(
           Object.defineProperties(
-            this.sources.set(key, assign<V>({}, this.get(key))).get(key)!,
+            this.sources.set(key, assign({}, this.get(key))).get(key)!,
             {
               __meta: {
                 get: () =>
@@ -111,7 +111,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
   }
 }
 
-function cast<K extends string, V extends ChannelObject<K>>(source: V) {
+function cast<K extends string, V extends ChannelObject<K>>(source: Partial<V>) {
   return <V & InternalChannelObject<K>>source;
 
   interface InternalChannelObject<K extends string> extends ChannelObject<K> {

@@ -249,14 +249,13 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         e.date > date ? e.date : date, 0)
     });
   }
-  public get(key: K): V {
+  public get(key: K): Partial<V> {
     if (!this.observes(key)) {
       void this.fetch(key);
     }
     void this.events_.access
       .emit([key], new EventStore.InternalEvent(EventStore.InternalEventType.query, IdNumber(0), key, ''));
-    return <V>compose(key, this.attrs, this.memory.reflect([key]))
-      .value;
+    return compose(key, this.attrs, this.memory.reflect([key])).value;
   }
   public add(event: UnsavedEventRecord<K, V>, tx: IDBTransaction | void = this.tx): void {
     assert(event.type === EventStore.EventType.snapshot ? tx : true);
