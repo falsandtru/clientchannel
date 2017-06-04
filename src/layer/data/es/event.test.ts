@@ -1,6 +1,6 @@
-import { isValidPropertyName, isValidPropertyValue } from './values';
+import { isValidPropertyName, isValidPropertyValue } from './event';
 
-describe('Unit: layers/data/constraint/values', () => {
+describe('Unit: layers/data/es/event', () => {
   describe('isValidPropertyName', () => {
     it('empty', () => {
       assert(!isValidPropertyName(''));
@@ -36,37 +36,8 @@ describe('Unit: layers/data/constraint/values', () => {
   });
 
   describe('isValidPropertyValue', () => {
-    const dao = <any>{
-      undefined: void 0,
-      boolean: false,
-      number: 0,
-      string: '',
-      object: {},
-      function: () => 0
-    };
-
-    it('undefined', () => {
-      assert(isValidPropertyValue(dao)('undefined') === true);
-    });
-
-    it('boolean', () => {
-      assert(isValidPropertyValue(dao)('boolean') === true);
-    });
-
-    it('number', () => {
-      assert(isValidPropertyValue(dao)('number') === true);
-    });
-
-    it('string', () => {
-      assert(isValidPropertyValue(dao)('string') === true);
-    });
-
-    it('object', () => {
-      assert(isValidPropertyValue(dao)('object') === true);
-    });
-
     it('function', () => {
-      assert(isValidPropertyValue(dao)('function') === false);
+      assert(isValidPropertyValue({ m() { } })('m') === false);
     });
 
   });

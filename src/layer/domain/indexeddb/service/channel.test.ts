@@ -1,7 +1,7 @@
 import { StoreChannelObject } from '../../../../../';
 import { StoreChannel } from './channel';
 import { listen, destroy, event, IDBEventType } from '../../../infrastructure/indexeddb/api';
-import { adjust } from '../../../data/store/event';
+import { adjust } from '../../../data/es/store';
 
 describe('Unit: layers/domain/indexeddb/service/channel', function () {
   this.timeout(5 * 1e3);

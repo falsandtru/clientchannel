@@ -1,7 +1,7 @@
 import { Observer } from 'spica';
 import { Config } from '../../../../infrastructure/indexeddb/api';
-import { KeyValueStore } from '../../../../data/store/key-value';
-import { EventStore } from '../../../../data/store/event';
+import { KeyValueStore } from '../../../../data/kvs/store';
+import { EventStore } from '../../../../data/es/store';
 
 export const STORE_NAME = 'access';
 

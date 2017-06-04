@@ -1,4 +1,4 @@
-import { isValidPropertyName, isValidPropertyValue } from '../../../data/constraint/values';
+import { isValidPropertyName, isValidPropertyValue } from '../../../data/es/event';
 import { noop } from '../../../../lib/noop';
 
 export {
@@ -24,7 +24,7 @@ export const SCHEMA = {
   }
 };
 
-export function build<V>(source: V, factory: () => V, update: (attr: string, newVal: any, oldVal: any) => void = noop): V {
+export function build<V extends object>(source: V, factory: () => V, update: (attr: string, newVal: any, oldVal: any) => void = noop): V {
   const dao: V = factory();
   void Object.keys(SCHEMA)
     .map(prop => SCHEMA[prop].NAME)

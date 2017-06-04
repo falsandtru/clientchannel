@@ -1,7 +1,7 @@
 import { StoreChannelEventType } from '../../../../';
 import { clone } from 'spica';
-import { IdNumber } from '../constraint/types';
-import { isValidPropertyName, isValidPropertyValue } from '../constraint/values';
+import { EventId, makeEventId } from './identifier';
+import { isStorable } from '../constraint/value';
 
 export namespace EventRecordFields {
   export const id: 'id' = 'id';
@@ -15,7 +15,7 @@ export namespace EventRecordFields {
 
 abstract class EventRecord<K extends string, V extends EventRecordValue> {
   constructor(
-    public readonly id: IdNumber,
+    public readonly id: EventId,
     public readonly type: EventRecordType,
     public readonly key: K,
     public readonly value: Partial<V>,
@@ -70,7 +70,7 @@ export class UnsavedEventRecord<K extends string, V extends EventRecordValue> ex
     type: EventRecordType = EventRecordType.put,
     date: number = Date.now()
   ) {
-    super(IdNumber(0), type, key, value, date);
+    super(makeEventId(0), type, key, value, date);
     this.EVENT_RECORD;
     // must not have id property
     if (this.id !== 0) throw new TypeError(`ClientChannel: UnsavedEventRecord: Invalid event id: ${this.id}`);
@@ -79,7 +79,7 @@ export class UnsavedEventRecord<K extends string, V extends EventRecordValue> ex
 export class SavedEventRecord<K extends string, V extends EventRecordValue> extends EventRecord<K, V> {
   private EVENT_RECORD: V;
   constructor(
-    id: IdNumber,
+    id: EventId,
     key: K,
     value: Partial<V>,
     type: EventRecordType,
@@ -109,4 +109,20 @@ export class EventRecordValue {
     assert(Object.keys(this).every(isValidPropertyName));
     assert(Object.keys(this).every(isValidPropertyValue(this)));
   }
+}
+
+const RegValidValueNameFormat = /^[a-zA-Z][0-9a-zA-Z_]*$/;
+const RegInvalidValueNameFormat = /^[0-9A-Z_]+$/;
+
+export function isValidPropertyName(prop: string): boolean {
+  return prop.length > 0
+      && !prop.startsWith('_')
+      && !prop.endsWith('_')
+      && !RegInvalidValueNameFormat.test(prop)
+      && RegValidValueNameFormat.test(prop);
+}
+
+export function isValidPropertyValue(dao: object) {
+  return (prop: string): boolean =>
+    isStorable(dao[prop]);
 }

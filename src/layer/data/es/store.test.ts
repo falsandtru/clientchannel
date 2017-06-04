@@ -1,7 +1,7 @@
-import { compose, EventStore, UnsavedEventRecord, SavedEventRecord } from './event';
+import { EventStore, UnsavedEventRecord, SavedEventRecord, compose } from './store';
 import { open, destroy, event, IDBEventType } from '../../infrastructure/indexeddb/api';
 
-describe('Unit: layers/data/store/event', function () {
+describe('Unit: layers/data/es/store', function () {
   this.timeout(7 * 1e3);
 
   describe('spec', () => {
