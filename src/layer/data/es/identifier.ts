@@ -1,10 +1,17 @@
-import { EventStoreEvent, Id, makeIdentifier } from '../constraint/identifier';
+namespace Identifier {
+  declare abstract class Identifier<T extends string> {
+    private IDENTITY: T;
+  }
+  export type Id = Identifier<'id'> & number;
+}
 
-export type EventId = EventStoreEvent<Id> & number;
-export function makeEventId(id: EventId | Id): void
+export type EventId = Identifier.Id;
+
+export function makeEventId(id: EventId): void
 export function makeEventId(id: number): EventId
-export function makeEventId(id: number & EventId): EventId {
-  assert(Number.isFinite(+id));
+export function makeEventId(id: EventId): EventId {
+  assert(Number.isFinite(id));
+  assert(Math.floor(id) === id);
   assert(id >= 0);
-  return makeIdentifier(id);
+  return id;
 }
