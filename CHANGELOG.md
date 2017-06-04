@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.1
+
+- Refactoring.
+
 ## 0.16.0
 
 - Throw an error when an invalid value was assigned to linked object properties.
