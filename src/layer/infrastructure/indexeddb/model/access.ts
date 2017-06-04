@@ -257,7 +257,7 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
     const close = () => (
       void connection.close(),
       closed = true,
-      connection.onversionchange = () => void connection.close(),
+      connection.onversionchange = <any>void 0,
       connection.onerror = <any>void 0,
       connection.onabort = <any>void 0,
       connection.onclose = <any>void 0,
