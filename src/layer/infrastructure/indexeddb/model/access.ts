@@ -31,101 +31,122 @@ type State
   | State.Destroy
   | State.End;
 namespace State {
-  export class Initial {
-    private readonly STATE: this;
+  class State {
     constructor(
       public readonly database: string
     ) {
+      if (states.has(database)) {
+        const state = states.get(database)!;
+        if (Object.isFrozen(state)) throw new TypeError(`ClientChannel: Split mutation: ${state} => ${this}.`);
+        void Object.freeze(state);
+      }
+    }
+  }
+  export class Initial extends State {
+    private readonly STATE: this;
+    constructor(
+      database: string
+    ) {
+      super(database);
       this.STATE;
       assert(!states.has(database));
       void states.set(database, this);
     }
   }
-  export class Block {
+  export class Block extends State {
     private readonly STATE: this;
     constructor(
-      public readonly database: string
-    ) {
-      this.STATE;
-      assert([Initial].some(S => states.get(database) instanceof S));
-      void states.set(database, this);
-    }
-  }
-  export class Upgrade {
-    private readonly STATE: this;
-    constructor(
-      public readonly database: string,
+      database: string,
       public readonly session: IDBOpenDBRequest
     ) {
+      super(database);
       this.STATE;
       assert([Initial, Block].some(S => states.get(database) instanceof S));
       void states.set(database, this);
     }
   }
-  export class Success {
+  export class Upgrade extends State {
     private readonly STATE: this;
     constructor(
-      public readonly database: string,
+      database: string,
+      public readonly session: IDBOpenDBRequest
+    ) {
+      super(database);
+      this.STATE;
+      assert([Initial, Block].some(S => states.get(database) instanceof S));
+      void states.set(database, this);
+    }
+  }
+  export class Success extends State {
+    private readonly STATE: this;
+    constructor(
+      database: string,
       public readonly connection: IDBDatabase
     ) {
+      super(database);
       this.STATE;
-      assert([Initial, Upgrade, Block].some(S => states.get(database) instanceof S));
+      assert([Initial, Block, Upgrade].some(S => states.get(database) instanceof S));
       void states.set(database, this);
     }
     public drain: () => void;
     public destroy: () => void;
     public end: () => void;
   }
-  export class Error {
+  export class Error extends State {
     private readonly STATE: this;
     constructor(
-      public readonly database: string,
+      database: string,
       public readonly error: DOMException | DOMError,
       public readonly event: Event
     ) {
+      super(database);
       this.STATE;
       assert(states.has(database));
       void states.set(database, this);
     }
   }
-  export class Abort {
+  export class Abort extends State {
     private readonly STATE: this;
     constructor(
-      public readonly database: string,
+      database: string,
       public readonly error: DOMException | DOMError,
       public readonly event: Event
     ) {
+      super(database);
       this.STATE;
       assert(states.has(database));
       void states.set(database, this);
     }
   }
-  export class Crash {
+  export class Crash extends State {
     private readonly STATE: this;
     constructor(
-      public readonly database: string,
+      database: string,
       public readonly error: DOMException | DOMError
     ) {
+      super(database);
       this.STATE;
       assert(states.has(database));
       void states.set(database, this);
     }
   }
-  export class Destroy {
+  export class Destroy extends State {
     private readonly STATE: this;
     constructor(
-      public readonly database: string
+      database: string
     ) {
+      super(database);
       this.STATE;
       assert(states.has(database));
       void states.set(database, this);
     }
   }
-  export class End {
+  export class End extends State {
     private readonly STATE: this;
     constructor(
-      public readonly database: string
+      database: string
     ) {
+      super(database);
       this.STATE;
       assert(states.has(database));
       void states.set(database, this);
@@ -205,9 +226,10 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
     const clear = () => (
       openRequest.onupgradeneeded = <any>void 0,
       openRequest.onsuccess = <any>void 0,
-      openRequest.onerror = <any>void 0)
+      openRequest.onerror = <any>void 0);
     openRequest.onblocked = () => (
-      void handleFromBlockedState(new State.Block(database)));
+      void clear(),
+      void handleFromBlockedState(new State.Block(database, openRequest)));
     openRequest.onupgradeneeded = () => (
       void clear(),
       void handleFromUpgradeState(new State.Upgrade(database, openRequest)));
@@ -223,7 +245,23 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
   }
   return;
 
-  function handleFromBlockedState({database}: State.Block): void {
+  function handleFromBlockedState({database, session}: State.Block): void {
+    const clear = () => (
+      session.onupgradeneeded = <any>void 0,
+      session.onsuccess = <any>void 0,
+      session.onerror = <any>void 0);
+    session.onblocked = () => (
+      void clear(),
+      void handleFromBlockedState(new State.Block(database, session)));
+    session.onupgradeneeded = () => (
+      void clear(),
+      void handleFromUpgradeState(new State.Upgrade(database, session)));
+    session.onsuccess = () => (
+      void clear(),
+      void handleFromSuccessState(new State.Success(database, <IDBDatabase>session.result)));
+    session.onerror = event => (
+      void clear(),
+      void handleFromErrorState(new State.Error(database, session.error, event)));
     void IDBEventObserver.emit([database, IDBEventType.block], new IDBEvent(IDBEventType.block, database));
   }
 
