@@ -111,18 +111,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     return void this.ages.set(key, age);
   }
   public recent(limit: number, cb: (keys: K[], err: DOMException | DOMError | null) => void): void {
-    const keys: K[] = [];
-    return void this.schema.access.cursor(
-      null,
-      AccessStore.fields.date,
-      'prev',
-      'readonly',
-      (cursor, err): void => {
-        if (!cursor) return void cb(keys, err);
-        if (--limit < 0) return;
-        void keys.push(cursor.primaryKey);
-        void cursor.continue();
-      });
+    return this.schema.access.recent(limit, cb);
   }
   public close(): void {
     void this.cancellation.cancel();

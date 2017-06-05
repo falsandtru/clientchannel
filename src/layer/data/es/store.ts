@@ -1,52 +1,61 @@
 import { Observation, Cancellation, tick, sqid, concat } from 'spica';
 import { listen, Config, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { EventId, makeEventId } from './identifier';
-import { EventRecordFields, EventRecordType, EventRecordValue, UnsavedEventRecord, SavedEventRecord, isValidPropertyName } from './event';
+import { EventRecordType, UnsavedEventRecord, SavedEventRecord, EventRecordValue, isValidPropertyName } from './event';
 import { noop } from '../../../lib/noop';
 
+namespace EventStoreSchema {
+  export const id = 'id';
+  export const key = 'key';
+  export const type = 'type';
+  export const attr = 'attr';
+  export const value = 'value';
+  export const date = 'date';
+  export const surrogateKeyDateField = 'key+date';
+}
+
 export abstract class EventStore<K extends string, V extends EventStore.Value> {
-  public static readonly fields = Object.freeze(EventRecordFields);
   public static configure(name: string): Config {
     return {
       make(db) {
         const store = db.objectStoreNames.contains(name)
           ? db.transaction(name).objectStore(name)
           : db.createObjectStore(name, {
-            keyPath: EventRecordFields.id,
+            keyPath: EventStoreSchema.id,
             autoIncrement: true
           });
-        if (!store.indexNames.contains(EventRecordFields.id)) {
-          void store.createIndex(EventRecordFields.id, EventRecordFields.id, { unique: true });
+        if (!store.indexNames.contains(EventStoreSchema.id)) {
+          void store.createIndex(EventStoreSchema.id, EventStoreSchema.id, { unique: true });
         }
-        if (!store.indexNames.contains(EventRecordFields.key)) {
-          void store.createIndex(EventRecordFields.key, EventRecordFields.key);
+        if (!store.indexNames.contains(EventStoreSchema.key)) {
+          void store.createIndex(EventStoreSchema.key, EventStoreSchema.key);
         }
-        if (!store.indexNames.contains(EventRecordFields.type)) {
-          void store.createIndex(EventRecordFields.type, EventRecordFields.type);
+        if (!store.indexNames.contains(EventStoreSchema.type)) {
+          void store.createIndex(EventStoreSchema.type, EventStoreSchema.type);
         }
-        if (!store.indexNames.contains(EventRecordFields.attr)) {
-          void store.createIndex(EventRecordFields.attr, EventRecordFields.attr);
+        if (!store.indexNames.contains(EventStoreSchema.attr)) {
+          void store.createIndex(EventStoreSchema.attr, EventStoreSchema.attr);
         }
-        if (!store.indexNames.contains(EventRecordFields.value)) {
-          void store.createIndex(EventRecordFields.value, EventRecordFields.value);
+        if (!store.indexNames.contains(EventStoreSchema.value)) {
+          void store.createIndex(EventStoreSchema.value, EventStoreSchema.value);
         }
-        if (!store.indexNames.contains(EventRecordFields.date)) {
-          void store.createIndex(EventRecordFields.date, EventRecordFields.date);
+        if (!store.indexNames.contains(EventStoreSchema.date)) {
+          void store.createIndex(EventStoreSchema.date, EventStoreSchema.date);
         }
-        if (!store.indexNames.contains(EventRecordFields.surrogateKeyDateField)) {
-          void store.createIndex(EventRecordFields.surrogateKeyDateField, [EventRecordFields.key, EventRecordFields.date]);
+        if (!store.indexNames.contains(EventStoreSchema.surrogateKeyDateField)) {
+          void store.createIndex(EventStoreSchema.surrogateKeyDateField, [EventStoreSchema.key, EventStoreSchema.date]);
         }
         return true;
       },
       verify(db) {
         return db.objectStoreNames.contains(name)
-            && db.transaction(name).objectStore(name).indexNames.contains(EventRecordFields.id)
-            && db.transaction(name).objectStore(name).indexNames.contains(EventRecordFields.key)
-            && db.transaction(name).objectStore(name).indexNames.contains(EventRecordFields.type)
-            && db.transaction(name).objectStore(name).indexNames.contains(EventRecordFields.attr)
-            && db.transaction(name).objectStore(name).indexNames.contains(EventRecordFields.value)
-            && db.transaction(name).objectStore(name).indexNames.contains(EventRecordFields.date)
-            && db.transaction(name).objectStore(name).indexNames.contains(EventRecordFields.surrogateKeyDateField);
+            && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.id)
+            && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.key)
+            && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.type)
+            && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.attr)
+            && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.value)
+            && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.date)
+            && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.surrogateKeyDateField);
       },
       destroy() {
         return true;
@@ -144,7 +153,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         .transaction(this.name, after ? 'readwrite' : 'readonly');
       const req = tx
         .objectStore(this.name)
-        .index(EventRecordFields.key)
+        .index(EventStoreSchema.key)
         .openCursor(key, 'prev');
       const unbind = () => {
         req.onsuccess = tx.onerror = tx.onabort = <any>null;
@@ -355,7 +364,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       const tx = db.transaction(this.name, 'readwrite');
       const store = tx.objectStore(this.name);
       const req = store
-        .index(EventRecordFields.key)
+        .index(EventStoreSchema.key)
         .openCursor(key, 'prev');
       const savedEvents: SavedEventRecord<K, V>[] = [];
       req.onsuccess = (): void => {
@@ -402,7 +411,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     const cleanState = new Map<K, boolean>();
     return void this.cursor(
       key ? IDBKeyRange.bound(key, key) : IDBKeyRange.upperBound(Infinity),
-      key ? EventRecordFields.key : EventRecordFields.date,
+      key ? EventStoreSchema.key : EventStoreSchema.date,
       'prev',
       'readwrite',
       cursor => {

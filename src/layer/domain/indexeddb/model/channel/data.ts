@@ -1,17 +1,17 @@
 import { Config } from '../../../../infrastructure/indexeddb/api';
 import { EventStore } from '../../../../data/es/store';
 
-export const STORE_NAME = 'data';
+export const name = 'data';
 
 export class DataStore<K extends string, V extends DataStore.Value> extends EventStore<K, V> {
   public static configure(): Config {
-    return EventStore.configure(STORE_NAME);
+    return EventStore.configure(name);
   }
   constructor(
     database: string,
     attrs: string[]
   ) {
-    super(database, STORE_NAME, attrs);
+    super(database, name, attrs);
     void Object.freeze(this);
   }
 }

@@ -3,36 +3,37 @@ import { Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
 import { EventStore } from '../../../../data/es/store';
 
-export const STORE_NAME = 'expiry';
+const name = 'expiry';
+
+namespace ExpiryStoreSchema {
+  export const key = 'key';
+  export const expiry = 'expiry';
+}
 
 export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord<K>> {
-  public static readonly fields = Object.freeze({
-    key: <'key'>'key',
-    expiry: <'expiry'>'expiry'
-  });
   public static configure(): Config {
     return {
       make(db) {
-        const store = db.objectStoreNames.contains(STORE_NAME)
-          ? db.transaction(STORE_NAME).objectStore(STORE_NAME)
-          : db.createObjectStore(STORE_NAME, {
-            keyPath: ExpiryStore.fields.key,
+        const store = db.objectStoreNames.contains(name)
+          ? db.transaction(name).objectStore(name)
+          : db.createObjectStore(name, {
+            keyPath: ExpiryStoreSchema.key,
             autoIncrement: false
           });
-        if (!store.indexNames.contains(ExpiryStore.fields.key)) {
-          void store.createIndex(ExpiryStore.fields.key, ExpiryStore.fields.key, {
+        if (!store.indexNames.contains(ExpiryStoreSchema.key)) {
+          void store.createIndex(ExpiryStoreSchema.key, ExpiryStoreSchema.key, {
             unique: true
           });
         }
-        if (!store.indexNames.contains(ExpiryStore.fields.expiry)) {
-          void store.createIndex(ExpiryStore.fields.expiry, ExpiryStore.fields.expiry);
+        if (!store.indexNames.contains(ExpiryStoreSchema.expiry)) {
+          void store.createIndex(ExpiryStoreSchema.expiry, ExpiryStoreSchema.expiry);
         }
         return true;
       },
       verify(db) {
-        return db.objectStoreNames.contains(STORE_NAME)
-            && db.transaction(STORE_NAME).objectStore(STORE_NAME).indexNames.contains(ExpiryStore.fields.key)
-            && db.transaction(STORE_NAME).objectStore(STORE_NAME).indexNames.contains(ExpiryStore.fields.expiry);
+        return db.objectStoreNames.contains(name)
+            && db.transaction(name).objectStore(name).indexNames.contains(ExpiryStoreSchema.key)
+            && db.transaction(name).objectStore(name).indexNames.contains(ExpiryStoreSchema.expiry);
       },
       destroy() {
         return true;
@@ -48,7 +49,7 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
     ages: Map<K, number>,
     cancellation: Cancellee<void>,
   ) {
-    super(database, STORE_NAME, ExpiryStore.fields.key);
+    super(database, name, ExpiryStoreSchema.key);
     void Object.freeze(this);
 
     let timer = 0;
@@ -60,7 +61,7 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
       scheduled = date;
       timer = setTimeout(() => {
         scheduled = Infinity;
-        void this.cursor(null, ExpiryStore.fields.expiry, 'next', 'readonly', cursor => {
+        void this.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', cursor => {
           if (!cursor) return;
           const record: ExpiryRecord<K> = cursor.value;
           if (record.expiry > Date.now() && isFinite(record.expiry)) return void schedule(record.expiry);

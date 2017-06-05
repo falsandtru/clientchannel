@@ -2,7 +2,7 @@ namespace Identifier {
   declare abstract class Identifier<T extends string> {
     private IDENTITY: T;
   }
-  export type Id = Identifier<'id'> & number;
+  export type Id = Identifier<'Id'> & number;
 }
 
 export type EventId = Identifier.Id;
