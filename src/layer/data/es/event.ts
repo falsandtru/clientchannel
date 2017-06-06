@@ -1,7 +1,7 @@
 import { StoreChannelEventType } from '../../../../';
 import { clone } from 'spica';
 import { EventId, makeEventId } from './identifier';
-import { isStorable } from '../constraint/value';
+import { isStorable } from '../database/value';
 
 export const EventRecordType = {
   put: <EventRecordType.Put>'put',

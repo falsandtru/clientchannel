@@ -1,17 +1,19 @@
 namespace Identifier {
-  declare abstract class Identifier<T extends string> {
+  declare class Event<T extends string> {
     private IDENTITY: T;
   }
-  export type Id = Identifier<'Id'> & number;
+  export type Number = Event<any> & number;
+
+  export type Id = Event<'Id'> & number;
 }
 
 export type EventId = Identifier.Id;
 
-export function makeEventId(id: EventId): void
+export function makeEventId(id: Identifier.Number): void
 export function makeEventId(id: number): EventId
-export function makeEventId(id: EventId): EventId {
+export function makeEventId(id: number): EventId {
   assert(Number.isFinite(id));
   assert(Math.floor(id) === id);
   assert(id >= 0);
-  return id;
+  return <EventId>id;
 }

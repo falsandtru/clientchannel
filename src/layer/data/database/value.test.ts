@@ -1,6 +1,6 @@
 import { isStorable } from './value';
 
-describe('Unit: layers/data/constraint/value', () => {
+describe('Unit: layers/data/database/value', () => {
   describe('isStorableValue', () => {
     it('undefined', () => {
       assert(isStorable(<any>void 0) === true);
