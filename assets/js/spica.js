@@ -1,4 +1,4 @@
-/*! spica v0.0.81 https://github.com/falsandtru/spica | (c) 2016, falsandtru | MIT License */
+/*! spica v0.0.85 https://github.com/falsandtru/spica | (c) 2016, falsandtru | MIT License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -227,6 +227,10 @@ require = function e(t, n, r) {
                     }
                     return false;
                 };
+                Cache.prototype.set = function (key, value) {
+                    void this.put(key, value);
+                    return value;
+                };
                 Cache.prototype.get = function (key) {
                     void this.access(key);
                     return this.store.get(key);
@@ -315,6 +319,7 @@ require = function e(t, n, r) {
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            var exception_1 = require('./exception');
             var maybe_1 = require('./monad/maybe');
             var either_1 = require('./monad/either');
             var Cancellation = function () {
@@ -327,7 +332,7 @@ require = function e(t, n, r) {
                     this.listeners = new Set();
                     this.register = function (listener) {
                         if (_this.canceled)
-                            return void listener(_this.reason), function () {
+                            return void handler(_this.reason), function () {
                                 return void 0;
                             };
                         if (_this.done)
@@ -339,7 +344,11 @@ require = function e(t, n, r) {
                             return _this.done ? void 0 : void _this.listeners.delete(handler);
                         };
                         function handler(reason) {
-                            void listener(reason);
+                            try {
+                                void listener(reason);
+                            } catch (reason) {
+                                void exception_1.causeAsyncException(reason);
+                            }
                         }
                     };
                     this.cancel = function (reason) {
@@ -384,6 +393,7 @@ require = function e(t, n, r) {
             exports.Cancellation = Cancellation;
         },
         {
+            './exception': 12,
             './monad/either': 19,
             './monad/maybe': 23
         }
@@ -3173,11 +3183,11 @@ require = function e(t, n, r) {
                 function default_1() {
                     return _super !== null && _super.apply(this, arguments) || this;
                 }
+                default_1.mempty = new core_1.Sequence(function (_, cons) {
+                    return cons();
+                });
                 return default_1;
             }(core_1.Sequence);
-            default_1.mempty = new core_1.Sequence(function (_, cons) {
-                return cons();
-            });
             exports.default = default_1;
         },
         { '../../core': 27 }
@@ -3208,9 +3218,9 @@ require = function e(t, n, r) {
                 function default_1() {
                     return _super !== null && _super.apply(this, arguments) || this;
                 }
+                default_1.mplus = core_1.Sequence.mappend;
                 return default_1;
             }(core_1.Sequence);
-            default_1.mplus = core_1.Sequence.mappend;
             exports.default = default_1;
         },
         { '../../core': 27 }
@@ -3241,9 +3251,9 @@ require = function e(t, n, r) {
                 function default_1() {
                     return _super !== null && _super.apply(this, arguments) || this;
                 }
+                default_1.mzero = core_1.Sequence.mempty;
                 return default_1;
             }(core_1.Sequence);
-            default_1.mzero = core_1.Sequence.mempty;
             exports.default = default_1;
         },
         { '../../core': 27 }

@@ -1,4 +1,4 @@
-/*! clientchannel v0.16.1 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.16.2 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -46,7 +46,7 @@ require = function e(t, n, r) {
             Object.defineProperty(exports, '__esModule', { value: true });
             __export(require('./layer/interface/api'));
         },
-        { './layer/interface/api': 30 }
+        { './layer/interface/api': 29 }
     ],
     4: [
         function (require, module, exports) {
@@ -103,22 +103,11 @@ require = function e(t, n, r) {
             exports.StorageChannel = StorageChannel;
         },
         {
-            '../domain/indexeddb/api': 14,
-            '../domain/webstorage/api': 20
+            '../domain/indexeddb/api': 13,
+            '../domain/webstorage/api': 19
         }
     ],
     5: [
-        function (require, module, exports) {
-            'use strict';
-            Object.defineProperty(exports, '__esModule', { value: true });
-            function makeIdentifier(id) {
-                return id;
-            }
-            exports.makeIdentifier = makeIdentifier;
-        },
-        {}
-    ],
-    6: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -144,7 +133,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    7: [
+    6: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -166,17 +155,12 @@ require = function e(t, n, r) {
             Object.defineProperty(exports, '__esModule', { value: true });
             var spica_1 = require('spica');
             var identifier_1 = require('./identifier');
-            var value_1 = require('../constraint/value');
-            var EventRecordFields;
-            (function (EventRecordFields) {
-                EventRecordFields.id = 'id';
-                EventRecordFields.key = 'key';
-                EventRecordFields.type = 'type';
-                EventRecordFields.attr = 'attr';
-                EventRecordFields.value = 'value';
-                EventRecordFields.date = 'date';
-                EventRecordFields.surrogateKeyDateField = 'key+date';
-            }(EventRecordFields = exports.EventRecordFields || (exports.EventRecordFields = {})));
+            var value_1 = require('../database/value');
+            exports.EventRecordType = {
+                put: 'put',
+                delete: 'delete',
+                snapshot: 'snapshot'
+            };
             var EventRecord = function () {
                 function EventRecord(id, type, key, value, date) {
                     this.id = id;
@@ -191,28 +175,30 @@ require = function e(t, n, r) {
                     if (typeof this.key !== 'string')
                         throw new TypeError('ClientChannel: EventRecord: Invalid event key: ' + this.key);
                     if (typeof this.value !== 'object' || !this.value)
-                        throw new TypeError('ClientChannel: EventRecord: Invalid event value: ' + this.value);
+                        throw new TypeError('ClientChannel: EventRecord: Invalid event value: ' + JSON.stringify(this.value));
                     if (typeof this.date !== 'number' || !isFinite(this.date) || this.date >= 0 === false)
                         throw new TypeError('ClientChannel: EventRecord: Invalid event date: ' + this.date);
                     this.attr = this.type === exports.EventRecordType.put ? Object.keys(value).filter(isValidPropertyName)[0] : '';
                     if (typeof this.attr !== 'string')
                         throw new TypeError('ClientChannel: EventRecord: Invalid event attr: ' + this.key);
-                    if (this.type === exports.EventRecordType.put && this.attr.length === 0)
-                        throw new TypeError('ClientChannel: EventRecord: Invalid event attr with ' + this.type + ': ' + this.attr);
-                    if (this.type !== exports.EventRecordType.put && this.attr.length !== 0)
-                        throw new TypeError('ClientChannel: EventRecord: Invalid event attr with ' + this.type + ': ' + this.attr);
                     switch (type) {
                     case exports.EventRecordType.put:
+                        if (!isValidPropertyName(this.attr))
+                            throw new TypeError('ClientChannel: EventRecord: Invalid event attr with ' + this.type + ': ' + this.attr);
                         this.value = value = new EventRecordValue((_a = {}, _a[this.attr] = value[this.attr], _a));
                         void Object.freeze(this.value);
                         void Object.freeze(this);
                         return;
                     case exports.EventRecordType.snapshot:
+                        if (this.attr !== '')
+                            throw new TypeError('ClientChannel: EventRecord: Invalid event attr with ' + this.type + ': ' + this.attr);
                         this.value = value = new EventRecordValue(value);
                         void Object.freeze(this.value);
                         void Object.freeze(this);
                         return;
                     case exports.EventRecordType.delete:
+                        if (this.attr !== '')
+                            throw new TypeError('ClientChannel: EventRecord: Invalid event attr with ' + this.type + ': ' + this.attr);
                         this.value = value = new EventRecordValue();
                         void Object.freeze(this.value);
                         void Object.freeze(this);
@@ -254,11 +240,6 @@ require = function e(t, n, r) {
                 return SavedEventRecord;
             }(EventRecord);
             exports.SavedEventRecord = SavedEventRecord;
-            exports.EventRecordType = {
-                put: 'put',
-                delete: 'delete',
-                snapshot: 'snapshot'
-            };
             var EventRecordValue = function () {
                 function EventRecordValue() {
                     var sources = [];
@@ -284,24 +265,26 @@ require = function e(t, n, r) {
             exports.isValidPropertyValue = isValidPropertyValue;
         },
         {
-            '../constraint/value': 6,
-            './identifier': 8,
+            '../database/value': 5,
+            './identifier': 7,
             'spica': undefined
         }
     ],
-    8: [
+    7: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            var identifier_1 = require('../constraint/identifier');
+            var Identifier;
+            (function (Identifier) {
+            }(Identifier || (Identifier = {})));
             function makeEventId(id) {
-                return identifier_1.makeIdentifier(id);
+                return id;
             }
             exports.makeEventId = makeEventId;
         },
-        { '../constraint/identifier': 5 }
+        {}
     ],
-    9: [
+    8: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -337,6 +320,16 @@ require = function e(t, n, r) {
             exports.UnsavedEventRecord = event_1.UnsavedEventRecord;
             exports.SavedEventRecord = event_1.SavedEventRecord;
             var noop_1 = require('../../../lib/noop');
+            var EventStoreSchema;
+            (function (EventStoreSchema) {
+                EventStoreSchema.id = 'id';
+                EventStoreSchema.key = 'key';
+                EventStoreSchema.type = 'type';
+                EventStoreSchema.attr = 'attr';
+                EventStoreSchema.value = 'value';
+                EventStoreSchema.date = 'date';
+                EventStoreSchema.surrogateKeyDateField = 'key+date';
+            }(EventStoreSchema || (EventStoreSchema = {})));
             var EventStore = function () {
                 function EventStore(database, name, attrs) {
                     var _this = this;
@@ -399,37 +392,37 @@ require = function e(t, n, r) {
                     return {
                         make: function (db) {
                             var store = db.objectStoreNames.contains(name) ? db.transaction(name).objectStore(name) : db.createObjectStore(name, {
-                                keyPath: event_1.EventRecordFields.id,
+                                keyPath: EventStoreSchema.id,
                                 autoIncrement: true
                             });
-                            if (!store.indexNames.contains(event_1.EventRecordFields.id)) {
-                                void store.createIndex(event_1.EventRecordFields.id, event_1.EventRecordFields.id, { unique: true });
+                            if (!store.indexNames.contains(EventStoreSchema.id)) {
+                                void store.createIndex(EventStoreSchema.id, EventStoreSchema.id, { unique: true });
                             }
-                            if (!store.indexNames.contains(event_1.EventRecordFields.key)) {
-                                void store.createIndex(event_1.EventRecordFields.key, event_1.EventRecordFields.key);
+                            if (!store.indexNames.contains(EventStoreSchema.key)) {
+                                void store.createIndex(EventStoreSchema.key, EventStoreSchema.key);
                             }
-                            if (!store.indexNames.contains(event_1.EventRecordFields.type)) {
-                                void store.createIndex(event_1.EventRecordFields.type, event_1.EventRecordFields.type);
+                            if (!store.indexNames.contains(EventStoreSchema.type)) {
+                                void store.createIndex(EventStoreSchema.type, EventStoreSchema.type);
                             }
-                            if (!store.indexNames.contains(event_1.EventRecordFields.attr)) {
-                                void store.createIndex(event_1.EventRecordFields.attr, event_1.EventRecordFields.attr);
+                            if (!store.indexNames.contains(EventStoreSchema.attr)) {
+                                void store.createIndex(EventStoreSchema.attr, EventStoreSchema.attr);
                             }
-                            if (!store.indexNames.contains(event_1.EventRecordFields.value)) {
-                                void store.createIndex(event_1.EventRecordFields.value, event_1.EventRecordFields.value);
+                            if (!store.indexNames.contains(EventStoreSchema.value)) {
+                                void store.createIndex(EventStoreSchema.value, EventStoreSchema.value);
                             }
-                            if (!store.indexNames.contains(event_1.EventRecordFields.date)) {
-                                void store.createIndex(event_1.EventRecordFields.date, event_1.EventRecordFields.date);
+                            if (!store.indexNames.contains(EventStoreSchema.date)) {
+                                void store.createIndex(EventStoreSchema.date, EventStoreSchema.date);
                             }
-                            if (!store.indexNames.contains(event_1.EventRecordFields.surrogateKeyDateField)) {
-                                void store.createIndex(event_1.EventRecordFields.surrogateKeyDateField, [
-                                    event_1.EventRecordFields.key,
-                                    event_1.EventRecordFields.date
+                            if (!store.indexNames.contains(EventStoreSchema.surrogateKeyDateField)) {
+                                void store.createIndex(EventStoreSchema.surrogateKeyDateField, [
+                                    EventStoreSchema.key,
+                                    EventStoreSchema.date
                                 ]);
                             }
                             return true;
                         },
                         verify: function (db) {
-                            return db.objectStoreNames.contains(name) && db.transaction(name).objectStore(name).indexNames.contains(event_1.EventRecordFields.id) && db.transaction(name).objectStore(name).indexNames.contains(event_1.EventRecordFields.key) && db.transaction(name).objectStore(name).indexNames.contains(event_1.EventRecordFields.type) && db.transaction(name).objectStore(name).indexNames.contains(event_1.EventRecordFields.attr) && db.transaction(name).objectStore(name).indexNames.contains(event_1.EventRecordFields.value) && db.transaction(name).objectStore(name).indexNames.contains(event_1.EventRecordFields.date) && db.transaction(name).objectStore(name).indexNames.contains(event_1.EventRecordFields.surrogateKeyDateField);
+                            return db.objectStoreNames.contains(name) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.id) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.key) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.type) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.attr) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.value) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.date) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.surrogateKeyDateField);
                         },
                         destroy: function () {
                             return true;
@@ -494,7 +487,7 @@ require = function e(t, n, r) {
                     var savedEvents = [];
                     return void api_1.listen(this.database)(function (db) {
                         var tx = db.transaction(_this.name, after ? 'readwrite' : 'readonly');
-                        var req = tx.objectStore(_this.name).index(event_1.EventRecordFields.key).openCursor(key, 'prev');
+                        var req = tx.objectStore(_this.name).index(EventStoreSchema.key).openCursor(key, 'prev');
                         var unbind = function () {
                             req.onsuccess = tx.onerror = tx.onabort = null;
                         };
@@ -770,7 +763,7 @@ require = function e(t, n, r) {
                             return;
                         var tx = db.transaction(_this.name, 'readwrite');
                         var store = tx.objectStore(_this.name);
-                        var req = store.index(event_1.EventRecordFields.key).openCursor(key, 'prev');
+                        var req = store.index(EventStoreSchema.key).openCursor(key, 'prev');
                         var savedEvents = [];
                         req.onsuccess = function () {
                             var cursor = req.result;
@@ -810,7 +803,7 @@ require = function e(t, n, r) {
                     var _this = this;
                     var removedEvents = [];
                     var cleanState = new Map();
-                    return void this.cursor(key ? api_1.IDBKeyRange.bound(key, key) : api_1.IDBKeyRange.upperBound(Infinity), key ? event_1.EventRecordFields.key : event_1.EventRecordFields.date, 'prev', 'readwrite', function (cursor) {
+                    return void this.cursor(key ? api_1.IDBKeyRange.bound(key, key) : api_1.IDBKeyRange.upperBound(Infinity), key ? EventStoreSchema.key : EventStoreSchema.date, 'prev', 'readwrite', function (cursor) {
                         if (!cursor) {
                             return void removedEvents.reduce(function (_, event) {
                                 return void _this.memory.off([
@@ -863,7 +856,6 @@ require = function e(t, n, r) {
                         };
                     });
                 };
-                EventStore.fields = Object.freeze(event_1.EventRecordFields);
                 return EventStore;
             }();
             exports.EventStore = EventStore;
@@ -959,14 +951,14 @@ require = function e(t, n, r) {
             exports.compose = compose;
         },
         {
-            '../../../lib/noop': 31,
-            '../../infrastructure/indexeddb/api': 23,
-            './event': 7,
-            './identifier': 8,
+            '../../../lib/noop': 30,
+            '../../infrastructure/indexeddb/api': 22,
+            './event': 6,
+            './identifier': 7,
             'spica': undefined
         }
     ],
-    10: [
+    9: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1095,12 +1087,12 @@ require = function e(t, n, r) {
             exports.KeyValueStore = KeyValueStore;
         },
         {
-            '../../../lib/noop': 31,
-            '../../infrastructure/indexeddb/api': 23,
+            '../../../lib/noop': 30,
+            '../../infrastructure/indexeddb/api': 22,
             'spica': undefined
         }
     ],
-    11: [
+    10: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1191,9 +1183,9 @@ require = function e(t, n, r) {
                 return Storage;
             }();
         },
-        { '../../infrastructure/webstorage/api': 27 }
+        { '../../infrastructure/webstorage/api': 26 }
     ],
-    12: [
+    11: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1203,9 +1195,9 @@ require = function e(t, n, r) {
             exports.isValidPropertyName = builder_1.isValidPropertyName;
             exports.isValidPropertyValue = builder_1.isValidPropertyValue;
         },
-        { './module/builder': 13 }
+        { './module/builder': 12 }
     ],
-    13: [
+    12: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1296,20 +1288,20 @@ require = function e(t, n, r) {
             exports.build = build;
         },
         {
-            '../../../../lib/noop': 31,
-            '../../../data/es/event': 7
+            '../../../../lib/noop': 30,
+            '../../../data/es/event': 6
         }
     ],
-    14: [
+    13: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var channel_1 = require('./service/channel');
             exports.StoreChannel = channel_1.StoreChannel;
         },
-        { './service/channel': 19 }
+        { './service/channel': 18 }
     ],
-    15: [
+    14: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1429,15 +1421,7 @@ require = function e(t, n, r) {
                     return void this.ages.set(key, age);
                 };
                 ChannelStore.prototype.recent = function (limit, cb) {
-                    var keys = [];
-                    return void this.schema.access.cursor(null, access_1.AccessStore.fields.date, 'prev', 'readonly', function (cursor, err) {
-                        if (!cursor)
-                            return void cb(keys, err);
-                        if (--limit < 0)
-                            return;
-                        void keys.push(cursor.primaryKey);
-                        void cursor.continue();
-                    });
+                    return this.schema.access.recent(limit, cb);
                 };
                 ChannelStore.prototype.close = function () {
                     void this.cancellation.cancel();
@@ -1488,12 +1472,101 @@ require = function e(t, n, r) {
             }();
         },
         {
-            '../../../../lib/noop': 31,
-            '../../../infrastructure/indexeddb/api': 23,
-            './channel/access': 16,
-            './channel/data': 17,
-            './channel/expiry': 18,
+            '../../../../lib/noop': 30,
+            '../../../infrastructure/indexeddb/api': 22,
+            './channel/access': 15,
+            './channel/data': 16,
+            './channel/expiry': 17,
             'spica': undefined
+        }
+    ],
+    15: [
+        function (require, module, exports) {
+            'use strict';
+            var __extends = this && this.__extends || function () {
+                var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
+                    d.__proto__ = b;
+                } || function (d, b) {
+                    for (var p in b)
+                        if (b.hasOwnProperty(p))
+                            d[p] = b[p];
+                };
+                return function (d, b) {
+                    extendStatics(d, b);
+                    function __() {
+                        this.constructor = d;
+                    }
+                    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+                };
+            }();
+            Object.defineProperty(exports, '__esModule', { value: true });
+            var store_1 = require('../../../../data/kvs/store');
+            var store_2 = require('../../../../data/es/store');
+            exports.name = 'access';
+            var AccessStoreSchema;
+            (function (AccessStoreSchema) {
+                AccessStoreSchema.key = 'key';
+                AccessStoreSchema.date = 'date';
+            }(AccessStoreSchema || (AccessStoreSchema = {})));
+            var AccessStore = function (_super) {
+                __extends(AccessStore, _super);
+                function AccessStore(database, access) {
+                    var _this = _super.call(this, database, exports.name, AccessStoreSchema.key) || this;
+                    void Object.freeze(_this);
+                    void access.monitor([], function (_a) {
+                        var key = _a.key, type = _a.type;
+                        return type === store_2.EventStore.EventType.delete ? void _this.delete(key) : void _this.set(key, new AccessRecord(key, Date.now()));
+                    });
+                    return _this;
+                }
+                AccessStore.configure = function () {
+                    return {
+                        make: function (db) {
+                            var store = db.objectStoreNames.contains(exports.name) ? db.transaction(exports.name).objectStore(exports.name) : db.createObjectStore(exports.name, {
+                                keyPath: AccessStoreSchema.key,
+                                autoIncrement: false
+                            });
+                            if (!store.indexNames.contains(AccessStoreSchema.key)) {
+                                void store.createIndex(AccessStoreSchema.key, AccessStoreSchema.key, { unique: true });
+                            }
+                            if (!store.indexNames.contains(AccessStoreSchema.date)) {
+                                void store.createIndex(AccessStoreSchema.date, AccessStoreSchema.date);
+                            }
+                            return true;
+                        },
+                        verify: function (db) {
+                            return db.objectStoreNames.contains(exports.name) && db.transaction(exports.name).objectStore(exports.name).indexNames.contains(AccessStoreSchema.key) && db.transaction(exports.name).objectStore(exports.name).indexNames.contains(AccessStoreSchema.date);
+                        },
+                        destroy: function () {
+                            return true;
+                        }
+                    };
+                };
+                AccessStore.prototype.recent = function (limit, cb) {
+                    var keys = [];
+                    return void this.cursor(null, AccessStoreSchema.date, 'prev', 'readonly', function (cursor, err) {
+                        if (!cursor)
+                            return void cb(keys, err);
+                        if (--limit < 0)
+                            return;
+                        void keys.push(cursor.primaryKey);
+                        void cursor.continue();
+                    });
+                };
+                return AccessStore;
+            }(store_1.KeyValueStore);
+            exports.AccessStore = AccessStore;
+            var AccessRecord = function () {
+                function AccessRecord(key, date) {
+                    this.key = key;
+                    this.date = date;
+                }
+                return AccessRecord;
+            }();
+        },
+        {
+            '../../../../data/es/store': 8,
+            '../../../../data/kvs/store': 9
         }
     ],
     16: [
@@ -1516,62 +1589,30 @@ require = function e(t, n, r) {
                 };
             }();
             Object.defineProperty(exports, '__esModule', { value: true });
-            var store_1 = require('../../../../data/kvs/store');
-            var store_2 = require('../../../../data/es/store');
-            exports.STORE_NAME = 'access';
-            var AccessStore = function (_super) {
-                __extends(AccessStore, _super);
-                function AccessStore(database, access) {
-                    var _this = _super.call(this, database, exports.STORE_NAME, AccessStore.fields.key) || this;
+            var store_1 = require('../../../../data/es/store');
+            exports.name = 'data';
+            var DataStore = function (_super) {
+                __extends(DataStore, _super);
+                function DataStore(database, attrs) {
+                    var _this = _super.call(this, database, exports.name, attrs) || this;
                     void Object.freeze(_this);
-                    void access.monitor([], function (_a) {
-                        var key = _a.key, type = _a.type;
-                        return type === store_2.EventStore.EventType.delete ? void _this.delete(key) : void _this.set(key, new AccessRecord(key, Date.now()));
-                    });
                     return _this;
                 }
-                AccessStore.configure = function () {
-                    return {
-                        make: function (db) {
-                            var store = db.objectStoreNames.contains(exports.STORE_NAME) ? db.transaction(exports.STORE_NAME).objectStore(exports.STORE_NAME) : db.createObjectStore(exports.STORE_NAME, {
-                                keyPath: AccessStore.fields.key,
-                                autoIncrement: false
-                            });
-                            if (!store.indexNames.contains(AccessStore.fields.key)) {
-                                void store.createIndex(AccessStore.fields.key, AccessStore.fields.key, { unique: true });
-                            }
-                            if (!store.indexNames.contains(AccessStore.fields.date)) {
-                                void store.createIndex(AccessStore.fields.date, AccessStore.fields.date);
-                            }
-                            return true;
-                        },
-                        verify: function (db) {
-                            return db.objectStoreNames.contains(exports.STORE_NAME) && db.transaction(exports.STORE_NAME).objectStore(exports.STORE_NAME).indexNames.contains(AccessStore.fields.key) && db.transaction(exports.STORE_NAME).objectStore(exports.STORE_NAME).indexNames.contains(AccessStore.fields.date);
-                        },
-                        destroy: function () {
-                            return true;
-                        }
-                    };
+                DataStore.configure = function () {
+                    return store_1.EventStore.configure(exports.name);
                 };
-                AccessStore.fields = Object.freeze({
-                    key: 'key',
-                    date: 'date'
-                });
-                return AccessStore;
-            }(store_1.KeyValueStore);
-            exports.AccessStore = AccessStore;
-            var AccessRecord = function () {
-                function AccessRecord(key, date) {
-                    this.key = key;
-                    this.date = date;
-                }
-                return AccessRecord;
-            }();
+                return DataStore;
+            }(store_1.EventStore);
+            exports.DataStore = DataStore;
+            (function (DataStore) {
+                DataStore.Event = store_1.EventStore.Event;
+                DataStore.EventType = store_1.EventStore.EventType;
+                DataStore.Record = store_1.EventStore.Record;
+                DataStore.Value = store_1.EventStore.Value;
+            }(DataStore = exports.DataStore || (exports.DataStore = {})));
+            exports.DataStore = DataStore;
         },
-        {
-            '../../../../data/es/store': 9,
-            '../../../../data/kvs/store': 10
-        }
+        { '../../../../data/es/store': 8 }
     ],
     17: [
         function (require, module, exports) {
@@ -1593,58 +1634,18 @@ require = function e(t, n, r) {
                 };
             }();
             Object.defineProperty(exports, '__esModule', { value: true });
-            var store_1 = require('../../../../data/es/store');
-            exports.STORE_NAME = 'data';
-            var DataStore = function (_super) {
-                __extends(DataStore, _super);
-                function DataStore(database, attrs) {
-                    var _this = _super.call(this, database, exports.STORE_NAME, attrs) || this;
-                    void Object.freeze(_this);
-                    return _this;
-                }
-                DataStore.configure = function () {
-                    return store_1.EventStore.configure(exports.STORE_NAME);
-                };
-                return DataStore;
-            }(store_1.EventStore);
-            exports.DataStore = DataStore;
-            (function (DataStore) {
-                DataStore.Event = store_1.EventStore.Event;
-                DataStore.EventType = store_1.EventStore.EventType;
-                DataStore.Record = store_1.EventStore.Record;
-                DataStore.Value = store_1.EventStore.Value;
-            }(DataStore = exports.DataStore || (exports.DataStore = {})));
-            exports.DataStore = DataStore;
-        },
-        { '../../../../data/es/store': 9 }
-    ],
-    18: [
-        function (require, module, exports) {
-            'use strict';
-            var __extends = this && this.__extends || function () {
-                var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
-                    d.__proto__ = b;
-                } || function (d, b) {
-                    for (var p in b)
-                        if (b.hasOwnProperty(p))
-                            d[p] = b[p];
-                };
-                return function (d, b) {
-                    extendStatics(d, b);
-                    function __() {
-                        this.constructor = d;
-                    }
-                    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-                };
-            }();
-            Object.defineProperty(exports, '__esModule', { value: true });
             var store_1 = require('../../../../data/kvs/store');
             var store_2 = require('../../../../data/es/store');
-            exports.STORE_NAME = 'expiry';
+            var name = 'expiry';
+            var ExpiryStoreSchema;
+            (function (ExpiryStoreSchema) {
+                ExpiryStoreSchema.key = 'key';
+                ExpiryStoreSchema.expiry = 'expiry';
+            }(ExpiryStoreSchema || (ExpiryStoreSchema = {})));
             var ExpiryStore = function (_super) {
                 __extends(ExpiryStore, _super);
                 function ExpiryStore(database, store, access, ages, cancellation) {
-                    var _this = _super.call(this, database, exports.STORE_NAME, ExpiryStore.fields.key) || this;
+                    var _this = _super.call(this, database, name, ExpiryStoreSchema.key) || this;
                     void Object.freeze(_this);
                     var timer = 0;
                     var scheduled = Infinity;
@@ -1655,7 +1656,7 @@ require = function e(t, n, r) {
                         scheduled = date;
                         timer = setTimeout(function () {
                             scheduled = Infinity;
-                            void _this.cursor(null, ExpiryStore.fields.expiry, 'next', 'readonly', function (cursor) {
+                            void _this.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', function (cursor) {
                                 if (!cursor)
                                     return;
                                 var record = cursor.value;
@@ -1688,30 +1689,26 @@ require = function e(t, n, r) {
                 ExpiryStore.configure = function () {
                     return {
                         make: function (db) {
-                            var store = db.objectStoreNames.contains(exports.STORE_NAME) ? db.transaction(exports.STORE_NAME).objectStore(exports.STORE_NAME) : db.createObjectStore(exports.STORE_NAME, {
-                                keyPath: ExpiryStore.fields.key,
+                            var store = db.objectStoreNames.contains(name) ? db.transaction(name).objectStore(name) : db.createObjectStore(name, {
+                                keyPath: ExpiryStoreSchema.key,
                                 autoIncrement: false
                             });
-                            if (!store.indexNames.contains(ExpiryStore.fields.key)) {
-                                void store.createIndex(ExpiryStore.fields.key, ExpiryStore.fields.key, { unique: true });
+                            if (!store.indexNames.contains(ExpiryStoreSchema.key)) {
+                                void store.createIndex(ExpiryStoreSchema.key, ExpiryStoreSchema.key, { unique: true });
                             }
-                            if (!store.indexNames.contains(ExpiryStore.fields.expiry)) {
-                                void store.createIndex(ExpiryStore.fields.expiry, ExpiryStore.fields.expiry);
+                            if (!store.indexNames.contains(ExpiryStoreSchema.expiry)) {
+                                void store.createIndex(ExpiryStoreSchema.expiry, ExpiryStoreSchema.expiry);
                             }
                             return true;
                         },
                         verify: function (db) {
-                            return db.objectStoreNames.contains(exports.STORE_NAME) && db.transaction(exports.STORE_NAME).objectStore(exports.STORE_NAME).indexNames.contains(ExpiryStore.fields.key) && db.transaction(exports.STORE_NAME).objectStore(exports.STORE_NAME).indexNames.contains(ExpiryStore.fields.expiry);
+                            return db.objectStoreNames.contains(name) && db.transaction(name).objectStore(name).indexNames.contains(ExpiryStoreSchema.key) && db.transaction(name).objectStore(name).indexNames.contains(ExpiryStoreSchema.expiry);
                         },
                         destroy: function () {
                             return true;
                         }
                     };
                 };
-                ExpiryStore.fields = Object.freeze({
-                    key: 'key',
-                    expiry: 'expiry'
-                });
                 return ExpiryStore;
             }(store_1.KeyValueStore);
             exports.ExpiryStore = ExpiryStore;
@@ -1724,11 +1721,11 @@ require = function e(t, n, r) {
             }();
         },
         {
-            '../../../../data/es/store': 9,
-            '../../../../data/kvs/store': 10
+            '../../../../data/es/store': 8,
+            '../../../../data/kvs/store': 9
         }
     ],
-    19: [
+    18: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -1881,14 +1878,14 @@ require = function e(t, n, r) {
             }
         },
         {
-            '../../broadcast/api': 11,
-            '../../dao/api': 12,
-            '../../webstorage/api': 20,
-            '../model/channel': 15,
+            '../../broadcast/api': 10,
+            '../../dao/api': 11,
+            '../../webstorage/api': 19,
+            '../model/channel': 14,
             'spica': undefined
         }
     ],
-    20: [
+    19: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1899,11 +1896,11 @@ require = function e(t, n, r) {
             exports.sessionStorage = api_1.sessionStorage;
         },
         {
-            '../../infrastructure/webstorage/api': 27,
-            './service/channel': 22
+            '../../infrastructure/webstorage/api': 26,
+            './service/channel': 21
         }
     ],
-    21: [
+    20: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1936,7 +1933,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    22: [
+    21: [
         function (require, module, exports) {
             'use strict';
             var __assign = this && this.__assign || Object.assign || function (t) {
@@ -2072,13 +2069,13 @@ require = function e(t, n, r) {
             }
         },
         {
-            '../../../infrastructure/webstorage/api': 27,
-            '../../dao/api': 12,
-            '../model/storage': 21,
+            '../../../infrastructure/webstorage/api': 26,
+            '../../dao/api': 11,
+            '../model/storage': 20,
             'spica': undefined
         }
     ],
-    23: [
+    22: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2096,14 +2093,30 @@ require = function e(t, n, r) {
             exports.IDBEventType = event_1.IDBEventType;
         },
         {
-            './model/access': 24,
-            './model/event': 25,
-            './module/global': 26
+            './model/access': 23,
+            './model/event': 24,
+            './module/global': 25
         }
     ],
-    24: [
+    23: [
         function (require, module, exports) {
             'use strict';
+            var __extends = this && this.__extends || function () {
+                var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
+                    d.__proto__ = b;
+                } || function (d, b) {
+                    for (var p in b)
+                        if (b.hasOwnProperty(p))
+                            d[p] = b[p];
+                };
+                return function (d, b) {
+                    extendStatics(d, b);
+                    function __() {
+                        this.constructor = d;
+                    }
+                    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+                };
+            }();
             Object.defineProperty(exports, '__esModule', { value: true });
             var spica_1 = require('spica');
             var global_1 = require('../module/global');
@@ -2120,95 +2133,126 @@ require = function e(t, n, r) {
             }(Command || (Command = {})));
             var states = new Map();
             var State;
-            (function (State) {
-                var Initial = function () {
-                    function Initial(database) {
+            (function (State_1) {
+                var State = function () {
+                    function State(database) {
                         this.database = database;
-                        this.STATE;
-                        void states.set(database, this);
+                        if (states.has(database)) {
+                            var state = states.get(database);
+                            if (Object.isFrozen(state))
+                                throw new TypeError('ClientChannel: Split mutation: ' + state + ' => ' + this + '.');
+                            void Object.freeze(state);
+                        }
+                    }
+                    return State;
+                }();
+                var Initial = function (_super) {
+                    __extends(Initial, _super);
+                    function Initial(database) {
+                        var _this = _super.call(this, database) || this;
+                        _this.STATE;
+                        void states.set(database, _this);
+                        return _this;
                     }
                     return Initial;
-                }();
-                State.Initial = Initial;
-                var Block = function () {
-                    function Block(database) {
-                        this.database = database;
-                        this.STATE;
-                        void states.set(database, this);
+                }(State);
+                State_1.Initial = Initial;
+                var Block = function (_super) {
+                    __extends(Block, _super);
+                    function Block(database, session) {
+                        var _this = _super.call(this, database) || this;
+                        _this.session = session;
+                        _this.STATE;
+                        void states.set(database, _this);
+                        return _this;
                     }
                     return Block;
-                }();
-                State.Block = Block;
-                var Upgrade = function () {
+                }(State);
+                State_1.Block = Block;
+                var Upgrade = function (_super) {
+                    __extends(Upgrade, _super);
                     function Upgrade(database, session) {
-                        this.database = database;
-                        this.session = session;
-                        this.STATE;
-                        void states.set(database, this);
+                        var _this = _super.call(this, database) || this;
+                        _this.session = session;
+                        _this.STATE;
+                        void states.set(database, _this);
+                        return _this;
                     }
                     return Upgrade;
-                }();
-                State.Upgrade = Upgrade;
-                var Success = function () {
+                }(State);
+                State_1.Upgrade = Upgrade;
+                var Success = function (_super) {
+                    __extends(Success, _super);
                     function Success(database, connection) {
-                        this.database = database;
-                        this.connection = connection;
-                        this.STATE;
-                        void states.set(database, this);
+                        var _this = _super.call(this, database) || this;
+                        _this.connection = connection;
+                        _this.STATE;
+                        void states.set(database, _this);
+                        return _this;
                     }
                     return Success;
-                }();
-                State.Success = Success;
-                var Error = function () {
+                }(State);
+                State_1.Success = Success;
+                var Error = function (_super) {
+                    __extends(Error, _super);
                     function Error(database, error, event) {
-                        this.database = database;
-                        this.error = error;
-                        this.event = event;
-                        this.STATE;
-                        void states.set(database, this);
+                        var _this = _super.call(this, database) || this;
+                        _this.error = error;
+                        _this.event = event;
+                        _this.STATE;
+                        void states.set(database, _this);
+                        return _this;
                     }
                     return Error;
-                }();
-                State.Error = Error;
-                var Abort = function () {
+                }(State);
+                State_1.Error = Error;
+                var Abort = function (_super) {
+                    __extends(Abort, _super);
                     function Abort(database, error, event) {
-                        this.database = database;
-                        this.error = error;
-                        this.event = event;
-                        this.STATE;
-                        void states.set(database, this);
+                        var _this = _super.call(this, database) || this;
+                        _this.error = error;
+                        _this.event = event;
+                        _this.STATE;
+                        void states.set(database, _this);
+                        return _this;
                     }
                     return Abort;
-                }();
-                State.Abort = Abort;
-                var Crash = function () {
+                }(State);
+                State_1.Abort = Abort;
+                var Crash = function (_super) {
+                    __extends(Crash, _super);
                     function Crash(database, error) {
-                        this.database = database;
-                        this.error = error;
-                        this.STATE;
-                        void states.set(database, this);
+                        var _this = _super.call(this, database) || this;
+                        _this.error = error;
+                        _this.STATE;
+                        void states.set(database, _this);
+                        return _this;
                     }
                     return Crash;
-                }();
-                State.Crash = Crash;
-                var Destroy = function () {
+                }(State);
+                State_1.Crash = Crash;
+                var Destroy = function (_super) {
+                    __extends(Destroy, _super);
                     function Destroy(database) {
-                        this.database = database;
-                        this.STATE;
-                        void states.set(database, this);
+                        var _this = _super.call(this, database) || this;
+                        _this.STATE;
+                        void states.set(database, _this);
+                        return _this;
                     }
                     return Destroy;
-                }();
-                State.Destroy = Destroy;
-                var End = function () {
+                }(State);
+                State_1.Destroy = Destroy;
+                var End = function (_super) {
+                    __extends(End, _super);
                     function End(database) {
-                        this.database = database;
-                        this.STATE;
-                        void states.set(database, this);
+                        var _this = _super.call(this, database) || this;
+                        _this.STATE;
+                        void states.set(database, _this);
+                        return _this;
                     }
                     return End;
-                }();
-                State.End = End;
+                }(State);
+                State_1.End = End;
             }(State || (State = {})));
             var requests = new Map();
             function open(name, config) {
@@ -2286,7 +2330,7 @@ require = function e(t, n, r) {
                         return openRequest_1.onupgradeneeded = void 0, openRequest_1.onsuccess = void 0, openRequest_1.onerror = void 0;
                     };
                     openRequest_1.onblocked = function () {
-                        return void handleFromBlockedState(new State.Block(database));
+                        return void clear_1(), void handleFromBlockedState(new State.Block(database, openRequest_1));
                     };
                     openRequest_1.onupgradeneeded = function () {
                         return void clear_1(), void handleFromUpgradeState(new State.Upgrade(database, openRequest_1));
@@ -2302,7 +2346,22 @@ require = function e(t, n, r) {
                 }
                 return;
                 function handleFromBlockedState(_a) {
-                    var database = _a.database;
+                    var database = _a.database, session = _a.session;
+                    var clear = function () {
+                        return session.onupgradeneeded = void 0, session.onsuccess = void 0, session.onerror = void 0;
+                    };
+                    session.onblocked = function () {
+                        return void clear(), void handleFromBlockedState(new State.Block(database, session));
+                    };
+                    session.onupgradeneeded = function () {
+                        return void clear(), void handleFromUpgradeState(new State.Upgrade(database, session));
+                    };
+                    session.onsuccess = function () {
+                        return void clear(), void handleFromSuccessState(new State.Success(database, session.result));
+                    };
+                    session.onerror = function (event) {
+                        return void clear(), void handleFromErrorState(new State.Error(database, session.error, event));
+                    };
                     void IDBEventObserver.emit([
                         database,
                         event_1.IDBEventType.block
@@ -2493,12 +2552,12 @@ require = function e(t, n, r) {
             }
         },
         {
-            '../module/global': 26,
-            './event': 25,
+            '../module/global': 25,
+            './event': 24,
             'spica': undefined
         }
     ],
-    25: [
+    24: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2525,7 +2584,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    26: [
+    25: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2534,7 +2593,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    27: [
+    26: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2546,11 +2605,11 @@ require = function e(t, n, r) {
             exports.eventstream_ = event_1.eventstream_;
         },
         {
-            './model/event': 28,
-            './module/global': 29
+            './model/event': 27,
+            './module/global': 28
         }
     ],
-    28: [
+    27: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2577,11 +2636,11 @@ require = function e(t, n, r) {
             });
         },
         {
-            '../module/global': 29,
+            '../module/global': 28,
             'spica': undefined
         }
     ],
-    29: [
+    28: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2605,7 +2664,7 @@ require = function e(t, n, r) {
         },
         { 'spica': undefined }
     ],
-    30: [
+    29: [
         function (require, module, exports) {
             'use strict';
             function __export(m) {
@@ -2618,7 +2677,7 @@ require = function e(t, n, r) {
         },
         { '../application/api': 4 }
     ],
-    31: [
+    30: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
