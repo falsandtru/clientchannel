@@ -39,6 +39,7 @@ class Broadcast<M extends string> implements Channel<M> {
     void this.listeners
       .forEach(listener =>
         void this.channel.removeEventListener('message', listener));
+    void this.listeners.clear();
   }
 }
 
@@ -70,6 +71,7 @@ class Storage<M extends string> implements Channel<M> {
     void this.listeners
       .forEach(listener =>
         void eventstream.off(['local', this.name], listener));
+    void this.listeners.clear();
     void this.storage.removeItem(this.name);
   }
 }
