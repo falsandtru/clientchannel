@@ -1,4 +1,4 @@
-/*! clientchannel v0.16.2 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.16.3 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -638,17 +638,15 @@ require = function e(t, n, r) {
                     case EventStore.EventType.delete:
                     case EventStore.EventType.snapshot: {
                             void this.memory.refs([event.key]).filter(function (_a) {
-                                var _b = _a[0], id = _b[2];
+                                var _b = _a.namespace, id = _b[2];
                                 return id === spica_1.sqid(0);
-                            }).reduce(function (m, _a) {
-                                var _b = _a[0], key = _b[0], attr = _b[1], id = _b[2];
-                                return m.set(key, [
+                            }).forEach(function (_a) {
+                                var _b = _a.namespace, key = _b[0], attr = _b[1], id = _b[2];
+                                return void _this.memory.off([
                                     key,
                                     attr,
                                     id
                                 ]);
-                            }, new Map()).forEach(function (ns) {
-                                return void _this.memory.off(ns);
                             });
                             break;
                         }
@@ -681,8 +679,8 @@ require = function e(t, n, r) {
                                     event.attr,
                                     spica_1.sqid(0)
                                 ]).some(function (_a) {
-                                    var s = _a[1];
-                                    return s(void 0, [
+                                    var listener = _a.listener;
+                                    return listener(void 0, [
                                         event.key,
                                         event.attr,
                                         spica_1.sqid(0)
@@ -721,8 +719,8 @@ require = function e(t, n, r) {
                                 void _this.update(savedEvent.key, savedEvent.attr, spica_1.sqid(savedEvent.id));
                                 void resolve();
                                 if (_this.memory.refs([savedEvent.key]).filter(function (_a) {
-                                        var sub = _a[1];
-                                        return sub(void 0, [savedEvent.key]) instanceof event_1.SavedEventRecord;
+                                        var listener = _a.listener;
+                                        return listener(void 0, [savedEvent.key]) instanceof event_1.SavedEventRecord;
                                     }).length >= _this.snapshotCycle) {
                                     void _this.snapshot(savedEvent.key);
                                 }
@@ -1136,6 +1134,7 @@ require = function e(t, n, r) {
                     void this.listeners.forEach(function (listener) {
                         return void _this.channel.removeEventListener('message', listener);
                     });
+                    void this.listeners.clear();
                 };
                 return Broadcast;
             }();
@@ -1178,6 +1177,7 @@ require = function e(t, n, r) {
                             _this.name
                         ], listener);
                     });
+                    void this.listeners.clear();
                     void this.storage.removeItem(this.name);
                 };
                 return Storage;
@@ -1800,7 +1800,9 @@ require = function e(t, n, r) {
                         }
                         return;
                         function update(attrs, source, memory, link) {
-                            var changes = attrs.map(function (attr) {
+                            var changes = attrs.filter(function (attr) {
+                                return memory.hasOwnProperty(attr);
+                            }).map(function (attr) {
                                 var newVal = memory[attr];
                                 var oldVal = source[attr];
                                 source[attr] = newVal;
@@ -1811,7 +1813,7 @@ require = function e(t, n, r) {
                                 };
                             }).filter(function (_a) {
                                 var newVal = _a.newVal, oldVal = _a.oldVal;
-                                return newVal !== oldVal;
+                                return newVal !== oldVal || !(Number.isNaN(newVal) && Number.isNaN(oldVal));
                             });
                             if (changes.length === 0)
                                 return;
@@ -2010,7 +2012,7 @@ require = function e(t, n, r) {
                         void Object.keys(item).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(item)).reduce(function (_, attr) {
                             var oldVal = source[attr];
                             var newVal = item[attr];
-                            if (newVal === oldVal)
+                            if (newVal === oldVal || Number.isNaN(newVal) && Number.isNaN(oldVal))
                                 return;
                             source[attr] = newVal;
                             void migrate(_this.link_);
