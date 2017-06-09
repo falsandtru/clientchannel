@@ -1,4 +1,4 @@
-/*! clientchannel v0.16.3 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.16.4 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -390,8 +390,8 @@ require = function e(t, n, r) {
                 }
                 EventStore.configure = function (name) {
                     return {
-                        make: function (db) {
-                            var store = db.objectStoreNames.contains(name) ? db.transaction(name).objectStore(name) : db.createObjectStore(name, {
+                        make: function (tx) {
+                            var store = tx.db.objectStoreNames.contains(name) ? tx.objectStore(name) : tx.db.createObjectStore(name, {
                                 keyPath: EventStoreSchema.id,
                                 autoIncrement: true
                             });
@@ -1521,8 +1521,8 @@ require = function e(t, n, r) {
                 }
                 AccessStore.configure = function () {
                     return {
-                        make: function (db) {
-                            var store = db.objectStoreNames.contains(exports.name) ? db.transaction(exports.name).objectStore(exports.name) : db.createObjectStore(exports.name, {
+                        make: function (tx) {
+                            var store = tx.db.objectStoreNames.contains(exports.name) ? tx.objectStore(exports.name) : tx.db.createObjectStore(exports.name, {
                                 keyPath: AccessStoreSchema.key,
                                 autoIncrement: false
                             });
@@ -1688,8 +1688,8 @@ require = function e(t, n, r) {
                 }
                 ExpiryStore.configure = function () {
                     return {
-                        make: function (db) {
-                            var store = db.objectStoreNames.contains(name) ? db.transaction(name).objectStore(name) : db.createObjectStore(name, {
+                        make: function (tx) {
+                            var store = tx.db.objectStoreNames.contains(name) ? tx.objectStore(name) : tx.db.createObjectStore(name, {
                                 keyPath: ExpiryStoreSchema.key,
                                 autoIncrement: false
                             });
@@ -2329,7 +2329,7 @@ require = function e(t, n, r) {
                 try {
                     var openRequest_1 = version ? global_1.indexedDB.open(database, version) : global_1.indexedDB.open(database);
                     var clear_1 = function () {
-                        return openRequest_1.onupgradeneeded = void 0, openRequest_1.onsuccess = void 0, openRequest_1.onerror = void 0;
+                        return openRequest_1.onblocked = void 0, openRequest_1.onupgradeneeded = void 0, openRequest_1.onsuccess = void 0, openRequest_1.onerror = void 0;
                     };
                     openRequest_1.onblocked = function () {
                         return void clear_1(), void handleFromBlockedState(new State.Block(database, openRequest_1));
@@ -2350,7 +2350,7 @@ require = function e(t, n, r) {
                 function handleFromBlockedState(_a) {
                     var database = _a.database, session = _a.session;
                     var clear = function () {
-                        return session.onupgradeneeded = void 0, session.onsuccess = void 0, session.onerror = void 0;
+                        return session.onblocked = void 0, session.onupgradeneeded = void 0, session.onsuccess = void 0, session.onerror = void 0;
                     };
                     session.onblocked = function () {
                         return void clear(), void handleFromBlockedState(new State.Block(database, session));
@@ -2374,7 +2374,7 @@ require = function e(t, n, r) {
                     var db = session.transaction.db;
                     var _b = configs.get(database), make = _b.make, destroy = _b.destroy;
                     try {
-                        if (make(db)) {
+                        if (make(session.transaction)) {
                             session.onsuccess = function () {
                                 return void handleFromSuccessState(new State.Success(database, db));
                             };
