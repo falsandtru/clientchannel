@@ -80,7 +80,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
 
     // dispatch events
     void this.events_.update
-      .monitor([], (event): void => {
+      .monitor([], event => {
         if (event instanceof UnsavedEventRecord) return;
         assert(event instanceof SavedEventRecord);
         if (event.date <= states.dates.get(event.key)! && event.id <= states.ids.get(event.key)!) return;
@@ -291,12 +291,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       case EventStore.EventType.snapshot: {
         void this.memory
           .refs([event.key])
-          .filter(([[, , id]]) => id === sqid(0))
-          .reduce<Map<K, [K, keyof V, string]>>((m, [[key, attr, id]]) =>
-            m.set(<K>key, [<K>key, <keyof V>attr, id])
-          , new Map())
-          .forEach(ns =>
-            void this.memory.off(ns));
+          .filter(({ namespace: [, , id] }) => id === sqid(0))
+          .forEach(({ namespace: [key, attr, id] }) =>
+            void this.memory.off([<K>key, <keyof V>attr, id]));
         break;
       }
     }
@@ -309,7 +306,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       const cont = (tx: IDBTransaction): void => {
         const active = (): boolean =>
           this.memory.refs([event.key, event.attr, sqid(0)])
-            .some(([, s]) => s(void 0, [event.key, event.attr, sqid(0)]) === event);
+            .some(({ listener }) => listener(void 0, [event.key, event.attr, sqid(0)]) === event);
         if (!active()) return void resolve();
         const req = tx
           .objectStore(this.name)
@@ -327,7 +324,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             .emit([savedEvent.key, savedEvent.attr, savedEvent.type], new EventStore.Event<K, V>(savedEvent.type, savedEvent.id, savedEvent.key, savedEvent.attr, event.date));
           void this.update(savedEvent.key, savedEvent.attr, sqid(savedEvent.id));
           void resolve();
-          if (this.memory.refs([savedEvent.key]).filter(([, sub]) => sub(void 0, [savedEvent.key]) instanceof SavedEventRecord).length >= this.snapshotCycle) {
+          if (this.memory.refs([savedEvent.key]).filter(({ listener }) => listener(void 0, [savedEvent.key]) instanceof SavedEventRecord).length >= this.snapshotCycle) {
             void this.snapshot(savedEvent.key);
           }
         };
