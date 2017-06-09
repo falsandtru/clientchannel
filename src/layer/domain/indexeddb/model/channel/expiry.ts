@@ -13,10 +13,10 @@ namespace ExpiryStoreSchema {
 export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord<K>> {
   public static configure(): Config {
     return {
-      make(db) {
-        const store = db.objectStoreNames.contains(name)
-          ? db.transaction(name).objectStore(name)
-          : db.createObjectStore(name, {
+      make(tx) {
+        const store = tx.db.objectStoreNames.contains(name)
+          ? tx.objectStore(name)
+          : tx.db.createObjectStore(name, {
             keyPath: ExpiryStoreSchema.key,
             autoIncrement: false
           });

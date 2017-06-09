@@ -13,10 +13,10 @@ namespace AccessStoreSchema {
 export class AccessStore<K extends string> extends KeyValueStore<K, AccessRecord<K>> {
   public static configure(): Config {
     return {
-      make(db) {
-        const store = db.objectStoreNames.contains(name)
-          ? db.transaction(name).objectStore(name)
-          : db.createObjectStore(name, {
+      make(tx) {
+        const store = tx.db.objectStoreNames.contains(name)
+          ? tx.objectStore(name)
+          : tx.db.createObjectStore(name, {
             keyPath: AccessStoreSchema.key,
             autoIncrement: false
           });

@@ -6,7 +6,7 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
     this.timeout(10 * 1e3);
 
     const config: Config = {
-      make: state => state.objectStoreNames.contains('test') || !!state.createObjectStore('test'),
+      make: state => state.db.objectStoreNames.contains('test') || !!state.db.createObjectStore('test'),
       verify: state => state.objectStoreNames.contains('test'),
       destroy: () => true
     };

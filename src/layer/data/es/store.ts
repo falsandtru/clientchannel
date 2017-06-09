@@ -17,10 +17,10 @@ namespace EventStoreSchema {
 export abstract class EventStore<K extends string, V extends EventStore.Value> {
   public static configure(name: string): Config {
     return {
-      make(db) {
-        const store = db.objectStoreNames.contains(name)
-          ? db.transaction(name).objectStore(name)
-          : db.createObjectStore(name, {
+      make(tx) {
+        const store = tx.db.objectStoreNames.contains(name)
+          ? tx.objectStore(name)
+          : tx.db.createObjectStore(name, {
             keyPath: EventStoreSchema.id,
             autoIncrement: true
           });

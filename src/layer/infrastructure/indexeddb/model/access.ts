@@ -7,7 +7,7 @@ export const event: Observer<[string] | [string, IDBEventType], IDBEvent, void> 
 
 const configs = new Map<string, Config>();
 export type Config = {
-  make: (db: IDBDatabase) => boolean;
+  make: (tx: IDBTransaction) => boolean;
   verify: (db: IDBDatabase) => boolean;
   destroy: (error: DOMException | DOMError, event: Event | null) => boolean;
 };
@@ -224,6 +224,7 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
       : indexedDB.open(database);
 
     const clear = () => (
+      openRequest.onblocked = <any>void 0,
       openRequest.onupgradeneeded = <any>void 0,
       openRequest.onsuccess = <any>void 0,
       openRequest.onerror = <any>void 0);
@@ -247,6 +248,7 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
 
   function handleFromBlockedState({database, session}: State.Block): void {
     const clear = () => (
+      session.onblocked = <any>void 0,
       session.onupgradeneeded = <any>void 0,
       session.onsuccess = <any>void 0,
       session.onerror = <any>void 0);
@@ -270,7 +272,7 @@ function handleFromInitialState({database}: State.Initial, version: number = 0):
     assert(db);
     const {make, destroy} = configs.get(database)!;
     try {
-      if (make(db)) {
+      if (make(session.transaction)) {
         session.onsuccess = () =>
           void handleFromSuccessState(new State.Success(database, db));
         session.onerror = event =>

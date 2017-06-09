@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.4
+
+- Fix database upgrade processing.
+
 ## 0.16.3
 
 - Fix incorrect event emitting.

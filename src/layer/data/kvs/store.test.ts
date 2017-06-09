@@ -8,11 +8,11 @@ describe('Unit: layers/data/kvs/store', function () {
     class Store<K extends string, V extends IDBValidValue> extends KeyValueStore<K, V> {
       public static configure(): Config {
         return {
-          make(db) {
-            if (db.objectStoreNames.contains('test')) {
-              db.deleteObjectStore('test');
+          make(tx) {
+            if (tx.db.objectStoreNames.contains('test')) {
+              tx.db.deleteObjectStore('test');
             }
-            void db.createObjectStore('test', {
+            void tx.db.createObjectStore('test', {
               autoIncrement: false
             });
             return true;
