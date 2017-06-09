@@ -40,7 +40,7 @@
       },
       destroy: function (err) {
         console.error(err);
-        return err.name !== 'InvalidStateError';
+        return true;
       }
     });
     // create data binding object
