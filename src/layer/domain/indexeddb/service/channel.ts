@@ -40,6 +40,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
 
         function update(attrs: (keyof V)[], source: Partial<V>, memory: Partial<V>, link: V): void {
           const changes = attrs
+            .filter(attr => memory.hasOwnProperty(attr))
             .map((attr: keyof V) => {
               const newVal = memory[attr];
               const oldVal = source[attr];
@@ -51,7 +52,8 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
               };
             })
             .filter(({ newVal, oldVal }) =>
-              newVal !== oldVal);
+              newVal !== oldVal ||
+              !(Number.isNaN(<any>newVal) && Number.isNaN(<any>oldVal)));
           if (changes.length === 0) return;
           void migrate(link);
           void changes

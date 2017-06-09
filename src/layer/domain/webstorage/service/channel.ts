@@ -46,7 +46,7 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
           .reduce<void>((_, attr: keyof V) => {
             const oldVal = source[attr];
             const newVal = item[attr];
-            if (newVal === oldVal) return;
+            if (newVal === oldVal || Number.isNaN(newVal) && Number.isNaN(oldVal)) return;
             source[attr] = newVal;
             void migrate(this.link_);
             const event = new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, source[attr], oldVal);

@@ -2,7 +2,7 @@
 
 ## 0.16.3
 
-- Update dependencies.
+- Fix incorrect event emitting.
 
 ## 0.16.2
 
