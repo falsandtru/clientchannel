@@ -1,4 +1,4 @@
-/*! clientchannel v0.16.4 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.16.5 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -609,7 +609,7 @@ require = function e(t, n, r) {
                         void this.fetch(key);
                     }
                     void this.events_.access.emit([key], new EventStore.InternalEvent(EventStore.InternalEventType.query, identifier_1.makeEventId(0), key, ''));
-                    return Object.assign({}, compose(key, this.attrs, this.memory.reflect([key])).value);
+                    return Object.assign(Object.create(null), compose(key, this.attrs, this.memory.reflect([key])).value);
                 };
                 EventStore.prototype.add = function (event, tx) {
                     var _this = this;
@@ -1801,7 +1801,7 @@ require = function e(t, n, r) {
                         return;
                         function update(attrs, source, memory, link) {
                             var changes = attrs.filter(function (attr) {
-                                return memory.hasOwnProperty(attr);
+                                return attr in memory;
                             }).map(function (attr) {
                                 var newVal = memory[attr];
                                 var oldVal = source[attr];
