@@ -40,7 +40,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
 
         function update(attrs: (keyof V)[], source: Partial<V>, memory: Partial<V>, link: V): void {
           const changes = attrs
-            .filter(attr => memory.hasOwnProperty(attr))
+            .filter(attr => attr in memory)
             .map((attr: keyof V) => {
               const newVal = memory[attr];
               const oldVal = source[attr];

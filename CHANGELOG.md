@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.5
+
+- Fix incorrect event emitting with Object property names.
+
 ## 0.16.4
 
 - Fix database upgrade processing.

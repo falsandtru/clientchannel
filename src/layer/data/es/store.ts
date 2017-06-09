@@ -270,7 +270,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     }
     void this.events_.access
       .emit([key], new EventStore.InternalEvent(EventStore.InternalEventType.query, makeEventId(0), key, ''));
-    return Object.assign({}, compose(key, this.attrs, this.memory.reflect([key])).value);
+    return Object.assign(Object.create(null), compose(key, this.attrs, this.memory.reflect([key])).value);
   }
   public add(event: UnsavedEventRecord<K, V>, tx: IDBTransaction | void = this.tx): void {
     assert(event.type === EventStore.EventType.snapshot ? tx : true);
