@@ -1,4 +1,5 @@
-import { EventStore, UnsavedEventRecord, SavedEventRecord, compose } from './store';
+import { EventStore, compose } from './store';
+import { UnstoredEventRecord, StoredEventRecord } from './event';
 import { open, destroy, event, IDBEventType } from '../../infrastructure/indexeddb/api';
 
 describe('Unit: layers/data/es/store', function () {
@@ -17,7 +18,7 @@ describe('Unit: layers/data/es/store', function () {
         super(database, name, Object.keys(new Value(0)));
       }
     }
-    function stringify<K extends string, V extends EventStore.Value>(e: UnsavedEventRecord<K, V> | SavedEventRecord<K, V>): string {
+    function stringify<K extends string, V extends EventStore.Value>(e: UnstoredEventRecord<K, V> | StoredEventRecord<K, V>): string {
       return JSON.stringify(e)
         .replace(/"date":\s?\d+,\s?/, '');
     }
@@ -43,19 +44,19 @@ describe('Unit: layers/data/es/store', function () {
     describe('EventRecord', () => {
       it('put', () => {
         const e = '{"id":0,"type":"put","key":"","value":{"value":0},"attr":"value"}';
-        const a = stringify(new UnsavedEventRecord('', new Value(0)));
+        const a = stringify(new UnstoredEventRecord('', new Value(0)));
         assert(a === e);
       });
 
       it('snapshot', () => {
         const e = '{"id":0,"type":"snapshot","key":"","value":{"value":0},"attr":""}';
-        const a = stringify(new UnsavedEventRecord('', new Value(0), EventStore.EventType.snapshot));
+        const a = stringify(new UnstoredEventRecord('', new Value(0), EventStore.EventType.snapshot));
         assert(a === e);
       });
 
       it('delete', () => {
         const e = '{"id":0,"type":"delete","key":"","value":{},"attr":""}';
-        const a = stringify(new UnsavedEventRecord('', new Value(0), EventStore.EventType.delete));
+        const a = stringify(new UnstoredEventRecord('', new Value(0), EventStore.EventType.delete));
         assert(a === e);
       });
 
@@ -76,7 +77,7 @@ describe('Unit: layers/data/es/store', function () {
         it('empty', () => {
           const e = '{"id":0,"type":"delete","key":"","value":{},"attr":""}';
           let a = '';
-          a = stringify(new UnsavedEventRecord('', new EventStore.Value(), EventStore.EventType.delete));
+          a = stringify(new UnstoredEventRecord('', new EventStore.Value(), EventStore.EventType.delete));
           assert(a === e);
           a = stringify(compose('', Object.keys(new Value(0)), []));
           assert(a === e);
@@ -85,27 +86,27 @@ describe('Unit: layers/data/es/store', function () {
         it('put', () => {
           const e = '{"id":0,"type":"snapshot","key":"a","value":{"number":0},"attr":""}';
           let a = '';
-          a = stringify(new UnsavedEventRecord('a', new Value(0), EventStore.EventType.snapshot));
+          a = stringify(new UnstoredEventRecord('a', new Value(0), EventStore.EventType.snapshot));
           assert(a === e);
-          a = stringify(compose('a', Object.keys(new Value(0)), [new UnsavedEventRecord('a', new Value(0))]));
+          a = stringify(compose('a', Object.keys(new Value(0)), [new UnstoredEventRecord('a', new Value(0))]));
           assert(a === e);
         });
 
         it('snapshot', () => {
           const e = '{"id":0,"type":"snapshot","key":"a","value":{"number":0},"attr":""}';
           let a = '';
-          a = stringify(new UnsavedEventRecord('a', new Value(0), EventStore.EventType.snapshot));
+          a = stringify(new UnstoredEventRecord('a', new Value(0), EventStore.EventType.snapshot));
           assert(a === e);
-          a = stringify(compose('a', Object.keys(new Value(0)), [new UnsavedEventRecord('a', new Value(0), EventStore.EventType.snapshot)]));
+          a = stringify(compose('a', Object.keys(new Value(0)), [new UnstoredEventRecord('a', new Value(0), EventStore.EventType.snapshot)]));
           assert(a === e);
         });
 
         it('delete', () => {
           const e = '{"id":0,"type":"delete","key":"a","value":{},"attr":""}';
           let a = '';
-          a = stringify(new UnsavedEventRecord('a', new EventStore.Value(), EventStore.EventType.delete));
+          a = stringify(new UnstoredEventRecord('a', new EventStore.Value(), EventStore.EventType.delete));
           assert(a === e);
-          a = stringify(compose('a', Object.keys(new Value(0)), [new UnsavedEventRecord('a', <Value>new EventStore.Value(), EventStore.EventType.delete)]));
+          a = stringify(compose('a', Object.keys(new Value(0)), [new UnstoredEventRecord('a', <Value>new EventStore.Value(), EventStore.EventType.delete)]));
           assert(a === e);
         });
 
@@ -115,8 +116,8 @@ describe('Unit: layers/data/es/store', function () {
         it('override', () => {
           const e = '{"id":0,"type":"snapshot","key":"a","value":{"number":1},"attr":""}';
           const a = stringify(compose('a', Object.keys(new Value(0)), [
-            new UnsavedEventRecord('a', new Value(0)),
-            new UnsavedEventRecord('a', new Value(1))
+            new UnstoredEventRecord('a', new Value(0)),
+            new UnstoredEventRecord('a', new Value(1))
           ]));
           assert(a === e);
         });
@@ -124,8 +125,8 @@ describe('Unit: layers/data/es/store', function () {
         it('merge', () => {
           const e = '{"id":0,"type":"snapshot","key":"a","value":{"number":0,"string":""},"attr":""}';
           const a = stringify(compose('a', Object.keys(new Value(0)), [
-            new UnsavedEventRecord('a', new Value(0)),
-            new UnsavedEventRecord('a', new Value(''))
+            new UnstoredEventRecord('a', new Value(0)),
+            new UnstoredEventRecord('a', new Value(''))
           ]));
           assert(a === e);
         });
@@ -133,8 +134,8 @@ describe('Unit: layers/data/es/store', function () {
         it('override after snapshot', () => {
           const e = '{"id":0,"type":"snapshot","key":"a","value":{"number":1},"attr":""}';
           const a = stringify(compose('a', Object.keys(new Value(0)), [
-            new UnsavedEventRecord('a', new Value(0), EventStore.EventType.snapshot),
-            new UnsavedEventRecord('a', new Value(1))
+            new UnstoredEventRecord('a', new Value(0), EventStore.EventType.snapshot),
+            new UnstoredEventRecord('a', new Value(1))
           ]));
           assert(a === e);
         });
@@ -142,8 +143,8 @@ describe('Unit: layers/data/es/store', function () {
         it('merge after snapshot', () => {
           const e = '{"id":0,"type":"snapshot","key":"a","value":{"number":0,"string":""},"attr":""}';
           const a = stringify(compose('a', Object.keys(new Value(0)), [
-            new UnsavedEventRecord('a', new Value(0), EventStore.EventType.snapshot),
-            new UnsavedEventRecord('a', new Value(''))
+            new UnstoredEventRecord('a', new Value(0), EventStore.EventType.snapshot),
+            new UnstoredEventRecord('a', new Value(''))
           ]));
           assert(a === e);
         });
@@ -151,8 +152,8 @@ describe('Unit: layers/data/es/store', function () {
         it('override after delete', () => {
           const e = '{"id":0,"type":"snapshot","key":"a","value":{"number":1},"attr":""}';
           const a = stringify(compose('a', Object.keys(new Value(0)), [
-            new UnsavedEventRecord('a', new Value(0), EventStore.EventType.delete),
-            new UnsavedEventRecord('a', new Value(1))
+            new UnstoredEventRecord('a', new Value(0), EventStore.EventType.delete),
+            new UnstoredEventRecord('a', new Value(1))
           ]));
           assert(a === e);
         });
@@ -160,8 +161,8 @@ describe('Unit: layers/data/es/store', function () {
         it('merge after delete', () => {
           const e = '{"id":0,"type":"snapshot","key":"a","value":{"string":""},"attr":""}';
           const a = stringify(compose('a', Object.keys(new Value(0)), [
-            new UnsavedEventRecord('a', new Value(0), EventStore.EventType.delete),
-            new UnsavedEventRecord('a', new Value(''))
+            new UnstoredEventRecord('a', new Value(0), EventStore.EventType.delete),
+            new UnstoredEventRecord('a', new Value(''))
           ]));
           assert(a === e);
         });
@@ -172,8 +173,8 @@ describe('Unit: layers/data/es/store', function () {
         it('override', () => {
           const e = '{"id":0,"type":"snapshot","key":"a","value":{"number":1},"attr":""}';
           const a = stringify(compose('a', Object.keys(new Value(0)), [
-            new UnsavedEventRecord('a', new Value(0), EventStore.EventType.snapshot),
-            new UnsavedEventRecord('a', new Value(1), EventStore.EventType.snapshot)
+            new UnstoredEventRecord('a', new Value(0), EventStore.EventType.snapshot),
+            new UnstoredEventRecord('a', new Value(1), EventStore.EventType.snapshot)
           ]));
           assert(a === e);
         });
@@ -181,8 +182,8 @@ describe('Unit: layers/data/es/store', function () {
         it('merge', () => {
           const e = '{"id":0,"type":"snapshot","key":"a","value":{"string":""},"attr":""}';
           const a = stringify(compose('a', Object.keys(new Value(0)), [
-            new UnsavedEventRecord('a', new Value(0), EventStore.EventType.snapshot),
-            new UnsavedEventRecord('a', new Value(''), EventStore.EventType.snapshot)
+            new UnstoredEventRecord('a', new Value(0), EventStore.EventType.snapshot),
+            new UnstoredEventRecord('a', new Value(''), EventStore.EventType.snapshot)
           ]));
           assert(a === e);
         });
@@ -190,8 +191,8 @@ describe('Unit: layers/data/es/store', function () {
         it('override after put', () => {
           const e = '{"id":0,"type":"snapshot","key":"a","value":{"number":1},"attr":""}';
           const a = stringify(compose('a', Object.keys(new Value(0)), [
-            new UnsavedEventRecord('a', new Value(0), EventStore.EventType.put),
-            new UnsavedEventRecord('a', new Value(1), EventStore.EventType.snapshot)
+            new UnstoredEventRecord('a', new Value(0), EventStore.EventType.put),
+            new UnstoredEventRecord('a', new Value(1), EventStore.EventType.snapshot)
           ]));
           assert(a === e);
         });
@@ -199,8 +200,8 @@ describe('Unit: layers/data/es/store', function () {
         it('merge after put', () => {
           const e = '{"id":0,"type":"snapshot","key":"a","value":{"string":""},"attr":""}';
           const a = stringify(compose('a', Object.keys(new Value(0)), [
-            new UnsavedEventRecord('a', new Value(0), EventStore.EventType.put),
-            new UnsavedEventRecord('a', new Value(''), EventStore.EventType.snapshot)
+            new UnstoredEventRecord('a', new Value(0), EventStore.EventType.put),
+            new UnstoredEventRecord('a', new Value(''), EventStore.EventType.snapshot)
           ]));
           assert(a === e);
         });
@@ -208,8 +209,8 @@ describe('Unit: layers/data/es/store', function () {
         it('override after delete', () => {
           const e = '{"id":0,"type":"snapshot","key":"a","value":{"number":1},"attr":""}';
           const a = stringify(compose('a', Object.keys(new Value(0)), [
-            new UnsavedEventRecord('a', new Value(0), EventStore.EventType.delete),
-            new UnsavedEventRecord('a', new Value(1), EventStore.EventType.snapshot)
+            new UnstoredEventRecord('a', new Value(0), EventStore.EventType.delete),
+            new UnstoredEventRecord('a', new Value(1), EventStore.EventType.snapshot)
           ]));
           assert(a === e);
         });
@@ -217,8 +218,8 @@ describe('Unit: layers/data/es/store', function () {
         it('merge after delete', () => {
           const e = '{"id":0,"type":"snapshot","key":"a","value":{"string":""},"attr":""}';
           const a = stringify(compose('a', Object.keys(new Value(0)), [
-            new UnsavedEventRecord('a', new Value(0), EventStore.EventType.delete),
-            new UnsavedEventRecord('a', new Value(''), EventStore.EventType.snapshot)
+            new UnstoredEventRecord('a', new Value(0), EventStore.EventType.delete),
+            new UnstoredEventRecord('a', new Value(''), EventStore.EventType.snapshot)
           ]));
           assert(a === e);
         });
@@ -229,8 +230,8 @@ describe('Unit: layers/data/es/store', function () {
         it('override', () => {
           const e = '{"id":0,"type":"delete","key":"a","value":{},"attr":""}';
           const a = stringify(compose('a', Object.keys(new Value(0)), [
-            new UnsavedEventRecord('a', new Value(0), EventStore.EventType.delete),
-            new UnsavedEventRecord('a', new Value(1), EventStore.EventType.delete)
+            new UnstoredEventRecord('a', new Value(0), EventStore.EventType.delete),
+            new UnstoredEventRecord('a', new Value(1), EventStore.EventType.delete)
           ]));
           assert(a === e);
         });
@@ -238,8 +239,8 @@ describe('Unit: layers/data/es/store', function () {
         it('merge', () => {
           const e = '{"id":0,"type":"delete","key":"a","value":{},"attr":""}';
           const a = stringify(compose('a', Object.keys(new Value(0)), [
-            new UnsavedEventRecord('a', new Value(0), EventStore.EventType.delete),
-            new UnsavedEventRecord('a', new Value(''), EventStore.EventType.delete)
+            new UnstoredEventRecord('a', new Value(0), EventStore.EventType.delete),
+            new UnstoredEventRecord('a', new Value(''), EventStore.EventType.delete)
           ]));
           assert(a === e);
         });
@@ -247,8 +248,8 @@ describe('Unit: layers/data/es/store', function () {
         it('override after put', () => {
           const e = '{"id":0,"type":"delete","key":"a","value":{},"attr":""}';
           const a = stringify(compose('a', Object.keys(new Value(0)), [
-            new UnsavedEventRecord('a', new Value(0), EventStore.EventType.put),
-            new UnsavedEventRecord('a', new Value(1), EventStore.EventType.delete)
+            new UnstoredEventRecord('a', new Value(0), EventStore.EventType.put),
+            new UnstoredEventRecord('a', new Value(1), EventStore.EventType.delete)
           ]));
           assert(a === e);
         });
@@ -256,8 +257,8 @@ describe('Unit: layers/data/es/store', function () {
         it('merge after put', () => {
           const e = '{"id":0,"type":"delete","key":"a","value":{},"attr":""}';
           const a = stringify(compose('a', Object.keys(new Value(0)), [
-            new UnsavedEventRecord('a', new Value(0), EventStore.EventType.put),
-            new UnsavedEventRecord('a', new Value(''), EventStore.EventType.delete)
+            new UnstoredEventRecord('a', new Value(0), EventStore.EventType.put),
+            new UnstoredEventRecord('a', new Value(''), EventStore.EventType.delete)
           ]));
           assert(a === e);
         });
@@ -265,8 +266,8 @@ describe('Unit: layers/data/es/store', function () {
         it('override after snapshot', () => {
           const e = '{"id":0,"type":"delete","key":"a","value":{},"attr":""}';
           const a = stringify(compose('a', Object.keys(new Value(0)), [
-            new UnsavedEventRecord('a', new Value(0), EventStore.EventType.snapshot),
-            new UnsavedEventRecord('a', new Value(1), EventStore.EventType.delete)
+            new UnstoredEventRecord('a', new Value(0), EventStore.EventType.snapshot),
+            new UnstoredEventRecord('a', new Value(1), EventStore.EventType.delete)
           ]));
           assert(a === e);
         });
@@ -274,8 +275,8 @@ describe('Unit: layers/data/es/store', function () {
         it('merge after snapshot', () => {
           const e = '{"id":0,"type":"delete","key":"a","value":{},"attr":""}';
           const a = stringify(compose('a', Object.keys(new Value(0)), [
-            new UnsavedEventRecord('a', new Value(0), EventStore.EventType.snapshot),
-            new UnsavedEventRecord('a', new Value(''), EventStore.EventType.delete)
+            new UnstoredEventRecord('a', new Value(0), EventStore.EventType.snapshot),
+            new UnstoredEventRecord('a', new Value(''), EventStore.EventType.delete)
           ]));
           assert(a === e);
         });
@@ -294,7 +295,7 @@ describe('Unit: layers/data/es/store', function () {
       assert(es.meta('a').key === 'a');
       assert(es.meta('a').date === 0);
       assert(es.get('a').value === void 0);
-      es.add(new UnsavedEventRecord('a', new Value(0)));
+      es.add(new UnstoredEventRecord('a', new Value(0)));
       assert(es.observes('a') === true);
       assert(es.has('a') === true);
       assert(es.meta('a').id === 0);
@@ -356,7 +357,7 @@ describe('Unit: layers/data/es/store', function () {
       es.transaction('', () => {
         assert(es.observes('') === true);
         assert(es.has('') === false);
-        es.add(new UnsavedEventRecord('', new Value(1)));
+        es.add(new UnstoredEventRecord('', new Value(1)));
         assert(es.observes('') === true);
         assert(es.has('') === true);
         assert(es.meta('').id === 0);
@@ -373,8 +374,8 @@ describe('Unit: layers/data/es/store', function () {
       open('test', Store.configure('test'));
       const es = new Store<string, Value>('test', 'test');
 
-      es.add(new UnsavedEventRecord('a', new Value(0)));
-      es.add(new UnsavedEventRecord('b', new Value(0)));
+      es.add(new UnstoredEventRecord('a', new Value(0)));
+      es.add(new UnstoredEventRecord('b', new Value(0)));
       es.events.save
         .once(['a', 'value', 'put'], () => {
           es.delete('a');
@@ -408,47 +409,47 @@ describe('Unit: layers/data/es/store', function () {
       Promise.resolve()
         .then(() =>
           new Promise(resolve => {
-            es.add(new UnsavedEventRecord('a', new Value(1)));
+            es.add(new UnstoredEventRecord('a', new Value(1)));
             es.events.save.once(['a', 'value', 'put'], () => resolve());
           }))
         .then(() =>
           new Promise(resolve => {
-            es.add(new UnsavedEventRecord('a', new Value(2)));
+            es.add(new UnstoredEventRecord('a', new Value(2)));
             es.events.save.once(['a', 'value', 'put'], () => resolve());
           }))
         .then(() =>
           new Promise(resolve => {
-            es.add(new UnsavedEventRecord('a', new Value(3)));
+            es.add(new UnstoredEventRecord('a', new Value(3)));
             es.events.save.once(['a', 'value', 'put'], () => resolve());
           }))
         .then(() =>
           new Promise(resolve => {
-            es.add(new UnsavedEventRecord('a', new Value(4)));
+            es.add(new UnstoredEventRecord('a', new Value(4)));
             es.events.save.once(['a', 'value', 'put'], () => resolve());
           }))
         .then(() =>
           new Promise(resolve => {
-            es.add(new UnsavedEventRecord('a', new Value(5)));
+            es.add(new UnstoredEventRecord('a', new Value(5)));
             es.events.save.once(['a', 'value', 'put'], () => resolve());
           }))
         .then(() =>
           new Promise(resolve => {
-            es.add(new UnsavedEventRecord('a', new Value(6)));
+            es.add(new UnstoredEventRecord('a', new Value(6)));
             es.events.save.once(['a', 'value', 'put'], () => resolve());
           }))
         .then(() =>
           new Promise(resolve => {
-            es.add(new UnsavedEventRecord('a', new Value(7)));
+            es.add(new UnstoredEventRecord('a', new Value(7)));
             es.events.save.once(['a', 'value', 'put'], () => resolve());
           }))
         .then(() =>
           new Promise(resolve => {
-            es.add(new UnsavedEventRecord('a', new Value(8)));
+            es.add(new UnstoredEventRecord('a', new Value(8)));
             es.events.save.once(['a', 'value', 'put'], () => resolve());
           }))
         .then(() =>
           new Promise(resolve => {
-            es.add(new UnsavedEventRecord('a', new Value(9)));
+            es.add(new UnstoredEventRecord('a', new Value(9)));
             es.events.save.once(['a', 'value', 'put'], () => resolve());
             es.events.save.once(['a', '', 'snapshot'], ev => {
               assert(ev.id === 10);
@@ -459,7 +460,7 @@ describe('Unit: layers/data/es/store', function () {
               assert(es.get('a').value === 9);
 
               for (let i = 0; i < 9; ++i) {
-                es.add(new UnsavedEventRecord('a', new Value(i + ev.id + 1)));
+                es.add(new UnstoredEventRecord('a', new Value(i + ev.id + 1)));
               }
               es.events.save.once(['a', 'value', 'put'], ev => {
                 assert(ev.id === 11);
