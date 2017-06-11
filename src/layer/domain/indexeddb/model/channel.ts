@@ -71,15 +71,15 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   }
   private cancellation = new Cancellation();
   private readonly schema: Schema<K, V>;
-  public readonly events_ = {
+  public readonly events_ = Object.freeze({
     load: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
     save: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
-  };
-  public readonly events = {
+  });
+  public readonly events = Object.freeze({
     load: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
     save: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
     loss: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>()
-  };
+  });
   public sync(keys: K[], cb: (errs: [K, DOMException | DOMError][]) => void = noop): void {
     return this.schema.data.sync(keys, cb);
   }

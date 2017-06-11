@@ -63,10 +63,10 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
   }
   private cancellation = new Cancellation();
   private readonly mode = this.storage === localStorage ? 'local' : 'session';
-  public readonly events = {
+  public readonly events = Object.freeze({
     send: new Observation<never[] | [keyof V], StorageChannel.Event<V>, void>(),
     recv: new Observation<never[] | [keyof V], StorageChannel.Event<V>, void>()
-  };
+  });
   private readonly link_: V;
   public link(): V {
     return this.link_;
