@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.6
+
+- Update dependencies.
+
 ## 0.16.5
 
 - Fix incorrect event emitting with Object property names.
