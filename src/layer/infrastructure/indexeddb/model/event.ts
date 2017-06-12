@@ -1,3 +1,8 @@
+import { Observation, Observer } from 'spica';
+
+export const idbEventStream_ = new Observation<[string] | [string, IDBEventType], IDBEvent, void>();
+export const idbEventStream: Observer<[string] | [string, IDBEventType], IDBEvent, void> = idbEventStream_;
+
 export type IDBEventType
   = typeof IDBEventType.connect
   | typeof IDBEventType.disconnect
@@ -18,10 +23,9 @@ export namespace IDBEventType {
 
 export class IDBEvent {
   constructor(
+    protected readonly name: string,
     public readonly type: IDBEventType,
-    public readonly name: string
   ) {
     void Object.freeze(this);
   }
-  public readonly namespace = [this.name];
 }

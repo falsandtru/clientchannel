@@ -1,5 +1,5 @@
 import { KeyValueStore } from './store';
-import { open, destroy, event, Config, IDBEventType } from '../../infrastructure/indexeddb/api';
+import { open, destroy, idbEventStream, Config, IDBEventType } from '../../infrastructure/indexeddb/api';
 
 describe('Unit: layers/data/kvs/store', function () {
   this.timeout(5 * 1e3);
@@ -28,18 +28,18 @@ describe('Unit: layers/data/kvs/store', function () {
     }
 
     before(done => {
-      event
+      idbEventStream
         .once(['test', IDBEventType.destroy], () =>
-          event
+          idbEventStream
             .once(['test', IDBEventType.disconnect], () => done())
         );
       destroy('test');
     });
 
     afterEach(done => {
-      event
+      idbEventStream
         .once(['test', IDBEventType.destroy], () =>
-          event
+          idbEventStream
             .once(['test', IDBEventType.disconnect], () => done())
         );
       destroy('test');

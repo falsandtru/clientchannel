@@ -1,6 +1,6 @@
 import { EventStore, compose } from './store';
 import { UnstoredEventRecord, StoredEventRecord } from './event';
-import { open, destroy, event, IDBEventType } from '../../infrastructure/indexeddb/api';
+import { open, destroy, idbEventStream, IDBEventType } from '../../infrastructure/indexeddb/api';
 
 describe('Unit: layers/data/es/store', function () {
   this.timeout(7 * 1e3);
@@ -24,18 +24,18 @@ describe('Unit: layers/data/es/store', function () {
     }
 
     before(done => {
-      event
+      idbEventStream
         .once(['test', IDBEventType.destroy], () =>
-          event
+          idbEventStream
             .once(['test', IDBEventType.disconnect], () => done())
         );
       destroy('test');
     });
 
     afterEach(done => {
-      event
+      idbEventStream
         .once(['test', IDBEventType.destroy], () =>
-          event
+          idbEventStream
             .once(['test', IDBEventType.disconnect], () => done())
         );
       destroy('test');

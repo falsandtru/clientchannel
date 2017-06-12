@@ -1,4 +1,4 @@
-import { localStorage, eventstream } from '../../infrastructure/webstorage/api';
+import { localStorage, storageEventStream } from '../../infrastructure/webstorage/api';
 
 class Channel<M extends string> {
   constructor(
@@ -58,10 +58,10 @@ class Storage<M extends string> implements Channel<M> {
       typeof ev.newValue === 'string' &&
       void listener_(ev);
     void this.listeners.add(listener);
-    void eventstream.on(['local', this.name], listener);
+    void storageEventStream.on(['local', this.name], listener);
     return () => (
       void this.listeners.delete(listener),
-      void eventstream.off(['local', this.name], listener));
+      void storageEventStream.off(['local', this.name], listener));
   }
   public post(message: M): void {
     void this.storage.removeItem(this.name);
@@ -70,7 +70,7 @@ class Storage<M extends string> implements Channel<M> {
   public close(): void {
     void this.listeners
       .forEach(listener =>
-        void eventstream.off(['local', this.name], listener));
+        void storageEventStream.off(['local', this.name], listener));
     void this.listeners.clear();
     void this.storage.removeItem(this.name);
   }

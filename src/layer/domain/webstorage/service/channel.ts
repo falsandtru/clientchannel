@@ -1,7 +1,7 @@
 import { StorageChannel as IStorageChannel, StorageChannelObject as ChannelObject, StorageChannelEvent, StorageChannelEventType } from '../../../../../';
 import { Observation, Cancellation } from 'spica';
 import { SCHEMA, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
-import { localStorage, sessionStorage, eventstream } from '../../../infrastructure/webstorage/api';
+import { localStorage, sessionStorage, storageEventStream } from '../../../infrastructure/webstorage/api';
 import { StorageLike, fakeStorage } from '../model/storage';
 
 const cache = new Map<string, StorageChannel<ChannelObject>>();
@@ -38,7 +38,7 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
     });
     void migrate(this.link_);
     void this.cancellation.register(
-      eventstream.on([this.mode, this.name], ({ newValue }: StorageEvent): void => {
+      storageEventStream.on([this.mode, this.name], ({ newValue }: StorageEvent): void => {
         const item: V = parse<V>(newValue);
         void Object.keys(item)
           .filter(isValidPropertyName)

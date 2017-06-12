@@ -1,6 +1,6 @@
 import { StorageChannelObject } from '../../../../../';
 import { StorageChannel } from './channel';
-import { eventstream_ } from '../../../infrastructure/webstorage/api';
+import { storageEventStream_ } from '../../../infrastructure/webstorage/api';
 
 describe('Unit: layers/domain/webstorage/service/channel', () => {
   describe('spec', () => {
@@ -74,7 +74,7 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
       assert(link.n === 1);
       assert(JSON.parse(sessionStorage.getItem('test')!).n === 1);
       sessionStorage.setItem('test', JSON.stringify({ n: 2 }));
-      eventstream_.emit(['session', chan.name], <StorageEvent>{ newValue: '{"n": 2}' })
+      storageEventStream_.emit(['session', chan.name], <StorageEvent>{ newValue: '{"n": 2}' })
       assert(link.n === 3);
       assert(JSON.parse(sessionStorage.getItem('test')!).n === 3);
       chan.destroy();

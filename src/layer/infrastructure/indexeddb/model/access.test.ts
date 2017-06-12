@@ -1,5 +1,6 @@
-import { Config, event, open, listen, close, destroy } from './access';
-import { IDBEventType } from './event';
+import { open, listen, close, destroy } from './access';
+import { Config } from './state';
+import { idbEventStream, IDBEventType } from './event';
 
 describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
   describe('database', function () {
@@ -13,18 +14,18 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
     Object.freeze(config);
 
     before(done => {
-      event
+      idbEventStream
         .once(['test', IDBEventType.destroy], () =>
-          event
+          idbEventStream
             .once(['test', IDBEventType.disconnect], () => done())
         );
       destroy('test');
     });
 
     after(done => {
-      event
+      idbEventStream
         .once(['test', IDBEventType.destroy], () =>
-          event
+          idbEventStream
             .once(['test', IDBEventType.disconnect], () => done())
         );
       destroy('test');
@@ -42,22 +43,22 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
     });
 
     it('close', done => {
-      event
+      idbEventStream
         .once(['test', IDBEventType.disconnect], () => done())
       close('test');
     });
 
     it('destroy', done => {
-      event
+      idbEventStream
         .once(['test', IDBEventType.destroy], () =>
-          event
+          idbEventStream
             .once(['test', IDBEventType.disconnect], () => done())
         );
       destroy('test');
     });
 
     it('cancel opening', done => {
-      event
+      idbEventStream
         .once(['test', IDBEventType.disconnect], () => done());
       open('test', config);
       close('test');
@@ -68,7 +69,7 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
       open('test', config);
       listen('test')
         (() => {
-          event
+          idbEventStream
             .once(['test', IDBEventType.disconnect], () => done());
           close('test');
         });
@@ -79,19 +80,19 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
       open('test', config);
       listen('test')
         (() => {
-          event
+          idbEventStream
             .once(['test', IDBEventType.disconnect], () => done());
           close('test');
         });
     });
 
     it('reopen after closing', done => {
-      event
+      idbEventStream
         .once(['test', IDBEventType.disconnect], () => {
           open('test', config);
           listen('test')
             (() => {
-              event
+              idbEventStream
                 .once(['test', IDBEventType.disconnect], () => done());
               close('test');
             });
@@ -100,12 +101,12 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
     });
 
     it('reopen after destroying', done => {
-      event
+      idbEventStream
         .once(['test', IDBEventType.disconnect], () => {
           open('test', config);
           listen('test')
             (() => {
-              event
+              idbEventStream
                 .once(['test', IDBEventType.disconnect], () => done());
               close('test');
             });
@@ -135,7 +136,7 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
         (db => {
           db.transaction('test', 'readwrite').objectStore('test').count().onsuccess = () => {
             assert(++cnt === 3);
-            event
+            idbEventStream
               .once(['test', IDBEventType.disconnect], () => done());
             close('test');
           };

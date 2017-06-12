@@ -1,6 +1,6 @@
 import { StoreChannelObject } from '../../../../../';
 import { StoreChannel } from './channel';
-import { listen, destroy, event, IDBEventType } from '../../../infrastructure/indexeddb/api';
+import { listen, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { adjust } from '../../../data/es/store';
 
 describe('Unit: layers/domain/indexeddb/service/channel', function () {
@@ -8,18 +8,18 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
 
   describe('spec', () => {
     before(done => {
-      event
+      idbEventStream
         .once(['test', IDBEventType.destroy], () =>
-          event
+          idbEventStream
             .once(['test', IDBEventType.disconnect], () => done())
         );
       destroy('test');
     });
 
     afterEach(done => {
-      event
+      idbEventStream
         .once(['test', IDBEventType.destroy], () =>
-          event
+          idbEventStream
             .once(['test', IDBEventType.disconnect], () => done())
         );
       destroy('test');

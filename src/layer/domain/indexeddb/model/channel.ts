@@ -1,6 +1,6 @@
 import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../';
 import { Observation, Cancellation, Cache } from 'spica';
-import { open, close, destroy, event, IDBEventType } from '../../../infrastructure/indexeddb/api';
+import { open, close, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { DataStore } from './channel/data';
 import { AccessStore } from './channel/access';
 import { ExpiryStore } from './channel/expiry';
@@ -42,7 +42,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     void this.cancellation.register(() =>
         void this.schema.close());
     void this.cancellation.register(
-      event.on([name, IDBEventType.destroy], () =>
+      idbEventStream.on([name, IDBEventType.destroy], () =>
         cache.get(name) === this &&
         void this.schema.rebuild()));
     if (size < Infinity) {

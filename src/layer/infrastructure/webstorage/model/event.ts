@@ -3,17 +3,15 @@ import { localStorage, sessionStorage } from '../module/global';
 
 type Type = ['local' | 'session'] | ['local' | 'session', string];
 
-const storageEventStream = new Observation<Type, StorageEvent, void>();
-
-export const eventstream: Observer<Type, StorageEvent, void> = storageEventStream;
-export const eventstream_ = storageEventStream;
+export const storageEventStream_ = new Observation<Type, StorageEvent, void>();
+export const storageEventStream: Observer<Type, StorageEvent, void> = storageEventStream_;
 
 void self.addEventListener('storage', event => {
   switch (event.storageArea) {
     case localStorage:
-      return void storageEventStream.emit(typeof event.key === 'string' ? ['local', event.key] : ['local'], event);
+      return void storageEventStream_.emit(typeof event.key === 'string' ? ['local', event.key] : ['local'], event);
     case sessionStorage:
-      return void storageEventStream.emit(typeof event.key === 'string' ? ['session', event.key] : ['session'], event);
+      return void storageEventStream_.emit(typeof event.key === 'string' ? ['session', event.key] : ['session'], event);
     default:
       return;
   }

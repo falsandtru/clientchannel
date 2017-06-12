@@ -1,24 +1,24 @@
 import { StoreChannelObject } from '../../../../../';
 import { ChannelStore } from './channel';
-import { destroy, event, IDBEventType } from '../../../infrastructure/indexeddb/api';
+import { destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
 
 describe('Unit: layers/domain/indexeddb/model/channel', function () {
   this.timeout(9 * 1e3);
 
   describe('spec', () => {
     before(done => {
-      event
+      idbEventStream
         .once(['test', IDBEventType.destroy], () =>
-          event
+          idbEventStream
             .once(['test', IDBEventType.disconnect], () => done())
         );
       destroy('test');
     });
 
     afterEach(done => {
-      event
+      idbEventStream
         .once(['test', IDBEventType.destroy], () =>
-          event
+          idbEventStream
             .once(['test', IDBEventType.disconnect], () => done())
         );
       destroy('test');
