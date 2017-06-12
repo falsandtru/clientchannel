@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.7
+
+- Fix destroy reason type.
+
 ## 0.16.6
 
 - Update dependencies.

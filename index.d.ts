@@ -20,7 +20,7 @@ export interface StoreChannelConfig<K extends string, V extends StoreChannelObje
   size?: number;
   expiry?: number;
   migrate?(link: V): void;
-  destroy?(error: DOMException | DOMError, event: Event | null): boolean;
+  destroy?(reason: any, event?: Event): boolean;
 }
 export interface StoreChannelObject<K extends string> {
   readonly __meta: StoreChannelObjectMetaData<K>;

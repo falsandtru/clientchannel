@@ -26,8 +26,8 @@ function handleFromInitialState(state: InitialState): void {
     openRequest.onerror = event =>
       void handleFromErrorState(new ErrorState(state, openRequest.error, event));
   }
-  catch (err) {
-    void handleFromCrashState(new CrashState(state, err));
+  catch (reason) {
+    void handleFromCrashState(new CrashState(state, reason));
   }
 }
 
@@ -66,8 +66,8 @@ function handleFromUpgradeState(state: UpgradeState): void {
           : void handleFromEndState(new EndState(state)));
     }
   }
-  catch (err) {
-    void handleFromCrashState(new CrashState(state, err));
+  catch (reason) {
+    void handleFromCrashState(new CrashState(state, reason));
   }
 }
 
@@ -101,9 +101,9 @@ function handleFromSuccessState(state: SuccessState): void {
           void connection.close();
           return void handleFromEndState(new EndState(state, connection.version + 1));
         }
-        catch (err) {
+        catch (reason) {
           void connection.close();
-          return void handleFromCrashState(new CrashState(state, err));
+          return void handleFromCrashState(new CrashState(state, reason));
         }
       }
       void idbEventStream_.emit([database, IDBEventType.connect], new IDBEvent(database, IDBEventType.connect));
@@ -114,12 +114,12 @@ function handleFromSuccessState(state: SuccessState): void {
           void reqs.shift()!(connection);
         }
       }
-      catch (err) {
-        assert(!console.debug(err + ''));
+      catch (reason) {
+        assert(!console.debug(reason + ''));
         void new Promise((_, reject) =>
-          void reject(err));
+          void reject(reason));
         void connection.close();
-        void handleFromCrashState(new CrashState(state, err));
+        void handleFromCrashState(new CrashState(state, reason));
       }
       return void 0;
     }
@@ -163,10 +163,10 @@ function handleFromAbortState(state: AbortState): void {
 
 function handleFromCrashState(state: CrashState): void {
   if (!state.alive) return;
-  const { database, error } = state;
+  const { database, reason } = state;
   void idbEventStream_.emit([database, IDBEventType.crash], new IDBEvent(database, IDBEventType.crash));
   const { destroy } = state.config;
-  if (destroy(error, null)) {
+  if (destroy(reason)) {
     return void handleFromDestroyState(new DestroyState(state));
   }
   else {

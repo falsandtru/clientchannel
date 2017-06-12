@@ -10,7 +10,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
     name: string,
     private readonly factory: () => V,
     migrate: (link: V) => void = () => void 0,
-    destroy: (err: DOMException | DOMError, ev: Event | null) => boolean = () => true,
+    destroy: (reason: any, ev?: Event) => boolean = () => true,
     size: number = Infinity,
     expiry: number = Infinity,
   ) {

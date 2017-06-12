@@ -12,7 +12,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   constructor(
     public readonly name: string,
     attrs: string[],
-    destroy: (err: DOMException | DOMError, event: Event | null) => boolean,
+    destroy: (reason: any, event?: Event) => boolean,
     private readonly size: number,
     private readonly expiry: number,
   ) {
@@ -31,11 +31,11 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
             && AccessStore.configure().verify(db)
             && ExpiryStore.configure().verify(db);
       },
-      destroy(err, ev) {
-        return DataStore.configure().destroy(err, ev)
-            && AccessStore.configure().destroy(err, ev)
-            && ExpiryStore.configure().destroy(err, ev)
-            && destroy(err, ev);
+      destroy(reason, ev) {
+        return DataStore.configure().destroy(reason, ev)
+            && AccessStore.configure().destroy(reason, ev)
+            && ExpiryStore.configure().destroy(reason, ev)
+            && destroy(reason, ev);
       }
     });
     this.schema = new Schema<K, V>(this, attrs, this.ages);

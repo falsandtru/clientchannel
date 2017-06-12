@@ -2,7 +2,7 @@ export const configs = new Map<string, Config>();
 export type Config = {
   make: (tx: IDBTransaction) => boolean;
   verify: (db: IDBDatabase) => boolean;
-  destroy: (error: DOMException | DOMError, event: Event | null) => boolean;
+  destroy: (reason: any, event?: Event) => boolean;
 };
 
 export const commands = new Map<string, Command>();
@@ -138,7 +138,7 @@ export class CrashState extends State {
   private readonly STATE: this;
   constructor(
     state: InitialState | UpgradeState | SuccessState,
-    public readonly error: DOMException | DOMError
+    public readonly reason: any
   ) {
     super(state.database);
     this.STATE;
