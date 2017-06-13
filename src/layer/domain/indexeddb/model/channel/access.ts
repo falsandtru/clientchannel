@@ -51,7 +51,7 @@ export class AccessStore<K extends string> extends KeyValueStore<K, AccessRecord
       .monitor([], ({key, type}) =>
         type === EventStore.EventType.delete
           ? void this.delete(key)
-          : void this.set(key, new AccessRecord(key, Date.now()))
+          : void this.set(key, new AccessRecord(key))
       );
   }
   public recent(limit: number, cb: (keys: K[], err: DOMException | DOMError | null) => void): void {
@@ -73,7 +73,7 @@ export class AccessStore<K extends string> extends KeyValueStore<K, AccessRecord
 class AccessRecord<K extends string> {
   constructor(
     public readonly key: K,
-    public readonly date: number
   ) {
   }
+  public readonly date: number = Date.now();
 }

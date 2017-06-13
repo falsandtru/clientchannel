@@ -107,7 +107,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   private readonly ages = new Map<K, number>();
   public expire(key: K, age: number = this.expiry): void {
     assert(age > 0);
-    if (!isFinite(age)) return;
+    if (!Number.isFinite(age)) return;
     return void this.ages.set(key, age);
   }
   public recent(limit: number, cb: (keys: K[], err: DOMException | DOMError | null) => void): void {

@@ -514,23 +514,23 @@ export function adjust(event: UnstoredEventRecord<any, any>): {} {
 export function compose<K extends string, V extends EventStore.Value>(
   key: K,
   attrs: string[],
-  events: Array<UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V> | StoredEventRecord<K, V>>
-): UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V> | StoredEventRecord<K, V> {
+  events: Array<UnstoredEventRecord<K, V> | StoredEventRecord<K, V>>,
+): UnstoredEventRecord<K, V> | StoredEventRecord<K, V> {
   assert(attrs.every(isValidPropertyName));
   assert(events.every(event => event.key === key));
   assert(events.every(event => event instanceof UnstoredEventRecord || event instanceof StoredEventRecord));
-  type Event = UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V> | StoredEventRecord<K, V>;
+  type E = UnstoredEventRecord<K, V> | StoredEventRecord<K, V>;
   return group(events)
     .map(events =>
       events
         .reduceRight(compose, new UnstoredEventRecord<K, V>(key, new EventStore.Value(), EventStore.EventType.delete, 0)))
     .reduce(e => e);
 
-  function group(events: Event[]): Event[][] {
+  function group(events: E[]): E[][] {
     return events
-      .map<[Event, number]>((e, i) => [e, i])
+      .map<[E, number]>((e, i) => [e, i])
       .sort(([a, ai], [b, bi]) => indexedDB.cmp(a.key, b.key) || b.date - a.date || b.id - a.id || bi - ai)
-      .reduceRight<Event[][]>(([head, ...tail], [event]) => {
+      .reduceRight<E[][]>(([head, ...tail], [event]) => {
         const prev = head[0];
         if (!prev) return [[event]];
         assert(prev.key === event.key);
@@ -539,7 +539,7 @@ export function compose<K extends string, V extends EventStore.Value>(
           : concat([[event]], concat([head], tail));
       }, [[]]);
   }
-  function compose(target: Event, source: Event): Event {
+  function compose(target: E, source: E): E {
     switch (source.type) {
       case EventStore.EventType.put:
         return new UnstoredEventRecord<K, V>(
