@@ -29,7 +29,7 @@ export function build<V extends object>(source: V, factory: () => V, update: (at
   void Object.keys(SCHEMA)
     .map(prop => SCHEMA[prop].NAME)
     .reduce((_, prop) => { delete dao[prop] }, void 0);
-  if (typeof source[SCHEMA.KEY.NAME] !== 'string') throw new TypeError(`ClientChannel: Invalid key: ${source[SCHEMA.KEY.NAME]}`);
+  if (typeof source[SCHEMA.KEY.NAME] !== 'string') throw new TypeError(`ClientChannel: DAO: Invalid key: ${source[SCHEMA.KEY.NAME]}`);
   const descmap: PropertyDescriptorMap = Object.assign(Object.keys(dao)
     .filter(isValidPropertyName)
     .filter(isValidPropertyValue(dao))
@@ -46,7 +46,7 @@ export function build<V extends object>(source: V, factory: () => V, update: (at
         enumerable: true,
         get: () => source[prop] === void 0 ? iniVal : source[prop],
         set: newVal => {
-          if (!isValidPropertyValue({ [prop]: newVal })(prop)) throw new TypeError(`ClientChannel: Invalid value: ${JSON.stringify(newVal)}`);
+          if (!isValidPropertyValue({ [prop]: newVal })(prop)) throw new TypeError(`ClientChannel: DAO: Invalid value: ${JSON.stringify(newVal)}`);
           const oldVal = source[prop];
           source[prop] = newVal === void 0 ? iniVal : newVal;
           void update(prop, newVal, oldVal);

@@ -258,11 +258,11 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     return Object.assign(Object.create(null), compose(key, this.attrs, this.memory.reflect([key])).value);
   }
   public add(event: UnstoredEventRecord<K, V>, tx: IDBTransaction | void = this.tx): void {
+    assert(event instanceof UnstoredEventRecord);
     assert(event.type === EventStore.EventType.snapshot ? tx : true);
     assert(!tx || tx.db.name === this.database && tx.mode === 'readwrite')
     void this.events_.access
       .emit([event.key, event.attr, event.type], new EventStore.InternalEvent(event.type, makeEventId(0), event.key, event.attr));
-    if (!(event instanceof UnstoredEventRecord)) throw new Error(`ClientChannel: Cannot add a saved event: ${JSON.stringify(event)}`);
     if (!this.observes(event.key)) {
       void this.fetch(event.key);
     }
@@ -391,7 +391,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             case EventStore.EventType.delete:
               return;
           }
-          throw new TypeError(`ClientChannel: Invalid event type: ${composedEvent.type}`);
+          throw new TypeError(`ClientChannel: EventStore: Invalid event type: ${composedEvent.type}`);
         }
         else {
           return void cursor.continue();
@@ -553,6 +553,6 @@ export function compose<K extends string, V extends EventStore.Value>(
       case EventStore.EventType.delete:
         return source;
     }
-    throw new TypeError(`ClientChannel: Invalid event type: ${source}`);
+    throw new TypeError(`ClientChannel: EventStore: Invalid event type: ${source}`);
   }
 }

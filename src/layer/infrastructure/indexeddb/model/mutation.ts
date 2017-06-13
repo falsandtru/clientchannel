@@ -130,7 +130,7 @@ function handleFromSuccessState(state: SuccessState): void {
       void connection.close();
       return void handleFromDestroyState(new DestroyState(state));
   }
-  throw new TypeError(`ClientChannel: Invalid command ${state.command}.`);
+  throw new TypeError(`ClientChannel: IndexedDB: Invalid command ${state.command}.`);
 }
 
 function handleFromErrorState(state: ErrorState): void {
@@ -203,5 +203,5 @@ function handleFromEndState(state: EndState): void {
       return void idbEventStream_
         .emit([database, IDBEventType.disconnect], new IDBEvent(database, IDBEventType.disconnect));
   }
-  throw new TypeError(`ClientChannel: Invalid command ${state.command}.`);
+  throw new TypeError(`ClientChannel: IndexedDB: Invalid command ${state.command}.`);
 }

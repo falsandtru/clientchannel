@@ -56,7 +56,7 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
         void Object.freeze(this);
         return;
       default:
-        throw new TypeError(`ClientChannel: Invalid event type: ${type}`);
+        throw new TypeError(`ClientChannel: EventRecord: Invalid event type: ${type}`);
     }
   }
   public readonly attr: keyof V | '';
@@ -72,7 +72,7 @@ export class UnstoredEventRecord<K extends string, V extends EventRecordValue> e
     super(makeEventId(0), type, key, value, date);
     this.EVENT_RECORD;
     // must not have id property
-    if (this.id !== 0) throw new TypeError(`ClientChannel: UnsavedEventRecord: Invalid event id: ${this.id}`);
+    if (this.id !== 0) throw new TypeError(`ClientChannel: UnstoredEventRecord: Invalid event id: ${this.id}`);
   }
 }
 export class StoredEventRecord<K extends string, V extends EventRecordValue> extends EventRecord<K, V> {
@@ -85,7 +85,7 @@ export class StoredEventRecord<K extends string, V extends EventRecordValue> ext
     date: number
   ) {
     super(id, type, key, value, date);
-    if (this.id > 0 === false) throw new TypeError(`ClientChannel: SavedEventRecord: Invalid event id: ${this.id}`);
+    if (this.id > 0 === false) throw new TypeError(`ClientChannel: StoredEventRecord: Invalid event id: ${this.id}`);
   }
 }
 export class LoadedEventRecord<K extends string, V extends EventRecordValue> extends StoredEventRecord<K, V> {
