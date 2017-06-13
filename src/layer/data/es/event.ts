@@ -23,11 +23,11 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
     public readonly value: Partial<V>,
     public readonly date: number,
   ) {
-    if (typeof this.id !== 'number' || !isFinite(this.id) || this.id >= 0 === false || !Number.isInteger(this.id)) throw new TypeError(`ClientChannel: EventRecord: Invalid event id: ${this.id}`);
+    if (typeof this.id !== 'number' || !Number.isFinite(this.id) || this.id >= 0 === false || !Number.isInteger(this.id)) throw new TypeError(`ClientChannel: EventRecord: Invalid event id: ${this.id}`);
     if (typeof this.type !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event type: ${this.type}`);
     if (typeof this.key !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event key: ${this.key}`);
     if (typeof this.value !== 'object' || !this.value) throw new TypeError(`ClientChannel: EventRecord: Invalid event value: ${JSON.stringify(this.value)}`);
-    if (typeof this.date !== 'number' || !isFinite(this.date) || this.date >= 0 === false) throw new TypeError(`ClientChannel: EventRecord: Invalid event date: ${this.date}`);
+    if (typeof this.date !== 'number' || !Number.isFinite(this.date) || this.date >= 0 === false) throw new TypeError(`ClientChannel: EventRecord: Invalid event date: ${this.date}`);
     this.attr = this.type === EventRecordType.put
       ? <keyof V>Object.keys(value).filter(isValidPropertyName)[0]
       : '';
