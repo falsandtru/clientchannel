@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.9
+
+- Fix performance with binary data.
+
 ## 0.16.8
 
 - Don't delete databases by aborting.
