@@ -1,4 +1,4 @@
-/*! clientchannel v0.16.7 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.16.8 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -168,7 +168,7 @@ require = function e(t, n, r) {
                     this.key = key;
                     this.value = value;
                     this.date = date;
-                    if (typeof this.id !== 'number' || !isFinite(this.id) || this.id >= 0 === false || !Number.isInteger(this.id))
+                    if (typeof this.id !== 'number' || !Number.isFinite(this.id) || this.id >= 0 === false || !Number.isInteger(this.id))
                         throw new TypeError('ClientChannel: EventRecord: Invalid event id: ' + this.id);
                     if (typeof this.type !== 'string')
                         throw new TypeError('ClientChannel: EventRecord: Invalid event type: ' + this.type);
@@ -176,7 +176,7 @@ require = function e(t, n, r) {
                         throw new TypeError('ClientChannel: EventRecord: Invalid event key: ' + this.key);
                     if (typeof this.value !== 'object' || !this.value)
                         throw new TypeError('ClientChannel: EventRecord: Invalid event value: ' + JSON.stringify(this.value));
-                    if (typeof this.date !== 'number' || !isFinite(this.date) || this.date >= 0 === false)
+                    if (typeof this.date !== 'number' || !Number.isFinite(this.date) || this.date >= 0 === false)
                         throw new TypeError('ClientChannel: EventRecord: Invalid event date: ' + this.date);
                     this.attr = this.type === exports.EventRecordType.put ? Object.keys(value).filter(isValidPropertyName)[0] : '';
                     if (typeof this.attr !== 'string')
@@ -204,7 +204,7 @@ require = function e(t, n, r) {
                         void Object.freeze(this);
                         return;
                     default:
-                        throw new TypeError('ClientChannel: Invalid event type: ' + type);
+                        throw new TypeError('ClientChannel: EventRecord: Invalid event type: ' + type);
                     }
                     var _a;
                 }
@@ -222,7 +222,7 @@ require = function e(t, n, r) {
                     var _this = _super.call(this, identifier_1.makeEventId(0), type, key, value, date) || this;
                     _this.EVENT_RECORD;
                     if (_this.id !== 0)
-                        throw new TypeError('ClientChannel: UnsavedEventRecord: Invalid event id: ' + _this.id);
+                        throw new TypeError('ClientChannel: UnstoredEventRecord: Invalid event id: ' + _this.id);
                     return _this;
                 }
                 return UnstoredEventRecord;
@@ -233,7 +233,7 @@ require = function e(t, n, r) {
                 function StoredEventRecord(id, key, value, type, date) {
                     var _this = _super.call(this, id, type, key, value, date) || this;
                     if (_this.id > 0 === false)
-                        throw new TypeError('ClientChannel: SavedEventRecord: Invalid event id: ' + _this.id);
+                        throw new TypeError('ClientChannel: StoredEventRecord: Invalid event id: ' + _this.id);
                     return _this;
                 }
                 return StoredEventRecord;
@@ -341,11 +341,6 @@ require = function e(t, n, r) {
             (function (EventStoreSchema) {
                 EventStoreSchema.id = 'id';
                 EventStoreSchema.key = 'key';
-                EventStoreSchema.type = 'type';
-                EventStoreSchema.attr = 'attr';
-                EventStoreSchema.value = 'value';
-                EventStoreSchema.date = 'date';
-                EventStoreSchema.surrogateKeyDateField = 'key+date';
             }(EventStoreSchema || (EventStoreSchema = {})));
             var EventStore = function () {
                 function EventStore(database, name, attrs) {
@@ -426,28 +421,10 @@ require = function e(t, n, r) {
                             if (!store.indexNames.contains(EventStoreSchema.key)) {
                                 void store.createIndex(EventStoreSchema.key, EventStoreSchema.key);
                             }
-                            if (!store.indexNames.contains(EventStoreSchema.type)) {
-                                void store.createIndex(EventStoreSchema.type, EventStoreSchema.type);
-                            }
-                            if (!store.indexNames.contains(EventStoreSchema.attr)) {
-                                void store.createIndex(EventStoreSchema.attr, EventStoreSchema.attr);
-                            }
-                            if (!store.indexNames.contains(EventStoreSchema.value)) {
-                                void store.createIndex(EventStoreSchema.value, EventStoreSchema.value);
-                            }
-                            if (!store.indexNames.contains(EventStoreSchema.date)) {
-                                void store.createIndex(EventStoreSchema.date, EventStoreSchema.date);
-                            }
-                            if (!store.indexNames.contains(EventStoreSchema.surrogateKeyDateField)) {
-                                void store.createIndex(EventStoreSchema.surrogateKeyDateField, [
-                                    EventStoreSchema.key,
-                                    EventStoreSchema.date
-                                ]);
-                            }
                             return true;
                         },
                         verify: function (db) {
-                            return db.objectStoreNames.contains(name) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.id) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.key) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.type) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.attr) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.value) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.date) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.surrogateKeyDateField);
+                            return db.objectStoreNames.contains(name) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.id) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.key);
                         },
                         destroy: function () {
                             return true;
@@ -644,8 +621,6 @@ require = function e(t, n, r) {
                         event.attr,
                         event.type
                     ], new EventStore.InternalEvent(event.type, identifier_1.makeEventId(0), event.key, event.attr));
-                    if (!(event instanceof event_1.UnstoredEventRecord))
-                        throw new Error('ClientChannel: Cannot add a saved event: ' + JSON.stringify(event));
                     if (!this.observes(event.key)) {
                         void this.fetch(event.key);
                     }
@@ -811,7 +786,7 @@ require = function e(t, n, r) {
                                 case EventStore.EventType.delete:
                                     return;
                                 }
-                                throw new TypeError('ClientChannel: Invalid event type: ' + composedEvent.type);
+                                throw new TypeError('ClientChannel: EventStore: Invalid event type: ' + composedEvent.type);
                             } else {
                                 return void cursor.continue();
                             }
@@ -820,11 +795,11 @@ require = function e(t, n, r) {
                 };
                 EventStore.prototype.clean = function (key) {
                     var _this = this;
-                    var removedEvents = [];
+                    var events = [];
                     var cleanState = new Map();
-                    return void this.cursor(key ? api_1.IDBKeyRange.bound(key, key) : api_1.IDBKeyRange.upperBound(Infinity), key ? EventStoreSchema.key : EventStoreSchema.date, 'prev', 'readwrite', function (cursor) {
+                    return void this.cursor(api_1.IDBKeyRange.bound(key, key), EventStoreSchema.key, 'prev', 'readwrite', function (cursor) {
                         if (!cursor) {
-                            return void removedEvents.reduce(function (_, event) {
+                            return void events.reduce(function (_, event) {
                                 return void _this.memory.off([
                                     event.key,
                                     event.attr,
@@ -857,7 +832,7 @@ require = function e(t, n, r) {
                             }
                             if (cleanState.get(event_4.key)) {
                                 void cursor.delete();
-                                void removedEvents.unshift(event_4);
+                                void events.unshift(event_4);
                             }
                             return void cursor.continue();
                         }
@@ -967,7 +942,7 @@ require = function e(t, n, r) {
                     case EventStore.EventType.delete:
                         return source;
                     }
-                    throw new TypeError('ClientChannel: Invalid event type: ' + source);
+                    throw new TypeError('ClientChannel: EventStore: Invalid event type: ' + source);
                     var _a;
                 }
             }
@@ -1248,7 +1223,7 @@ require = function e(t, n, r) {
                     delete dao[prop];
                 }, void 0);
                 if (typeof source[exports.SCHEMA.KEY.NAME] !== 'string')
-                    throw new TypeError('ClientChannel: Invalid key: ' + source[exports.SCHEMA.KEY.NAME]);
+                    throw new TypeError('ClientChannel: DAO: Invalid key: ' + source[exports.SCHEMA.KEY.NAME]);
                 var descmap = Object.assign(Object.keys(dao).filter(event_1.isValidPropertyName).filter(event_1.isValidPropertyValue(dao)).reduce(function (map, prop) {
                     {
                         var desc = Object.getOwnPropertyDescriptor(dao, prop);
@@ -1266,7 +1241,7 @@ require = function e(t, n, r) {
                         },
                         set: function (newVal) {
                             if (!event_1.isValidPropertyValue((_a = {}, _a[prop] = newVal, _a))(prop))
-                                throw new TypeError('ClientChannel: Invalid value: ' + JSON.stringify(newVal));
+                                throw new TypeError('ClientChannel: DAO: Invalid value: ' + JSON.stringify(newVal));
                             var oldVal = source[prop];
                             source[prop] = newVal === void 0 ? iniVal : newVal;
                             void update(prop, newVal, oldVal);
@@ -1355,7 +1330,7 @@ require = function e(t, n, r) {
                     });
                     this.ages = new Map();
                     if (cache.has(name))
-                        throw new Error('ClientChannel: IndexedDB: Specified channel ' + name + ' is already created.');
+                        throw new Error('ClientChannel: Specified database channel ' + name + ' is already created.');
                     void cache.set(name, this);
                     void this.cancellation.register(function () {
                         return void cache.delete(name);
@@ -1441,7 +1416,7 @@ require = function e(t, n, r) {
                     if (age === void 0) {
                         age = this.expiry;
                     }
-                    if (!isFinite(age))
+                    if (!Number.isFinite(age))
                         return;
                     return void this.ages.set(key, age);
                 };
@@ -1540,7 +1515,7 @@ require = function e(t, n, r) {
                     void Object.freeze(_this);
                     void access.monitor([], function (_a) {
                         var key = _a.key, type = _a.type;
-                        return type === store_2.EventStore.EventType.delete ? void _this.delete(key) : void _this.set(key, new AccessRecord(key, Date.now()));
+                        return type === store_2.EventStore.EventType.delete ? void _this.delete(key) : void _this.set(key, new AccessRecord(key));
                     });
                     return _this;
                 }
@@ -1582,9 +1557,9 @@ require = function e(t, n, r) {
             }(store_1.KeyValueStore);
             exports.AccessStore = AccessStore;
             var AccessRecord = function () {
-                function AccessRecord(key, date) {
+                function AccessRecord(key) {
                     this.key = key;
-                    this.date = date;
+                    this.date = Date.now();
                 }
                 return AccessRecord;
             }();
@@ -1685,7 +1660,7 @@ require = function e(t, n, r) {
                                 if (!cursor)
                                     return;
                                 var record = cursor.value;
-                                if (record.expiry > Date.now() && isFinite(record.expiry))
+                                if (record.expiry > Date.now() && Number.isFinite(record.expiry))
                                     return void schedule(record.expiry);
                                 void store.delete(record.key);
                                 return void cursor.continue();
@@ -2008,7 +1983,7 @@ require = function e(t, n, r) {
                         recv: new spica_1.Observation()
                     });
                     if (cache.has(name))
-                        throw new Error('ClientChannel: WebStorage: Specified channel ' + name + ' is already created.');
+                        throw new Error('ClientChannel: Specified storage channel ' + name + ' is already created.');
                     void cache.set(name, this);
                     void this.cancellation.register(function () {
                         return void cache.delete(name);
@@ -2306,7 +2281,7 @@ require = function e(t, n, r) {
                     return void handleFromErrorState(new state_1.ErrorState(state, event.target.error, event));
                 };
                 connection.onabort = function (event) {
-                    return void handleFromAbortState(new state_1.AbortState(state, event.target.error, event));
+                    return void handleFromAbortState(new state_1.AbortState(state, event));
                 };
                 connection.onclose = function () {
                     return void handleFromEndState(new state_1.EndState(state));
@@ -2359,7 +2334,7 @@ require = function e(t, n, r) {
                     void connection.close();
                     return void handleFromDestroyState(new state_1.DestroyState(state));
                 }
-                throw new TypeError('ClientChannel: Invalid command ' + state.command + '.');
+                throw new TypeError('ClientChannel: IndexedDB: Invalid command ' + state.command + '.');
             }
             function handleFromErrorState(state) {
                 if (!state.alive)
@@ -2380,18 +2355,13 @@ require = function e(t, n, r) {
             function handleFromAbortState(state) {
                 if (!state.alive)
                     return;
-                var database = state.database, error = state.error, event = state.event;
+                var database = state.database, event = state.event;
                 void event.preventDefault();
                 void event_1.idbEventStream_.emit([
                     database,
                     event_1.IDBEventType.abort
                 ], new event_1.IDBEvent(database, event_1.IDBEventType.abort));
-                var destroy = state.config.destroy;
-                if (destroy(error, event)) {
-                    return void handleFromDestroyState(new state_1.DestroyState(state));
-                } else {
-                    return void handleFromEndState(new state_1.EndState(state));
-                }
+                return void handleFromEndState(new state_1.EndState(state));
             }
             function handleFromCrashState(state) {
                 if (!state.alive)
@@ -2452,7 +2422,7 @@ require = function e(t, n, r) {
                         event_1.IDBEventType.disconnect
                     ], new event_1.IDBEvent(database, event_1.IDBEventType.disconnect));
                 }
-                throw new TypeError('ClientChannel: Invalid command ' + state.command + '.');
+                throw new TypeError('ClientChannel: IndexedDB: Invalid command ' + state.command + '.');
             }
         },
         {
@@ -2516,18 +2486,12 @@ require = function e(t, n, r) {
                     get: function () {
                         return exports.commands.get(this.database);
                     },
-                    set: function (command) {
-                        void exports.commands.set(this.database, command);
-                    },
                     enumerable: true,
                     configurable: true
                 });
                 Object.defineProperty(State.prototype, 'config', {
                     get: function () {
                         return exports.configs.get(this.database);
-                    },
-                    set: function (config) {
-                        void exports.configs.set(this.database, config);
                     },
                     enumerable: true,
                     configurable: true
@@ -2602,9 +2566,8 @@ require = function e(t, n, r) {
             exports.ErrorState = ErrorState;
             var AbortState = function (_super) {
                 __extends(AbortState, _super);
-                function AbortState(state, error, event) {
+                function AbortState(state, event) {
                     var _this = _super.call(this, state.database) || this;
-                    _this.error = error;
                     _this.event = event;
                     _this.STATE;
                     return _this;
