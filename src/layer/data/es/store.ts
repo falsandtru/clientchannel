@@ -7,11 +7,11 @@ import { noop } from '../../../lib/noop';
 namespace EventStoreSchema {
   export const id = 'id';
   export const key = 'key';
-  export const type = 'type';
-  export const attr = 'attr';
-  export const value = 'value';
-  export const date = 'date';
-  export const surrogateKeyDateField = 'key+date';
+  //export const type = 'type';
+  //export const attr = 'attr';
+  //export const value = 'value';
+  //export const date = 'date';
+  //export const surrogateKeyDateField = 'key+date';
 }
 
 export abstract class EventStore<K extends string, V extends EventStore.Value> {
@@ -30,32 +30,12 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         if (!store.indexNames.contains(EventStoreSchema.key)) {
           void store.createIndex(EventStoreSchema.key, EventStoreSchema.key);
         }
-        if (!store.indexNames.contains(EventStoreSchema.type)) {
-          void store.createIndex(EventStoreSchema.type, EventStoreSchema.type);
-        }
-        if (!store.indexNames.contains(EventStoreSchema.attr)) {
-          void store.createIndex(EventStoreSchema.attr, EventStoreSchema.attr);
-        }
-        if (!store.indexNames.contains(EventStoreSchema.value)) {
-          void store.createIndex(EventStoreSchema.value, EventStoreSchema.value);
-        }
-        if (!store.indexNames.contains(EventStoreSchema.date)) {
-          void store.createIndex(EventStoreSchema.date, EventStoreSchema.date);
-        }
-        if (!store.indexNames.contains(EventStoreSchema.surrogateKeyDateField)) {
-          void store.createIndex(EventStoreSchema.surrogateKeyDateField, [EventStoreSchema.key, EventStoreSchema.date]);
-        }
         return true;
       },
       verify(db) {
         return db.objectStoreNames.contains(name)
             && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.id)
-            && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.key)
-            && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.type)
-            && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.attr)
-            && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.value)
-            && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.date)
-            && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.surrogateKeyDateField);
+            && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.key);
       },
       destroy() {
         return true;
@@ -419,17 +399,17 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       };
     });
   }
-  private clean(key?: K): void {
-    const removedEvents: StoredEventRecord<K, V>[] = [];
+  private clean(key: K): void {
+    const events: StoredEventRecord<K, V>[] = [];
     const cleanState = new Map<K, boolean>();
     return void this.cursor(
-      key ? IDBKeyRange.bound(key, key) : IDBKeyRange.upperBound(Infinity),
-      key ? EventStoreSchema.key : EventStoreSchema.date,
+      IDBKeyRange.bound(key, key),
+      EventStoreSchema.key,
       'prev',
       'readwrite',
       cursor => {
         if (!cursor) {
-          return void removedEvents
+          return void events
             .reduce<void>((_, event) => (
               void this.memory
                 .off([event.key, event.attr, sqid(event.id)]),
@@ -459,7 +439,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           }
           if (cleanState.get(event.key)) {
             void cursor.delete();
-            void removedEvents.unshift(event);
+            void events.unshift(event);
           }
           return void cursor.continue();
         }
