@@ -38,8 +38,8 @@
           content: null
         };
       },
-      destroy: function (err) {
-        console.error(err);
+      destroy: function (reason) {
+        console.warn(reason);
         return true;
       }
     });
