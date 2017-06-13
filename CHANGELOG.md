@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.8
+
+- Don't delete databases by aborting.
+
 ## 0.16.7
 
 - Fix destroy reason type.

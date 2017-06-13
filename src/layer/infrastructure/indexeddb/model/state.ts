@@ -46,15 +46,9 @@ abstract class State {
     assert(commands.has(this.database));
     return commands.get(this.database)!;
   }
-  public set command(command: Command) {
-    void commands.set(this.database, command);
-  }
   public get config(): Config {
     assert(configs.has(this.database));
     return configs.get(this.database)!;
-  }
-  public set config(config: Config) {
-    void configs.set(this.database, config);
   }
   public get requests(): Request[] {
     return requests
@@ -126,7 +120,6 @@ export class AbortState extends State {
   private readonly STATE: this;
   constructor(
     state: SuccessState,
-    public readonly error: DOMException | DOMError,
     public readonly event: Event
   ) {
     super(state.database);

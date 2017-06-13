@@ -82,7 +82,7 @@ function handleFromSuccessState(state: SuccessState): void {
   connection.onerror = event =>
     void handleFromErrorState(new ErrorState(state, (<any>event.target).error, event));
   connection.onabort = event =>
-    void handleFromAbortState(new AbortState(state, (<any>event.target).error, event));
+    void handleFromAbortState(new AbortState(state, event));
   connection.onclose = () =>
     void handleFromEndState(new EndState(state));
   state.close = () =>
@@ -149,16 +149,10 @@ function handleFromErrorState(state: ErrorState): void {
 
 function handleFromAbortState(state: AbortState): void {
   if (!state.alive) return;
-  const { database, error, event } = state;
+  const { database, event } = state;
   void event.preventDefault();
   void idbEventStream_.emit([database, IDBEventType.abort], new IDBEvent(database, IDBEventType.abort));
-  const { destroy } = state.config;
-  if (destroy(error, event)) {
-    return void handleFromDestroyState(new DestroyState(state));
-  }
-  else {
-    return void handleFromEndState(new EndState(state));
-  }
+  return void handleFromEndState(new EndState(state));
 }
 
 function handleFromCrashState(state: CrashState): void {
