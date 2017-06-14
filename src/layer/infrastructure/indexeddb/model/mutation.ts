@@ -115,7 +115,7 @@ function handleFromSuccessState(state: SuccessState): void {
         }
       }
       catch (reason) {
-        assert(!console.debug(reason + ''));
+        assert(!console.error(reason + ''));
         void new Promise((_, reject) =>
           void reject(reason));
         void connection.close();

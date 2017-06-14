@@ -53,7 +53,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
             })
             .filter(({ newVal, oldVal }) =>
               newVal !== oldVal ||
-              !(Number.isNaN(newVal) && Number.isNaN(oldVal)));
+              !(isNaN(<any>newVal) && isNaN(<any>oldVal)));
           if (changes.length === 0) return;
           void migrate(link);
           void changes

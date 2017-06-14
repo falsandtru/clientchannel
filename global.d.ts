@@ -2,11 +2,7 @@ import 'mocha';
 import _assert from 'power-assert';
 
 declare global {
-  export const assert: typeof _assert;
-
-  interface NumberConstructor {
-    isNaN(target: any): boolean;
-  }
+  const assert: typeof _assert;
 
   interface IDBDatabase {
     onclose: (ev: Event) => void;
