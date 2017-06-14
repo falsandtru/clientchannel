@@ -141,7 +141,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           void cb(err),
           void unbind(),
           void after(tx, err));
-        if (!cursor || (<LoadedEventRecord<K, V>>cursor.value).date < this.meta(key).date) {
+        if (!cursor || new LoadedEventRecord<K, V>(cursor.value).date < this.meta(key).date) {
           // register latest events
           void this.syncState.set(key, true);
           void Array.from(
@@ -184,10 +184,10 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           return;
         }
         else {
-          const event: LoadedEventRecord<K, V> = cursor.value;
+          const event = new LoadedEventRecord<K, V>(cursor.value);
           if (this.memory.refs([event.key, event.attr, sqid(event.id)]).length > 0) return void proc(null, err);
           try {
-            void events.unshift(new LoadedEventRecord(event.id, event.key, event.value, event.type, event.date));
+            void events.unshift(event);
           }
           catch (err) {
             void tx.objectStore(this.name).delete(cursor.primaryKey);
@@ -363,9 +363,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       req.onsuccess = (): void => {
         const cursor: IDBCursorWithValue | null = req.result;
         if (cursor) {
-          const event: StoredEventRecord<K, V> = cursor.value;
+          const event = new LoadedEventRecord<K, V>(cursor.value);
           try {
-            void events.unshift(new StoredEventRecord(event.id, event.key, event.value, event.type, event.date));
+            void events.unshift(event);
           }
           catch (err) {
             void cursor.delete();
@@ -418,7 +418,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             , void 0);
         }
         else {
-          const event: StoredEventRecord<K, V> = cursor.value;
+          const event = new LoadedEventRecord<K, V>(cursor.value);
           switch (event.type) {
             case EventStore.EventType.put: {
               void cleanState.set(event.key, cleanState.get(event.key) || false);
