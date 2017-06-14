@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.10
+
+- Squash records having binary data immediately.
+
 ## 0.16.9
 
 - Fix performance with binary data.

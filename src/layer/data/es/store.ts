@@ -2,6 +2,7 @@ import { Observation, Cancellation, tick, sqid, concat } from 'spica';
 import { listen, Config, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { EventId, makeEventId } from './identifier';
 import { EventRecordType, UnstoredEventRecord, StoredEventRecord, LoadedEventRecord, SavedEventRecord, EventRecordValue, isValidPropertyName } from './event';
+import { hasBinary } from '../database/value';
 import { noop } from '../../../lib/noop';
 
 namespace EventStoreSchema {
@@ -320,7 +321,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
                 ? concat(acc, [event])
                 : acc
             , []);
-          if (events.length >= this.snapshotCycle) {
+          if (events.length >= this.snapshotCycle || hasBinary(<object>event.value)) {
             void this.snapshot(savedEvent.key);
           }
         };
@@ -374,7 +375,6 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           }
         }
         if (!cursor) {
-          assert(this.snapshotCycle > 0);
           if (events.length === 0) return;
           const composedEvent = compose(key, this.attrs, events);
           if (composedEvent instanceof StoredEventRecord) return;

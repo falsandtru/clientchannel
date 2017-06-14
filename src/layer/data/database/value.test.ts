@@ -1,4 +1,4 @@
-import { isStorable } from './value';
+import { isStorable, hasBinary } from './value';
 
 describe('Unit: layers/data/database/value', () => {
   describe('isStorableValue', () => {
@@ -7,7 +7,7 @@ describe('Unit: layers/data/database/value', () => {
     });
 
     it('boolean', () => {
-      assert(isStorable(true) === true);
+      assert(isStorable(false) === true);
     });
 
     it('number', () => {
@@ -29,6 +29,26 @@ describe('Unit: layers/data/database/value', () => {
 
     it('function', () => {
       assert(isStorable(() => 0) === false);
+    });
+
+  });
+
+  describe('hasBinary', () => {
+    it('true', () => {
+      assert(hasBinary(new ArrayBuffer(0)) === true);
+      assert(hasBinary([new ArrayBuffer(0)]) === true);
+      assert(hasBinary({ b: new ArrayBuffer(0) }) === true);
+    });
+
+    it('false', () => {
+      assert(hasBinary(<any>void 0) === false);
+      assert(hasBinary(false) === false);
+      assert(hasBinary(0) === false);
+      assert(hasBinary('') === false);
+      assert(hasBinary([]) === false);
+      assert(hasBinary({}) === false);
+      assert(hasBinary(<any>null) === false);
+      assert(hasBinary(() => 0) === false);
     });
 
   });

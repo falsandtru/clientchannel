@@ -475,6 +475,29 @@ describe('Unit: layers/data/es/store', function () {
           }));
     });
 
+    it('snapshot binary', done => {
+      class Value extends EventStore.Value {
+        constructor(
+          public value: ArrayBuffer
+        ) {
+          super();
+        }
+      }
+
+      open('test', Store.configure('test'));
+      const es = new Store<string, Value>('test', 'test');
+
+      es.add(new UnstoredEventRecord('a', new Value(new ArrayBuffer(0))));
+      es.events.save.once(['a', '', 'snapshot'], ev => {
+        assert(ev.key === 'a');
+        assert(ev.attr === '');
+        assert(ev.type === 'snapshot');
+        assert(es.meta('a').id === 2);
+        assert(es.get('a').value instanceof ArrayBuffer);
+      });
+      done();
+    });
+
   });
 
 });

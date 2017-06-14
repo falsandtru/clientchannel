@@ -7,23 +7,10 @@ export function isStorable(value: IDBValidValue): boolean {
       return true;
     case 'object':
       try {
-        switch (true) {
-          case value === null:
-          case value instanceof Int8Array:
-          case value instanceof Int16Array:
-          case value instanceof Int32Array:
-          case value instanceof Uint8Array:
-          case value instanceof Uint8ClampedArray:
-          case value instanceof Uint16Array:
-          case value instanceof Uint32Array:
-          case value instanceof ArrayBuffer:
-          case value instanceof Blob:
-            return true;
-          default:
-            return Object.keys(value)
-              .map(key => value[key])
-              .every(isStorable);
-        }
+        return value === null
+            || isBinary(value)
+            || Object.keys(value)
+                 .every(key => isStorable(value[key]));
       }
       catch (_) {
         return false;
@@ -31,4 +18,24 @@ export function isStorable(value: IDBValidValue): boolean {
     default:
       return false;
   }
+}
+
+export function hasBinary(value: IDBValidValue): boolean {
+  return value instanceof Object
+    ? isBinary(value) ||
+      Object.keys(value)
+        .some(key => hasBinary(value[key]))
+    : false;
+}
+
+function isBinary(value: IDBValidValue): boolean {
+  return value instanceof Int8Array
+      || value instanceof Int16Array
+      || value instanceof Int32Array
+      || value instanceof Uint8Array
+      || value instanceof Uint8ClampedArray
+      || value instanceof Uint16Array
+      || value instanceof Uint32Array
+      || value instanceof ArrayBuffer
+      || value instanceof Blob;
 }
