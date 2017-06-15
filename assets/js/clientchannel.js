@@ -1,4 +1,4 @@
-/*! clientchannel v0.16.9 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.16.10 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -120,23 +120,9 @@ require = function e(t, n, r) {
                     return true;
                 case 'object':
                     try {
-                        switch (true) {
-                        case value === null:
-                        case value instanceof Int8Array:
-                        case value instanceof Int16Array:
-                        case value instanceof Int32Array:
-                        case value instanceof Uint8Array:
-                        case value instanceof Uint8ClampedArray:
-                        case value instanceof Uint16Array:
-                        case value instanceof Uint32Array:
-                        case value instanceof ArrayBuffer:
-                        case value instanceof Blob:
-                            return true;
-                        default:
-                            return Object.keys(value).map(function (key) {
-                                return value[key];
-                            }).every(isStorable);
-                        }
+                        return value === null || isBinary(value) || Object.keys(value).every(function (key) {
+                            return isStorable(value[key]);
+                        });
                     } catch (_) {
                         return false;
                     }
@@ -145,6 +131,15 @@ require = function e(t, n, r) {
                 }
             }
             exports.isStorable = isStorable;
+            function hasBinary(value) {
+                return value instanceof Object ? isBinary(value) || Object.keys(value).some(function (key) {
+                    return hasBinary(value[key]);
+                }) : false;
+            }
+            exports.hasBinary = hasBinary;
+            function isBinary(value) {
+                return value instanceof Int8Array || value instanceof Int16Array || value instanceof Int32Array || value instanceof Uint8Array || value instanceof Uint8ClampedArray || value instanceof Uint16Array || value instanceof Uint32Array || value instanceof ArrayBuffer || value instanceof Blob;
+            }
         },
         {}
     ],
@@ -256,7 +251,8 @@ require = function e(t, n, r) {
             exports.StoredEventRecord = StoredEventRecord;
             var LoadedEventRecord = function (_super) {
                 __extends(LoadedEventRecord, _super);
-                function LoadedEventRecord(id, key, value, type, date) {
+                function LoadedEventRecord(_a) {
+                    var id = _a.id, key = _a.key, value = _a.value, type = _a.type, date = _a.date;
                     var _this = _super.call(this, id, key, value, type, date) || this;
                     _this.EVENT_RECORD;
                     return _this;
@@ -351,6 +347,7 @@ require = function e(t, n, r) {
             var api_1 = require('../../infrastructure/indexeddb/api');
             var identifier_1 = require('./identifier');
             var event_1 = require('./event');
+            var value_1 = require('../database/value');
             var noop_1 = require('../../../lib/noop');
             var EventStoreSchema;
             (function (EventStoreSchema) {
@@ -501,10 +498,10 @@ require = function e(t, n, r) {
                         var proc = function (cursor, err) {
                             if (err)
                                 return void cb(err), void unbind(), void after(tx, err);
-                            if (!cursor || cursor.value.date < _this.meta(key).date) {
+                            if (!cursor || new event_1.LoadedEventRecord(cursor.value).date < _this.meta(key).date) {
                                 void _this.syncState.set(key, true);
-                                void Array.from(events.reduceRight(function (acc, e) {
-                                    return acc.length === 0 || acc[0].type === EventStore.EventType.put ? spica_1.concat(acc, [e]) : acc;
+                                void Array.from(events.reduceRight(function (es, e) {
+                                    return es.length === 0 || es[0].type === EventStore.EventType.put ? spica_1.concat(es, [e]) : es;
                                 }, []).reduceRight(function (dict, e) {
                                     return dict.set(e.attr, e);
                                 }, new Map()).values()).sort(function (a, b) {
@@ -543,7 +540,7 @@ require = function e(t, n, r) {
                                 }
                                 return;
                             } else {
-                                var event_2 = cursor.value;
+                                var event_2 = new event_1.LoadedEventRecord(cursor.value);
                                 if (_this.memory.refs([
                                         event_2.key,
                                         event_2.attr,
@@ -551,7 +548,7 @@ require = function e(t, n, r) {
                                     ]).length > 0)
                                     return void proc(null, err);
                                 try {
-                                    void events.unshift(new event_1.LoadedEventRecord(event_2.id, event_2.key, event_2.value, event_2.type, event_2.date));
+                                    void events.unshift(event_2);
                                 } catch (err) {
                                     void tx.objectStore(_this.name).delete(cursor.primaryKey);
                                     void new Promise(function (_, reject) {
@@ -729,10 +726,10 @@ require = function e(t, n, r) {
                                 var events = _this.memory.refs([savedEvent.key]).map(function (_a) {
                                     var listener = _a.listener;
                                     return listener(void 0, [savedEvent.key]);
-                                }).reduce(function (acc, event) {
-                                    return event instanceof event_1.StoredEventRecord ? spica_1.concat(acc, [event]) : acc;
+                                }).reduce(function (es, e) {
+                                    return e instanceof event_1.StoredEventRecord ? spica_1.concat(es, [e]) : es;
                                 }, []);
-                                if (events.length >= _this.snapshotCycle) {
+                                if (events.length >= _this.snapshotCycle || value_1.hasBinary(event.value)) {
                                     void _this.snapshot(savedEvent.key);
                                 }
                             };
@@ -777,9 +774,9 @@ require = function e(t, n, r) {
                         req.onsuccess = function () {
                             var cursor = req.result;
                             if (cursor) {
-                                var event_3 = cursor.value;
+                                var event_3 = new event_1.LoadedEventRecord(cursor.value);
                                 try {
-                                    void events.unshift(new event_1.StoredEventRecord(event_3.id, event_3.key, event_3.value, event_3.type, event_3.date));
+                                    void events.unshift(event_3);
                                 } catch (err) {
                                     void cursor.delete();
                                     void new Promise(function (_, reject) {
@@ -826,7 +823,7 @@ require = function e(t, n, r) {
                                 ]);
                             }, void 0);
                         } else {
-                            var event_4 = cursor.value;
+                            var event_4 = new event_1.LoadedEventRecord(cursor.value);
                             switch (event_4.type) {
                             case EventStore.EventType.put: {
                                     void cleanState.set(event_4.key, cleanState.get(event_4.key) || false);
@@ -966,6 +963,7 @@ require = function e(t, n, r) {
         {
             '../../../lib/noop': 32,
             '../../infrastructure/indexeddb/api': 22,
+            '../database/value': 5,
             './event': 6,
             './identifier': 7,
             'spica': undefined
@@ -1828,7 +1826,7 @@ require = function e(t, n, r) {
                                 };
                             }).filter(function (_a) {
                                 var newVal = _a.newVal, oldVal = _a.oldVal;
-                                return newVal !== oldVal || !(Number.isNaN(newVal) && Number.isNaN(oldVal));
+                                return newVal !== oldVal || !(isNaN(newVal) && isNaN(oldVal));
                             });
                             if (changes.length === 0)
                                 return;
