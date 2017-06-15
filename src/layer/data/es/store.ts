@@ -148,10 +148,10 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           void Array.from(
             events
               // remove overridable event
-              .reduceRight<LoadedEventRecord<K, V>[]>((acc, e) =>
-                acc.length === 0 || acc[0].type === EventStore.EventType.put
-                  ? concat(acc, [e])
-                  : acc
+              .reduceRight<LoadedEventRecord<K, V>[]>((es, e) =>
+                es.length === 0 || es[0].type === EventStore.EventType.put
+                  ? concat(es, [e])
+                  : es
               , [])
               .reduceRight<Map<string, LoadedEventRecord<K, V>>>((dict, e) =>
                 dict.set(e.attr, e)
@@ -316,10 +316,10 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           const events: StoredEventRecord<K, V>[] = this.memory.refs([savedEvent.key])
             .map(({ listener }) =>
               <UnstoredEventRecord<K, V> | StoredEventRecord<K, V>>listener(void 0, [savedEvent.key]))
-            .reduce<StoredEventRecord<K, V>[]>((acc, event) =>
-              event instanceof StoredEventRecord
-                ? concat(acc, [event])
-                : acc
+            .reduce<StoredEventRecord<K, V>[]>((es, e) =>
+              e instanceof StoredEventRecord
+                ? concat(es, [e])
+                : es
             , []);
           if (events.length >= this.snapshotCycle || hasBinary(<object>event.value)) {
             void this.snapshot(savedEvent.key);
