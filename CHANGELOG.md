@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.11
+
+- Reflect all stored data before event emitting.
+
 ## 0.16.10
 
 - Squash records having binary data immediately.

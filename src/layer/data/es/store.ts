@@ -145,7 +145,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         if (!cursor || new LoadedEventRecord<K, V>(cursor.value).date < this.meta(key).date) {
           // register latest events
           void this.syncState.set(key, true);
-          void Array.from(
+          const es = Array.from(
             events
               // remove overridable event
               .reduceRight<LoadedEventRecord<K, V>[]>((es, e) =>
@@ -157,7 +157,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
                 dict.set(e.attr, e)
               , new Map())
               .values())
-            .sort((a, b) => a.date - b.date || a.id - b.id)
+            .sort((a, b) => a.date - b.date || a.id - b.id);
+          void es
             .forEach(e => {
               assert(this.memory.refs([e.key, e.attr, sqid(e.id)]).length === 0);
               assert(this.memory.refs([e.key, e.attr, sqid(e.id + 1)]).length === 0);
@@ -165,9 +166,11 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
                 .off([e.key, e.attr, sqid(e.id)]);
               void this.memory
                 .on([e.key, e.attr, sqid(e.id)], () => e);
-              void this.events_.memory
-                .emit([e.key, e.attr, sqid(e.id)], e);
             });
+          void es
+            .forEach(e =>
+              void this.events_.memory
+                .emit([e.key, e.attr, sqid(e.id)], e));
           try {
             void cb();
           }

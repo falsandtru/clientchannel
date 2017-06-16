@@ -55,6 +55,48 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       chan.destroy();
     });
 
+    it('sync', done => {
+      const chan = new StoreChannel('test', () => new Value(0, ''));
+
+      listen('test')(db => {
+        db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { n: 1 })));
+        db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { s: '1' }))).onsuccess = () => {
+          chan.sync(['a'], errs => {
+            assert.deepStrictEqual(errs, []);
+            const link = chan.link('a');
+            assert(link.__id === 2);
+            assert(link.__key === 'a');
+            assert(link.__date > 0);
+            assert(link.n === 1);
+            assert(link.s === '1');
+            chan.destroy();
+            done();
+          });
+        };
+      });
+    });
+
+    it('fetch', done => {
+      const chan = new StoreChannel('test', () => new Value(0, ''));
+
+      listen('test')(db => {
+        db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { n: 1 })));
+        db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { s: '1' }))).onsuccess = () => {
+          chan.fetch('a', err => {
+            assert(!err);
+            const link = chan.link('a');
+            assert(link.__id === 2);
+            assert(link.__key === 'a');
+            assert(link.__date > 0);
+            assert(link.n === 1);
+            assert(link.s === '1');
+            chan.destroy();
+            done();
+          });
+        };
+      });
+    });
+
     it('send', done => {
       const chan = new StoreChannel('test', () => new Value(0, ''));
       const link = chan.link('a');
@@ -90,15 +132,19 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
 
       assert(link.n === 0);
       listen('test')(db => {
-        db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { n: 1 }))).onsuccess = () => {
-          chan['schema'].data.fetch('a');
+        db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { n: 1 })));
+        db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { s: '1' }))).onsuccess = () => {
+          chan.fetch('a');
           link.__event.once(['recv', 'n'], () => {
-            assert(link.__id === 1);
+            assert(link.__id === 2);
             assert(link.__key === 'a');
             assert(link.__date > 0);
             assert(link.n === 1);
-            chan.destroy();
-            done();
+            assert(link.s === '1');
+            link.__event.once(['recv', 's'], () => {
+              chan.destroy();
+              done();
+            });
           });
         };
       });
