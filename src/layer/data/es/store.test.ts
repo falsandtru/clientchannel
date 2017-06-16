@@ -350,26 +350,6 @@ describe('Unit: layers/data/es/store', function () {
       });
     });
 
-    it('transaction', done => {
-      open('test', Store.configure('test'));
-      const es = new Store<string, Value>('test', 'test');
-
-      es.transaction('', () => {
-        assert(es.observes('') === true);
-        assert(es.has('') === false);
-        es.add(new UnstoredEventRecord('', new Value(1)));
-        assert(es.observes('') === true);
-        assert(es.has('') === true);
-        assert(es.meta('').id === 0);
-        assert(es.get('').value === 1);
-      }, err => {
-        assert(!err);
-        assert(es.meta('').id === 1);
-        assert(es.get('').value === 1);
-        done();
-      });
-    });
-
     it('clean', done => {
       open('test', Store.configure('test'));
       const es = new Store<string, Value>('test', 'test');

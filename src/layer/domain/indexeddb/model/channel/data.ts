@@ -12,7 +12,7 @@ export class DataStore<K extends string, V extends DataStore.Value> extends Even
     attrs: string[]
   ) {
     super(database, name, attrs);
-    void Object.seal(this);
+    void Object.freeze(this);
   }
 }
 export namespace DataStore {

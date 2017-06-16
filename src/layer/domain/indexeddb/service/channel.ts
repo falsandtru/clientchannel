@@ -85,9 +85,6 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
               __event: {
                 value: new Observation<[StorageChannel.EventType], StorageChannel.Event<V>, any>()
               },
-              __transaction: {
-                value: (cb: () => void, complete: (err?: DOMException | DOMError | Error) => void) => this.transaction(key, cb, complete)
-              }
             }
           ),
           this.factory,

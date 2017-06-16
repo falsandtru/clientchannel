@@ -86,9 +86,6 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   public fetch(key: K, cb: (err?: DOMException | DOMError) => void = noop): void {
     return this.schema.data.fetch(key, cb);
   }
-  public transaction(key: K, cb: () => void, complete: (err?: DOMException | DOMError | Error) => void): void {
-    return this.schema.data.transaction(key, cb, complete);
-  }
   public has(key: K): boolean {
     return this.schema.data.has(key);
   }

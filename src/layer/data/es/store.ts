@@ -206,26 +206,6 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       tx.onerror = tx.onabort = () => void cb(tx.error);
     });
   }
-  private tx: IDBTransaction | void = void 0;
-  public transaction(key: K, cb: () => void, complete: (err?: DOMException | DOMError | Error) => void): void {
-    return void this.fetch(key, noop, (tx, err) => {
-      try {
-        if (err) throw err;
-        this.tx = tx;
-        void cb();
-        void tx.addEventListener('complete', () => void complete());
-        void tx.addEventListener('abort', () => void complete(tx.error));
-        void tx.addEventListener('error', () => void complete(tx.error));
-      }
-      catch (e) {
-        void tx.abort();
-        void complete(e instanceof Error || e instanceof DOMError ? e : new Error());
-      }
-      finally {
-        this.tx = void 0;
-      }
-    });
-  }
   public keys(): K[] {
     return this.memory.reflect([])
       .reduce<K[]>((keys, e) =>
@@ -261,7 +241,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       .emit([key], new EventStore.InternalEvent(EventStore.InternalEventType.query, makeEventId(0), key, ''));
     return Object.assign(Object.create(null), compose(key, this.attrs, this.memory.reflect([key])).value);
   }
-  public add(event: UnstoredEventRecord<K, V>, tx: IDBTransaction | void = this.tx): void {
+  public add(event: UnstoredEventRecord<K, V>, tx?: IDBTransaction): void {
     assert(event instanceof UnstoredEventRecord);
     assert(event.type === EventStore.EventType.snapshot ? tx : true);
     assert(!tx || tx.db.name === this.database && tx.mode === 'readwrite')
