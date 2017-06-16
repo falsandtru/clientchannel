@@ -17,40 +17,50 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
     super(name, Object.keys(factory()).filter(isValidPropertyName).filter(isValidPropertyValue(factory())), destroy, size, expiry);
     const attrs = <(keyof V)[]>Object.keys(this.factory())
       .filter(isValidPropertyName)
-      .filter(isValidPropertyValue(this.factory()))
-      .sort();
+      .filter(isValidPropertyValue(this.factory()));
     void this.broadcast.listen(ev =>
       void this.fetch(ev instanceof MessageEvent ? <K>ev.data : <K>ev.newValue));
     void this.events_.save
       .monitor([], ({key}) =>
         void this.broadcast.post(key));
     void this.events_.load
-      .monitor([], ({key}) => {
-        if (!this.sources.has(key)) return;
-        const source = this.sources.get(key)!;
+      .monitor([], ({key, attr, type}) => {
+        const source = this.sources.get(key);
         const memory = this.get(key);
         const link = this.link(key);
-        const changes = attrs
-          .filter(attr => attr in memory)
-          .map((attr: keyof V) => {
-            const newVal = memory[attr];
-            const oldVal = source[attr];
-            source[attr] = newVal;
-            return {
-              attr,
-              newVal,
-              oldVal,
-            };
-          })
-          .filter(({ newVal, oldVal }) =>
-            newVal !== oldVal ||
-            !(isNaN(<any>newVal) && isNaN(<any>oldVal)));
-        if (changes.length === 0) return;
-        void migrate(link);
-        void changes
-          .forEach(({ attr, oldVal }) =>
-            void cast(source).__event
-              .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, memory[attr], oldVal)));
+        if (!source) return;
+        switch (type) {
+          case ChannelStore.EventType.put:
+            return void update(attrs.filter(a => a === attr), source, memory, link);
+          case ChannelStore.EventType.delete:
+          case ChannelStore.EventType.snapshot:
+            return void update(attrs, source, memory, link);
+        }
+        return;
+
+        function update(attrs: (keyof V)[], source: Partial<V>, memory: Partial<V>, link: V): void {
+          const changes = attrs
+            .filter(attr => attr in memory)
+            .map((attr: keyof V) => {
+              const newVal = memory[attr];
+              const oldVal = source[attr];
+              source[attr] = newVal;
+              return {
+                attr,
+                newVal,
+                oldVal,
+              };
+            })
+            .filter(({ newVal, oldVal }) =>
+              newVal !== oldVal ||
+              !(isNaN(<any>newVal) && isNaN(<any>oldVal)));
+          if (changes.length === 0) return;
+          void migrate(link);
+          void changes
+            .forEach(({ attr, oldVal }) =>
+              void cast(source).__event
+                .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, memory[attr], oldVal)));
+        }
       });
     void Object.freeze(this);
   }

@@ -2,7 +2,6 @@
 
 ## 0.16.11
 
-- Reflect all stored data before event emitting.
 - Remove transaction feature.
 
 ## 0.16.10

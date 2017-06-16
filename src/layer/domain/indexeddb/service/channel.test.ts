@@ -132,19 +132,15 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
 
       assert(link.n === 0);
       listen('test')(db => {
-        db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { n: 1 })));
-        db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { s: '1' }))).onsuccess = () => {
-          chan.fetch('a');
+        db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { n: 1 }))).onsuccess = () => {
+          chan['schema'].data.fetch('a');
           link.__event.once(['recv', 'n'], () => {
-            assert(link.__id === 2);
+            assert(link.__id === 1);
             assert(link.__key === 'a');
             assert(link.__date > 0);
             assert(link.n === 1);
-            assert(link.s === '1');
-            link.__event.once(['recv', 's'], () => {
-              chan.destroy();
-              done();
-            });
+            chan.destroy();
+            done();
           });
         };
       });
