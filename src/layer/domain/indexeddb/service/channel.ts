@@ -25,20 +25,20 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
         void this.broadcast.post(key));
     void this.events_.load
       .monitor([], ({key, attr, type}) => {
-        const source = this.sources.get(key);
+        if (!this.sources.has(key)) return;
+        const source = this.sources.get(key)!;
         const memory = this.get(key);
         const link = this.link(key);
-        if (!source) return;
         switch (type) {
           case ChannelStore.EventType.put:
-            return void update(attrs.filter(a => a === attr), source, memory, link);
+            return void update(attrs.filter(a => a === attr));
           case ChannelStore.EventType.delete:
           case ChannelStore.EventType.snapshot:
-            return void update(attrs, source, memory, link);
+            return void update(attrs);
         }
         return;
 
-        function update(attrs: (keyof V)[], source: Partial<V>, memory: Partial<V>, link: V): void {
+        function update(attrs: (keyof V)[]): void {
           const changes = attrs
             .filter(attr => attr in memory)
             .map((attr: keyof V) => {
