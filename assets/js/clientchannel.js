@@ -1,4 +1,4 @@
-/*! clientchannel v0.16.10 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.16.11 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -568,31 +568,6 @@ require = function e(t, n, r) {
                         };
                     });
                 };
-                EventStore.prototype.transaction = function (key, cb, complete) {
-                    var _this = this;
-                    return void this.fetch(key, noop_1.noop, function (tx, err) {
-                        try {
-                            if (err)
-                                throw err;
-                            _this.tx = tx;
-                            void cb();
-                            void tx.addEventListener('complete', function () {
-                                return void complete();
-                            });
-                            void tx.addEventListener('abort', function () {
-                                return void complete(tx.error);
-                            });
-                            void tx.addEventListener('error', function () {
-                                return void complete(tx.error);
-                            });
-                        } catch (e) {
-                            void tx.abort();
-                            void complete(e instanceof Error || e instanceof DOMError ? e : new Error());
-                        } finally {
-                            _this.tx = void 0;
-                        }
-                    });
-                };
                 EventStore.prototype.keys = function () {
                     return this.memory.reflect([]).reduce(function (keys, e) {
                         return keys.length === 0 || keys[keys.length - 1] !== e.key ? spica_1.concat(keys, [e.key]) : keys;
@@ -625,9 +600,6 @@ require = function e(t, n, r) {
                 };
                 EventStore.prototype.add = function (event, tx) {
                     var _this = this;
-                    if (tx === void 0) {
-                        tx = this.tx;
-                    }
                     void this.events_.access.emit([
                         event.key,
                         event.attr,
@@ -702,7 +674,7 @@ require = function e(t, n, r) {
                             if (!active())
                                 return void resolve();
                             var req = tx.objectStore(_this.name).add(adjust(event));
-                            tx.oncomplete = function () {
+                            var success = function () {
                                 void clean();
                                 var savedEvent = new event_1.SavedEventRecord(identifier_1.makeEventId(req.result), event.key, event.value, event.type, event.date);
                                 void _this.memory.off([
@@ -733,9 +705,12 @@ require = function e(t, n, r) {
                                     void _this.snapshot(savedEvent.key);
                                 }
                             };
-                            tx.onerror = tx.onabort = function () {
+                            var fail = function () {
                                 return active() ? void reject() : void resolve(), void clean();
                             };
+                            tx.addEventListener('complete', success);
+                            tx.addEventListener('error', fail);
+                            tx.addEventListener('abort', fail);
                         };
                         if (tx)
                             return void cont(tx);
@@ -1407,9 +1382,6 @@ require = function e(t, n, r) {
                     }
                     return this.schema.data.fetch(key, cb);
                 };
-                ChannelStore.prototype.transaction = function (key, cb, complete) {
-                    return this.schema.data.transaction(key, cb, complete);
-                };
                 ChannelStore.prototype.has = function (key) {
                     return this.schema.data.has(key);
                 };
@@ -1797,22 +1769,22 @@ require = function e(t, n, r) {
                     });
                     void _this.events_.load.monitor([], function (_a) {
                         var key = _a.key, attr = _a.attr, type = _a.type;
+                        if (!_this.sources.has(key))
+                            return;
                         var source = _this.sources.get(key);
                         var memory = _this.get(key);
                         var link = _this.link(key);
-                        if (!source)
-                            return;
                         switch (type) {
                         case channel_1.ChannelStore.EventType.put:
                             return void update(attrs.filter(function (a) {
                                 return a === attr;
-                            }), source, memory, link);
+                            }));
                         case channel_1.ChannelStore.EventType.delete:
                         case channel_1.ChannelStore.EventType.snapshot:
-                            return void update(attrs, source, memory, link);
+                            return void update(attrs);
                         }
                         return;
-                        function update(attrs, source, memory, link) {
+                        function update(attrs) {
                             var changes = attrs.filter(function (attr) {
                                 return attr in memory;
                             }).map(function (attr) {
@@ -1867,12 +1839,7 @@ require = function e(t, n, r) {
                                 return _this.meta(key).date;
                             }
                         },
-                        __event: { value: new spica_1.Observation() },
-                        __transaction: {
-                            value: function (cb, complete) {
-                                return _this.transaction(key, cb, complete);
-                            }
-                        }
+                        __event: { value: new spica_1.Observation() }
                     }), this.factory, function (attr, newValue, oldValue) {
                         return void _this.add(new channel_1.ChannelStore.Record(key, (_a = {}, _a[attr] = newValue, _a))), void cast(_this.sources.get(key)).__event.emit([
                             api_2.StorageChannel.EventType.send,
