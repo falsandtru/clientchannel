@@ -97,6 +97,22 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       });
     });
 
+    it('transaction', done => {
+      const chan = new StoreChannel('test', () => new Value(0, ''));
+
+      chan.transaction('a', () => {
+        const link = chan.link('a');
+        assert(link.__id === 0);
+        link.n = 1;
+        link.s = '1';
+      }, () => {
+        const link = chan.link('a');
+        assert(link.__id === 2);
+        chan.destroy();
+        done();
+      });
+    });
+
     it('send', done => {
       const chan = new StoreChannel('test', () => new Value(0, ''));
       const link = chan.link('a');

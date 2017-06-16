@@ -206,7 +206,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       tx.onerror = tx.onabort = () => void cb(tx.error);
     });
   }
-  private tx: IDBTransaction | void;
+  private tx: IDBTransaction | void = void 0;
   public transaction(key: K, cb: () => void, complete: (err?: DOMException | DOMError | Error) => void): void {
     return void this.fetch(key, noop, (tx, err) => {
       try {
@@ -304,8 +304,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         const req = tx
           .objectStore(this.name)
           .add(adjust(event));
-        assert(!tx.oncomplete);
-        tx.oncomplete = () => {
+        const success = () => {
           assert(req.result > 0);
           void clean();
           const savedEvent = new SavedEventRecord(makeEventId(<number>req.result), event.key, event.value, event.type, event.date);
@@ -328,13 +327,14 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             void this.snapshot(savedEvent.key);
           }
         };
-        assert(!tx.onerror);
-        assert(!tx.onabort);
-        tx.onerror = tx.onabort = () => (
+        const fail = () => (
           active()
             ? void reject()
             : void resolve(),
           void clean());
+        tx.addEventListener('complete', success);
+        tx.addEventListener('error', fail);
+        tx.addEventListener('abort', fail);
       };
       if (tx) return void cont(tx);
       const cancellation = new Cancellation();
