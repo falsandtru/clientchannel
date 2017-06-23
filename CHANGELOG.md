@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.16.11
+## 0.17.0
 
 - Remove transaction feature.
 
