@@ -1,4 +1,4 @@
-/*! clientchannel v0.17.0 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.17.1 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -1798,7 +1798,7 @@ require = function e(t, n, r) {
                                 };
                             }).filter(function (_a) {
                                 var newVal = _a.newVal, oldVal = _a.oldVal;
-                                return newVal !== oldVal || !(isNaN(newVal) && isNaN(oldVal));
+                                return newVal !== oldVal || !(Number.isNaN(newVal) && Number.isNaN(oldVal));
                             });
                             if (changes.length === 0)
                                 return;
