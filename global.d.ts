@@ -4,6 +4,10 @@ import _assert from 'power-assert';
 declare global {
   const assert: typeof _assert;
 
+  interface NumberConstructor {
+    isNaN(target: any): target is number;
+  }
+
   interface IDBDatabase {
     onclose: (ev: Event) => void;
   }

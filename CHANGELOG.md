@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.17.1
+
+- Fix incorrect event emitting with NaN checks.
+
 ## 0.17.0
 
 - Remove transaction feature.
