@@ -7,9 +7,9 @@ export type Config = {
 
 export const commands = new Map<string, Command>();
 export const enum Command {
-  open = 1,
-  close,
-  destroy,
+  open = 'open',
+  close = 'close',
+  destroy = 'destroy',
 }
 
 export const requests = new Map<string, Request[]>();
