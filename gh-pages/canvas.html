@@ -28,7 +28,7 @@
     // connect to database
     var StoreChannel = require('clientchannel').StoreChannel;
     var chan = new StoreChannel('demo', {
-      schema: function () {
+      Schema: function () {
         // define schema
         return {
           event: function () {

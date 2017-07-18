@@ -9,14 +9,14 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
   constructor(
     name: string,
     {
-      schema,
+      Schema,
       migrate = () => void 0,
       destroy = () => true,
       size = Infinity,
       expiry = Infinity,
     }: StoreChannelConfig<K, V>
   ) {
-    super(name, schema, migrate, destroy, size, expiry);
+    super(name, Schema, migrate, destroy, size, expiry);
   }
 }
 
@@ -24,10 +24,10 @@ export class StorageChannel<V extends StorageChannelObject> extends BaseStorageC
   constructor(
     name: string,
     {
-      schema,
+      Schema,
       migrate = () => void 0,
     }: StorageChannelConfig<V>
   ) {
-    super(name, localStorage, schema, migrate);
+    super(name, localStorage, Schema, migrate);
   }
 }

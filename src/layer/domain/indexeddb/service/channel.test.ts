@@ -28,21 +28,18 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     interface Value extends StoreChannelObject<string> {
     }
     class Value {
-      constructor(
-        public n: number,
-        public s: string
-      ) {
-      }
+      public n: number = 0;
+      public s: string = '';
     }
 
     it('resource', () => {
-      const chan = new StoreChannel('test', () => new Value(0, ''));
-      assert.throws(() => new StoreChannel('test', () => new Value(0, '')));
+      const chan = new StoreChannel('test', Value);
+      assert.throws(() => new StoreChannel('test', Value));
       chan.destroy();
     });
 
     it('link', () => {
-      const chan = new StoreChannel('test', () => new Value(0, ''));
+      const chan = new StoreChannel('test', Value);
       const link = chan.link('a');
 
       assert(link === chan.link('a'));
@@ -56,7 +53,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     });
 
     it('sync', done => {
-      const chan = new StoreChannel('test', () => new Value(0, ''));
+      const chan = new StoreChannel('test', Value);
 
       listen('test')(db => {
         db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { n: 1 })));
@@ -77,7 +74,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     });
 
     it('fetch', done => {
-      const chan = new StoreChannel('test', () => new Value(0, ''));
+      const chan = new StoreChannel('test', Value);
 
       listen('test')(db => {
         db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { n: 1 })));
@@ -98,7 +95,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     });
 
     it('send', done => {
-      const chan = new StoreChannel('test', () => new Value(0, ''));
+      const chan = new StoreChannel('test', Value);
       const link = chan.link('a');
 
       link.__event.once(['send', 'n'], ev => {
@@ -127,7 +124,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     });
 
     it('recv', done => {
-      const chan = new StoreChannel('test', () => new Value(0, ''));
+      const chan = new StoreChannel('test', Value);
       const link = chan.link('a');
 
       assert(link.n === 0);
@@ -147,12 +144,12 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     });
 
     it('migrate', (done) => {
-      let chan = new StoreChannel('test', () => new Value(0, ''));
+      let chan = new StoreChannel('test', Value);
       const link = chan.link('a');
       link.n = 1;
       chan.events.save.once(['a', 'n', 'put'], () => {
         chan.close();
-        chan = new StoreChannel('test', () => new Value(0, ''), link => {
+        chan = new StoreChannel('test', Value, link => {
           assert(link.__id === 1);
           assert(link.n === 1);
           link.n = 2;

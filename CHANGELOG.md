@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.0
+
+- Change the way to define schema.
+
 ## 0.17.1
 
 - Fix incorrect event emitting with NaN checks.

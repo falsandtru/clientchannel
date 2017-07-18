@@ -23,11 +23,9 @@ describe('Integration: Package', function () {
       }
 
       const chan = new StoreChannel('domain', {
+        Schema: Value,
         // delete linked record 3 days later since last access.
         expiry: 3 * 24 * 60 * 60 * 1e3,
-        schema() {
-          return new Value();
-        }
       });
       // load data from indexeddb a little later.
       const link = chan.link('path');
@@ -48,9 +46,7 @@ describe('Integration: Package', function () {
       }
 
       const chan = new StorageChannel('version', {
-        schema() {
-          return new Value();
-        }
+        Schema: Value,
       });
       const link = chan.link();
       const VERSION = 1;

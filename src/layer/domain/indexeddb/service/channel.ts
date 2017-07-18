@@ -8,16 +8,16 @@ import { BroadcastChannel } from '../../broadcast/api';
 export class StoreChannel<K extends string, V extends ChannelObject<K>> extends ChannelStore<K, V> implements IStoreChannel<K, V> {
   constructor(
     name: string,
-    private readonly factory: () => V,
+    private readonly Schema: new () => V,
     migrate: (link: V) => void = () => void 0,
     destroy: (reason: any, ev?: Event) => boolean = () => true,
     size: number = Infinity,
     expiry: number = Infinity,
   ) {
-    super(name, Object.keys(factory()).filter(isValidPropertyName).filter(isValidPropertyValue(factory())), destroy, size, expiry);
-    const attrs = <(keyof V)[]>Object.keys(this.factory())
+    super(name, Object.keys(new Schema()).filter(isValidPropertyName).filter(isValidPropertyValue(new Schema())), destroy, size, expiry);
+    const attrs = <(keyof V)[]>Object.keys(new Schema())
       .filter(isValidPropertyName)
-      .filter(isValidPropertyValue(this.factory()));
+      .filter(isValidPropertyValue(new Schema()));
     void this.broadcast.listen(ev =>
       void this.fetch(ev instanceof MessageEvent ? <K>ev.data : <K>ev.newValue));
     void this.events_.save
@@ -97,7 +97,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
               },
             }
           ),
-          this.factory,
+          () => new this.Schema(),
           (attr: keyof V, newValue, oldValue) => (
             void this.add(new ChannelStore.Record<K, V>(key, <V>{ [attr]: newValue })),
             void cast(this.sources.get(key)!).__event

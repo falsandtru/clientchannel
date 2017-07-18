@@ -10,9 +10,9 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
   constructor(
     public readonly name: string,
     private readonly storage: StorageLike = sessionStorage || fakeStorage,
-    private readonly factory: () => V,
+    Schema: new () => V,
     migrate: (link: V) => void = () => void 0,
-    private readonly log = {
+    log = {
       update(_name: string) { },
       delete(_name: string) { }
     }
@@ -26,8 +26,8 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
       [SCHEMA.EVENT.NAME]: new Observation<[StorageChannelEventType] | [StorageChannelEventType, keyof V], StorageChannel.Event<V>, void>(),
       ...<Object>parse<V>(this.storage.getItem(this.name))
     };
-    this.link_ = build(source, this.factory, (attr: keyof V, newValue, oldValue) => {
-      void this.log.update(this.name);
+    this.link_ = build(source, () => new Schema(), (attr: keyof V, newValue, oldValue) => {
+      void log.update(this.name);
       void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, attr) => {
         acc[attr] = source[attr];
         return acc;
@@ -54,9 +54,9 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
             void this.events.recv.emit([event.attr], event);
           }, void 0);
       }));
-    void this.log.update(this.name);
+    void log.update(this.name);
     void this.cancellation.register(() =>
-      void this.log.delete(this.name));
+      void log.delete(this.name));
     void this.cancellation.register(() =>
         void this.storage.removeItem(this.name));
     void Object.freeze(this);
