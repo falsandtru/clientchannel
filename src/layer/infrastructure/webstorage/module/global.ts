@@ -1,4 +1,4 @@
-import { uuid } from 'spica';
+import { uuid } from 'spica/uuid';
 
 const supportsWebStorage: boolean = (() => {
   try {

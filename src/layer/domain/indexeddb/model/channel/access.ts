@@ -1,4 +1,4 @@
-import { Observer } from 'spica';
+import { Observer } from 'spica/observation';
 import { Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
 import { EventStore } from '../../../../data/es/store';

@@ -1,5 +1,7 @@
 import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../';
-import { Observation, Cancellation, Cache } from 'spica';
+import { Observation } from 'spica/observation';
+import { Cancellation } from 'spica/cancellation';
+import { Cache } from 'spica/cache';
 import { open, close, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { DataStore } from './channel/data';
 import { AccessStore } from './channel/access';

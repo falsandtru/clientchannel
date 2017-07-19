@@ -5,7 +5,6 @@ module.exports = function (config) {
     files: [
       { pattern: 'https://cdn.polyfill.io/v2/polyfill.js?features=default,WeakMap,WeakSet,Array.prototype.findIndex,Number.isInteger&flags=gated', watched: false, served: false, included: true },
       { pattern: 'node_modules/power-assert/build/power-assert.js', watched: true, served: true, included: true },
-      { pattern: 'node_modules/spica/dist/spica.js', watched: true, served: true, included: true },
       { pattern: 'dist/*.js', watched: true, served: true, included: true }
     ],
     exclude: [

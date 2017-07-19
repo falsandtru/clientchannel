@@ -1,4 +1,4 @@
-﻿import { Observer, Subscriber } from 'spica';
+﻿import { Observer, Subscriber } from 'spica/observation';
 
 export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
   constructor(name: string, config: StoreChannelConfig<K, V>);

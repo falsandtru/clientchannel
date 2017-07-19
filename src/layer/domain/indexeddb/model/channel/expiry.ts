@@ -1,4 +1,5 @@
-import { Observer, Cancellee } from 'spica';
+import { Observer } from 'spica/observation';
+import { Cancellee } from 'spica/cancellation';
 import { Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
 import { EventStore } from '../../../../data/es/store';

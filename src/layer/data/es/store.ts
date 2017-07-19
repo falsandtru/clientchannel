@@ -1,4 +1,8 @@
-import { Observation, Cancellation, tick, sqid, concat } from 'spica';
+import { Observation } from 'spica/observation';
+import { Cancellation } from 'spica/cancellation';
+import { tick } from 'spica/tick';
+import { sqid } from 'spica/sqid';
+import { concat } from 'spica/concat';
 import { listen, Config, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { EventId, makeEventId } from './identifier';
 import { EventRecordType, UnstoredEventRecord, StoredEventRecord, LoadedEventRecord, SavedEventRecord, EventRecordValue, isValidPropertyName } from './event';

@@ -1,4 +1,4 @@
-import { Observation } from 'spica';
+import { Observation } from 'spica/observation';
 import { listen, Config } from '../../infrastructure/indexeddb/api';
 import { noop } from '../../../lib/noop';
 

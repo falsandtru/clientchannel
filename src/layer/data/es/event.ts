@@ -1,5 +1,5 @@
 import { StoreChannelEventType } from '../../../../';
-import { clone } from 'spica';
+import { clone } from 'spica/assign';
 import { EventId, makeEventId } from './identifier';
 import { isStorable } from '../database/value';
 

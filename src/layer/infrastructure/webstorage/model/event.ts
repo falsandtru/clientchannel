@@ -1,4 +1,4 @@
-import { Observation, Observer } from 'spica';
+import { Observation, Observer } from 'spica/observation';
 import { localStorage, sessionStorage } from '../module/global';
 
 type Type = ['local' | 'session'] | ['local' | 'session', string];

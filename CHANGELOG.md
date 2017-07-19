@@ -2,6 +2,7 @@
 
 ## 0.18.0
 
+- Remove dependencies.
 - Change the way to define schema.
 
 ## 0.17.1

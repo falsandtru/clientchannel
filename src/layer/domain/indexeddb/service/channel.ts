@@ -1,5 +1,5 @@
 import { StoreChannel as IStoreChannel, StoreChannelObject as ChannelObject } from '../../../../../';
-import { Observation } from 'spica';
+import { Observation } from 'spica/observation';
 import { build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { ChannelStore } from '../model/channel';
 import { StorageChannel } from '../../webstorage/api';
