@@ -36,7 +36,8 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
     switch (type) {
       case EventRecordType.put:
         if (!isValidPropertyName(this.attr)) throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
-        this.value = value = new EventRecordValue({ [this.attr]: value[this.attr] });
+        assert(this.attr !== '');
+        this.value = value = new EventRecordValue({ [this.attr]: value[<keyof V>this.attr] });
         void Object.freeze(this.value);
         void Object.freeze(this);
         return;

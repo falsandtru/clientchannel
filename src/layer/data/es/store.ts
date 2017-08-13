@@ -526,10 +526,11 @@ export function compose<K extends string, V extends EventStore.Value>(
   function compose(target: E, source: E): E {
     switch (source.type) {
       case EventStore.EventType.put:
+        assert(source.attr !== '');
         return new UnstoredEventRecord<K, V>(
           source.key,
           new EventStore.Value(target.value, {
-            [source.attr]: source.value[source.attr]
+            [source.attr]: source.value[<keyof V>source.attr]
           }),
           EventStore.EventType.snapshot);
       case EventStore.EventType.snapshot:
