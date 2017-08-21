@@ -1,4 +1,4 @@
-import { configs, Config, commands, Command, requests, Request } from './state';
+import { configs, Config, commands, Command, requests } from './state';
 import { handleState } from './mutation';
 
 export function open(database: string, config: Config): void {
@@ -7,11 +7,10 @@ export function open(database: string, config: Config): void {
   void handleState(database);
 }
 
-export function listen(database: string): (req: Request) => void {
-  return (req: Request) => {
-    void requests.set(database, requests.get(database) || []).get(database)!.push(req);
-    void handleState(database);
-  };
+export function listen(database: string): (success: (db: IDBDatabase) => void, failure?: () => void) => void {
+  return (success, failure = () => void 0) => (
+    void requests.get(database)!.add(success, failure),
+    void handleState(database));
 }
 
 export function close(database: string): void {

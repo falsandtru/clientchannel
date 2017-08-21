@@ -12,9 +12,40 @@ export const enum Command {
   destroy = 'destroy',
 }
 
-export const requests = new Map<string, Request[]>();
-export type Request = (db: IDBDatabase) => void;
-
+export const requests = new Map<string, Requests>();
+type Request = {
+  success: (db: IDBDatabase) => void;
+  failure: () => void;
+};
+class Requests {
+  private queue: Request[] = [];
+  public add(success: (db: IDBDatabase) => void, failure: () => void) {
+    void this.queue.push({ success, failure });
+  }
+  public resolve(state: SuccessState, catcher: (reason: any) => void): void {
+    try {
+      while (this.queue.length > 0 && state.alive) {
+        assert(state.command === Command.open);
+        const request = this.queue.shift()!;
+        void request.success(state.connection);
+      }
+    }
+    catch (reason) {
+      void catcher(reason);
+    }
+  }
+  public clear(): void {
+    try {
+      this.queue
+        .forEach(({ failure }) =>
+          void failure());
+    }
+    catch (_) {
+      return this.clear();
+    }
+    this.queue.length = 0;
+  }
+}
 
 export const states = new Map<string, State>();
 
@@ -50,10 +81,8 @@ abstract class State {
     assert(configs.has(this.database));
     return configs.get(this.database)!;
   }
-  public get requests(): Request[] {
-    return requests
-      .set(this.database, requests.get(this.database) || [])
-      .get(this.database)!;
+  public get requests(): Requests {
+    return requests.get(this.database)!;
   }
 }
 
@@ -65,6 +94,7 @@ export class InitialState extends State {
   ) {
     super(database);
     this.STATE;
+    void requests.set(database, requests.get(database) || new Requests());
   }
 }
 

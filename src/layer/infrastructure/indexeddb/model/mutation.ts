@@ -73,9 +73,9 @@ function handleFromUpgradeState(state: UpgradeState): void {
 
 function handleFromSuccessState(state: SuccessState): void {
   if (!state.alive) return;
-  const { database, connection } = state;
+  const { database, connection, requests } = state;
   connection.onversionchange = () => (
-    state.requests.length = 0,
+    requests.clear(),
     void connection.close(),
     void idbEventStream_.emit([database, IDBEventType.destroy], new IDBEvent(database, IDBEventType.destroy)),
     void handleFromEndState(new EndState(state)));
@@ -107,21 +107,13 @@ function handleFromSuccessState(state: SuccessState): void {
         }
       }
       void idbEventStream_.emit([database, IDBEventType.connect], new IDBEvent(database, IDBEventType.connect));
-      const reqs = state.requests;
-      try {
-        while (reqs.length > 0 && state.alive) {
-          assert(state.command === Command.open);
-          void reqs.shift()!(connection);
-        }
-      }
-      catch (reason) {
+      return void requests.resolve(state, reason => {
         assert(!console.error(reason + ''));
         void new Promise((_, reject) =>
           void reject(reason));
         void connection.close();
         void handleFromCrashState(new CrashState(state, reason));
-      }
-      return void 0;
+      });
     }
     case Command.close:
       void connection.close();
@@ -173,7 +165,7 @@ function handleFromDestroyState(state: DestroyState): void {
   const { database } = state;
   const deleteRequest = indexedDB.deleteDatabase(database);
   deleteRequest.onsuccess = () => (
-    state.requests.length = 0,
+    state.requests.clear(),
     void idbEventStream_.emit([database, IDBEventType.destroy], new IDBEvent(database, IDBEventType.destroy)),
     void handleFromEndState(new EndState(state)));
   deleteRequest.onerror = event =>
@@ -199,7 +191,7 @@ function handleFromEndState(state: EndState): void {
     case Command.destroy:
       void commands.delete(database);
       void configs.delete(database);
-      state.requests.length = 0;
+      state.requests.clear();
       return void idbEventStream_
         .emit([database, IDBEventType.disconnect], new IDBEvent(database, IDBEventType.disconnect));
   }
