@@ -107,7 +107,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     memory: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', string], UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>, void>(),
     access: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.InternalEventType], EventStore.InternalEvent<K>, void>()
   });
-  private readonly syncState = new Map<K, boolean>();
+  private readonly syncState = new Map<K, boolean | undefined>();
   private readonly syncWaits = new Observation<[K], DOMException | DOMError | void, any>();
   public sync(keys: K[], cb: (errs: [K, DOMException | DOMError][]) => void = noop): void {
     type SyncErrorInfo = [K, DOMException | DOMError];
@@ -128,27 +128,28 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       .then(rs =>
         void cb(<SyncErrorInfo[]>rs.filter(r => r)));
   }
-  public fetch(key: K, cb: (err?: DOMException | DOMError) => void = noop, after: (tx: IDBTransaction, err?: DOMException | DOMError) => void = noop): void {
-    void this.syncState.set(key, this.syncState.get(key) === true);
+  public fetch(key: K, cb: (err?: DOMException | DOMError) => void = noop): void {
     const events: LoadedEventRecord<K, V>[] = [];
+    const updateSyncState = (state?: boolean) =>
+      void this.syncState.set(key, state || this.syncState.get(key) || void 0);
+    void updateSyncState(this.syncState.get(key) === true);
     return void listen(this.database)(db => {
       const tx = db
-        .transaction(this.name, after ? 'readwrite' : 'readonly');
+        .transaction(this.name, 'readonly');
       const req = tx
         .objectStore(this.name)
         .index(EventStoreSchema.key)
         .openCursor(key, 'prev');
-      const unbind = () => {
-        req.onsuccess = tx.onerror = tx.onabort = <any>null;
-      };
+      const unbind = () => void (
+        req.onsuccess = tx.onerror = tx.onabort = <any>null);
       const proc = (cursor: IDBCursorWithValue | null, err: DOMException | DOMError | null): void => {
-        if (err) return (
-          void cb(err),
-          void unbind(),
-          void after(tx, err));
+        if (err) return void (
+          cb(err),
+          updateSyncState(),
+          unbind());
         if (!cursor || new LoadedEventRecord<K, V>(cursor.value).date < this.meta(key).date) {
           // register latest events
-          void this.syncState.set(key, true);
+          void updateSyncState(true);
           void Array.from(
             events
               // remove overridable event
@@ -162,16 +163,13 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
               , new Map())
               .values())
             .sort((a, b) => a.date - b.date || a.id - b.id)
-            .forEach(e => {
-              assert(this.memory.refs([e.key, e.attr, sqid(e.id)]).length === 0);
-              assert(this.memory.refs([e.key, e.attr, sqid(e.id + 1)]).length === 0);
+            .forEach(e => (
               void this.memory
-                .off([e.key, e.attr, sqid(e.id)]);
+                .off([e.key, e.attr, sqid(e.id)]),
               void this.memory
-                .on([e.key, e.attr, sqid(e.id)], () => e);
+                .on([e.key, e.attr, sqid(e.id)], () => e),
               void this.events_.memory
-                .emit([e.key, e.attr, sqid(e.id)], e);
-            });
+                .emit([e.key, e.attr, sqid(e.id)], e)));
           try {
             void cb();
           }
@@ -180,7 +178,6 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
               void reject(reason));
           }
           void unbind();
-          void after(tx);
           void this.events_.access
             .emit([key], new EventStore.InternalEvent(EventStore.InternalEventType.query, makeEventId(0), key, ''));
           if (events.length >= this.snapshotCycle) {
@@ -205,7 +202,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       };
       req.onsuccess = () => void proc(req.result, req.error);
       tx.onerror = tx.onabort = () => void cb(tx.error);
-    });
+    }, updateSyncState);
   }
   public keys(): K[] {
     return this.memory.reflect([])
@@ -323,11 +320,13 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       void cancellation.register(clean);
       void tick(() => (
         void setTimeout(cancellation.cancel, 1000),
-        void listen(this.database)(db => (
-          void cancellation.close(),
-          void cancellation.maybe(db)
-            .fmap(db => void cont(db.transaction(this.name, 'readwrite')))
-            .extract(() => void 0)))));
+        void listen(this.database)(
+          db => (
+            void cancellation.close(),
+            void cancellation.maybe(db)
+              .fmap(db => void cont(db.transaction(this.name, 'readwrite')))
+              .extract(() => void 0)),
+          cancellation.cancel)));
     })
       .catch(() =>
         void this.events.loss.emit([event.key, event.attr, event.type], new EventStore.Event<K, V>(event.type, makeEventId(0), event.key, event.attr, event.date)));
@@ -429,7 +428,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         }
       });
   }
-  public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMException | DOMError | null) => void): void {
+  public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMException | DOMError | Error | null) => void): void {
     return void listen(this.database)(db => {
       const tx = db
         .transaction(this.name, mode);
@@ -444,7 +443,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       req.onsuccess = () => req.result && void cb(req.result, req.error);
       tx.oncomplete = () => void cb(null, tx.error);
       tx.onerror = tx.onabort = () => void cb(null, tx.error);
-    });
+    }, () => cb(null, new Error('Access has failed.')));
   }
 }
 export namespace EventStore {

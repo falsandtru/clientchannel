@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.1
+
+- Fix processing with database access failure.
+
 ## 0.18.0
 
 - Remove dependencies.
