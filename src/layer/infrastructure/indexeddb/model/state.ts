@@ -26,8 +26,7 @@ class Requests {
     try {
       while (this.queue.length > 0 && state.alive) {
         assert(state.command === Command.open);
-        const request = this.queue.shift()!;
-        void request.success(state.connection);
+        void this.queue.shift()!.success(state.connection);
       }
     }
     catch (reason) {
@@ -36,14 +35,13 @@ class Requests {
   }
   public clear(): void {
     try {
-      this.queue
-        .forEach(({ failure }) =>
-          void failure());
+      while (this.queue.length > 0) {
+        void this.queue.shift()!.failure();
+      }
     }
     catch (_) {
       return this.clear();
     }
-    this.queue.length = 0;
   }
 }
 
