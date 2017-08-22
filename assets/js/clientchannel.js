@@ -1,4 +1,4 @@
-/*! clientchannel v0.18.0 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.18.1 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -96,12 +96,13 @@ require = function e(t, n, r) {
                 }
             }
         },
-        { './type': 21 }
+        { './type': 22 }
     ],
     4: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            var equal_1 = require('./equal');
             var Cache = function () {
                 function Cache(size, callback, _a) {
                     if (callback === void 0) {
@@ -113,6 +114,7 @@ require = function e(t, n, r) {
                             [],
                             []
                         ] : _c, _d = _b.entries, entries = _d === void 0 ? [] : _d;
+                    var _this = this;
                     this.size = size;
                     this.callback = callback;
                     if (size > 0 === false)
@@ -124,10 +126,14 @@ require = function e(t, n, r) {
                         LFU: LFU
                     };
                     this.store = new Map(entries.slice(0, size));
+                    if (this.store.size !== LFU.length + LRU.length)
+                        throw new Error('Spica: Cache: Size of stats and entries is not matched.');
+                    if (!LFU.concat(LRU).every(function (k) {
+                            return _this.store.has(k);
+                        }))
+                        throw new Error('Spica: Cache: Keys of stats and entries is not matched.');
                 }
                 Cache.prototype.put = function (key, value) {
-                    if (key !== key)
-                        throw new TypeError('Spica: Cache: Cannot use NaN for keys.');
                     if (this.access(key))
                         return void this.store.set(key, value), true;
                     var _a = this.stats, LRU = _a.LRU, LFU = _a.LFU;
@@ -159,17 +165,17 @@ require = function e(t, n, r) {
                     return this.store.has(key);
                 };
                 Cache.prototype.delete = function (key) {
+                    if (!this.store.has(key))
+                        return false;
                     var _a = this.stats, LRU = _a.LRU, LFU = _a.LFU;
                     for (var _i = 0, _b = [
                                 LFU,
                                 LRU
                             ]; _i < _b.length; _i++) {
                         var log = _b[_i];
-                        var index = log.indexOf(key);
+                        var index = equal_1.findIndex(key, log);
                         if (index === -1)
                             continue;
-                        if (!this.store.has(key))
-                            return false;
                         var val = this.store.get(key);
                         void this.store.delete(log.splice(index, 1)[0]);
                         void this.callback(key, val);
@@ -213,8 +219,10 @@ require = function e(t, n, r) {
                     return this.accessLFU(key) || this.accessLRU(key);
                 };
                 Cache.prototype.accessLRU = function (key) {
+                    if (!this.store.has(key))
+                        return false;
                     var LRU = this.stats.LRU;
-                    var index = LRU.indexOf(key);
+                    var index = equal_1.findIndex(key, LRU);
                     if (index === -1)
                         return false;
                     var LFU = this.stats.LFU;
@@ -222,8 +230,10 @@ require = function e(t, n, r) {
                     return true;
                 };
                 Cache.prototype.accessLFU = function (key) {
+                    if (!this.store.has(key))
+                        return false;
                     var LFU = this.stats.LFU;
-                    var index = LFU.indexOf(key);
+                    var index = equal_1.findIndex(key, LFU);
                     if (index === -1)
                         return false;
                     void LFU.unshift.apply(LFU, LFU.splice(index, 1));
@@ -233,7 +243,7 @@ require = function e(t, n, r) {
             }();
             exports.Cache = Cache;
         },
-        {}
+        { './equal': 8 }
     ],
     5: [
         function (require, module, exports) {
@@ -311,9 +321,9 @@ require = function e(t, n, r) {
             exports.Cancellation = Cancellation;
         },
         {
-            './exception': 8,
-            './monad/either': 11,
-            './monad/maybe': 15
+            './exception': 9,
+            './monad/either': 12,
+            './monad/maybe': 16
         }
     ],
     6: [
@@ -355,6 +365,23 @@ require = function e(t, n, r) {
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            function findIndex(a1, as) {
+                var isNaN = a1 !== a1;
+                for (var i = 0; i < as.length; ++i) {
+                    var a2 = as[i];
+                    if (isNaN ? a2 !== a2 : a2 === a1)
+                        return i;
+                }
+                return -1;
+            }
+            exports.findIndex = findIndex;
+        },
+        {}
+    ],
+    9: [
+        function (require, module, exports) {
+            'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             function causeAsyncException(reason) {
                 void new Promise(function (_, reject) {
                     return void reject(reason);
@@ -371,7 +398,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    9: [
+    10: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -417,10 +444,10 @@ require = function e(t, n, r) {
         },
         {
             '../curry': 7,
-            './functor': 12
+            './functor': 13
         }
     ],
-    10: [
+    11: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -529,9 +556,9 @@ require = function e(t, n, r) {
                 throw new Error('Spica: Either: Invalid thunk call.');
             }
         },
-        { './monad': 16 }
+        { './monad': 17 }
     ],
-    11: [
+    12: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -553,9 +580,9 @@ require = function e(t, n, r) {
             }
             exports.Right = Right;
         },
-        { './either.impl': 10 }
+        { './either.impl': 11 }
     ],
-    12: [
+    13: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -594,9 +621,9 @@ require = function e(t, n, r) {
             }(Functor = exports.Functor || (exports.Functor = {})));
             exports.Functor = Functor;
         },
-        { './lazy': 13 }
+        { './lazy': 14 }
     ],
-    13: [
+    14: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -613,7 +640,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    14: [
+    15: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -735,9 +762,9 @@ require = function e(t, n, r) {
                 throw new Error('Spica: Maybe: Invalid thunk call.');
             }
         },
-        { './monadplus': 17 }
+        { './monadplus': 18 }
     ],
-    15: [
+    16: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -758,9 +785,9 @@ require = function e(t, n, r) {
             exports.Just = Just;
             exports.Nothing = Monad.Maybe.mzero;
         },
-        { './maybe.impl': 14 }
+        { './maybe.impl': 15 }
     ],
-    16: [
+    17: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -799,9 +826,9 @@ require = function e(t, n, r) {
             }(Monad = exports.Monad || (exports.Monad = {})));
             exports.Monad = Monad;
         },
-        { './applicative': 9 }
+        { './applicative': 10 }
     ],
-    17: [
+    18: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -834,13 +861,14 @@ require = function e(t, n, r) {
             }(MonadPlus = exports.MonadPlus || (exports.MonadPlus = {})));
             exports.MonadPlus = MonadPlus;
         },
-        { './monad': 16 }
+        { './monad': 17 }
     ],
-    18: [
+    19: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var concat_1 = require('./concat');
+            var equal_1 = require('./equal');
             var exception_1 = require('./exception');
             var RegisterItemType;
             (function (RegisterItemType) {
@@ -931,9 +959,7 @@ require = function e(t, n, r) {
                                 if (child.items.length + child.childrenNames.length > 0)
                                     return;
                                 void node_1.children.delete(name);
-                                void node_1.childrenNames.splice(node_1.childrenNames.findIndex(function (value) {
-                                    return value === name || name !== name && value !== value;
-                                }), 1);
+                                void node_1.childrenNames.splice(equal_1.findIndex(name, node_1.childrenNames), 1);
                             });
                             node_1.items = node_1.items.filter(function (_a) {
                                 var type = _a.type;
@@ -1024,23 +1050,15 @@ require = function e(t, n, r) {
                 Observation.prototype.refsBelow_ = function (_a) {
                     var childrenNames = _a.childrenNames, children = _a.children, items = _a.items;
                     items = concat_1.concat([], items);
-                    var _loop_1 = function (i) {
+                    for (var i = 0; i < childrenNames.length; ++i) {
                         var name_1 = childrenNames[i];
-                        var below = this_1.refsBelow_(children.get(name_1));
+                        var below = this.refsBelow_(children.get(name_1));
                         items = concat_1.concat(items, below);
                         if (below.length === 0) {
                             void children.delete(name_1);
-                            void childrenNames.splice(childrenNames.findIndex(function (value) {
-                                return value === name_1 || Number.isNaN(value) && Number.isNaN(name_1);
-                            }), 1);
+                            void childrenNames.splice(equal_1.findIndex(name_1, childrenNames), 1);
                             void --i;
                         }
-                        out_i_1 = i;
-                    };
-                    var this_1 = this, out_i_1;
-                    for (var i = 0; i < childrenNames.length; ++i) {
-                        _loop_1(i);
-                        i = out_i_1;
                     }
                     return items;
                 };
@@ -1084,13 +1102,15 @@ require = function e(t, n, r) {
         },
         {
             './concat': 6,
-            './exception': 8
+            './equal': 8,
+            './exception': 9
         }
     ],
-    19: [
+    20: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            var zeros = '0'.repeat(15);
             var cnt = 0;
             function sqid(id) {
                 if (arguments.length > 0) {
@@ -1101,13 +1121,13 @@ require = function e(t, n, r) {
                     if (id % 1 !== 0)
                         throw new TypeError('Spica: sqid: A parameter value must be an integer: ' + id);
                 }
-                return id === void 0 ? (1000000000000000 + ++cnt + '').slice(1) : (1000000000000000 + id + '').slice(1);
+                return id === void 0 ? (zeros + ++cnt).slice(-15) : (zeros + id).slice(-15);
             }
             exports.sqid = sqid;
         },
         {}
     ],
-    20: [
+    21: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1153,9 +1173,9 @@ require = function e(t, n, r) {
                 }
             }
         },
-        { './exception': 8 }
+        { './exception': 9 }
     ],
-    21: [
+    22: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1166,7 +1186,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    22: [
+    23: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1189,7 +1209,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    23: [
+    24: [
         function (require, module, exports) {
             'use strict';
             function __export(m) {
@@ -1200,9 +1220,9 @@ require = function e(t, n, r) {
             Object.defineProperty(exports, '__esModule', { value: true });
             __export(require('./layer/interface/api'));
         },
-        { './layer/interface/api': 51 }
+        { './layer/interface/api': 52 }
     ],
-    24: [
+    25: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -1257,11 +1277,11 @@ require = function e(t, n, r) {
             exports.StorageChannel = StorageChannel;
         },
         {
-            '../domain/indexeddb/api': 33,
-            '../domain/webstorage/api': 39
+            '../domain/indexeddb/api': 34,
+            '../domain/webstorage/api': 40
         }
     ],
-    25: [
+    26: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1297,7 +1317,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    26: [
+    27: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -1449,12 +1469,12 @@ require = function e(t, n, r) {
             exports.isValidPropertyValue = isValidPropertyValue;
         },
         {
-            '../database/value': 25,
-            './identifier': 27,
+            '../database/value': 26,
+            './identifier': 28,
             'spica/assign': 3
         }
     ],
-    27: [
+    28: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1468,7 +1488,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    28: [
+    29: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -1637,27 +1657,27 @@ require = function e(t, n, r) {
                         }));
                     });
                 };
-                EventStore.prototype.fetch = function (key, cb, after) {
+                EventStore.prototype.fetch = function (key, cb) {
                     var _this = this;
                     if (cb === void 0) {
                         cb = noop_1.noop;
                     }
-                    if (after === void 0) {
-                        after = noop_1.noop;
-                    }
-                    void this.syncState.set(key, this.syncState.get(key) === true);
                     var events = [];
+                    var updateSyncState = function (state) {
+                        return void _this.syncState.set(key, state || _this.syncState.get(key) || void 0);
+                    };
+                    void updateSyncState(this.syncState.get(key) === true);
                     return void api_1.listen(this.database)(function (db) {
-                        var tx = db.transaction(_this.name, after ? 'readwrite' : 'readonly');
+                        var tx = db.transaction(_this.name, 'readonly');
                         var req = tx.objectStore(_this.name).index(EventStoreSchema.key).openCursor(key, 'prev');
                         var unbind = function () {
-                            req.onsuccess = tx.onerror = tx.onabort = null;
+                            return void (req.onsuccess = tx.onerror = tx.onabort = null);
                         };
                         var proc = function (cursor, err) {
                             if (err)
-                                return void cb(err), void unbind(), void after(tx, err);
+                                return void (cb(err), updateSyncState(), unbind());
                             if (!cursor || new event_1.LoadedEventRecord(cursor.value).date < _this.meta(key).date) {
-                                void _this.syncState.set(key, true);
+                                void updateSyncState(true);
                                 void Array.from(events.reduceRight(function (es, e) {
                                     return es.length === 0 || es[0].type === EventStore.EventType.put ? concat_1.concat(es, [e]) : es;
                                 }, []).reduceRight(function (dict, e) {
@@ -1665,19 +1685,17 @@ require = function e(t, n, r) {
                                 }, new Map()).values()).sort(function (a, b) {
                                     return a.date - b.date || a.id - b.id;
                                 }).forEach(function (e) {
-                                    void _this.memory.off([
+                                    return void _this.memory.off([
                                         e.key,
                                         e.attr,
                                         sqid_1.sqid(e.id)
-                                    ]);
-                                    void _this.memory.on([
+                                    ]), void _this.memory.on([
                                         e.key,
                                         e.attr,
                                         sqid_1.sqid(e.id)
                                     ], function () {
                                         return e;
-                                    });
-                                    void _this.events_.memory.emit([
+                                    }), void _this.events_.memory.emit([
                                         e.key,
                                         e.attr,
                                         sqid_1.sqid(e.id)
@@ -1691,7 +1709,6 @@ require = function e(t, n, r) {
                                     });
                                 }
                                 void unbind();
-                                void after(tx);
                                 void _this.events_.access.emit([key], new EventStore.InternalEvent(EventStore.InternalEventType.query, identifier_1.makeEventId(0), key, ''));
                                 if (events.length >= _this.snapshotCycle) {
                                     void _this.snapshot(key);
@@ -1724,7 +1741,7 @@ require = function e(t, n, r) {
                         tx.onerror = tx.onabort = function () {
                             return void cb(tx.error);
                         };
-                    });
+                    }, updateSyncState);
                 };
                 EventStore.prototype.keys = function () {
                     return this.memory.reflect([]).reduce(function (keys, e) {
@@ -1882,7 +1899,7 @@ require = function e(t, n, r) {
                                 }).extract(function () {
                                     return void 0;
                                 });
-                            });
+                            }, cancellation.cancel);
                         });
                     }).catch(function () {
                         return void _this.events.loss.emit([
@@ -1997,6 +2014,8 @@ require = function e(t, n, r) {
                         tx.onerror = tx.onabort = function () {
                             return void cb(null, tx.error);
                         };
+                    }, function () {
+                        return cb(null, new Error('Access has failed.'));
                     });
                 };
                 return EventStore;
@@ -2094,19 +2113,19 @@ require = function e(t, n, r) {
             exports.compose = compose;
         },
         {
-            '../../../lib/noop': 52,
-            '../../infrastructure/indexeddb/api': 42,
-            '../database/value': 25,
-            './event': 26,
-            './identifier': 27,
+            '../../../lib/noop': 53,
+            '../../infrastructure/indexeddb/api': 43,
+            '../database/value': 26,
+            './event': 27,
+            './identifier': 28,
             'spica/cancellation': 5,
             'spica/concat': 6,
-            'spica/observation': 18,
-            'spica/sqid': 19,
-            'spica/tick': 20
+            'spica/observation': 19,
+            'spica/sqid': 20,
+            'spica/tick': 21
         }
     ],
-    29: [
+    30: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2158,6 +2177,8 @@ require = function e(t, n, r) {
                         tx.onerror = tx.onabort = function () {
                             return cb(void 0, tx.error);
                         };
+                    }, function () {
+                        return cb(void 0, new Error('Access has failed.'));
                     });
                     return this.cache.get(key);
                 };
@@ -2185,6 +2206,8 @@ require = function e(t, n, r) {
                         tx.oncomplete = tx.onerror = tx.onabort = function () {
                             return void cb(key, tx.error);
                         };
+                    }, function () {
+                        return cb(key, new Error('Access has failed.'));
                     });
                     return this.cache.get(key);
                 };
@@ -2204,6 +2227,8 @@ require = function e(t, n, r) {
                         tx.oncomplete = tx.onerror = tx.onabort = function () {
                             return void cb(tx.error);
                         };
+                    }, function () {
+                        return cb(new Error('Access has failed.'));
                     });
                 };
                 KeyValueStore.prototype.cursor = function (query, index, direction, mode, cb) {
@@ -2220,6 +2245,8 @@ require = function e(t, n, r) {
                         tx.onerror = tx.onabort = function () {
                             return void cb(null, tx.error);
                         };
+                    }, function () {
+                        return cb(null, new Error('Access has failed.'));
                     });
                 };
                 return KeyValueStore;
@@ -2235,12 +2262,12 @@ require = function e(t, n, r) {
             exports.KeyValueStore = KeyValueStore;
         },
         {
-            '../../../lib/noop': 52,
-            '../../infrastructure/indexeddb/api': 42,
-            'spica/observation': 18
+            '../../../lib/noop': 53,
+            '../../infrastructure/indexeddb/api': 43,
+            'spica/observation': 19
         }
     ],
-    30: [
+    31: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2333,9 +2360,9 @@ require = function e(t, n, r) {
                 return Storage;
             }();
         },
-        { '../../infrastructure/webstorage/api': 48 }
+        { '../../infrastructure/webstorage/api': 49 }
     ],
-    31: [
+    32: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2345,9 +2372,9 @@ require = function e(t, n, r) {
             exports.isValidPropertyName = builder_1.isValidPropertyName;
             exports.isValidPropertyValue = builder_1.isValidPropertyValue;
         },
-        { './module/builder': 32 }
+        { './module/builder': 33 }
     ],
-    32: [
+    33: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2438,20 +2465,20 @@ require = function e(t, n, r) {
             exports.build = build;
         },
         {
-            '../../../../lib/noop': 52,
-            '../../../data/es/event': 26
+            '../../../../lib/noop': 53,
+            '../../../data/es/event': 27
         }
     ],
-    33: [
+    34: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var channel_1 = require('./service/channel');
             exports.StoreChannel = channel_1.StoreChannel;
         },
-        { './service/channel': 38 }
+        { './service/channel': 39 }
     ],
-    34: [
+    35: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2621,17 +2648,17 @@ require = function e(t, n, r) {
             }();
         },
         {
-            '../../../../lib/noop': 52,
-            '../../../infrastructure/indexeddb/api': 42,
-            './channel/access': 35,
-            './channel/data': 36,
-            './channel/expiry': 37,
+            '../../../../lib/noop': 53,
+            '../../../infrastructure/indexeddb/api': 43,
+            './channel/access': 36,
+            './channel/data': 37,
+            './channel/expiry': 38,
             'spica/cache': 4,
             'spica/cancellation': 5,
-            'spica/observation': 18
+            'spica/observation': 19
         }
     ],
-    35: [
+    36: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -2716,11 +2743,11 @@ require = function e(t, n, r) {
             }();
         },
         {
-            '../../../../data/es/store': 28,
-            '../../../../data/kvs/store': 29
+            '../../../../data/es/store': 29,
+            '../../../../data/kvs/store': 30
         }
     ],
-    36: [
+    37: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -2763,9 +2790,9 @@ require = function e(t, n, r) {
             }(DataStore = exports.DataStore || (exports.DataStore = {})));
             exports.DataStore = DataStore;
         },
-        { '../../../../data/es/store': 28 }
+        { '../../../../data/es/store': 29 }
     ],
-    37: [
+    38: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -2872,11 +2899,11 @@ require = function e(t, n, r) {
             }();
         },
         {
-            '../../../../data/es/store': 28,
-            '../../../../data/kvs/store': 29
+            '../../../../data/es/store': 29,
+            '../../../../data/kvs/store': 30
         }
     ],
-    38: [
+    39: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -3028,14 +3055,14 @@ require = function e(t, n, r) {
             }
         },
         {
-            '../../broadcast/api': 30,
-            '../../dao/api': 31,
-            '../../webstorage/api': 39,
-            '../model/channel': 34,
-            'spica/observation': 18
+            '../../broadcast/api': 31,
+            '../../dao/api': 32,
+            '../../webstorage/api': 40,
+            '../model/channel': 35,
+            'spica/observation': 19
         }
     ],
-    39: [
+    40: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3046,11 +3073,11 @@ require = function e(t, n, r) {
             exports.sessionStorage = api_1.sessionStorage;
         },
         {
-            '../../infrastructure/webstorage/api': 48,
-            './service/channel': 41
+            '../../infrastructure/webstorage/api': 49,
+            './service/channel': 42
         }
     ],
-    40: [
+    41: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3083,7 +3110,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    41: [
+    42: [
         function (require, module, exports) {
             'use strict';
             var __assign = this && this.__assign || Object.assign || function (t) {
@@ -3220,14 +3247,14 @@ require = function e(t, n, r) {
             }
         },
         {
-            '../../../infrastructure/webstorage/api': 48,
-            '../../dao/api': 31,
-            '../model/storage': 40,
+            '../../../infrastructure/webstorage/api': 49,
+            '../../dao/api': 32,
+            '../model/storage': 41,
             'spica/cancellation': 5,
-            'spica/observation': 18
+            'spica/observation': 19
         }
     ],
-    42: [
+    43: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3245,12 +3272,12 @@ require = function e(t, n, r) {
             exports.IDBEventType = event_1.IDBEventType;
         },
         {
-            './model/access': 43,
-            './model/event': 44,
-            './module/global': 47
+            './model/access': 44,
+            './model/event': 45,
+            './module/global': 48
         }
     ],
-    43: [
+    44: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3263,9 +3290,13 @@ require = function e(t, n, r) {
             }
             exports.open = open;
             function listen(database) {
-                return function (req) {
-                    void state_1.requests.set(database, state_1.requests.get(database) || []).get(database).push(req);
-                    void mutation_1.handleState(database);
+                return function (success, failure) {
+                    if (failure === void 0) {
+                        failure = function () {
+                            return void 0;
+                        };
+                    }
+                    return void state_1.requests.get(database).add(success, failure), void mutation_1.handleState(database);
                 };
             }
             exports.listen = listen;
@@ -3303,11 +3334,11 @@ require = function e(t, n, r) {
             exports.destroy = destroy;
         },
         {
-            './mutation': 45,
-            './state': 46
+            './mutation': 46,
+            './state': 47
         }
     ],
-    44: [
+    45: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3334,9 +3365,9 @@ require = function e(t, n, r) {
             }();
             exports.IDBEvent = IDBEvent;
         },
-        { 'spica/observation': 18 }
+        { 'spica/observation': 19 }
     ],
-    45: [
+    46: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3420,9 +3451,9 @@ require = function e(t, n, r) {
             function handleFromSuccessState(state) {
                 if (!state.alive)
                     return;
-                var database = state.database, connection = state.connection;
+                var database = state.database, connection = state.connection, requests = state.requests;
                 connection.onversionchange = function () {
-                    return state.requests.length = 0, void connection.close(), void event_1.idbEventStream_.emit([
+                    return requests.clear(), void connection.close(), void event_1.idbEventStream_.emit([
                         database,
                         event_1.IDBEventType.destroy
                     ], new event_1.IDBEvent(database, event_1.IDBEventType.destroy)), void handleFromEndState(new state_1.EndState(state));
@@ -3463,19 +3494,13 @@ require = function e(t, n, r) {
                             database,
                             event_1.IDBEventType.connect
                         ], new event_1.IDBEvent(database, event_1.IDBEventType.connect));
-                        var reqs = state.requests;
-                        try {
-                            while (reqs.length > 0 && state.alive) {
-                                void reqs.shift()(connection);
-                            }
-                        } catch (reason) {
+                        return void requests.resolve(state, function (reason) {
                             void new Promise(function (_, reject) {
                                 return void reject(reason);
                             });
                             void connection.close();
                             void handleFromCrashState(new state_1.CrashState(state, reason));
-                        }
-                        return void 0;
+                        });
                     }
                 case 'close':
                     void connection.close();
@@ -3534,7 +3559,7 @@ require = function e(t, n, r) {
                 var database = state.database;
                 var deleteRequest = global_1.indexedDB.deleteDatabase(database);
                 deleteRequest.onsuccess = function () {
-                    return state.requests.length = 0, void event_1.idbEventStream_.emit([
+                    return state.requests.clear(), void event_1.idbEventStream_.emit([
                         database,
                         event_1.IDBEventType.destroy
                     ], new event_1.IDBEvent(database, event_1.IDBEventType.destroy)), void handleFromEndState(new state_1.EndState(state));
@@ -3566,7 +3591,7 @@ require = function e(t, n, r) {
                 case 'destroy':
                     void state_1.commands.delete(database);
                     void state_1.configs.delete(database);
-                    state.requests.length = 0;
+                    state.requests.clear();
                     return void event_1.idbEventStream_.emit([
                         database,
                         event_1.IDBEventType.disconnect
@@ -3576,12 +3601,12 @@ require = function e(t, n, r) {
             }
         },
         {
-            '../module/global': 47,
-            './event': 44,
-            './state': 46
+            '../module/global': 48,
+            './event': 45,
+            './state': 47
         }
     ],
-    46: [
+    47: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -3610,6 +3635,39 @@ require = function e(t, n, r) {
                 Command['destroy'] = 'destroy';
             }(Command = exports.Command || (exports.Command = {})));
             exports.requests = new Map();
+            var Requests = function () {
+                function Requests() {
+                    this.queue = [];
+                }
+                Requests.prototype.add = function (success, failure) {
+                    void this.queue.push({
+                        success: success,
+                        failure: failure
+                    });
+                };
+                Requests.prototype.resolve = function (state, catcher) {
+                    try {
+                        while (this.queue.length > 0 && state.alive) {
+                            var request = this.queue.shift();
+                            void request.success(state.connection);
+                        }
+                    } catch (reason) {
+                        void catcher(reason);
+                    }
+                };
+                Requests.prototype.clear = function () {
+                    try {
+                        this.queue.forEach(function (_a) {
+                            var failure = _a.failure;
+                            return void failure();
+                        });
+                    } catch (_) {
+                        return this.clear();
+                    }
+                    this.queue.length = 0;
+                };
+                return Requests;
+            }();
             exports.states = new Map();
             var State = function () {
                 function State(database) {
@@ -3648,7 +3706,7 @@ require = function e(t, n, r) {
                 });
                 Object.defineProperty(State.prototype, 'requests', {
                     get: function () {
-                        return exports.requests.set(this.database, exports.requests.get(this.database) || []).get(this.database);
+                        return exports.requests.get(this.database);
                     },
                     enumerable: true,
                     configurable: true
@@ -3664,6 +3722,7 @@ require = function e(t, n, r) {
                     var _this = _super.call(this, database) || this;
                     _this.version = version;
                     _this.STATE;
+                    void exports.requests.set(database, exports.requests.get(database) || new Requests());
                     return _this;
                 }
                 return InitialState;
@@ -3763,7 +3822,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    47: [
+    48: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3772,7 +3831,7 @@ require = function e(t, n, r) {
         },
         {}
     ],
-    48: [
+    49: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3784,11 +3843,11 @@ require = function e(t, n, r) {
             exports.storageEventStream_ = event_1.storageEventStream_;
         },
         {
-            './model/event': 49,
-            './module/global': 50
+            './model/event': 50,
+            './module/global': 51
         }
     ],
-    49: [
+    50: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3814,11 +3873,11 @@ require = function e(t, n, r) {
             });
         },
         {
-            '../module/global': 50,
-            'spica/observation': 18
+            '../module/global': 51,
+            'spica/observation': 19
         }
     ],
-    50: [
+    51: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3840,9 +3899,9 @@ require = function e(t, n, r) {
             exports.localStorage = supportsWebStorage ? self.localStorage : void 0;
             exports.sessionStorage = supportsWebStorage ? self.sessionStorage : void 0;
         },
-        { 'spica/uuid': 22 }
+        { 'spica/uuid': 23 }
     ],
-    51: [
+    52: [
         function (require, module, exports) {
             'use strict';
             function __export(m) {
@@ -3853,9 +3912,9 @@ require = function e(t, n, r) {
             Object.defineProperty(exports, '__esModule', { value: true });
             __export(require('../application/api'));
         },
-        { '../application/api': 24 }
+        { '../application/api': 25 }
     ],
-    52: [
+    53: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3879,7 +3938,7 @@ require = function e(t, n, r) {
             var export_1 = require('./src/export');
             exports.default = export_1.default;
         },
-        { './src/export': 23 }
+        { './src/export': 24 }
     ]
 }, {}, [
     1,
