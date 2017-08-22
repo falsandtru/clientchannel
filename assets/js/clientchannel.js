@@ -1,4 +1,4 @@
-/*! clientchannel v0.18.1 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.18.2 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -133,7 +133,12 @@ require = function e(t, n, r) {
                         }))
                         throw new Error('Spica: Cache: Keys of stats and entries is not matched.');
                 }
-                Cache.prototype.put = function (key, value) {
+                Cache.prototype.put = function (key, value, log) {
+                    if (log === void 0) {
+                        log = true;
+                    }
+                    if (!log && this.store.has(key))
+                        return void this.store.set(key, value), true;
                     if (this.access(key))
                         return void this.store.set(key, value), true;
                     var _a = this.stats, LRU = _a.LRU, LFU = _a.LFU;
@@ -153,8 +158,8 @@ require = function e(t, n, r) {
                     }
                     return false;
                 };
-                Cache.prototype.set = function (key, value) {
-                    void this.put(key, value);
+                Cache.prototype.set = function (key, value, log) {
+                    void this.put(key, value, log);
                     return value;
                 };
                 Cache.prototype.get = function (key) {
@@ -1675,7 +1680,7 @@ require = function e(t, n, r) {
                         };
                         var proc = function (cursor, err) {
                             if (err)
-                                return void (cb(err), updateSyncState(), unbind());
+                                return void cb(err), void updateSyncState(), void unbind();
                             if (!cursor || new event_1.LoadedEventRecord(cursor.value).date < _this.meta(key).date) {
                                 void updateSyncState(true);
                                 void Array.from(events.reduceRight(function (es, e) {
@@ -2015,7 +2020,7 @@ require = function e(t, n, r) {
                             return void cb(null, tx.error);
                         };
                     }, function () {
-                        return cb(null, new Error('Access has failed.'));
+                        return void cb(null, new Error('Access has failed.'));
                     });
                 };
                 return EventStore;
@@ -2178,7 +2183,7 @@ require = function e(t, n, r) {
                             return cb(void 0, tx.error);
                         };
                     }, function () {
-                        return cb(void 0, new Error('Access has failed.'));
+                        return void cb(void 0, new Error('Access has failed.'));
                     });
                     return this.cache.get(key);
                 };
@@ -2207,7 +2212,7 @@ require = function e(t, n, r) {
                             return void cb(key, tx.error);
                         };
                     }, function () {
-                        return cb(key, new Error('Access has failed.'));
+                        return void cb(key, new Error('Access has failed.'));
                     });
                     return this.cache.get(key);
                 };
@@ -2228,7 +2233,7 @@ require = function e(t, n, r) {
                             return void cb(tx.error);
                         };
                     }, function () {
-                        return cb(new Error('Access has failed.'));
+                        return void cb(new Error('Access has failed.'));
                     });
                 };
                 KeyValueStore.prototype.cursor = function (query, index, direction, mode, cb) {
@@ -2246,7 +2251,7 @@ require = function e(t, n, r) {
                             return void cb(null, tx.error);
                         };
                     }, function () {
-                        return cb(null, new Error('Access has failed.'));
+                        return void cb(null, new Error('Access has failed.'));
                     });
                 };
                 return KeyValueStore;
@@ -3453,7 +3458,7 @@ require = function e(t, n, r) {
                     return;
                 var database = state.database, connection = state.connection, requests = state.requests;
                 connection.onversionchange = function () {
-                    return requests.clear(), void connection.close(), void event_1.idbEventStream_.emit([
+                    return void requests.clear(), void connection.close(), void event_1.idbEventStream_.emit([
                         database,
                         event_1.IDBEventType.destroy
                     ], new event_1.IDBEvent(database, event_1.IDBEventType.destroy)), void handleFromEndState(new state_1.EndState(state));
@@ -3559,7 +3564,7 @@ require = function e(t, n, r) {
                 var database = state.database;
                 var deleteRequest = global_1.indexedDB.deleteDatabase(database);
                 deleteRequest.onsuccess = function () {
-                    return state.requests.clear(), void event_1.idbEventStream_.emit([
+                    return void state.requests.clear(), void event_1.idbEventStream_.emit([
                         database,
                         event_1.IDBEventType.destroy
                     ], new event_1.IDBEvent(database, event_1.IDBEventType.destroy)), void handleFromEndState(new state_1.EndState(state));
@@ -3591,7 +3596,7 @@ require = function e(t, n, r) {
                 case 'destroy':
                     void state_1.commands.delete(database);
                     void state_1.configs.delete(database);
-                    state.requests.clear();
+                    void state.requests.clear();
                     return void event_1.idbEventStream_.emit([
                         database,
                         event_1.IDBEventType.disconnect
@@ -3648,8 +3653,7 @@ require = function e(t, n, r) {
                 Requests.prototype.resolve = function (state, catcher) {
                     try {
                         while (this.queue.length > 0 && state.alive) {
-                            var request = this.queue.shift();
-                            void request.success(state.connection);
+                            void this.queue.shift().success(state.connection);
                         }
                     } catch (reason) {
                         void catcher(reason);
@@ -3657,14 +3661,12 @@ require = function e(t, n, r) {
                 };
                 Requests.prototype.clear = function () {
                     try {
-                        this.queue.forEach(function (_a) {
-                            var failure = _a.failure;
-                            return void failure();
-                        });
+                        while (this.queue.length > 0) {
+                            void this.queue.shift().failure();
+                        }
                     } catch (_) {
                         return this.clear();
                     }
-                    this.queue.length = 0;
                 };
                 return Requests;
             }();
