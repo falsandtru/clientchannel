@@ -142,6 +142,7 @@ class Schema<K extends string, V extends StoreChannelObject<K>> {
     this.data = new DataStore<K, V>(this.store_.name, this.attrs_);
     this.access = new AccessStore<K>(this.store_.name, this.data.events_.access);
     this.expire = new ExpiryStore<K>(this.store_.name, this.store_, this.data.events_.access, this.expiries_, this.cancellation_);
+
     void this.cancellation_.register(this.store_.events_.load.relay(this.data.events.load));
     void this.cancellation_.register(this.store_.events_.save.relay(this.data.events.save));
     void this.cancellation_.register(this.store_.events.load.relay(this.data.events.load));
