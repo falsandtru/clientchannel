@@ -4,7 +4,7 @@
 [![Coverage Status](https://coveralls.io/repos/falsandtru/clientchannel/badge.svg?branch=master&service=github)](https://coveralls.io/github/falsandtru/clientchannel?branch=master)
 [![Dependency Status](https://gemnasium.com/falsandtru/clientchannel.svg)](https://gemnasium.com/falsandtru/clientchannel)
 
-Store and sync values by communicating between tabs via IndexedDB and LocalStorage.
+Store and sync values by communication between tabs via IndexedDB and LocalStorage.
 
 ## Feature
 
@@ -24,7 +24,7 @@ https://falsandtru.github.io/clientchannel/
 
 ## Usage
 
-### Persistence
+### Storing
 
 Schemas are defined by property names that made by factory function.
 A property name that has underscore(`_`) prefix or postfix will be ignored.
