@@ -75,7 +75,7 @@ function handleFromSuccessState(state: SuccessState): void {
   if (!state.alive) return;
   const { database, connection, requests } = state;
   connection.onversionchange = () => (
-    requests.clear(),
+    void requests.clear(),
     void connection.close(),
     void idbEventStream_.emit([database, IDBEventType.destroy], new IDBEvent(database, IDBEventType.destroy)),
     void handleFromEndState(new EndState(state)));
@@ -165,7 +165,7 @@ function handleFromDestroyState(state: DestroyState): void {
   const { database } = state;
   const deleteRequest = indexedDB.deleteDatabase(database);
   deleteRequest.onsuccess = () => (
-    state.requests.clear(),
+    void state.requests.clear(),
     void idbEventStream_.emit([database, IDBEventType.destroy], new IDBEvent(database, IDBEventType.destroy)),
     void handleFromEndState(new EndState(state)));
   deleteRequest.onerror = event =>
@@ -191,7 +191,7 @@ function handleFromEndState(state: EndState): void {
     case Command.destroy:
       void commands.delete(database);
       void configs.delete(database);
-      state.requests.clear();
+      void state.requests.clear();
       return void idbEventStream_
         .emit([database, IDBEventType.disconnect], new IDBEvent(database, IDBEventType.disconnect));
   }
