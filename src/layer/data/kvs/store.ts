@@ -46,7 +46,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
           : this.cache.get(key);
       tx.oncomplete = () => cb(result, tx.error);
       tx.onerror = tx.onabort = () => cb(void 0, tx.error);
-    }, () => cb(void 0, new Error('Access has failed.')));
+    }, () => void cb(void 0, new Error('Access has failed.')));
     return this.cache.get(key);
   }
   public set(key: K, value: V, cb: (key: K, error: DOMException | DOMError) => void = noop): V | undefined {
@@ -66,7 +66,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
           .objectStore(this.name)
           .put(this.cache.get(key), key);
       tx.oncomplete = tx.onerror = tx.onabort = () => void cb(key, tx.error);
-    }, () => cb(key, new Error('Access has failed.')));
+    }, () => void cb(key, new Error('Access has failed.')));
     return this.cache.get(key);
   }
   public delete(key: K, cb: (error: DOMException | DOMError | Error) => void = noop): void {
@@ -78,7 +78,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
         .objectStore(this.name)
         .delete(key);
       tx.oncomplete = tx.onerror = tx.onabort = () => void cb(tx.error);
-    }, () => cb(new Error('Access has failed.')));
+    }, () => void cb(new Error('Access has failed.')));
   }
   public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMException | DOMError | Error | null) => void): void {
     void listen(this.database)(db => {
@@ -95,7 +95,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
       req.onsuccess = () => req.result && void cb(req.result, req.error);
       tx.oncomplete = () => void cb(null, tx.error);
       tx.onerror = tx.onabort = () => void cb(null, tx.error);
-    }, () => cb(null, new Error('Access has failed.')));
+    }, () => void cb(null, new Error('Access has failed.')));
   }
 }
 export namespace KeyValueStore {

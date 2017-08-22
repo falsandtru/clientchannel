@@ -143,10 +143,10 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       const unbind = () => void (
         req.onsuccess = tx.onerror = tx.onabort = <any>null);
       const proc = (cursor: IDBCursorWithValue | null, err: DOMException | DOMError | null): void => {
-        if (err) return void (
-          cb(err),
-          updateSyncState(),
-          unbind());
+        if (err) return (
+          void cb(err),
+          void updateSyncState(),
+          void unbind());
         if (!cursor || new LoadedEventRecord<K, V>(cursor.value).date < this.meta(key).date) {
           // register latest events
           void updateSyncState(true);
@@ -443,7 +443,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       req.onsuccess = () => req.result && void cb(req.result, req.error);
       tx.oncomplete = () => void cb(null, tx.error);
       tx.onerror = tx.onabort = () => void cb(null, tx.error);
-    }, () => cb(null, new Error('Access has failed.')));
+    }, () => void cb(null, new Error('Access has failed.')));
   }
 }
 export namespace EventStore {
