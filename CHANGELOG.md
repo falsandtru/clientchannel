@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.0
+
+- Don't cancel a destroy command by other commands.
+
 ## 0.18.2
 
 - Fix processing with database access failure.

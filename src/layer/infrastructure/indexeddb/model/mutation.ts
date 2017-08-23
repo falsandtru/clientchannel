@@ -3,6 +3,16 @@ import { configs, Config, commands, Command, requests, Requests, states, Initial
 import { idbEventStream_, IDBEvent, IDBEventType } from './event';
 
 export function operate(database: string, command: Command, config: Config): void {
+  if (commands.get(database) === Command.destroy) {
+    assert(states.has(database));
+    switch (command) {
+      case Command.open:
+      case Command.close:
+        return void idbEventStream_
+          .once([database, IDBEventType.disconnect], () =>
+            void operate(database, command, config));
+    }
+  }
   void commands.set(database, command);
   void configs.set(database, config);
   requests.has(database) || void requests.set(database, new Requests());

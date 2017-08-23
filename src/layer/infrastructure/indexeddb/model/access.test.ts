@@ -75,15 +75,13 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
         });
     });
 
-    it('cancel destroying', done => {
+    it('cannot cancel destroying', done => {
       destroy('test');
       open('test', config);
-      listen('test')
-        (() => {
+      idbEventStream
+        .once(['test', IDBEventType.destroy], () =>
           idbEventStream
-            .once(['test', IDBEventType.disconnect], () => done());
-          close('test');
-        });
+            .once(['test', IDBEventType.disconnect], () => done()));
     });
 
     it('reopen after closing', done => {
