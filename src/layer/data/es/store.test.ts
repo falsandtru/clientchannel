@@ -474,8 +474,8 @@ describe('Unit: layers/data/es/store', function () {
         assert(ev.type === 'snapshot');
         assert(es.meta('a').id === 2);
         assert(es.get('a').value instanceof ArrayBuffer);
+        done();
       });
-      done();
     });
 
   });

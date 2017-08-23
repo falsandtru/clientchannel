@@ -22,7 +22,7 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
       destroy('test');
     });
 
-    after(done => {
+    afterEach(done => {
       idbEventStream
         .once(['test', IDBEventType.destroy], () =>
           idbEventStream

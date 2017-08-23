@@ -1,9 +1,9 @@
 export const configs = new Map<string, Config>();
-export type Config = {
+export interface Config {
   make: (tx: IDBTransaction) => boolean;
   verify: (db: IDBDatabase) => boolean;
   destroy: (reason: any, event?: Event) => boolean;
-};
+}
 
 export const commands = new Map<string, Command>();
 export const enum Command {
@@ -13,11 +13,11 @@ export const enum Command {
 }
 
 export const requests = new Map<string, Requests>();
-type Request = {
+interface Request {
   success: (db: IDBDatabase) => void;
   failure: () => void;
-};
-class Requests {
+}
+export class Requests {
   private queue: Request[] = [];
   public add(success: (db: IDBDatabase) => void, failure: () => void) {
     void this.queue.push({ success, failure });
@@ -92,7 +92,6 @@ export class InitialState extends State {
   ) {
     super(database);
     this.STATE;
-    void requests.set(database, requests.get(database) || new Requests());
   }
 }
 

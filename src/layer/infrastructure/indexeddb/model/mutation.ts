@@ -1,8 +1,21 @@
 import { indexedDB } from '../module/global';
-import { configs, commands, Command, states, InitialState, BlockState, UpgradeState, SuccessState, ErrorState, AbortState, CrashState, DestroyState, EndState } from './state';
+import { configs, Config, commands, Command, requests, Requests, states, InitialState, BlockState, UpgradeState, SuccessState, ErrorState, AbortState, CrashState, DestroyState, EndState } from './state';
 import { idbEventStream_, IDBEvent, IDBEventType } from './event';
 
-export function handleState(database: string): void {
+export function operate(database: string, command: Command, config: Config): void {
+  void commands.set(database, command);
+  void configs.set(database, config);
+  requests.has(database) || void requests.set(database, new Requests());
+  void handle(database);
+}
+
+export function request(database: string, success: (db: IDBDatabase) => void, failure: () => void): void {
+  requests.has(database) || void requests.set(database, new Requests());
+  void requests.get(database)!.add(success, failure);
+  void handle(database);
+}
+
+function handle(database: string): void {
   const state = states.get(database);
   if (!state) return void handleFromInitialState(new InitialState(database));
   if (state instanceof SuccessState) return void handleFromSuccessState(state);
@@ -75,9 +88,9 @@ function handleFromSuccessState(state: SuccessState): void {
   if (!state.alive) return;
   const { database, connection, requests } = state;
   connection.onversionchange = () => (
-    void requests.clear(),
     void connection.close(),
     void idbEventStream_.emit([database, IDBEventType.destroy], new IDBEvent(database, IDBEventType.destroy)),
+    void requests.clear(),
     void handleFromEndState(new EndState(state)));
   connection.onerror = event =>
     void handleFromErrorState(new ErrorState(state, (event.target as any).error, event));
@@ -165,8 +178,8 @@ function handleFromDestroyState(state: DestroyState): void {
   const { database } = state;
   const deleteRequest = indexedDB.deleteDatabase(database);
   deleteRequest.onsuccess = () => (
-    void state.requests.clear(),
     void idbEventStream_.emit([database, IDBEventType.destroy], new IDBEvent(database, IDBEventType.destroy)),
+    void state.requests.clear(),
     void handleFromEndState(new EndState(state)));
   deleteRequest.onerror = event =>
     void handleFromErrorState(new ErrorState(state, deleteRequest.error, event));
@@ -184,16 +197,12 @@ function handleFromEndState(state: EndState): void {
         .emit([database, IDBEventType.disconnect], new IDBEvent(database, IDBEventType.disconnect));
       return void handleFromInitialState(new InitialState(database, version));
     case Command.close:
-      void commands.delete(database);
-      void configs.delete(database);
-      return void idbEventStream_
-        .emit([database, IDBEventType.disconnect], new IDBEvent(database, IDBEventType.disconnect));
     case Command.destroy:
       void commands.delete(database);
       void configs.delete(database);
-      void state.requests.clear();
-      return void idbEventStream_
+      void idbEventStream_
         .emit([database, IDBEventType.disconnect], new IDBEvent(database, IDBEventType.disconnect));
+      return;
   }
   throw new TypeError(`ClientChannel: IndexedDB: Invalid command ${state.command}.`);
 }

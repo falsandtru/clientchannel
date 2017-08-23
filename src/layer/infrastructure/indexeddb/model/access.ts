@@ -1,21 +1,17 @@
-import { configs, Config, commands, Command, requests } from './state';
-import { handleState } from './mutation';
+import { Config, Command } from './state';
+import { operate, request } from './mutation';
 
 export function open(database: string, config: Config): void {
-  void commands.set(database, Command.open);
-  void configs.set(database, config);
-  void handleState(database);
+  return void operate(database, Command.open, config);
 }
 
 export function listen(database: string): (success: (db: IDBDatabase) => void, failure?: () => void) => void {
-  return (success, failure = () => void 0) => (
-    void requests.get(database)!.add(success, failure),
-    void handleState(database));
+  return (success, failure = () => void 0) =>
+    void request(database, success, failure);
 }
 
 export function close(database: string): void {
-  void commands.set(database, Command.close);
-  void configs.set(database, {
+  return void operate(database, Command.close, {
     make() {
       return false;
     },
@@ -24,14 +20,12 @@ export function close(database: string): void {
     },
     destroy() {
       return false;
-    }
+    },
   });
-  void handleState(database);
 }
 
 export function destroy(database: string): void {
-  void commands.set(database, Command.destroy);
-  void configs.set(database, {
+  return void operate(database, Command.destroy, {
     make() {
       return false;
     },
@@ -40,7 +34,6 @@ export function destroy(database: string): void {
     },
     destroy() {
       return true;
-    }
+    },
   });
-  void handleState(database);
 }
