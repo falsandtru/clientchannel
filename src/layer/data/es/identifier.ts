@@ -15,5 +15,5 @@ export function makeEventId(id: number): EventId {
   assert(Number.isFinite(id));
   assert(Math.floor(id) === id);
   assert(id >= 0);
-  return <EventId>id;
+  return id as EventId;
 }

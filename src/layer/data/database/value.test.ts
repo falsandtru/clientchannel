@@ -3,7 +3,7 @@ import { isStorable, hasBinary } from './value';
 describe('Unit: layers/data/database/value', () => {
   describe('isStorableValue', () => {
     it('undefined', () => {
-      assert(isStorable(<any>void 0) === true);
+      assert(isStorable(void 0 as any) === true);
     });
 
     it('boolean', () => {
@@ -21,7 +21,7 @@ describe('Unit: layers/data/database/value', () => {
     it('object', () => {
       assert(isStorable([]) === true);
       assert(isStorable({}) === true);
-      assert(isStorable(<any>null) === true);
+      assert(isStorable(null as any) === true);
       const a: any[] = [];
       a.push(a);
       assert(isStorable(a) === false);
@@ -41,13 +41,13 @@ describe('Unit: layers/data/database/value', () => {
     });
 
     it('false', () => {
-      assert(hasBinary(<any>void 0) === false);
+      assert(hasBinary(void 0 as any) === false);
       assert(hasBinary(false) === false);
       assert(hasBinary(0) === false);
       assert(hasBinary('') === false);
       assert(hasBinary([]) === false);
       assert(hasBinary({}) === false);
-      assert(hasBinary(<any>null) === false);
+      assert(hasBinary(null as any) === false);
       assert(hasBinary(() => 0) === false);
     });
 

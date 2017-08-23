@@ -22,11 +22,11 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
     void cache.set(name, this);
     void this.cancellation.register(() =>
       void cache.delete(name));
-    const source: V = <any>{
+    const source: V = {
       [SCHEMA.KEY.NAME]: this.name,
       [SCHEMA.EVENT.NAME]: new Observation<[StorageChannelEventType] | [StorageChannelEventType, keyof V], StorageChannel.Event<V>, void>(),
-      ...<Object>parse<V>(this.storage.getItem(this.name))
-    };
+      ...parse<V>(this.storage.getItem(this.name)) as object
+    } as any;
     this.link_ = build(source, () => new Schema(), (attr: keyof V, newValue, oldValue) => {
       void log.update(this.name);
       void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, attr) => {
@@ -34,7 +34,7 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
         return acc;
       }, {})));
       const event = new StorageChannel.Event<V>(StorageChannel.EventType.send, attr, newValue, oldValue);
-      void (<Observation<[StorageChannelEventType, keyof V], StorageChannel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
+      void (source.__event as Observation<[StorageChannelEventType, keyof V], StorageChannel.Event<V>, any>).emit([event.type, event.attr], event);
       void this.events.send.emit([event.attr], event);
     });
     void migrate(this.link_);
@@ -51,7 +51,7 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
             source[attr] = newVal;
             void migrate(this.link_);
             const event = new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, source[attr], oldVal);
-            void (<Observation<[StorageChannelEventType, keyof V], StorageChannel.Event<V>, any>>source.__event).emit([event.type, event.attr], event);
+            void (source.__event as Observation<[StorageChannelEventType, keyof V], StorageChannel.Event<V>, any>).emit([event.type, event.attr], event);
             void this.events.recv.emit([event.attr], event);
           }, void 0);
       }));
@@ -98,9 +98,9 @@ export namespace StorageChannel {
 
 function parse<V>(item: string | undefined | null): V {
   try {
-    return JSON.parse(item || '{}') || <V>{};
+    return JSON.parse(item || '{}') || {} as V;
   }
   catch (_) {
-    return <V>{};
+    return {} as V;
   }
 }

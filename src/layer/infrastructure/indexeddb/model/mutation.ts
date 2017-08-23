@@ -22,7 +22,7 @@ function handleFromInitialState(state: InitialState): void {
     openRequest.onupgradeneeded = () =>
       void handleFromUpgradeState(new UpgradeState(state, openRequest))
     openRequest.onsuccess = () =>
-      void handleFromSuccessState(new SuccessState(state, <IDBDatabase>openRequest.result));
+      void handleFromSuccessState(new SuccessState(state, openRequest.result as IDBDatabase));
     openRequest.onerror = event =>
       void handleFromErrorState(new ErrorState(state, openRequest.error, event));
   }
@@ -39,7 +39,7 @@ function handleFromBlockedState(state: BlockState): void {
   session.onupgradeneeded = () =>
     void handleFromUpgradeState(new UpgradeState(state, session));
   session.onsuccess = () =>
-    void handleFromSuccessState(new SuccessState(state, <IDBDatabase>session.result));
+    void handleFromSuccessState(new SuccessState(state, session.result as IDBDatabase));
   session.onerror = event =>
     void handleFromErrorState(new ErrorState(state, session.error, event));
   void idbEventStream_.emit([database, IDBEventType.block], new IDBEvent(database, IDBEventType.block));
@@ -80,7 +80,7 @@ function handleFromSuccessState(state: SuccessState): void {
     void idbEventStream_.emit([database, IDBEventType.destroy], new IDBEvent(database, IDBEventType.destroy)),
     void handleFromEndState(new EndState(state)));
   connection.onerror = event =>
-    void handleFromErrorState(new ErrorState(state, (<any>event.target).error, event));
+    void handleFromErrorState(new ErrorState(state, (event.target as any).error, event));
   connection.onabort = event =>
     void handleFromAbortState(new AbortState(state, event));
   connection.onclose = () =>

@@ -106,7 +106,7 @@ describe('Unit: layers/data/es/store', function () {
           let a = '';
           a = stringify(new UnstoredEventRecord('a', new EventStore.Value(), EventStore.EventType.delete));
           assert(a === e);
-          a = stringify(compose('a', Object.keys(new Value(0)), [new UnstoredEventRecord('a', <Value>new EventStore.Value(), EventStore.EventType.delete)]));
+          a = stringify(compose('a', Object.keys(new Value(0)), [new UnstoredEventRecord('a', new EventStore.Value(), EventStore.EventType.delete)]));
           assert(a === e);
         });
 

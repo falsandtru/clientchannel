@@ -17,7 +17,7 @@ describe('Unit: layers/data/es/identifier', () => {
     });
 
     it('disallow multiple applying', () => {
-      <void>makeEventId(makeEventId(0));
+      makeEventId(makeEventId(0)) as void;
     });
 
   });

@@ -71,7 +71,7 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
       assert(link.n === 1);
       assert(JSON.parse(sessionStorage.getItem('test')!).n === 1);
       sessionStorage.setItem('test', JSON.stringify({ n: 2 }));
-      storageEventStream_.emit(['session', chan.name], <StorageEvent>{ newValue: '{"n": 2}' })
+      storageEventStream_.emit(['session', chan.name], { newValue: '{"n": 2}' } as StorageEvent)
       assert(link.n === 3);
       assert(JSON.parse(sessionStorage.getItem('test')!).n === 3);
       chan.destroy();

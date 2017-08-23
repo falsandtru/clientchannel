@@ -126,7 +126,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         }
       }))
       .then(rs =>
-        void cb(<SyncErrorInfo[]>rs.filter(r => r)));
+        void cb(rs.filter(r => r) as SyncErrorInfo[]));
   }
   public fetch(key: K, cb: (err?: DOMException | DOMError) => void = noop): void {
     const events: LoadedEventRecord<K, V>[] = [];
@@ -141,7 +141,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         .index(EventStoreSchema.key)
         .openCursor(key, 'prev');
       const unbind = () => void (
-        req.onsuccess = tx.onerror = tx.onabort = <any>null);
+        req.onsuccess = tx.onerror = tx.onabort = null as any);
       const proc = (cursor: IDBCursorWithValue | null, err: DOMException | DOMError | null): void => {
         if (err) return (
           void cb(err),
@@ -263,9 +263,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           .filter(({ namespace: [, , id] }) => id === sqid(0))
           .forEach(({ namespace: [key, attr, id] }) => (
             void this.memory
-              .off([<K>key, <keyof V>attr, id]),
+              .off([key as K, attr as keyof V, id]),
             void this.events_.memory
-              .off([<K>key, <keyof V>attr, id])));
+              .off([key as K, attr as keyof V, id])));
         break;
       }
     }
@@ -285,7 +285,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         const success = () => {
           assert(req.result > 0);
           void clean();
-          const savedEvent = new SavedEventRecord(makeEventId(<number>req.result), event.key, event.value, event.type, event.date);
+          const savedEvent = new SavedEventRecord(makeEventId(req.result as number), event.key, event.value, event.type, event.date);
           void this.memory
             .off([savedEvent.key, savedEvent.attr, sqid(savedEvent.id)]);
           void this.memory
@@ -295,13 +295,13 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           void resolve();
           const events: StoredEventRecord<K, V>[] = this.memory.refs([savedEvent.key])
             .map(({ listener }) =>
-              <UnstoredEventRecord<K, V> | StoredEventRecord<K, V>>listener(void 0, [savedEvent.key]))
+              listener(void 0, [savedEvent.key]) as UnstoredEventRecord<K, V> | StoredEventRecord<K, V>)
             .reduce<StoredEventRecord<K, V>[]>((es, e) =>
               e instanceof StoredEventRecord
                 ? concat(es, [e])
                 : es
             , []);
-          if (events.length >= this.snapshotCycle || hasBinary(<object>event.value)) {
+          if (events.length >= this.snapshotCycle || hasBinary(event.value)) {
             void this.snapshot(savedEvent.key);
           }
         };
@@ -529,7 +529,7 @@ export function compose<K extends string, V extends EventStore.Value>(
         return new UnstoredEventRecord<K, V>(
           source.key,
           new EventStore.Value(target.value, {
-            [source.attr]: source.value[<keyof V>source.attr]
+            [source.attr]: source.value[source.attr as keyof V]
           }),
           EventStore.EventType.snapshot);
       case EventStore.EventType.snapshot:

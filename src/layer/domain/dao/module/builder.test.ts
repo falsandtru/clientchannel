@@ -25,7 +25,7 @@ describe('Unit: layers/domain/dao/module/build', () => {
     }
 
     it('init', () => {
-      const source = <DAO><any>{__key: 'test', m: 1};
+      const source = {__key: 'test', m: 1} as any as DAO;
       const dao = build(source, factory);
 
       assert(dao['__key'] === 'test');
@@ -37,7 +37,7 @@ describe('Unit: layers/domain/dao/module/build', () => {
     });
 
     it('seal', () => {
-      const source = <DAO><any>{__key: 'test', m: 1};
+      const source = {__key: 'test', m: 1} as any as DAO;
       const dao = build(source, factory);
 
       try {
@@ -50,7 +50,7 @@ describe('Unit: layers/domain/dao/module/build', () => {
     });
 
     it('id', () => {
-      const source = <DAO><any>{__key: 'test', m: 1};
+      const source = {__key: 'test', m: 1} as any as DAO;
       const dao = build(source, factory);
 
       assert(dao['__id'] === void 0);
@@ -65,7 +65,7 @@ describe('Unit: layers/domain/dao/module/build', () => {
     });
 
     it('key', () => {
-      const source = <DAO><any>{__key: 'test', m: 1};
+      const source = {__key: 'test', m: 1} as any as DAO;
       const dao = build(source, factory);
 
       assert(dao.name === 'test');
@@ -80,7 +80,7 @@ describe('Unit: layers/domain/dao/module/build', () => {
     });
 
     it('prop', () => {
-      const source = <DAO><any>{__key: 'test', m: 1};
+      const source = {__key: 'test', m: 1} as any as DAO;
       const dao = build(source, factory);
 
       dao.n = 2;
@@ -99,7 +99,7 @@ describe('Unit: layers/domain/dao/module/build', () => {
     });
 
     it('accessor', () => {
-      const source = <DAO><any>{__key: 'test', m: 1};
+      const source = {__key: 'test', m: 1} as any as DAO;
       const dao = build(source, factory);
 
       dao.p_ = 6;
@@ -128,15 +128,15 @@ describe('Unit: layers/domain/dao/module/build', () => {
     });
 
     it('invalid values', () => {
-      const source = <DAO><any>{__key: 'test', m: 1};
+      const source = {__key: 'test', m: 1} as any;
       const dao = build(source, factory);
 
       // function
-      assert.throws(() => dao.m = <any>Date);
+      assert.throws(() => dao.m = Date as any);
       // circular reference
       const a: any[] = [];
       a.push(a);
-      assert.throws(() => dao.m = <any>a);
+      assert.throws(() => dao.m = a as any);
     });
 
   });

@@ -19,7 +19,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
       .filter(isValidPropertyName)
       .filter(isValidPropertyValue(new Schema()));
     void this.broadcast.listen(ev =>
-      void this.fetch(ev instanceof MessageEvent ? <K>ev.data : <K>ev.newValue));
+      void this.fetch(ev instanceof MessageEvent ? ev.data as K : ev.newValue as K));
     void this.events_.save
       .monitor([], ({key}) =>
         void this.broadcast.post(key));
@@ -99,7 +99,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
           ),
           () => new this.Schema(),
           (attr: keyof V, newValue, oldValue) => (
-            void this.add(new ChannelStore.Record<K, V>(key, <V>{ [attr]: newValue })),
+            void this.add(new ChannelStore.Record<K, V>(key, { [attr]: newValue } as V)),
             void cast(this.sources.get(key)!).__event
               .emit([StorageChannel.EventType.send, attr], new StorageChannel.Event<V>(StorageChannel.EventType.send, attr, newValue, oldValue)))))
         .get(key)!;
@@ -111,7 +111,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
 }
 
 function cast<K extends string, V extends ChannelObject<K>>(source: Partial<V>) {
-  return <V & InternalChannelObject<K>>source;
+  return source as V & InternalChannelObject<K>;
 
   interface InternalChannelObject<K extends string> extends ChannelObject<K> {
     readonly __event: Observation<[StorageChannel.EventType] | [StorageChannel.EventType, keyof this], StorageChannel.Event<this>, any>;
