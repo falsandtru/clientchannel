@@ -15,20 +15,19 @@ export function operate(database: string, command: Command, config: Config): voi
   }
   void commands.set(database, command);
   void configs.set(database, config);
-  requests.has(database) || void requests.set(database, new Requests());
   void handle(database);
 }
 
 export function request(database: string, success: (db: IDBDatabase) => void, failure: () => void): void {
-  requests.has(database) || void requests.set(database, new Requests());
+  requests.has(database) || void requests.set(database, new Requests(database));
   void requests.get(database)!.add(success, failure);
-  void handle(database);
 }
 
 function handle(database: string): void {
-  const state = states.get(database);
-  if (!state) return void handleFromInitialState(new InitialState(database));
-  if (state instanceof SuccessState) return void handleFromSuccessState(state);
+  void request(database, () => void 0, () => void 0);
+  if (states.has(database)) return;
+  assert(requests.has(database));
+  void handleFromInitialState(new InitialState(database));
 }
 
 function handleFromInitialState(state: InitialState): void {
@@ -145,7 +144,6 @@ function handleFromSuccessState(state: SuccessState): void {
       void connection.close();
       return void handleFromDestroyState(new DestroyState(state));
   }
-  throw new TypeError(`ClientChannel: IndexedDB: Invalid command ${state.command}.`);
 }
 
 function handleFromErrorState(state: ErrorState): void {
@@ -199,20 +197,14 @@ function handleFromEndState(state: EndState): void {
   if (!state.alive) return;
   const { database, version } = state;
   assert(version >= 0);
-  state.alive = false;
-  void states.delete(database);
+  void state.complete();
+  void idbEventStream_
+    .emit([database, IDBEventType.disconnect], new IDBEvent(database, IDBEventType.disconnect));
   switch (state.command) {
     case Command.open:
-      void idbEventStream_
-        .emit([database, IDBEventType.disconnect], new IDBEvent(database, IDBEventType.disconnect));
       return void handleFromInitialState(new InitialState(database, version));
     case Command.close:
     case Command.destroy:
-      void commands.delete(database);
-      void configs.delete(database);
-      void idbEventStream_
-        .emit([database, IDBEventType.disconnect], new IDBEvent(database, IDBEventType.disconnect));
       return;
   }
-  throw new TypeError(`ClientChannel: IndexedDB: Invalid command ${state.command}.`);
 }

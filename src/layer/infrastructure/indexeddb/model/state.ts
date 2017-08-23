@@ -18,9 +18,16 @@ interface Request {
   failure: () => void;
 }
 export class Requests {
+  constructor(
+    private database: string,
+  ) {
+  }
   private queue: Request[] = [];
   public add(success: (db: IDBDatabase) => void, failure: () => void) {
     void this.queue.push({ success, failure });
+    const state = states.get(this.database);
+    if (!(state instanceof SuccessState)) return;
+    void state.drain();
   }
   public resolve(state: SuccessState, catcher: (reason: any) => void): void {
     try {
@@ -50,27 +57,25 @@ export const states = new Map<string, State>();
 abstract class State {
   constructor(
     public readonly database: string,
+    state?: State,
   ) {
     assert(this.command);
     assert(this.config);
-    const state = states.get(database);
     switch (true) {
       case this instanceof InitialState:
-        if (state) {
-          this.alive = false;
-        }
+        this.alive = !state;
         break;
       default:
-        if (state) {
-          this.alive = this.alive && state.alive;
-          state.alive = false;
-        }
+        assert(state);
+        this.alive = !!state && state.alive;
     }
-    if (this.alive) {
-      void states.set(database, this);
+    if (!this.alive) return;
+    void states.set(database, this);
+    if (state) {
+      state.alive = false;
     }
   }
-  public alive = !!this.command && !!this.config;
+  public alive = true;
   public get command(): Command {
     assert(commands.has(this.database));
     return commands.get(this.database)!;
@@ -80,6 +85,7 @@ abstract class State {
     return configs.get(this.database)!;
   }
   public get requests(): Requests {
+    assert(requests.has(this.database));
     return requests.get(this.database)!;
   }
 }
@@ -90,7 +96,7 @@ export class InitialState extends State {
     database: string,
     public readonly version: number = 0,
   ) {
-    super(database);
+    super(database, states.get(database));
     this.STATE;
   }
 }
@@ -101,7 +107,7 @@ export class BlockState extends State {
     state: InitialState | BlockState,
     public readonly session: IDBOpenDBRequest
   ) {
-    super(state.database);
+    super(state.database, state);
     this.STATE;
   }
 }
@@ -112,7 +118,7 @@ export class UpgradeState extends State {
     state: InitialState | BlockState,
     public readonly session: IDBOpenDBRequest
   ) {
-    super(state.database);
+    super(state.database, state);
     this.STATE;
   }
 }
@@ -123,7 +129,7 @@ export class SuccessState extends State {
     state: InitialState | BlockState | UpgradeState,
     public readonly connection: IDBDatabase
   ) {
-    super(state.database);
+    super(state.database, state);
     this.STATE;
   }
   public drain: () => void;
@@ -138,7 +144,7 @@ export class ErrorState extends State {
     public readonly error: DOMException | DOMError,
     public readonly event: Event
   ) {
-    super(state.database);
+    super(state.database, state);
     this.STATE;
   }
 }
@@ -149,7 +155,7 @@ export class AbortState extends State {
     state: SuccessState,
     public readonly event: Event
   ) {
-    super(state.database);
+    super(state.database, state);
     this.STATE;
   }
 }
@@ -160,7 +166,7 @@ export class CrashState extends State {
     state: InitialState | UpgradeState | SuccessState,
     public readonly reason: any
   ) {
-    super(state.database);
+    super(state.database, state);
     this.STATE;
   }
 }
@@ -170,7 +176,7 @@ export class DestroyState extends State {
   constructor(
     state: UpgradeState | SuccessState | ErrorState | AbortState | CrashState,
   ) {
-    super(state.database);
+    super(state.database, state);
     this.STATE;
   }
 }
@@ -181,7 +187,28 @@ export class EndState extends State {
     state: UpgradeState | SuccessState | ErrorState | AbortState | CrashState | DestroyState,
     public readonly version: number = 0,
   ) {
-    super(state.database);
+    super(state.database, state);
     this.STATE;
+  }
+  public complete(): void {
+    if (!this.alive) return;
+    this.alive = false;
+    void states.delete(this.database);
+    switch (this.command) {
+      case Command.close:
+      case Command.destroy:
+        void commands.set(this.database, Command.close);
+        void configs.set(this.database, {
+          make() {
+            return false;
+          },
+          verify() {
+            return false;
+          },
+          destroy() {
+            return false;
+          },
+        });
+    }
   }
 }

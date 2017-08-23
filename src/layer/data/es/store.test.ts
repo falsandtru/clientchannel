@@ -3,7 +3,7 @@ import { UnstoredEventRecord, StoredEventRecord } from './event';
 import { open, destroy, idbEventStream, IDBEventType } from '../../infrastructure/indexeddb/api';
 
 describe('Unit: layers/data/es/store', function () {
-  this.timeout(7 * 1e3);
+  this.timeout(9 * 1e3);
 
   describe('spec', () => {
     class Value extends EventStore.Value {

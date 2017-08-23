@@ -2,7 +2,7 @@ import { KeyValueStore } from './store';
 import { open, destroy, idbEventStream, Config, IDBEventType } from '../../infrastructure/indexeddb/api';
 
 describe('Unit: layers/data/kvs/store', function () {
-  this.timeout(5 * 1e3);
+  this.timeout(9 * 1e3);
 
   describe('spec', () => {
     class Store<K extends string, V extends IDBValidValue> extends KeyValueStore<K, V> {
