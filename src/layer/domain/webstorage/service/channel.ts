@@ -18,7 +18,7 @@ export class StorageChannel<V extends ChannelObject> implements IStorageChannel<
       delete(_name: string) { }
     }
   ) {
-    if (cache.has(name)) throw new Error(`ClientChannel: Specified storage channel ${name} is already created.`);
+    if (cache.has(name)) throw new Error(`ClientChannel: Specified storage channel "${name}" is already created.`);
     void cache.set(name, this);
     void this.cancellation.register(() =>
       void cache.delete(name));
