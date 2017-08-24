@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.3
+
+- Improve robustness.
+
 ## 0.19.2
 
 - Refactoring.

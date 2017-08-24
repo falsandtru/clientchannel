@@ -19,9 +19,10 @@ export class Requests {
   ) {
   }
   private queue: Request[] = [];
-  public add(success: (db: IDBDatabase) => void, failure: () => void) {
-    void this.queue.push({ success, failure });
+  public add(success: (db: IDBDatabase) => void, failure: () => void): void {
     const state = states.get(this.database);
+    if (!state) return void failure();
+    void this.queue.push({ success, failure });
     if (!(state instanceof SuccessState)) return;
     void state.drain();
   }
@@ -59,8 +60,9 @@ abstract class State {
     curr?: State,
   ) {
     assert(!curr || curr.alive);
-    assert(this.command);
-    assert(this.config);
+    assert(commands.has(database));
+    assert(configs.has(database));
+    assert(requests.has(database));
     switch (true) {
       case this instanceof InitialState:
         this.alive = !curr;
@@ -79,17 +81,30 @@ abstract class State {
   public get command(): Command {
     assert(this.alive);
     assert(commands.has(this.database));
-    return commands.get(this.database)!;
+    return commands.get(this.database)!
+        || Command.close;
   }
   public get config(): Config {
     assert(this.alive);
     assert(configs.has(this.database));
-    return configs.get(this.database)!;
+    return configs.get(this.database)!
+        || {
+             make() {
+               return false;
+             },
+             verify() {
+               return false;
+             },
+             destroy() {
+               return false;
+             },
+           };
   }
   public get requests(): Requests {
     assert(this.alive);
     assert(requests.has(this.database));
-    return requests.get(this.database)!;
+    return requests.get(this.database)!
+        || new Requests(this.database);
   }
 }
 
