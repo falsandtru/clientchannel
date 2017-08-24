@@ -15,19 +15,22 @@ export function operate(database: string, command: Command, config: Config): voi
   }
   void commands.set(database, command);
   void configs.set(database, config);
-  void handle(database);
+  if (states.has(database)) {
+    assert(requests.has(database));
+    return void request(database, () => void 0, () => void 0);
+  }
+  else {
+    void requests.set(database, requests.get(database) || new Requests(database));
+    assert(commands.get(database) === command);
+    assert(configs.get(database) === config);
+    return void handleFromInitialState(new InitialState(database));
+  }
 }
 
 export function request(database: string, success: (db: IDBDatabase) => void, failure: () => void): void {
-  requests.has(database) || void requests.set(database, new Requests(database));
-  void requests.get(database)!.add(success, failure);
-}
-
-function handle(database: string): void {
-  void request(database, () => void 0, () => void 0);
-  if (states.has(database)) return;
-  assert(requests.has(database));
-  void handleFromInitialState(new InitialState(database));
+  return requests.has(database)
+    ? void requests.get(database)!.add(success, failure)
+    : void failure();
 }
 
 function handleFromInitialState(state: InitialState): void {
@@ -195,12 +198,12 @@ function handleFromDestroyState(state: DestroyState): void {
 
 function handleFromEndState(state: EndState): void {
   if (!state.alive) return;
-  const { database, version } = state;
+  const { database, version, command } = state;
   assert(version >= 0);
   void state.complete();
   void idbEventStream_
     .emit([database, IDBEventType.disconnect], new IDBEvent(database, IDBEventType.disconnect));
-  switch (state.command) {
+  switch (command) {
     case Command.open:
       return void handleFromInitialState(new InitialState(database, version));
     case Command.close:

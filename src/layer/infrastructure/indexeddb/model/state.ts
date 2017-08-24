@@ -1,10 +1,3 @@
-export const configs = new Map<string, Config>();
-export interface Config {
-  make: (tx: IDBTransaction) => boolean;
-  verify: (db: IDBDatabase) => boolean;
-  destroy: (reason: any, event?: Event) => boolean;
-}
-
 export const commands = new Map<string, Command>();
 export const enum Command {
   open = 'open',
@@ -12,11 +5,14 @@ export const enum Command {
   destroy = 'destroy',
 }
 
-export const requests = new Map<string, Requests>();
-interface Request {
-  success: (db: IDBDatabase) => void;
-  failure: () => void;
+export const configs = new Map<string, Config>();
+export interface Config {
+  make: (tx: IDBTransaction) => boolean;
+  verify: (db: IDBDatabase) => boolean;
+  destroy: (reason: any, event?: Event) => boolean;
 }
+
+export const requests = new Map<string, Requests>();
 export class Requests {
   constructor(
     private database: string,
@@ -51,40 +47,47 @@ export class Requests {
     }
   }
 }
+interface Request {
+  success: (db: IDBDatabase) => void;
+  failure: () => void;
+}
 
 export const states = new Map<string, State>();
-
 abstract class State {
   constructor(
     public readonly database: string,
-    state?: State,
+    curr?: State,
   ) {
+    assert(!curr || curr.alive);
     assert(this.command);
     assert(this.config);
     switch (true) {
       case this instanceof InitialState:
-        this.alive = !state;
+        this.alive = !curr;
         break;
       default:
-        assert(state);
-        this.alive = !!state && state.alive;
+        assert(curr);
+        this.alive = !!curr && curr.alive;
     }
     if (!this.alive) return;
     void states.set(database, this);
-    if (state) {
-      state.alive = false;
+    if (curr) {
+      curr.alive = false;
     }
   }
   public alive = true;
   public get command(): Command {
+    assert(this.alive);
     assert(commands.has(this.database));
     return commands.get(this.database)!;
   }
   public get config(): Config {
+    assert(this.alive);
     assert(configs.has(this.database));
     return configs.get(this.database)!;
   }
   public get requests(): Requests {
+    assert(this.alive);
     assert(requests.has(this.database));
     return requests.get(this.database)!;
   }
@@ -192,23 +195,15 @@ export class EndState extends State {
   }
   public complete(): void {
     if (!this.alive) return;
+    const { command } = this;
     this.alive = false;
     void states.delete(this.database);
-    switch (this.command) {
+    switch (command) {
       case Command.close:
       case Command.destroy:
-        void commands.set(this.database, Command.close);
-        void configs.set(this.database, {
-          make() {
-            return false;
-          },
-          verify() {
-            return false;
-          },
-          destroy() {
-            return false;
-          },
-        });
+        void commands.delete(this.database);
+        void configs.delete(this.database);
+        void requests.delete(this.database);
     }
   }
 }
