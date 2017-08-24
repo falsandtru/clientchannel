@@ -1,5 +1,5 @@
 import { Observation } from 'spica/observation';
-import { listen, Config } from '../../infrastructure/indexeddb/api';
+import { Listen, Config } from '../../infrastructure/indexeddb/api';
 import { noop } from '../../../lib/noop';
 
 export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
@@ -17,9 +17,9 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     };
   }
   constructor(
-    protected readonly database: string,
     protected readonly name: string,
-    private readonly index: string
+    private readonly index: string,
+    private readonly listen: Listen,
   ) {
     if (typeof index !== 'string') throw new TypeError();
   }
@@ -29,7 +29,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
   };
   public get(key: K, cb: (value: V | void, error: DOMException | DOMError | Error) => void = noop): V | undefined {
     void this.events.access.emit([key], [[key], KeyValueStore.EventType.get]);
-    void listen(this.database, db => {
+    void this.listen(db => {
       const tx = db.transaction(this.name, 'readonly');
       const req = this.index
         ? tx
@@ -55,7 +55,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
   private put(value: V, key: K, cb: (key: K, error: DOMException | DOMError | Error) => void = noop): V | undefined {
     void this.cache.set(key, value);
     void this.events.access.emit([key], [[key], KeyValueStore.EventType.put]);
-    void listen(this.database, db => {
+    void this.listen(db => {
       if (!this.cache.has(key)) return;
       const tx = db.transaction(this.name, 'readwrite');
       this.index
@@ -72,7 +72,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
   public delete(key: K, cb: (error: DOMException | DOMError | Error) => void = noop): void {
     void this.cache.delete(key);
     void this.events.access.emit([key], [[key], KeyValueStore.EventType.delete]);
-    void listen(this.database, db => {
+    void this.listen(db => {
       const tx = db.transaction(this.name, 'readwrite');
       void tx
         .objectStore(this.name)
@@ -81,7 +81,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     }, () => void cb(new Error('Access has failed.')));
   }
   public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMException | DOMError | Error | null) => void): void {
-    void listen(this.database, db => {
+    void this.listen(db => {
       const tx = db
         .transaction(this.name, mode);
       const req = index

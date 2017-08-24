@@ -3,7 +3,7 @@ import { Cancellation } from 'spica/cancellation';
 import { tick } from 'spica/tick';
 import { sqid } from 'spica/sqid';
 import { concat } from 'spica/concat';
-import { listen, Config, IDBKeyRange } from '../../infrastructure/indexeddb/api';
+import { Listen, Config, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { EventId, makeEventId } from './identifier';
 import { EventRecordType, UnstoredEventRecord, StoredEventRecord, LoadedEventRecord, SavedEventRecord, EventRecordValue, isValidPropertyName } from './event';
 import { hasBinary } from '../database/value';
@@ -48,9 +48,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     };
   }
   constructor(
-    protected readonly database: string,
     protected readonly name: string,
-    protected readonly attrs: string[]
+    protected readonly attrs: string[],
+    private readonly listen: Listen,
   ) {
     assert(this.attrs.every(isValidPropertyName));
     const states = new class {
@@ -133,7 +133,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     const updateSyncState = (state?: boolean) =>
       void this.syncState.set(key, state || this.syncState.get(key) || void 0);
     void updateSyncState(this.syncState.get(key) === true);
-    return void listen(this.database, db => {
+    return void this.listen(db => {
       const tx = db
         .transaction(this.name, 'readonly');
       const req = tx
@@ -242,7 +242,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   public add(event: UnstoredEventRecord<K, V>, tx?: IDBTransaction): void {
     assert(event instanceof UnstoredEventRecord);
     assert(event.type === EventStore.EventType.snapshot ? tx : true);
-    assert(!tx || tx.db.name === this.database && tx.mode === 'readwrite')
+    assert(!tx || tx.mode === 'readwrite')
     void this.events_.access
       .emit([event.key, event.attr, event.type], new EventStore.InternalEvent(event.type, makeEventId(0), event.key, event.attr));
     if (!this.observes(event.key)) {
@@ -320,7 +320,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       void cancellation.register(clean);
       void tick(() => (
         void setTimeout(cancellation.cancel, 1000),
-        void listen(this.database,
+        void this.listen(
           db => (
             void cancellation.close(),
             void cancellation.maybe(db)
@@ -336,7 +336,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   }
   private readonly snapshotCycle: number = 9;
   private snapshot(key: K): void {
-    return void listen(this.database, db => {
+    return void this.listen(db => {
       if (!this.observes(key)) return;
       const tx = db.transaction(this.name, 'readwrite');
       const store = tx.objectStore(this.name);
@@ -429,7 +429,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       });
   }
   public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMException | DOMError | Error | null) => void): void {
-    return void listen(this.database, db => {
+    return void this.listen(db => {
       const tx = db
         .transaction(this.name, mode);
       const req = index

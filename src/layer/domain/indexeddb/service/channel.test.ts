@@ -1,6 +1,6 @@
 import { StoreChannelObject } from '../../../../../';
 import { StoreChannel } from './channel';
-import { listen, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
+import { listen_, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { adjust } from '../../../data/es/store';
 
 describe('Unit: layers/domain/indexeddb/service/channel', function () {
@@ -55,7 +55,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     it('sync', done => {
       const chan = new StoreChannel('test', Value);
 
-      listen('test', db => {
+      listen_('test', db => {
         db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { n: 1 })));
         db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { s: '1' }))).onsuccess = () => {
           chan.sync(['a'], errs => {
@@ -76,7 +76,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     it('fetch', done => {
       const chan = new StoreChannel('test', Value);
 
-      listen('test', db => {
+      listen_('test', db => {
         db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { n: 1 })));
         db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { s: '1' }))).onsuccess = () => {
           chan.fetch('a', err => {
@@ -128,7 +128,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       const link = chan.link('a');
 
       assert(link.n === 0);
-      listen('test', db => {
+      listen_('test', db => {
         db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { n: 1 }))).onsuccess = () => {
           chan['schema'].data.fetch('a');
           link.__event.once(['recv', 'n'], () => {

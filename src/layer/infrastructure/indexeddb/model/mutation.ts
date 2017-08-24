@@ -27,7 +27,7 @@ export function operate(database: string, command: Command, config: Config): voi
   }
 }
 
-export function request(database: string, success: (db: IDBDatabase) => void, failure: () => void): void {
+export function request(database: string, success: (db: IDBDatabase) => void, failure: () => void = () => void 0): void {
   return requests.has(database)
     ? void requests.get(database)!.add(success, failure)
     : void failure();

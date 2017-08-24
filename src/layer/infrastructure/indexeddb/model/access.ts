@@ -1,13 +1,15 @@
 import { Config, Command } from './state';
 import { operate, request } from './mutation';
 
-export function open(database: string, config: Config): void {
-  return void operate(database, Command.open, config);
+export type Listen = (success: (db: IDBDatabase) => void, failure?: () => void) => void;
+
+export function open(database: string, config: Config): Listen {
+  void operate(database, Command.open, config);
+  return (success: (db: IDBDatabase) => void, failure?: () => void) =>
+    void request(database, success, failure);
 }
 
-export function listen(database: string, success: (db: IDBDatabase) => void, failure: () => void = () => void 0): void {
-  return void request(database, success, failure);
-}
+export const listen_ = request;
 
 export function close(database: string): void {
   return void operate(database, Command.close, {

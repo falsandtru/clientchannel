@@ -1,5 +1,5 @@
 import { Observer } from 'spica/observation';
-import { Config } from '../../../../infrastructure/indexeddb/api';
+import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
 import { EventStore } from '../../../../data/es/store';
 
@@ -41,10 +41,10 @@ export class AccessStore<K extends string> extends KeyValueStore<K, AccessRecord
     };
   }
   constructor(
-    database: string,
-    access: Observer<any[], EventStore.InternalEvent<K>, void>
+    access: Observer<any[], EventStore.InternalEvent<K>, void>,
+    listen: Listen,
   ) {
-    super(database, name, AccessStoreSchema.key);
+    super(name, AccessStoreSchema.key, listen);
     void Object.freeze(this);
 
     void access

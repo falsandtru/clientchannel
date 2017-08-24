@@ -1,4 +1,4 @@
-import { open, listen, close, destroy } from './access';
+import { open, close, destroy } from './access';
 import { Config } from './state';
 import { idbEventStream, IDBEventType } from './event';
 
@@ -32,8 +32,7 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
     });
 
     it('open', done => {
-      open('test', config);
-      listen('test', db => {
+      open('test', config)(db => {
         db.transaction('test', 'readonly').objectStore('test').count().onsuccess = event => {
           assert(event.target['result'] === 0);
           done();
@@ -65,8 +64,7 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
 
     it('cancel closing', done => {
       close('test');
-      open('test', config);
-      listen('test', () => {
+      open('test', config)(() => {
         idbEventStream
           .once(['test', IDBEventType.disconnect], () => done());
         close('test');
@@ -85,8 +83,7 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
     it('reopen after closing', done => {
       idbEventStream
         .once(['test', IDBEventType.disconnect], () => {
-          open('test', config);
-          listen('test', () => {
+          open('test', config)(() => {
             idbEventStream
               .once(['test', IDBEventType.disconnect], () => done());
             close('test');
@@ -98,8 +95,7 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
     it('reopen after destroying', done => {
       idbEventStream
         .once(['test', IDBEventType.disconnect], () => {
-          open('test', config);
-          listen('test', () => {
+          open('test', config)(() => {
             idbEventStream
               .once(['test', IDBEventType.disconnect], () => done());
             close('test');
@@ -111,20 +107,17 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
     it.skip('concurrent', done => {
       // call in random order on IE
       let cnt = 0;
-      open('test', config);
-      listen('test', db => {
+      open('test', config)(db => {
         db.transaction('test', 'readwrite').objectStore('test').count().onsuccess = () => {
           assert(++cnt === 1);
         };
       });
-      open('test', config);
-      listen('test', db => {
+      open('test', config)(db => {
         db.transaction('test', 'readwrite').objectStore('test').count().onsuccess = () => {
           assert(++cnt === 2);
         };
       });
-      open('test', config);
-      listen('test', db => {
+      open('test', config)(db => {
         db.transaction('test', 'readwrite').objectStore('test').count().onsuccess = () => {
           assert(++cnt === 3);
           idbEventStream

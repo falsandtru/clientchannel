@@ -1,6 +1,6 @@
 import { EventStore, compose } from './store';
 import { UnstoredEventRecord, StoredEventRecord } from './event';
-import { open, destroy, idbEventStream, IDBEventType } from '../../infrastructure/indexeddb/api';
+import { open, Listen, destroy, idbEventStream, IDBEventType } from '../../infrastructure/indexeddb/api';
 
 describe('Unit: layers/data/es/store', function () {
   this.timeout(9 * 1e3);
@@ -14,8 +14,8 @@ describe('Unit: layers/data/es/store', function () {
       }
     }
     class Store<K extends string, V extends EventStore.Value> extends EventStore<K, V> {
-      constructor(database: string, name: string) {
-        super(database, name, Object.keys(new Value(0)));
+      constructor(name: string, listen: Listen) {
+        super(name, Object.keys(new Value(0)), listen);
       }
     }
     function stringify<K extends string, V extends EventStore.Value>(e: UnstoredEventRecord<K, V> | StoredEventRecord<K, V>): string {
@@ -286,8 +286,7 @@ describe('Unit: layers/data/es/store', function () {
     });
 
     it('CRUD', done => {
-      open('test', Store.configure('test'));
-      const es = new Store<string, Value>('test', 'test');
+      const es = new Store<string, Value>('test', open('test', Store.configure('test')));
 
       assert(es.observes('a') === false);
       assert(es.has('a') === false);
@@ -331,8 +330,7 @@ describe('Unit: layers/data/es/store', function () {
     });
 
     it('sync', done => {
-      open('test', Store.configure('test'));
-      const es = new Store<string, Value>('test', 'test');
+      const es = new Store<string, Value>('test', open('test', Store.configure('test')));
 
       let cnt = 0;
       es.sync([''], err => {
@@ -351,8 +349,7 @@ describe('Unit: layers/data/es/store', function () {
     });
 
     it('clean', done => {
-      open('test', Store.configure('test'));
-      const es = new Store<string, Value>('test', 'test');
+      const es = new Store<string, Value>('test', open('test', Store.configure('test')));
 
       es.add(new UnstoredEventRecord('a', new Value(0)));
       es.add(new UnstoredEventRecord('b', new Value(0)));
@@ -383,8 +380,7 @@ describe('Unit: layers/data/es/store', function () {
     });
 
     it('snapshot', done => {
-      open('test', Store.configure('test'));
-      const es = new Store<string, Value>('test', 'test');
+      const es = new Store<string, Value>('test', open('test', Store.configure('test')));
 
       Promise.resolve()
         .then(() =>
@@ -456,6 +452,8 @@ describe('Unit: layers/data/es/store', function () {
     });
 
     it('snapshot binary', done => {
+      const es = new Store<string, Value>('test', open('test', Store.configure('test')));
+
       class Value extends EventStore.Value {
         constructor(
           public value: ArrayBuffer
@@ -463,9 +461,6 @@ describe('Unit: layers/data/es/store', function () {
           super();
         }
       }
-
-      open('test', Store.configure('test'));
-      const es = new Store<string, Value>('test', 'test');
 
       es.add(new UnstoredEventRecord('a', new Value(new ArrayBuffer(0))));
       es.events.save.once(['a', '', 'snapshot'], ev => {

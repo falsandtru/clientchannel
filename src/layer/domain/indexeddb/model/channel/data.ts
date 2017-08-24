@@ -1,4 +1,4 @@
-import { Config } from '../../../../infrastructure/indexeddb/api';
+import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { EventStore } from '../../../../data/es/store';
 
 export const name = 'data';
@@ -8,10 +8,10 @@ export class DataStore<K extends string, V extends DataStore.Value> extends Even
     return EventStore.configure(name);
   }
   constructor(
-    database: string,
-    attrs: string[]
+    attrs: string[],
+    listen: Listen,
   ) {
-    super(database, name, attrs);
+    super(name, attrs, listen);
     void Object.freeze(this);
   }
 }

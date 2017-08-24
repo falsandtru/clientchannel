@@ -2,7 +2,7 @@ import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../'
 import { Observation } from 'spica/observation';
 import { Cancellation } from 'spica/cancellation';
 import { Cache } from 'spica/cache';
-import { open, close, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
+import { open, Listen, close, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { DataStore } from './channel/data';
 import { AccessStore } from './channel/access';
 import { ExpiryStore } from './channel/expiry';
@@ -22,7 +22,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     void cache.set(name, this);
     void this.cancellation.register(() =>
         void cache.delete(name));
-    void open(name, {
+    this.schema = new Schema<K, V>(this, attrs, this.ages, open(name, {
       make(db) {
         return DataStore.configure().make(db)
             && AccessStore.configure().make(db)
@@ -38,9 +38,8 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
             && AccessStore.configure().destroy(reason, ev)
             && ExpiryStore.configure().destroy(reason, ev)
             && destroy(reason, ev);
-      }
-    });
-    this.schema = new Schema<K, V>(this, attrs, this.ages);
+      },
+    }));
     void this.cancellation.register(() =>
         void this.schema.close());
     void this.cancellation.register(
@@ -131,7 +130,8 @@ class Schema<K extends string, V extends StoreChannelObject<K>> {
   constructor(
     private readonly store_: ChannelStore<K, V>,
     private readonly attrs_: string[],
-    private readonly expiries_: Map<K, number>
+    private readonly expiries_: Map<K, number>,
+    private readonly listen_: Listen,
   ) {
     void this.build();
   }
@@ -139,9 +139,9 @@ class Schema<K extends string, V extends StoreChannelObject<K>> {
   private build(): void {
     const keys = this.data ? this.data.keys() : [];
 
-    this.data = new DataStore<K, V>(this.store_.name, this.attrs_);
-    this.access = new AccessStore<K>(this.store_.name, this.data.events_.access);
-    this.expire = new ExpiryStore<K>(this.store_.name, this.store_, this.data.events_.access, this.expiries_, this.cancellation_);
+    this.data = new DataStore<K, V>(this.attrs_, this.listen_);
+    this.access = new AccessStore<K>(this.data.events_.access, this.listen_);
+    this.expire = new ExpiryStore<K>(this.store_, this.data.events_.access, this.expiries_, this.cancellation_, this.listen_);
 
     void this.cancellation_.register(this.store_.events_.load.relay(this.data.events.load));
     void this.cancellation_.register(this.store_.events_.save.relay(this.data.events.save));
