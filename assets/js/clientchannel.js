@@ -1,4 +1,4 @@
-/*! clientchannel v0.18.2 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.19.0 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -3286,12 +3286,9 @@ require = function e(t, n, r) {
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            var state_1 = require('./state');
             var mutation_1 = require('./mutation');
             function open(database, config) {
-                void state_1.commands.set(database, 'open');
-                void state_1.configs.set(database, config);
-                void mutation_1.handleState(database);
+                return void mutation_1.operate(database, 'open', config);
             }
             exports.open = open;
             function listen(database) {
@@ -3301,13 +3298,12 @@ require = function e(t, n, r) {
                             return void 0;
                         };
                     }
-                    return void state_1.requests.get(database).add(success, failure), void mutation_1.handleState(database);
+                    return void mutation_1.request(database, success, failure);
                 };
             }
             exports.listen = listen;
             function close(database) {
-                void state_1.commands.set(database, 'close');
-                void state_1.configs.set(database, {
+                return void mutation_1.operate(database, 'close', {
                     make: function () {
                         return false;
                     },
@@ -3318,12 +3314,10 @@ require = function e(t, n, r) {
                         return false;
                     }
                 });
-                void mutation_1.handleState(database);
             }
             exports.close = close;
             function destroy(database) {
-                void state_1.commands.set(database, 'destroy');
-                void state_1.configs.set(database, {
+                return void mutation_1.operate(database, 'destroy', {
                     make: function () {
                         return false;
                     },
@@ -3334,14 +3328,10 @@ require = function e(t, n, r) {
                         return true;
                     }
                 });
-                void mutation_1.handleState(database);
             }
             exports.destroy = destroy;
         },
-        {
-            './mutation': 46,
-            './state': 47
-        }
+        { './mutation': 46 }
     ],
     45: [
         function (require, module, exports) {
@@ -3379,14 +3369,39 @@ require = function e(t, n, r) {
             var global_1 = require('../module/global');
             var state_1 = require('./state');
             var event_1 = require('./event');
-            function handleState(database) {
-                var state = state_1.states.get(database);
-                if (!state)
-                    return void handleFromInitialState(new state_1.InitialState(database));
-                if (state instanceof state_1.SuccessState)
-                    return void handleFromSuccessState(state);
+            function operate(database, command, config) {
+                if (state_1.commands.get(database) === 'destroy') {
+                    switch (command) {
+                    case 'open':
+                    case 'close':
+                        return void event_1.idbEventStream_.once([
+                            database,
+                            event_1.IDBEventType.disconnect
+                        ], function () {
+                            return void operate(database, command, config);
+                        });
+                    }
+                }
+                void state_1.commands.set(database, command);
+                void state_1.configs.set(database, config);
+                void handle(database);
             }
-            exports.handleState = handleState;
+            exports.operate = operate;
+            function request(database, success, failure) {
+                state_1.requests.has(database) || void state_1.requests.set(database, new state_1.Requests(database));
+                void state_1.requests.get(database).add(success, failure);
+            }
+            exports.request = request;
+            function handle(database) {
+                void request(database, function () {
+                    return void 0;
+                }, function () {
+                    return void 0;
+                });
+                if (state_1.states.has(database))
+                    return;
+                void handleFromInitialState(new state_1.InitialState(database));
+            }
             function handleFromInitialState(state) {
                 if (!state.alive)
                     return;
@@ -3458,10 +3473,10 @@ require = function e(t, n, r) {
                     return;
                 var database = state.database, connection = state.connection, requests = state.requests;
                 connection.onversionchange = function () {
-                    return void requests.clear(), void connection.close(), void event_1.idbEventStream_.emit([
+                    return void connection.close(), void event_1.idbEventStream_.emit([
                         database,
                         event_1.IDBEventType.destroy
-                    ], new event_1.IDBEvent(database, event_1.IDBEventType.destroy)), void handleFromEndState(new state_1.EndState(state));
+                    ], new event_1.IDBEvent(database, event_1.IDBEventType.destroy)), void requests.clear(), void handleFromEndState(new state_1.EndState(state));
                 };
                 connection.onerror = function (event) {
                     return void handleFromErrorState(new state_1.ErrorState(state, event.target.error, event));
@@ -3514,7 +3529,6 @@ require = function e(t, n, r) {
                     void connection.close();
                     return void handleFromDestroyState(new state_1.DestroyState(state));
                 }
-                throw new TypeError('ClientChannel: IndexedDB: Invalid command ' + state.command + '.');
             }
             function handleFromErrorState(state) {
                 if (!state.alive)
@@ -3564,10 +3578,10 @@ require = function e(t, n, r) {
                 var database = state.database;
                 var deleteRequest = global_1.indexedDB.deleteDatabase(database);
                 deleteRequest.onsuccess = function () {
-                    return void state.requests.clear(), void event_1.idbEventStream_.emit([
+                    return void event_1.idbEventStream_.emit([
                         database,
                         event_1.IDBEventType.destroy
-                    ], new event_1.IDBEvent(database, event_1.IDBEventType.destroy)), void handleFromEndState(new state_1.EndState(state));
+                    ], new event_1.IDBEvent(database, event_1.IDBEventType.destroy)), void state.requests.clear(), void handleFromEndState(new state_1.EndState(state));
                 };
                 deleteRequest.onerror = function (event) {
                     return void handleFromErrorState(new state_1.ErrorState(state, deleteRequest.error, event));
@@ -3577,32 +3591,18 @@ require = function e(t, n, r) {
                 if (!state.alive)
                     return;
                 var database = state.database, version = state.version;
-                state.alive = false;
-                void state_1.states.delete(database);
+                void state.complete();
+                void event_1.idbEventStream_.emit([
+                    database,
+                    event_1.IDBEventType.disconnect
+                ], new event_1.IDBEvent(database, event_1.IDBEventType.disconnect));
                 switch (state.command) {
                 case 'open':
-                    void event_1.idbEventStream_.emit([
-                        database,
-                        event_1.IDBEventType.disconnect
-                    ], new event_1.IDBEvent(database, event_1.IDBEventType.disconnect));
                     return void handleFromInitialState(new state_1.InitialState(database, version));
                 case 'close':
-                    void state_1.commands.delete(database);
-                    void state_1.configs.delete(database);
-                    return void event_1.idbEventStream_.emit([
-                        database,
-                        event_1.IDBEventType.disconnect
-                    ], new event_1.IDBEvent(database, event_1.IDBEventType.disconnect));
                 case 'destroy':
-                    void state_1.commands.delete(database);
-                    void state_1.configs.delete(database);
-                    void state.requests.clear();
-                    return void event_1.idbEventStream_.emit([
-                        database,
-                        event_1.IDBEventType.disconnect
-                    ], new event_1.IDBEvent(database, event_1.IDBEventType.disconnect));
+                    return;
                 }
-                throw new TypeError('ClientChannel: IndexedDB: Invalid command ' + state.command + '.');
             }
         },
         {
@@ -3641,7 +3641,8 @@ require = function e(t, n, r) {
             }(Command = exports.Command || (exports.Command = {})));
             exports.requests = new Map();
             var Requests = function () {
-                function Requests() {
+                function Requests(database) {
+                    this.database = database;
                     this.queue = [];
                 }
                 Requests.prototype.add = function (success, failure) {
@@ -3649,6 +3650,10 @@ require = function e(t, n, r) {
                         success: success,
                         failure: failure
                     });
+                    var state = exports.states.get(this.database);
+                    if (!(state instanceof SuccessState))
+                        return;
+                    void state.drain();
                 };
                 Requests.prototype.resolve = function (state, catcher) {
                     try {
@@ -3670,26 +3675,24 @@ require = function e(t, n, r) {
                 };
                 return Requests;
             }();
+            exports.Requests = Requests;
             exports.states = new Map();
             var State = function () {
-                function State(database) {
+                function State(database, state) {
                     this.database = database;
-                    this.alive = !!this.command && !!this.config;
-                    var state = exports.states.get(database);
+                    this.alive = true;
                     switch (true) {
                     case this instanceof InitialState:
-                        if (state) {
-                            this.alive = false;
-                        }
+                        this.alive = !state;
                         break;
                     default:
-                        if (state) {
-                            this.alive = this.alive && state.alive;
-                            state.alive = false;
-                        }
+                        this.alive = !!state && state.alive;
                     }
-                    if (this.alive) {
-                        void exports.states.set(database, this);
+                    if (!this.alive)
+                        return;
+                    void exports.states.set(database, this);
+                    if (state) {
+                        state.alive = false;
                     }
                 }
                 Object.defineProperty(State.prototype, 'command', {
@@ -3721,10 +3724,9 @@ require = function e(t, n, r) {
                     if (version === void 0) {
                         version = 0;
                     }
-                    var _this = _super.call(this, database) || this;
+                    var _this = _super.call(this, database, exports.states.get(database)) || this;
                     _this.version = version;
                     _this.STATE;
-                    void exports.requests.set(database, exports.requests.get(database) || new Requests());
                     return _this;
                 }
                 return InitialState;
@@ -3733,7 +3735,7 @@ require = function e(t, n, r) {
             var BlockState = function (_super) {
                 __extends(BlockState, _super);
                 function BlockState(state, session) {
-                    var _this = _super.call(this, state.database) || this;
+                    var _this = _super.call(this, state.database, state) || this;
                     _this.session = session;
                     _this.STATE;
                     return _this;
@@ -3744,7 +3746,7 @@ require = function e(t, n, r) {
             var UpgradeState = function (_super) {
                 __extends(UpgradeState, _super);
                 function UpgradeState(state, session) {
-                    var _this = _super.call(this, state.database) || this;
+                    var _this = _super.call(this, state.database, state) || this;
                     _this.session = session;
                     _this.STATE;
                     return _this;
@@ -3755,7 +3757,7 @@ require = function e(t, n, r) {
             var SuccessState = function (_super) {
                 __extends(SuccessState, _super);
                 function SuccessState(state, connection) {
-                    var _this = _super.call(this, state.database) || this;
+                    var _this = _super.call(this, state.database, state) || this;
                     _this.connection = connection;
                     _this.STATE;
                     return _this;
@@ -3766,7 +3768,7 @@ require = function e(t, n, r) {
             var ErrorState = function (_super) {
                 __extends(ErrorState, _super);
                 function ErrorState(state, error, event) {
-                    var _this = _super.call(this, state.database) || this;
+                    var _this = _super.call(this, state.database, state) || this;
                     _this.error = error;
                     _this.event = event;
                     _this.STATE;
@@ -3778,7 +3780,7 @@ require = function e(t, n, r) {
             var AbortState = function (_super) {
                 __extends(AbortState, _super);
                 function AbortState(state, event) {
-                    var _this = _super.call(this, state.database) || this;
+                    var _this = _super.call(this, state.database, state) || this;
                     _this.event = event;
                     _this.STATE;
                     return _this;
@@ -3789,7 +3791,7 @@ require = function e(t, n, r) {
             var CrashState = function (_super) {
                 __extends(CrashState, _super);
                 function CrashState(state, reason) {
-                    var _this = _super.call(this, state.database) || this;
+                    var _this = _super.call(this, state.database, state) || this;
                     _this.reason = reason;
                     _this.STATE;
                     return _this;
@@ -3800,7 +3802,7 @@ require = function e(t, n, r) {
             var DestroyState = function (_super) {
                 __extends(DestroyState, _super);
                 function DestroyState(state) {
-                    var _this = _super.call(this, state.database) || this;
+                    var _this = _super.call(this, state.database, state) || this;
                     _this.STATE;
                     return _this;
                 }
@@ -3813,11 +3815,33 @@ require = function e(t, n, r) {
                     if (version === void 0) {
                         version = 0;
                     }
-                    var _this = _super.call(this, state.database) || this;
+                    var _this = _super.call(this, state.database, state) || this;
                     _this.version = version;
                     _this.STATE;
                     return _this;
                 }
+                EndState.prototype.complete = function () {
+                    if (!this.alive)
+                        return;
+                    this.alive = false;
+                    void exports.states.delete(this.database);
+                    switch (this.command) {
+                    case 'close':
+                    case 'destroy':
+                        void exports.commands.set(this.database, 'close');
+                        void exports.configs.set(this.database, {
+                            make: function () {
+                                return false;
+                            },
+                            verify: function () {
+                                return false;
+                            },
+                            destroy: function () {
+                                return false;
+                            }
+                        });
+                    }
+                };
                 return EndState;
             }(State);
             exports.EndState = EndState;
