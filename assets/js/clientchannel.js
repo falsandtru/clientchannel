@@ -1,4 +1,4 @@
-/*! clientchannel v0.19.2 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.19.3 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -2512,7 +2512,7 @@ require = function e(t, n, r) {
                     });
                     this.ages = new Map();
                     if (cache.has(name))
-                        throw new Error('ClientChannel: Specified database channel ' + name + ' is already created.');
+                        throw new Error('ClientChannel: Specified database channel "' + name + '" is already created.');
                     void cache.set(name, this);
                     void this.cancellation.register(function () {
                         return void cache.delete(name);
@@ -3160,7 +3160,7 @@ require = function e(t, n, r) {
                         recv: new observation_1.Observation()
                     });
                     if (cache.has(name))
-                        throw new Error('ClientChannel: Specified storage channel ' + name + ' is already created.');
+                        throw new Error('ClientChannel: Specified storage channel "' + name + '" is already created.');
                     void cache.set(name, this);
                     void this.cancellation.register(function () {
                         return void cache.delete(name);
@@ -3284,17 +3284,19 @@ require = function e(t, n, r) {
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            var state_1 = require('./state');
             var mutation_1 = require('./mutation');
+            var event_1 = require('./event');
             function open(database, config) {
-                void mutation_1.operate(database, 'open', config);
+                void operate(database, 'open', config);
                 return function (success, failure) {
-                    return void mutation_1.request(database, success, failure);
+                    return void request(database, success, failure);
                 };
             }
             exports.open = open;
-            exports.listen_ = mutation_1.request;
+            exports.listen_ = request;
             function close(database) {
-                return void mutation_1.operate(database, 'close', {
+                return void operate(database, 'close', {
                     make: function () {
                         return false;
                     },
@@ -3308,7 +3310,7 @@ require = function e(t, n, r) {
             }
             exports.close = close;
             function destroy(database) {
-                return void mutation_1.operate(database, 'destroy', {
+                return void operate(database, 'destroy', {
                     make: function () {
                         return false;
                     },
@@ -3321,8 +3323,45 @@ require = function e(t, n, r) {
                 });
             }
             exports.destroy = destroy;
+            function operate(database, command, config) {
+                if (state_1.commands.get(database) === 'destroy') {
+                    switch (command) {
+                    case 'open':
+                    case 'close':
+                        return void event_1.idbEventStream_.once([
+                            database,
+                            event_1.IDBEventType.destroy
+                        ], function () {
+                            return void operate(database, command, config);
+                        });
+                    }
+                }
+                void state_1.commands.set(database, command);
+                void state_1.configs.set(database, config);
+                if (state_1.states.has(database)) {
+                    return void request(database, function () {
+                        return void 0;
+                    }, function () {
+                        return void 0;
+                    });
+                } else {
+                    return void mutation_1.handle(database);
+                }
+            }
+            function request(database, success, failure) {
+                if (failure === void 0) {
+                    failure = function () {
+                        return void 0;
+                    };
+                }
+                return state_1.requests.has(database) ? void state_1.requests.get(database).add(success, failure) : void failure();
+            }
         },
-        { './mutation': 46 }
+        {
+            './event': 45,
+            './mutation': 46,
+            './state': 47
+        }
     ],
     45: [
         function (require, module, exports) {
@@ -3360,42 +3399,10 @@ require = function e(t, n, r) {
             var global_1 = require('../module/global');
             var state_1 = require('./state');
             var event_1 = require('./event');
-            function operate(database, command, config) {
-                if (state_1.commands.get(database) === 'destroy') {
-                    switch (command) {
-                    case 'open':
-                    case 'close':
-                        return void event_1.idbEventStream_.once([
-                            database,
-                            event_1.IDBEventType.destroy
-                        ], function () {
-                            return void operate(database, command, config);
-                        });
-                    }
-                }
-                void state_1.commands.set(database, command);
-                void state_1.configs.set(database, config);
-                if (state_1.states.has(database)) {
-                    return void request(database, function () {
-                        return void 0;
-                    }, function () {
-                        return void 0;
-                    });
-                } else {
-                    void state_1.requests.set(database, state_1.requests.get(database) || new state_1.Requests(database));
-                    return void handleFromInitialState(new state_1.InitialState(database));
-                }
+            function handle(database) {
+                return void handleFromInitialState(new state_1.InitialState(database));
             }
-            exports.operate = operate;
-            function request(database, success, failure) {
-                if (failure === void 0) {
-                    failure = function () {
-                        return void 0;
-                    };
-                }
-                return state_1.requests.has(database) ? void state_1.requests.get(database).add(success, failure) : void failure();
-            }
-            exports.request = request;
+            exports.handle = handle;
             function handleFromInitialState(state) {
                 if (!state.alive)
                     return;
@@ -3590,7 +3597,7 @@ require = function e(t, n, r) {
                     database,
                     event_1.IDBEventType.disconnect
                 ], new event_1.IDBEvent(database, event_1.IDBEventType.disconnect));
-                switch (command) {
+                switch (state_1.commands.get(database) || command) {
                 case 'open':
                     return void handleFromInitialState(new state_1.InitialState(database, version));
                 case 'close':
@@ -3634,22 +3641,24 @@ require = function e(t, n, r) {
             }(Command = exports.Command || (exports.Command = {})));
             exports.configs = new Map();
             exports.requests = new Map();
-            var Requests = function () {
-                function Requests(database) {
+            var RequestQueue = function () {
+                function RequestQueue(database) {
                     this.database = database;
                     this.queue = [];
                 }
-                Requests.prototype.add = function (success, failure) {
+                RequestQueue.prototype.add = function (success, failure) {
+                    var state = exports.states.get(this.database);
+                    if (!state)
+                        return void failure();
                     void this.queue.push({
                         success: success,
                         failure: failure
                     });
-                    var state = exports.states.get(this.database);
                     if (!(state instanceof SuccessState))
                         return;
                     void state.drain();
                 };
-                Requests.prototype.resolve = function (state, catcher) {
+                RequestQueue.prototype.resolve = function (state, catcher) {
                     try {
                         while (this.queue.length > 0 && state.alive) {
                             void this.queue.shift().success(state.connection);
@@ -3658,7 +3667,7 @@ require = function e(t, n, r) {
                         void catcher(reason);
                     }
                 };
-                Requests.prototype.clear = function () {
+                RequestQueue.prototype.clear = function () {
                     try {
                         while (this.queue.length > 0) {
                             void this.queue.shift().failure();
@@ -3667,9 +3676,8 @@ require = function e(t, n, r) {
                         return this.clear();
                     }
                 };
-                return Requests;
+                return RequestQueue;
             }();
-            exports.Requests = Requests;
             exports.states = new Map();
             var State = function () {
                 function State(database, curr) {
@@ -3678,12 +3686,15 @@ require = function e(t, n, r) {
                     switch (true) {
                     case this instanceof InitialState:
                         this.alive = !curr;
+                        if (!this.alive)
+                            return;
+                        void exports.requests.set(database, exports.requests.get(database) || new RequestQueue(database));
                         break;
                     default:
                         this.alive = !!curr && curr.alive;
+                        if (!this.alive)
+                            return;
                     }
-                    if (!this.alive)
-                        return;
                     void exports.states.set(database, this);
                     if (curr) {
                         curr.alive = false;
@@ -3691,21 +3702,31 @@ require = function e(t, n, r) {
                 }
                 Object.defineProperty(State.prototype, 'command', {
                     get: function () {
-                        return exports.commands.get(this.database);
+                        return exports.commands.get(this.database) || 'close';
                     },
                     enumerable: true,
                     configurable: true
                 });
                 Object.defineProperty(State.prototype, 'config', {
                     get: function () {
-                        return exports.configs.get(this.database);
+                        return exports.configs.get(this.database) || {
+                            make: function () {
+                                return false;
+                            },
+                            verify: function () {
+                                return false;
+                            },
+                            destroy: function () {
+                                return false;
+                            }
+                        };
                     },
                     enumerable: true,
                     configurable: true
                 });
                 Object.defineProperty(State.prototype, 'requests', {
                     get: function () {
-                        return exports.requests.get(this.database);
+                        return exports.requests.get(this.database) || new RequestQueue(this.database);
                     },
                     enumerable: true,
                     configurable: true
