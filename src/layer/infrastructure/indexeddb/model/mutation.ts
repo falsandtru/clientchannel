@@ -1,36 +1,9 @@
 import { indexedDB } from '../module/global';
-import { configs, Config, commands, Command, requests, Requests, states, InitialState, BlockState, UpgradeState, SuccessState, ErrorState, AbortState, CrashState, DestroyState, EndState } from './state';
+import { commands, Command, InitialState, BlockState, UpgradeState, SuccessState, ErrorState, AbortState, CrashState, DestroyState, EndState } from './state';
 import { idbEventStream_, IDBEvent, IDBEventType } from './event';
 
-export function operate(database: string, command: Command, config: Config): void {
-  if (commands.get(database) === Command.destroy) {
-    assert(states.has(database));
-    switch (command) {
-      case Command.open:
-      case Command.close:
-        return void idbEventStream_
-          .once([database, IDBEventType.destroy], () =>
-            void operate(database, command, config));
-    }
-  }
-  void commands.set(database, command);
-  void configs.set(database, config);
-  if (states.has(database)) {
-    assert(requests.has(database));
-    return void request(database, () => void 0, () => void 0);
-  }
-  else {
-    void requests.set(database, requests.get(database) || new Requests(database));
-    assert(commands.get(database) === command);
-    assert(configs.get(database) === config);
-    return void handleFromInitialState(new InitialState(database));
-  }
-}
-
-export function request(database: string, success: (db: IDBDatabase) => void, failure: () => void = () => void 0): void {
-  return requests.has(database)
-    ? void requests.get(database)!.add(success, failure)
-    : void failure();
+export function handle(database: string): void {
+  return void handleFromInitialState(new InitialState(database));
 }
 
 function handleFromInitialState(state: InitialState): void {
@@ -203,7 +176,7 @@ function handleFromEndState(state: EndState): void {
   void state.complete();
   void idbEventStream_
     .emit([database, IDBEventType.disconnect], new IDBEvent(database, IDBEventType.disconnect));
-  switch (command) {
+  switch (commands.get(database) || command) {
     case Command.open:
       return void handleFromInitialState(new InitialState(database, version));
     case Command.close:

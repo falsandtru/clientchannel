@@ -1,5 +1,6 @@
-import { Config, Command } from './state';
-import { operate, request } from './mutation';
+import { states, commands, configs, requests, Command, Config } from './state';
+import { handle } from './mutation';
+import { idbEventStream_, IDBEventType } from './event';
 
 export type Listen = (success: (db: IDBDatabase) => void, failure?: () => void) => void;
 
@@ -37,4 +38,34 @@ export function destroy(database: string): void {
       return true;
     },
   });
+}
+
+function operate(database: string, command: Command, config: Config): void {
+  if (commands.get(database) === Command.destroy) {
+    assert(states.has(database));
+    switch (command) {
+      case Command.open:
+      case Command.close:
+        return void idbEventStream_
+          .once([database, IDBEventType.destroy], () =>
+            void operate(database, command, config));
+    }
+  }
+  void commands.set(database, command);
+  void configs.set(database, config);
+  if (states.has(database)) {
+    assert(requests.has(database));
+    return void request(database, () => void 0, () => void 0);
+  }
+  else {
+    assert(commands.get(database) === command);
+    assert(configs.get(database) === config);
+    return void handle(database);
+  }
+}
+
+function request(database: string, success: (db: IDBDatabase) => void, failure: () => void = () => void 0): void {
+  return requests.has(database)
+    ? void requests.get(database)!.add(success, failure)
+    : void failure();
 }

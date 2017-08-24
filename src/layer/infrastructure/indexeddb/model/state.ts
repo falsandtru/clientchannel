@@ -62,16 +62,18 @@ abstract class State {
     assert(!curr || curr.alive);
     assert(commands.has(database));
     assert(configs.has(database));
-    assert(requests.has(database));
     switch (true) {
       case this instanceof InitialState:
         this.alive = !curr;
+        if (!this.alive) return;
+        void requests.set(database, requests.get(database) || new Requests(database));
         break;
       default:
+        assert(requests.has(database));
         assert(curr);
         this.alive = !!curr && curr.alive;
+        if (!this.alive) return;
     }
-    if (!this.alive) return;
     void states.set(database, this);
     if (curr) {
       curr.alive = false;
