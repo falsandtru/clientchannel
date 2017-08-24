@@ -1,4 +1,4 @@
-/*! clientchannel v0.19.1 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.19.2 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -1538,11 +1538,11 @@ require = function e(t, n, r) {
                 EventStoreSchema.key = 'key';
             }(EventStoreSchema || (EventStoreSchema = {})));
             var EventStore = function () {
-                function EventStore(database, name, attrs) {
+                function EventStore(name, attrs, listen) {
                     var _this = this;
-                    this.database = database;
                     this.name = name;
                     this.attrs = attrs;
+                    this.listen = listen;
                     this.memory = new observation_1.Observation();
                     this.events = Object.freeze({
                         load: new observation_1.Observation(),
@@ -1672,7 +1672,7 @@ require = function e(t, n, r) {
                         return void _this.syncState.set(key, state || _this.syncState.get(key) || void 0);
                     };
                     void updateSyncState(this.syncState.get(key) === true);
-                    return void api_1.listen(this.database)(function (db) {
+                    return void this.listen(function (db) {
                         var tx = db.transaction(_this.name, 'readonly');
                         var req = tx.objectStore(_this.name).index(EventStoreSchema.key).openCursor(key, 'prev');
                         var unbind = function () {
@@ -1898,7 +1898,7 @@ require = function e(t, n, r) {
                         void cancellation.register(reject);
                         void cancellation.register(clean);
                         void tick_1.tick(function () {
-                            return void setTimeout(cancellation.cancel, 1000), void api_1.listen(_this.database)(function (db) {
+                            return void setTimeout(cancellation.cancel, 1000), void _this.listen(function (db) {
                                 return void cancellation.close(), void cancellation.maybe(db).fmap(function (db) {
                                     return void cont(db.transaction(_this.name, 'readwrite'));
                                 }).extract(function () {
@@ -1919,7 +1919,7 @@ require = function e(t, n, r) {
                 };
                 EventStore.prototype.snapshot = function (key) {
                     var _this = this;
-                    return void api_1.listen(this.database)(function (db) {
+                    return void this.listen(function (db) {
                         if (!_this.observes(key))
                             return;
                         var tx = db.transaction(_this.name, 'readwrite');
@@ -2007,7 +2007,7 @@ require = function e(t, n, r) {
                 };
                 EventStore.prototype.cursor = function (query, index, direction, mode, cb) {
                     var _this = this;
-                    return void api_1.listen(this.database)(function (db) {
+                    return void this.listen(function (db) {
                         var tx = db.transaction(_this.name, mode);
                         var req = index ? tx.objectStore(_this.name).index(index).openCursor(query, direction) : tx.objectStore(_this.name).openCursor(query, direction);
                         req.onsuccess = function () {
@@ -2135,13 +2135,12 @@ require = function e(t, n, r) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var observation_1 = require('spica/observation');
-            var api_1 = require('../../infrastructure/indexeddb/api');
             var noop_1 = require('../../../lib/noop');
             var KeyValueStore = function () {
-                function KeyValueStore(database, name, index) {
-                    this.database = database;
+                function KeyValueStore(name, index, listen) {
                     this.name = name;
                     this.index = index;
+                    this.listen = listen;
                     this.cache = new Map();
                     this.events = { access: new observation_1.Observation() };
                     if (typeof index !== 'string')
@@ -2169,7 +2168,7 @@ require = function e(t, n, r) {
                         [key],
                         KeyValueStore.EventType.get
                     ]);
-                    void api_1.listen(this.database)(function (db) {
+                    void this.listen(function (db) {
                         var tx = db.transaction(_this.name, 'readonly');
                         var req = _this.index ? tx.objectStore(_this.name).index(_this.index).get(key) : tx.objectStore(_this.name).get(key);
                         var result;
@@ -2203,7 +2202,7 @@ require = function e(t, n, r) {
                         [key],
                         KeyValueStore.EventType.put
                     ]);
-                    void api_1.listen(this.database)(function (db) {
+                    void this.listen(function (db) {
                         if (!_this.cache.has(key))
                             return;
                         var tx = db.transaction(_this.name, 'readwrite');
@@ -2226,7 +2225,7 @@ require = function e(t, n, r) {
                         [key],
                         KeyValueStore.EventType.delete
                     ]);
-                    void api_1.listen(this.database)(function (db) {
+                    void this.listen(function (db) {
                         var tx = db.transaction(_this.name, 'readwrite');
                         void tx.objectStore(_this.name).delete(key);
                         tx.oncomplete = tx.onerror = tx.onabort = function () {
@@ -2238,7 +2237,7 @@ require = function e(t, n, r) {
                 };
                 KeyValueStore.prototype.cursor = function (query, index, direction, mode, cb) {
                     var _this = this;
-                    void api_1.listen(this.database)(function (db) {
+                    void this.listen(function (db) {
                         var tx = db.transaction(_this.name, mode);
                         var req = index ? tx.objectStore(_this.name).index(index).openCursor(query, direction) : tx.objectStore(_this.name).openCursor(query, direction);
                         req.onsuccess = function () {
@@ -2268,7 +2267,6 @@ require = function e(t, n, r) {
         },
         {
             '../../../lib/noop': 53,
-            '../../infrastructure/indexeddb/api': 43,
             'spica/observation': 19
         }
     ],
@@ -2519,7 +2517,7 @@ require = function e(t, n, r) {
                     void this.cancellation.register(function () {
                         return void cache.delete(name);
                     });
-                    void api_1.open(name, {
+                    this.schema = new Schema(this, attrs, this.ages, api_1.open(name, {
                         make: function (db) {
                             return data_1.DataStore.configure().make(db) && access_1.AccessStore.configure().make(db) && expiry_1.ExpiryStore.configure().make(db);
                         },
@@ -2529,8 +2527,7 @@ require = function e(t, n, r) {
                         destroy: function (reason, ev) {
                             return data_1.DataStore.configure().destroy(reason, ev) && access_1.AccessStore.configure().destroy(reason, ev) && expiry_1.ExpiryStore.configure().destroy(reason, ev) && destroy(reason, ev);
                         }
-                    });
-                    this.schema = new Schema(this, attrs, this.ages);
+                    }));
                     void this.cancellation.register(function () {
                         return void _this.schema.close();
                     });
@@ -2622,18 +2619,19 @@ require = function e(t, n, r) {
             }(ChannelStore = exports.ChannelStore || (exports.ChannelStore = {})));
             exports.ChannelStore = ChannelStore;
             var Schema = function () {
-                function Schema(store_, attrs_, expiries_) {
+                function Schema(store_, attrs_, expiries_, listen_) {
                     this.store_ = store_;
                     this.attrs_ = attrs_;
                     this.expiries_ = expiries_;
+                    this.listen_ = listen_;
                     this.cancellation_ = new cancellation_1.Cancellation();
                     void this.build();
                 }
                 Schema.prototype.build = function () {
                     var keys = this.data ? this.data.keys() : [];
-                    this.data = new data_1.DataStore(this.store_.name, this.attrs_);
-                    this.access = new access_1.AccessStore(this.store_.name, this.data.events_.access);
-                    this.expire = new expiry_1.ExpiryStore(this.store_.name, this.store_, this.data.events_.access, this.expiries_, this.cancellation_);
+                    this.data = new data_1.DataStore(this.attrs_, this.listen_);
+                    this.access = new access_1.AccessStore(this.data.events_.access, this.listen_);
+                    this.expire = new expiry_1.ExpiryStore(this.store_, this.data.events_.access, this.expiries_, this.cancellation_, this.listen_);
                     void this.cancellation_.register(this.store_.events_.load.relay(this.data.events.load));
                     void this.cancellation_.register(this.store_.events_.save.relay(this.data.events.save));
                     void this.cancellation_.register(this.store_.events.load.relay(this.data.events.load));
@@ -2693,8 +2691,8 @@ require = function e(t, n, r) {
             }(AccessStoreSchema || (AccessStoreSchema = {})));
             var AccessStore = function (_super) {
                 __extends(AccessStore, _super);
-                function AccessStore(database, access) {
-                    var _this = _super.call(this, database, exports.name, AccessStoreSchema.key) || this;
+                function AccessStore(access, listen) {
+                    var _this = _super.call(this, exports.name, AccessStoreSchema.key, listen) || this;
                     void Object.freeze(_this);
                     void access.monitor([], function (_a) {
                         var key = _a.key, type = _a.type;
@@ -2776,8 +2774,8 @@ require = function e(t, n, r) {
             exports.name = 'data';
             var DataStore = function (_super) {
                 __extends(DataStore, _super);
-                function DataStore(database, attrs) {
-                    var _this = _super.call(this, database, exports.name, attrs) || this;
+                function DataStore(attrs, listen) {
+                    var _this = _super.call(this, exports.name, attrs, listen) || this;
                     void Object.freeze(_this);
                     return _this;
                 }
@@ -2827,8 +2825,8 @@ require = function e(t, n, r) {
             }(ExpiryStoreSchema || (ExpiryStoreSchema = {})));
             var ExpiryStore = function (_super) {
                 __extends(ExpiryStore, _super);
-                function ExpiryStore(database, store, access, ages, cancellation) {
-                    var _this = _super.call(this, database, name, ExpiryStoreSchema.key) || this;
+                function ExpiryStore(store, access, ages, cancellation, listen) {
+                    var _this = _super.call(this, name, ExpiryStoreSchema.key, listen) || this;
                     void Object.freeze(_this);
                     var timer = 0;
                     var scheduled = Infinity;
@@ -3268,7 +3266,7 @@ require = function e(t, n, r) {
             exports.IDBKeyRange = global_1.IDBKeyRange;
             var access_1 = require('./model/access');
             exports.open = access_1.open;
-            exports.listen = access_1.listen;
+            exports.listen_ = access_1.listen_;
             exports.close = access_1.close;
             exports.destroy = access_1.destroy;
             var event_1 = require('./model/event');
@@ -3288,20 +3286,13 @@ require = function e(t, n, r) {
             Object.defineProperty(exports, '__esModule', { value: true });
             var mutation_1 = require('./mutation');
             function open(database, config) {
-                return void mutation_1.operate(database, 'open', config);
-            }
-            exports.open = open;
-            function listen(database) {
+                void mutation_1.operate(database, 'open', config);
                 return function (success, failure) {
-                    if (failure === void 0) {
-                        failure = function () {
-                            return void 0;
-                        };
-                    }
                     return void mutation_1.request(database, success, failure);
                 };
             }
-            exports.listen = listen;
+            exports.open = open;
+            exports.listen_ = mutation_1.request;
             function close(database) {
                 return void mutation_1.operate(database, 'close', {
                     make: function () {
@@ -3384,24 +3375,27 @@ require = function e(t, n, r) {
                 }
                 void state_1.commands.set(database, command);
                 void state_1.configs.set(database, config);
-                void handle(database);
+                if (state_1.states.has(database)) {
+                    return void request(database, function () {
+                        return void 0;
+                    }, function () {
+                        return void 0;
+                    });
+                } else {
+                    void state_1.requests.set(database, state_1.requests.get(database) || new state_1.Requests(database));
+                    return void handleFromInitialState(new state_1.InitialState(database));
+                }
             }
             exports.operate = operate;
             function request(database, success, failure) {
-                state_1.requests.has(database) || void state_1.requests.set(database, new state_1.Requests(database));
-                void state_1.requests.get(database).add(success, failure);
+                if (failure === void 0) {
+                    failure = function () {
+                        return void 0;
+                    };
+                }
+                return state_1.requests.has(database) ? void state_1.requests.get(database).add(success, failure) : void failure();
             }
             exports.request = request;
-            function handle(database) {
-                void request(database, function () {
-                    return void 0;
-                }, function () {
-                    return void 0;
-                });
-                if (state_1.states.has(database))
-                    return;
-                void handleFromInitialState(new state_1.InitialState(database));
-            }
             function handleFromInitialState(state) {
                 if (!state.alive)
                     return;
@@ -3590,13 +3584,13 @@ require = function e(t, n, r) {
             function handleFromEndState(state) {
                 if (!state.alive)
                     return;
-                var database = state.database, version = state.version;
+                var database = state.database, version = state.version, command = state.command;
                 void state.complete();
                 void event_1.idbEventStream_.emit([
                     database,
                     event_1.IDBEventType.disconnect
                 ], new event_1.IDBEvent(database, event_1.IDBEventType.disconnect));
-                switch (state.command) {
+                switch (command) {
                 case 'open':
                     return void handleFromInitialState(new state_1.InitialState(database, version));
                 case 'close':
@@ -3631,7 +3625,6 @@ require = function e(t, n, r) {
                 };
             }();
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.configs = new Map();
             exports.commands = new Map();
             var Command;
             (function (Command) {
@@ -3639,6 +3632,7 @@ require = function e(t, n, r) {
                 Command['close'] = 'close';
                 Command['destroy'] = 'destroy';
             }(Command = exports.Command || (exports.Command = {})));
+            exports.configs = new Map();
             exports.requests = new Map();
             var Requests = function () {
                 function Requests(database) {
@@ -3678,21 +3672,21 @@ require = function e(t, n, r) {
             exports.Requests = Requests;
             exports.states = new Map();
             var State = function () {
-                function State(database, state) {
+                function State(database, curr) {
                     this.database = database;
                     this.alive = true;
                     switch (true) {
                     case this instanceof InitialState:
-                        this.alive = !state;
+                        this.alive = !curr;
                         break;
                     default:
-                        this.alive = !!state && state.alive;
+                        this.alive = !!curr && curr.alive;
                     }
                     if (!this.alive)
                         return;
                     void exports.states.set(database, this);
-                    if (state) {
-                        state.alive = false;
+                    if (curr) {
+                        curr.alive = false;
                     }
                 }
                 Object.defineProperty(State.prototype, 'command', {
@@ -3823,23 +3817,15 @@ require = function e(t, n, r) {
                 EndState.prototype.complete = function () {
                     if (!this.alive)
                         return;
+                    var command = this.command;
                     this.alive = false;
                     void exports.states.delete(this.database);
-                    switch (this.command) {
+                    switch (command) {
                     case 'close':
                     case 'destroy':
-                        void exports.commands.set(this.database, 'close');
-                        void exports.configs.set(this.database, {
-                            make: function () {
-                                return false;
-                            },
-                            verify: function () {
-                                return false;
-                            },
-                            destroy: function () {
-                                return false;
-                            }
-                        });
+                        void exports.commands.delete(this.database);
+                        void exports.configs.delete(this.database);
+                        void exports.requests.delete(this.database);
                     }
                 };
                 return EndState;
