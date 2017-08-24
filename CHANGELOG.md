@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.2
+
+- Refactoring.
+
 ## 0.19.1
 
 - Fix database operations around database destruction.
