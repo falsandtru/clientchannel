@@ -5,9 +5,8 @@ export function open(database: string, config: Config): void {
   return void operate(database, Command.open, config);
 }
 
-export function listen(database: string): (success: (db: IDBDatabase) => void, failure?: () => void) => void {
-  return (success, failure = () => void 0) =>
-    void request(database, success, failure);
+export function listen(database: string, success: (db: IDBDatabase) => void, failure: () => void = () => void 0): void {
+  return void request(database, success, failure);
 }
 
 export function close(database: string): void {

@@ -133,7 +133,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     const updateSyncState = (state?: boolean) =>
       void this.syncState.set(key, state || this.syncState.get(key) || void 0);
     void updateSyncState(this.syncState.get(key) === true);
-    return void listen(this.database)(db => {
+    return void listen(this.database, db => {
       const tx = db
         .transaction(this.name, 'readonly');
       const req = tx
@@ -320,7 +320,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       void cancellation.register(clean);
       void tick(() => (
         void setTimeout(cancellation.cancel, 1000),
-        void listen(this.database)(
+        void listen(this.database,
           db => (
             void cancellation.close(),
             void cancellation.maybe(db)
@@ -336,7 +336,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   }
   private readonly snapshotCycle: number = 9;
   private snapshot(key: K): void {
-    return void listen(this.database)(db => {
+    return void listen(this.database, db => {
       if (!this.observes(key)) return;
       const tx = db.transaction(this.name, 'readwrite');
       const store = tx.objectStore(this.name);
@@ -429,7 +429,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       });
   }
   public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMException | DOMError | Error | null) => void): void {
-    return void listen(this.database)(db => {
+    return void listen(this.database, db => {
       const tx = db
         .transaction(this.name, mode);
       const req = index
