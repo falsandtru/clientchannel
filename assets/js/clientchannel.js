@@ -1,4 +1,4 @@
-/*! clientchannel v0.19.0 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.19.1 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -3376,7 +3376,7 @@ require = function e(t, n, r) {
                     case 'close':
                         return void event_1.idbEventStream_.once([
                             database,
-                            event_1.IDBEventType.disconnect
+                            event_1.IDBEventType.destroy
                         ], function () {
                             return void operate(database, command, config);
                         });
