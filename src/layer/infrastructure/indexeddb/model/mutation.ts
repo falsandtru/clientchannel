@@ -9,7 +9,7 @@ export function operate(database: string, command: Command, config: Config): voi
       case Command.open:
       case Command.close:
         return void idbEventStream_
-          .once([database, IDBEventType.disconnect], () =>
+          .once([database, IDBEventType.destroy], () =>
             void operate(database, command, config));
     }
   }

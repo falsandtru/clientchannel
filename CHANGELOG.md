@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.1
+
+- Fix database operations around database destruction.
+
 ## 0.19.0
 
 - Don't cancel a destroy command by other commands.
