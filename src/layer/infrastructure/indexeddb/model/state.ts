@@ -12,8 +12,8 @@ export interface Config {
   destroy: (reason: any, event?: Event) => boolean;
 }
 
-export const requests = new Map<string, Requests>();
-export class Requests {
+export const requests = new Map<string, RequestQueue>();
+class RequestQueue {
   constructor(
     private database: string,
   ) {
@@ -66,7 +66,7 @@ abstract class State {
       case this instanceof InitialState:
         this.alive = !curr;
         if (!this.alive) return;
-        void requests.set(database, requests.get(database) || new Requests(database));
+        void requests.set(database, requests.get(database) || new RequestQueue(database));
         break;
       default:
         assert(requests.has(database));
@@ -102,11 +102,11 @@ abstract class State {
              },
            };
   }
-  public get requests(): Requests {
+  public get requests(): RequestQueue {
     assert(this.alive);
     assert(requests.has(this.database));
     return requests.get(this.database)!
-        || new Requests(this.database);
+        || new RequestQueue(this.database);
   }
 }
 
