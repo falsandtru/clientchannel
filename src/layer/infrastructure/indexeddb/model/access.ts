@@ -55,7 +55,7 @@ function operate(database: string, command: Command, config: Config): void {
   void configs.set(database, config);
   if (states.has(database)) {
     assert(requests.has(database));
-    return void request(database, () => void 0, () => void 0);
+    return void request(database, () => void 0);
   }
   else {
     assert(commands.get(database) === command);
@@ -65,7 +65,7 @@ function operate(database: string, command: Command, config: Config): void {
 }
 
 function request(database: string, success: (db: IDBDatabase) => void, failure: () => void = () => void 0): void {
-  return requests.has(database)
-    ? void requests.get(database)!.add(success, failure)
-    : void failure();
+  if (!requests.has(database)) return void failure();
+  void requests.get(database)!.enqueue(success, failure);
+  void handle(database);
 }

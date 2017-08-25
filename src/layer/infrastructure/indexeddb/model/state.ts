@@ -19,23 +19,16 @@ class RequestQueue {
   ) {
   }
   private queue: Request[] = [];
-  public add(success: (db: IDBDatabase) => void, failure: () => void): void {
+  public enqueue(success: (db: IDBDatabase) => void, failure: () => void): void {
     const state = states.get(this.database);
-    if (!state) return void failure();
+    if (!state || !state.alive || state.queue !== this) return void failure();
     void this.queue.push({ success, failure });
-    if (!(state instanceof SuccessState)) return;
-    void state.drain();
   }
-  public resolve(state: SuccessState, catcher: (reason: any) => void): void {
-    try {
-      while (this.queue.length > 0 && state.alive) {
-        assert(state.command === Command.open);
-        void this.queue.shift()!.success(state.connection);
-      }
-    }
-    catch (reason) {
-      void catcher(reason);
-    }
+  public dequeue(): Request | undefined {
+    return this.queue.shift();
+  }
+  public get size(): number {
+    return this.queue.length;
   }
   public clear(): void {
     try {
@@ -102,7 +95,7 @@ abstract class State {
              },
            };
   }
-  public get requests(): RequestQueue {
+  public get queue(): RequestQueue {
     assert(this.alive);
     assert(requests.has(this.database));
     return requests.get(this.database)!
@@ -152,9 +145,6 @@ export class SuccessState extends State {
     super(state.database, state);
     this.STATE;
   }
-  public drain: () => void;
-  public close: () => void;
-  public destroy: () => void;
 }
 
 export class ErrorState extends State {
@@ -218,6 +208,9 @@ export class EndState extends State {
     switch (command) {
       case Command.close:
       case Command.destroy:
+        if (requests.has(this.database)) {
+          void requests.get(this.database)!.clear();
+        }
         void commands.delete(this.database);
         void configs.delete(this.database);
         void requests.delete(this.database);

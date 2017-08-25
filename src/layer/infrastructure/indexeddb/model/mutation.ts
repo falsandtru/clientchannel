@@ -1,9 +1,12 @@
 import { indexedDB } from '../module/global';
-import { commands, Command, InitialState, BlockState, UpgradeState, SuccessState, ErrorState, AbortState, CrashState, DestroyState, EndState } from './state';
+import { states, commands, Command, InitialState, BlockState, UpgradeState, SuccessState, ErrorState, AbortState, CrashState, DestroyState, EndState } from './state';
 import { idbEventStream_, IDBEvent, IDBEventType } from './event';
 
 export function handle(database: string): void {
-  return void handleFromInitialState(new InitialState(database));
+  const state = states.get(database);
+  return state instanceof SuccessState
+    ? void handleFromSuccessState(state)
+    : void handleFromInitialState(new InitialState(database));
 }
 
 function handleFromInitialState(state: InitialState): void {
@@ -71,11 +74,11 @@ function handleFromUpgradeState(state: UpgradeState): void {
 
 function handleFromSuccessState(state: SuccessState): void {
   if (!state.alive) return;
-  const { database, connection, requests } = state;
+  const { database, connection, queue } = state;
+
   connection.onversionchange = () => (
     void connection.close(),
     void idbEventStream_.emit([database, IDBEventType.destroy], new IDBEvent(database, IDBEventType.destroy)),
-    void requests.clear(),
     void handleFromEndState(new EndState(state)));
   connection.onerror = event =>
     void handleFromErrorState(new ErrorState(state, (event.target as any).error, event));
@@ -83,12 +86,6 @@ function handleFromSuccessState(state: SuccessState): void {
     void handleFromAbortState(new AbortState(state, event));
   connection.onclose = () =>
     void handleFromEndState(new EndState(state));
-  state.close = () =>
-    void handleFromSuccessState(state);
-  state.destroy = () =>
-    void handleFromSuccessState(state);
-  state.drain = () =>
-    void handleFromSuccessState(state);
 
   switch (state.command) {
     case Command.open: {
@@ -105,13 +102,20 @@ function handleFromSuccessState(state: SuccessState): void {
         }
       }
       void idbEventStream_.emit([database, IDBEventType.connect], new IDBEvent(database, IDBEventType.connect));
-      return void requests.resolve(state, reason => {
+      try {
+        while (queue.size > 0 && state.alive) {
+          assert(state.command === Command.open);
+          void queue.dequeue()!.success(connection);
+        }
+        return;
+      }
+      catch (reason) {
         assert(!console.error(reason + ''));
         void new Promise((_, reject) =>
           void reject(reason));
         void connection.close();
-        void handleFromCrashState(new CrashState(state, reason));
-      });
+        return void handleFromCrashState(new CrashState(state, reason));
+      }
     }
     case Command.close:
       void connection.close();
@@ -163,7 +167,6 @@ function handleFromDestroyState(state: DestroyState): void {
   const deleteRequest = indexedDB.deleteDatabase(database);
   deleteRequest.onsuccess = () => (
     void idbEventStream_.emit([database, IDBEventType.destroy], new IDBEvent(database, IDBEventType.destroy)),
-    void state.requests.clear(),
     void handleFromEndState(new EndState(state)));
   deleteRequest.onerror = event =>
     void handleFromErrorState(new ErrorState(state, deleteRequest.error, event));

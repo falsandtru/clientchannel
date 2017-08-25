@@ -118,7 +118,7 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
           chan.destroy();
           done();
         });
-      }, 3000);
+      }, 4000);
     });
 
     it('expiry', done => {
@@ -144,9 +144,9 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
               chan.destroy();
               done();
             });
-          }, 3000);
+          }, 4000);
         });
-      }, 3000);
+      }, 4000);
     });
 
   });
