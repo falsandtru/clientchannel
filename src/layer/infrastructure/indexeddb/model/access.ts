@@ -1,6 +1,6 @@
 import { states, commands, configs, requests, Command, Config } from './state';
 import { handle } from './mutation';
-import { idbEventStream_, IDBEventType } from './event';
+import { idbEventStream, IDBEventType } from './event';
 
 export type Listen = (success: (db: IDBDatabase) => void, failure?: () => void) => void;
 
@@ -46,7 +46,7 @@ function operate(database: string, command: Command, config: Config): void {
     switch (command) {
       case Command.open:
       case Command.close:
-        return void idbEventStream_
+        return void idbEventStream
           .once([database, IDBEventType.destroy], () =>
             void operate(database, command, config));
     }

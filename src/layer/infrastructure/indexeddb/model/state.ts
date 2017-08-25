@@ -202,10 +202,7 @@ export class EndState extends State {
   }
   public complete(): void {
     if (!this.alive) return;
-    const { command } = this;
-    this.alive = false;
-    void states.delete(this.database);
-    switch (command) {
+    switch (this.command) {
       case Command.close:
       case Command.destroy:
         if (requests.has(this.database)) {
@@ -215,5 +212,7 @@ export class EndState extends State {
         void configs.delete(this.database);
         void requests.delete(this.database);
     }
+    this.alive = false;
+    void states.delete(this.database);
   }
 }
