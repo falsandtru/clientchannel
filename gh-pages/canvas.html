@@ -71,6 +71,27 @@
     });
   });
 </script>
-
+<script>
+  var StoreChannel = require('clientchannel').StoreChannel;
+  var chan = new StoreChannel('random', {
+    Schema: function () {
+      return {
+        data: 0
+      };
+    },
+    expiry: 60 * 1e3,
+    size: 40,
+    destroy: function (reason) {
+      console.warn(reason);
+      return true;
+    }
+  });
+  var time = Date.now();
+  for (var i = 0; i < 25; ++i) {
+    var rnd = Math.random() * 1000 | 0;
+    var link = chan.link('v1/' + time + '/' + rnd);
+    link.data = 0;
+  }
+</script>
 </body>
 </html>

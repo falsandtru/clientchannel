@@ -1,4 +1,3 @@
-import { Observation } from 'spica/observation';
 import { Listen, Config } from '../../infrastructure/indexeddb/api';
 import { noop } from '../../../lib/noop';
 
@@ -24,11 +23,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     if (typeof index !== 'string') throw new TypeError();
   }
   private readonly cache = new Map<K, V>();
-  public readonly events = {
-    access: new Observation<[K], [[K], KeyValueStore.EventType], void>()
-  };
   public get(key: K, cb: (value: V | void, error: DOMException | DOMError | Error) => void = noop): V | undefined {
-    void this.events.access.emit([key], [[key], KeyValueStore.EventType.get]);
     void this.listen(db => {
       const tx = db.transaction(this.name, 'readonly');
       const req = this.index
@@ -54,7 +49,6 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
   }
   private put(value: V, key: K, cb: (key: K, error: DOMException | DOMError | Error) => void = noop): V {
     void this.cache.set(key, value);
-    void this.events.access.emit([key], [[key], KeyValueStore.EventType.put]);
     void this.listen(db => {
       if (!this.cache.has(key)) return;
       const tx = db.transaction(this.name, 'readwrite');
@@ -71,7 +65,6 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
   }
   public delete(key: K, cb: (error: DOMException | DOMError | Error) => void = noop): void {
     void this.cache.delete(key);
-    void this.events.access.emit([key], [[key], KeyValueStore.EventType.delete]);
     void this.listen(db => {
       const tx = db.transaction(this.name, 'readwrite');
       void tx

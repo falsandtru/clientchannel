@@ -4,7 +4,7 @@ import { listen_, destroy, idbEventStream, IDBEventType } from '../../../infrast
 import { adjust } from '../../../data/es/store';
 
 describe('Unit: layers/domain/indexeddb/service/channel', function () {
-  this.timeout(5 * 1e3);
+  this.timeout(9 * 1e3);
 
   describe('spec', () => {
     before(done => {

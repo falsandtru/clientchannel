@@ -1,8 +1,6 @@
-import { Observer } from 'spica/observation';
 import { Cancellee } from 'spica/cancellation';
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
-import { EventStore } from '../../../../data/es/store';
 
 const name = 'expiry';
 
@@ -11,7 +9,7 @@ namespace ExpiryStoreSchema {
   export const expiry = 'expiry';
 }
 
-export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord<K>> {
+export class ExpiryStore<K extends string> {
   public static configure(): Config {
     return {
       make(tx) {
@@ -42,51 +40,46 @@ export class ExpiryStore<K extends string> extends KeyValueStore<K, ExpiryRecord
     };
   }
   constructor(
-    store: {
+    private readonly channel: {
       delete(key: K): void;
     },
-    access: Observer<any[], EventStore.InternalEvent<K>, void>,
-    ages: Map<K, number>,
-    cancellation: Cancellee<void>,
-    listen: Listen,
+    private readonly cancellation: Cancellee<void>,
+    private readonly listen: Listen,
   ) {
-    super(name, ExpiryStoreSchema.key, listen);
     void Object.freeze(this);
-
-    let timer = 0;
-    let scheduled = Infinity;
-    let schedule = (date: number): void => {
+    void this.schedule(Date.now());
+  }
+  private store = new class extends KeyValueStore<K, ExpiryRecord<K>> { }(name, ExpiryStoreSchema.key, this.listen);
+  private schedule = ((timer = 0, scheduled = Infinity) => {
+    void this.cancellation.register(() => void clearTimeout(timer));
+    return (date: number): void => {
       assert(date > Date.now() - 10);
       if (scheduled < date) return;
       void clearTimeout(timer);
       scheduled = date;
       timer = setTimeout(() => {
-        scheduled = Infinity;
-        void this.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', cursor => {
-          if (!cursor) return;
+        scheduled = 0;
+        void this.store.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', cursor => {
+          if (!cursor) return scheduled = Infinity;
           const record: ExpiryRecord<K> = cursor.value;
-          if (record.expiry > Date.now() && Number.isFinite(record.expiry)) return void schedule(record.expiry);
-          void store.delete(record.key);
+          if (record.expiry > Date.now() && Number.isFinite(record.expiry)) {
+            scheduled = Infinity;
+            return void this.schedule(record.expiry);
+          }
+          void this.channel.delete(record.key);
           return void cursor.continue();
         });
       }, date - Date.now());
-    };
-    void cancellation.register(() => void clearTimeout(timer))
-
-    void schedule(Date.now());
-    void access
-      .monitor([], ({key, type}) => {
-        switch (type) {
-          case EventStore.EventType.delete:
-            return void this.delete(key);
-          default:
-            if (!ages.has(key)) return;
-            assert(ages.get(key)! < Infinity);
-            const expiry = Date.now() + ages.get(key)!;
-            void this.set(key, new ExpiryRecord(key, expiry));
-            return void schedule(expiry);
-        }
-      });
+    }
+  })();
+  public set(key: K, age: number): void {
+    if (age === Infinity) return void this.delete(key);
+    const expiry = Date.now() + age;
+    void this.schedule(expiry);
+    void this.store.set(key, new ExpiryRecord(key, expiry));
+  }
+  public delete(key: K): void {
+    void this.store.delete(key);
   }
 }
 

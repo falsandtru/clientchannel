@@ -103,9 +103,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     save: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
     loss: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
   });
-  public readonly events_ = Object.freeze({
+  private readonly events_ = Object.freeze({
     memory: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', string], UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>, void>(),
-    access: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.InternalEventType], EventStore.InternalEvent<K>, void>()
   });
   private readonly syncState = new Map<K, boolean | undefined>();
   private readonly syncWaits = new Observation<[K], DOMException | DOMError | void, any>();
@@ -178,8 +177,6 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
               void reject(reason));
           }
           void unbind();
-          void this.events_.access
-            .emit([key], new EventStore.InternalEvent(EventStore.InternalEventType.query, makeEventId(0), key, ''));
           if (events.length >= this.snapshotCycle) {
             void this.snapshot(key);
           }
@@ -235,16 +232,12 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     if (!this.observes(key)) {
       void this.fetch(key);
     }
-    void this.events_.access
-      .emit([key], new EventStore.InternalEvent(EventStore.InternalEventType.query, makeEventId(0), key, ''));
     return Object.assign(Object.create(null), compose(key, this.attrs, this.memory.reflect([key])).value);
   }
   public add(event: UnstoredEventRecord<K, V>, tx?: IDBTransaction): void {
     assert(event instanceof UnstoredEventRecord);
     assert(event.type === EventStore.EventType.snapshot ? tx : true);
     assert(!tx || tx.mode === 'readwrite')
-    void this.events_.access
-      .emit([event.key, event.attr, event.type], new EventStore.InternalEvent(event.type, makeEventId(0), event.key, event.attr));
     if (!this.observes(event.key)) {
       void this.fetch(event.key);
     }

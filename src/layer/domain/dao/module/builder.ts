@@ -24,7 +24,12 @@ export const SCHEMA = {
   }
 };
 
-export function build<V extends object>(source: V, factory: () => V, update: (attr: string, newVal: any, oldVal: any) => void = noop): V {
+export function build<V extends object>(
+  source: V,
+  factory: () => V,
+  set: (prop: string, newVal: any, oldVal: any) => void = noop,
+  get: (prop: string, val: any) => void = noop,
+): V {
   const dao: V = factory();
   void Object.keys(SCHEMA)
     .map(prop => SCHEMA[prop].NAME)
@@ -44,13 +49,17 @@ export function build<V extends object>(source: V, factory: () => V, update: (at
       }
       map[prop] = {
         enumerable: true,
-        get: () => source[prop] === void 0 ? iniVal : source[prop],
+        get: () => {
+          const val = source[prop] === void 0 ? iniVal : source[prop];
+          void get(prop, val);
+          return val;
+        },
         set: newVal => {
           if (!isValidPropertyValue({ [prop]: newVal })(prop)) throw new TypeError(`ClientChannel: DAO: Invalid value: ${JSON.stringify(newVal)}`);
           const oldVal = source[prop];
           source[prop] = newVal === void 0 ? iniVal : newVal;
-          void update(prop, newVal, oldVal);
-        }
+          void set(prop, newVal, oldVal);
+        },
       };
       return map;
     }, {}), {

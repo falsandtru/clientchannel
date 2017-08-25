@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.4
+
+- Improve metadata control.
+
 ## 0.19.3
 
 - Improve robustness.

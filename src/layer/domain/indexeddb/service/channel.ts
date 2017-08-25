@@ -71,8 +71,7 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
     void this.expire(key, expiry);
     return this.links.has(key)
       ? this.links.get(key)!
-      : this.links
-        .set(key, build(
+      : this.links.set(key, build(
           Object.defineProperties(
             this.sources.set(key, this.get(key)).get(key)!,
             {
@@ -101,8 +100,9 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
           (attr: keyof V, newValue, oldValue) => (
             void this.add(new ChannelStore.Record<K, V>(key, { [attr]: newValue } as V)),
             void cast(this.sources.get(key)!).__event
-              .emit([StorageChannel.EventType.send, attr], new StorageChannel.Event<V>(StorageChannel.EventType.send, attr, newValue, oldValue)))))
-        .get(key)!;
+              .emit([StorageChannel.EventType.send, attr], new StorageChannel.Event<V>(StorageChannel.EventType.send, attr, newValue, oldValue))),
+          () => void this.log(key)))
+          .get(key)!;
   }
   public destroy(): void {
     void this.broadcast.close();

@@ -22,7 +22,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     void cache.set(name, this);
     void this.cancellation.register(() =>
         void cache.delete(name));
-    this.schema = new Schema<K, V>(this, attrs, this.ages, open(name, {
+    this.schema = new Schema<K, V>(this, attrs, open(name, {
       make(db) {
         return DataStore.configure().make(db)
             && AccessStore.configure().make(db)
@@ -49,6 +49,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     if (size < Infinity) {
       const keys = new Cache<K>(this.size, k =>
         void this.delete(k));
+
       void this.events_.load.monitor([], ({ key, type }) =>
         type === ChannelStore.EventType.delete
           ? void keys.delete(key)
@@ -97,15 +98,24 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     return this.schema.data.get(key);
   }
   public add(record: DataStore.Record<K, V>): void {
-    return this.schema.data.add(record);
+    assert(record.type === DataStore.EventType.put);
+    void this.schema.access.set(record.key);
+    void this.schema.expire.set(record.key, this.ages.get(record.key) || this.expiry);
+    void this.schema.data.add(record);
   }
   public delete(key: K): void {
-    return this.schema.data.delete(key);
+    void this.schema.data.delete(key);
+    void this.schema.access.delete(key);
+    void this.schema.expire.delete(key);
+  }
+  protected log(key: K): void {
+    if (!this.has(key)) return;
+    void this.schema.access.set(key);
+    void this.schema.expire.set(key, this.ages.get(key) || this.expiry);
   }
   private readonly ages = new Map<K, number>();
   public expire(key: K, age: number = this.expiry): void {
     assert(age > 0);
-    if (!Number.isFinite(age)) return;
     return void this.ages.set(key, age);
   }
   public recent(limit: number, cb: (keys: K[], err: DOMException | DOMError | null) => void): void {
@@ -130,7 +140,6 @@ class Schema<K extends string, V extends StoreChannelObject<K>> {
   constructor(
     private readonly store_: ChannelStore<K, V>,
     private readonly attrs_: string[],
-    private readonly expiries_: Map<K, number>,
     private readonly listen_: Listen,
   ) {
     void this.build();
@@ -140,8 +149,8 @@ class Schema<K extends string, V extends StoreChannelObject<K>> {
     const keys = this.data ? this.data.keys() : [];
 
     this.data = new DataStore<K, V>(this.attrs_, this.listen_);
-    this.access = new AccessStore<K>(this.data.events_.access, this.listen_);
-    this.expire = new ExpiryStore<K>(this.store_, this.data.events_.access, this.expiries_, this.cancellation_, this.listen_);
+    this.access = new AccessStore<K>(this.listen_);
+    this.expire = new ExpiryStore<K>(this.store_, this.cancellation_, this.listen_);
 
     void this.cancellation_.register(this.store_.events_.load.relay(this.data.events.load));
     void this.cancellation_.register(this.store_.events_.save.relay(this.data.events.save));

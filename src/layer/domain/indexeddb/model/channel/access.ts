@@ -1,7 +1,5 @@
-import { Observer } from 'spica/observation';
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
-import { EventStore } from '../../../../data/es/store';
 
 export const name = 'access';
 
@@ -10,7 +8,7 @@ namespace AccessStoreSchema {
   export const date = 'date';
 }
 
-export class AccessStore<K extends string> extends KeyValueStore<K, AccessRecord<K>> {
+export class AccessStore<K extends string> {
   public static configure(): Config {
     return {
       make(tx) {
@@ -41,22 +39,14 @@ export class AccessStore<K extends string> extends KeyValueStore<K, AccessRecord
     };
   }
   constructor(
-    access: Observer<any[], EventStore.InternalEvent<K>, void>,
-    listen: Listen,
+    private readonly listen: Listen,
   ) {
-    super(name, AccessStoreSchema.key, listen);
     void Object.freeze(this);
-
-    void access
-      .monitor([], ({key, type}) =>
-        type === EventStore.EventType.delete
-          ? void this.delete(key)
-          : void this.set(key, new AccessRecord(key))
-      );
   }
+  private store = new class extends KeyValueStore<K, AccessRecord<K>> { }(name, AccessStoreSchema.key, this.listen);
   public recent(limit: number, cb: (keys: K[], err: DOMException | DOMError | null) => void): void {
     const keys: K[] = [];
-    return void this.cursor(
+    return void this.store.cursor(
       null,
       AccessStoreSchema.date,
       'prev',
@@ -67,6 +57,12 @@ export class AccessStore<K extends string> extends KeyValueStore<K, AccessRecord
         void keys.push(cursor.primaryKey);
         void cursor.continue();
       });
+  }
+  public set(key: K): void {
+    void this.store.set(key, new AccessRecord(key));
+  }
+  public delete(key: K): void {
+    void this.store.delete(key);
   }
 }
 

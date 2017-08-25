@@ -122,9 +122,8 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
     });
 
     it('expiry', done => {
-      const chan = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity, 4000);
+      const chan = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity, 6000);
 
-      chan.expire('a');
       chan.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
       chan.expire('b', 1000);
       chan.add(new ChannelStore.Record('b', new CustomSocketValue(0)));
@@ -137,10 +136,10 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
           assert(chan.has('c') === true);
           setTimeout(() => {
             chan.recent(Infinity, keys => {
-              assert.deepStrictEqual(keys, ['c']);
+              assert.deepStrictEqual(keys, []);
               assert(chan.has('a') === false);
               assert(chan.has('b') === false);
-              assert(chan.has('c') === true);
+              assert(chan.has('c') === false);
               chan.destroy();
               done();
             });
