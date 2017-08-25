@@ -10,8 +10,8 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
       idbEventStream
         .once(['test', IDBEventType.destroy], () =>
           idbEventStream
-            .once(['test', IDBEventType.disconnect], () => done())
-        );
+            .once(['test', IDBEventType.disconnect], () =>
+              done()));
       destroy('test');
     });
 
@@ -19,8 +19,8 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
       idbEventStream
         .once(['test', IDBEventType.destroy], () =>
           idbEventStream
-            .once(['test', IDBEventType.disconnect], () => done())
-        );
+            .once(['test', IDBEventType.disconnect], () =>
+              done()));
       destroy('test');
     });
 

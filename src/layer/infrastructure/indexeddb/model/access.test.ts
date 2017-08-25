@@ -17,8 +17,8 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
       idbEventStream
         .once(['test', IDBEventType.destroy], () =>
           idbEventStream
-            .once(['test', IDBEventType.disconnect], () => done())
-        );
+            .once(['test', IDBEventType.disconnect], () =>
+              done()));
       destroy('test');
     });
 
@@ -26,8 +26,8 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
       idbEventStream
         .once(['test', IDBEventType.destroy], () =>
           idbEventStream
-            .once(['test', IDBEventType.disconnect], () => done())
-        );
+            .once(['test', IDBEventType.disconnect], () =>
+              done()));
       destroy('test');
     });
 
