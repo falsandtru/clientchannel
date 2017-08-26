@@ -1,4 +1,4 @@
-/*! clientchannel v0.19.3 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.19.4 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -1549,10 +1549,7 @@ require = function e(t, n, r) {
                         save: new observation_1.Observation(),
                         loss: new observation_1.Observation()
                     });
-                    this.events_ = Object.freeze({
-                        memory: new observation_1.Observation(),
-                        access: new observation_1.Observation()
-                    });
+                    this.events_ = Object.freeze({ memory: new observation_1.Observation() });
                     this.syncState = new Map();
                     this.syncWaits = new observation_1.Observation();
                     this.snapshotCycle = 9;
@@ -1714,7 +1711,6 @@ require = function e(t, n, r) {
                                     });
                                 }
                                 void unbind();
-                                void _this.events_.access.emit([key], new EventStore.InternalEvent(EventStore.InternalEventType.query, identifier_1.makeEventId(0), key, ''));
                                 if (events.length >= _this.snapshotCycle) {
                                     void _this.snapshot(key);
                                 }
@@ -1775,16 +1771,10 @@ require = function e(t, n, r) {
                     if (!this.observes(key)) {
                         void this.fetch(key);
                     }
-                    void this.events_.access.emit([key], new EventStore.InternalEvent(EventStore.InternalEventType.query, identifier_1.makeEventId(0), key, ''));
                     return Object.assign(Object.create(null), compose(key, this.attrs, this.memory.reflect([key])).value);
                 };
                 EventStore.prototype.add = function (event, tx) {
                     var _this = this;
-                    void this.events_.access.emit([
-                        event.key,
-                        event.attr,
-                        event.type
-                    ], new EventStore.InternalEvent(event.type, identifier_1.makeEventId(0), event.key, event.attr));
                     if (!this.observes(event.key)) {
                         void this.fetch(event.key);
                     }
@@ -2043,8 +2033,8 @@ require = function e(t, n, r) {
                 EventStore.EventType = event_1.EventRecordType;
                 var Record = function (_super) {
                     __extends(Record, _super);
-                    function Record() {
-                        return _super !== null && _super.apply(this, arguments) || this;
+                    function Record(key, value) {
+                        return _super.call(this, key, value) || this;
                     }
                     return Record;
                 }(event_1.UnstoredEventRecord);
@@ -2092,7 +2082,7 @@ require = function e(t, n, r) {
                     }).sort(function (_a, _b) {
                         var a = _a[0], ai = _a[1];
                         var b = _b[0], bi = _b[1];
-                        return indexedDB.cmp(a.key, b.key) || b.date - a.date || b.id - a.id || bi - ai;
+                        return void 0 || indexedDB.cmp(a.key, b.key) || b.date - a.date || b.id * a.id > 0 && b.id - a.id || bi - ai;
                     }).reduceRight(function (_a, _b) {
                         var head = _a[0], tail = _a.slice(1);
                         var event = _b[0];
@@ -2134,7 +2124,6 @@ require = function e(t, n, r) {
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            var observation_1 = require('spica/observation');
             var noop_1 = require('../../../lib/noop');
             var KeyValueStore = function () {
                 function KeyValueStore(name, index, listen) {
@@ -2142,7 +2131,6 @@ require = function e(t, n, r) {
                     this.index = index;
                     this.listen = listen;
                     this.cache = new Map();
-                    this.events = { access: new observation_1.Observation() };
                     if (typeof index !== 'string')
                         throw new TypeError();
                 }
@@ -2164,10 +2152,6 @@ require = function e(t, n, r) {
                     if (cb === void 0) {
                         cb = noop_1.noop;
                     }
-                    void this.events.access.emit([key], [
-                        [key],
-                        KeyValueStore.EventType.get
-                    ]);
                     void this.listen(function (db) {
                         var tx = db.transaction(_this.name, 'readonly');
                         var req = _this.index ? tx.objectStore(_this.name).index(_this.index).get(key) : tx.objectStore(_this.name).get(key);
@@ -2198,10 +2182,6 @@ require = function e(t, n, r) {
                         cb = noop_1.noop;
                     }
                     void this.cache.set(key, value);
-                    void this.events.access.emit([key], [
-                        [key],
-                        KeyValueStore.EventType.put
-                    ]);
                     void this.listen(function (db) {
                         if (!_this.cache.has(key))
                             return;
@@ -2213,7 +2193,7 @@ require = function e(t, n, r) {
                     }, function () {
                         return void cb(key, new Error('Access has failed.'));
                     });
-                    return this.cache.get(key);
+                    return value;
                 };
                 KeyValueStore.prototype.delete = function (key, cb) {
                     var _this = this;
@@ -2221,10 +2201,6 @@ require = function e(t, n, r) {
                         cb = noop_1.noop;
                     }
                     void this.cache.delete(key);
-                    void this.events.access.emit([key], [
-                        [key],
-                        KeyValueStore.EventType.delete
-                    ]);
                     void this.listen(function (db) {
                         var tx = db.transaction(_this.name, 'readwrite');
                         void tx.objectStore(_this.name).delete(key);
@@ -2265,10 +2241,7 @@ require = function e(t, n, r) {
             }(KeyValueStore = exports.KeyValueStore || (exports.KeyValueStore = {})));
             exports.KeyValueStore = KeyValueStore;
         },
-        {
-            '../../../lib/noop': 53,
-            'spica/observation': 19
-        }
+        { '../../../lib/noop': 53 }
     ],
     31: [
         function (require, module, exports) {
@@ -2392,9 +2365,12 @@ require = function e(t, n, r) {
                 DATE: { NAME: '__date' },
                 EVENT: { NAME: '__event' }
             };
-            function build(source, factory, update) {
-                if (update === void 0) {
-                    update = noop_1.noop;
+            function build(source, factory, set, get) {
+                if (set === void 0) {
+                    set = noop_1.noop;
+                }
+                if (get === void 0) {
+                    get = noop_1.noop;
                 }
                 var dao = factory();
                 void Object.keys(exports.SCHEMA).map(function (prop) {
@@ -2417,14 +2393,16 @@ require = function e(t, n, r) {
                     map[prop] = {
                         enumerable: true,
                         get: function () {
-                            return source[prop] === void 0 ? iniVal : source[prop];
+                            var val = source[prop] === void 0 ? iniVal : source[prop];
+                            void get(prop, val);
+                            return val;
                         },
                         set: function (newVal) {
                             if (!event_1.isValidPropertyValue((_a = {}, _a[prop] = newVal, _a))(prop))
                                 throw new TypeError('ClientChannel: DAO: Invalid value: ' + JSON.stringify(newVal));
                             var oldVal = source[prop];
                             source[prop] = newVal === void 0 ? iniVal : newVal;
-                            void update(prop, newVal, oldVal);
+                            void set(prop, newVal, oldVal);
                             var _a;
                         }
                     };
@@ -2517,7 +2495,7 @@ require = function e(t, n, r) {
                     void this.cancellation.register(function () {
                         return void cache.delete(name);
                     });
-                    this.schema = new Schema(this, attrs, this.ages, api_1.open(name, {
+                    this.schema = new Schema(this, attrs, api_1.open(name, {
                         make: function (db) {
                             return data_1.DataStore.configure().make(db) && access_1.AccessStore.configure().make(db) && expiry_1.ExpiryStore.configure().make(db);
                         },
@@ -2585,17 +2563,25 @@ require = function e(t, n, r) {
                     return this.schema.data.get(key);
                 };
                 ChannelStore.prototype.add = function (record) {
-                    return this.schema.data.add(record);
+                    void this.schema.access.set(record.key);
+                    void this.schema.expire.set(record.key, this.ages.get(record.key) || this.expiry);
+                    void this.schema.data.add(record);
                 };
                 ChannelStore.prototype.delete = function (key) {
-                    return this.schema.data.delete(key);
+                    void this.schema.data.delete(key);
+                    void this.schema.access.delete(key);
+                    void this.schema.expire.delete(key);
+                };
+                ChannelStore.prototype.log = function (key) {
+                    if (!this.has(key))
+                        return;
+                    void this.schema.access.set(key);
+                    void this.schema.expire.set(key, this.ages.get(key) || this.expiry);
                 };
                 ChannelStore.prototype.expire = function (key, age) {
                     if (age === void 0) {
                         age = this.expiry;
                     }
-                    if (!Number.isFinite(age))
-                        return;
                     return void this.ages.set(key, age);
                 };
                 ChannelStore.prototype.recent = function (limit, cb) {
@@ -2619,10 +2605,9 @@ require = function e(t, n, r) {
             }(ChannelStore = exports.ChannelStore || (exports.ChannelStore = {})));
             exports.ChannelStore = ChannelStore;
             var Schema = function () {
-                function Schema(store_, attrs_, expiries_, listen_) {
+                function Schema(store_, attrs_, listen_) {
                     this.store_ = store_;
                     this.attrs_ = attrs_;
-                    this.expiries_ = expiries_;
                     this.listen_ = listen_;
                     this.cancellation_ = new cancellation_1.Cancellation();
                     void this.build();
@@ -2630,8 +2615,8 @@ require = function e(t, n, r) {
                 Schema.prototype.build = function () {
                     var keys = this.data ? this.data.keys() : [];
                     this.data = new data_1.DataStore(this.attrs_, this.listen_);
-                    this.access = new access_1.AccessStore(this.data.events_.access, this.listen_);
-                    this.expire = new expiry_1.ExpiryStore(this.store_, this.data.events_.access, this.expiries_, this.cancellation_, this.listen_);
+                    this.access = new access_1.AccessStore(this.listen_);
+                    this.expire = new expiry_1.ExpiryStore(this.store_, this.cancellation_, this.listen_);
                     void this.cancellation_.register(this.store_.events_.load.relay(this.data.events.load));
                     void this.cancellation_.register(this.store_.events_.save.relay(this.data.events.save));
                     void this.cancellation_.register(this.store_.events.load.relay(this.data.events.load));
@@ -2682,23 +2667,23 @@ require = function e(t, n, r) {
             }();
             Object.defineProperty(exports, '__esModule', { value: true });
             var store_1 = require('../../../../data/kvs/store');
-            var store_2 = require('../../../../data/es/store');
             exports.name = 'access';
             var AccessStoreSchema;
             (function (AccessStoreSchema) {
                 AccessStoreSchema.key = 'key';
                 AccessStoreSchema.date = 'date';
             }(AccessStoreSchema || (AccessStoreSchema = {})));
-            var AccessStore = function (_super) {
-                __extends(AccessStore, _super);
-                function AccessStore(access, listen) {
-                    var _this = _super.call(this, exports.name, AccessStoreSchema.key, listen) || this;
-                    void Object.freeze(_this);
-                    void access.monitor([], function (_a) {
-                        var key = _a.key, type = _a.type;
-                        return type === store_2.EventStore.EventType.delete ? void _this.delete(key) : void _this.set(key, new AccessRecord(key));
-                    });
-                    return _this;
+            var AccessStore = function () {
+                function AccessStore(listen) {
+                    this.listen = listen;
+                    this.store = new (function (_super) {
+                        __extends(class_1, _super);
+                        function class_1() {
+                            return _super !== null && _super.apply(this, arguments) || this;
+                        }
+                        return class_1;
+                    }(store_1.KeyValueStore))(exports.name, AccessStoreSchema.key, this.listen);
+                    void Object.freeze(this);
                 }
                 AccessStore.configure = function () {
                     return {
@@ -2725,7 +2710,7 @@ require = function e(t, n, r) {
                 };
                 AccessStore.prototype.recent = function (limit, cb) {
                     var keys = [];
-                    return void this.cursor(null, AccessStoreSchema.date, 'prev', 'readonly', function (cursor, err) {
+                    return void this.store.cursor(null, AccessStoreSchema.date, 'prev', 'readonly', function (cursor, err) {
                         if (!cursor)
                             return void cb(keys, err);
                         if (--limit < 0)
@@ -2734,8 +2719,14 @@ require = function e(t, n, r) {
                         void cursor.continue();
                     });
                 };
+                AccessStore.prototype.set = function (key) {
+                    void this.store.set(key, new AccessRecord(key));
+                };
+                AccessStore.prototype.delete = function (key) {
+                    void this.store.delete(key);
+                };
                 return AccessStore;
-            }(store_1.KeyValueStore);
+            }();
             exports.AccessStore = AccessStore;
             var AccessRecord = function () {
                 function AccessRecord(key) {
@@ -2745,10 +2736,7 @@ require = function e(t, n, r) {
                 return AccessRecord;
             }();
         },
-        {
-            '../../../../data/es/store': 29,
-            '../../../../data/kvs/store': 30
-        }
+        { '../../../../data/kvs/store': 30 }
     ],
     37: [
         function (require, module, exports) {
@@ -2816,56 +2804,58 @@ require = function e(t, n, r) {
             }();
             Object.defineProperty(exports, '__esModule', { value: true });
             var store_1 = require('../../../../data/kvs/store');
-            var store_2 = require('../../../../data/es/store');
             var name = 'expiry';
             var ExpiryStoreSchema;
             (function (ExpiryStoreSchema) {
                 ExpiryStoreSchema.key = 'key';
                 ExpiryStoreSchema.expiry = 'expiry';
             }(ExpiryStoreSchema || (ExpiryStoreSchema = {})));
-            var ExpiryStore = function (_super) {
-                __extends(ExpiryStore, _super);
-                function ExpiryStore(store, access, ages, cancellation, listen) {
-                    var _this = _super.call(this, name, ExpiryStoreSchema.key, listen) || this;
-                    void Object.freeze(_this);
-                    var timer = 0;
-                    var scheduled = Infinity;
-                    var schedule = function (date) {
-                        if (scheduled < date)
-                            return;
-                        void clearTimeout(timer);
-                        scheduled = date;
-                        timer = setTimeout(function () {
-                            scheduled = Infinity;
-                            void _this.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', function (cursor) {
-                                if (!cursor)
-                                    return;
-                                var record = cursor.value;
-                                if (record.expiry > Date.now() && Number.isFinite(record.expiry))
-                                    return void schedule(record.expiry);
-                                void store.delete(record.key);
-                                return void cursor.continue();
-                            });
-                        }, date - Date.now());
-                    };
-                    void cancellation.register(function () {
-                        return void clearTimeout(timer);
-                    });
-                    void schedule(Date.now());
-                    void access.monitor([], function (_a) {
-                        var key = _a.key, type = _a.type;
-                        switch (type) {
-                        case store_2.EventStore.EventType.delete:
-                            return void _this.delete(key);
-                        default:
-                            if (!ages.has(key))
-                                return;
-                            var expiry = Date.now() + ages.get(key);
-                            void _this.set(key, new ExpiryRecord(key, expiry));
-                            return void schedule(expiry);
+            var ExpiryStore = function () {
+                function ExpiryStore(channel, cancellation, listen) {
+                    var _this = this;
+                    this.channel = channel;
+                    this.cancellation = cancellation;
+                    this.listen = listen;
+                    this.store = new (function (_super) {
+                        __extends(class_1, _super);
+                        function class_1() {
+                            return _super !== null && _super.apply(this, arguments) || this;
                         }
-                    });
-                    return _this;
+                        return class_1;
+                    }(store_1.KeyValueStore))(name, ExpiryStoreSchema.key, this.listen);
+                    this.schedule = function (timer, scheduled) {
+                        if (timer === void 0) {
+                            timer = 0;
+                        }
+                        if (scheduled === void 0) {
+                            scheduled = Infinity;
+                        }
+                        void _this.cancellation.register(function () {
+                            return void clearTimeout(timer);
+                        });
+                        return function (date) {
+                            if (scheduled < date)
+                                return;
+                            void clearTimeout(timer);
+                            scheduled = date;
+                            timer = setTimeout(function () {
+                                scheduled = 0;
+                                void _this.store.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', function (cursor) {
+                                    if (!cursor)
+                                        return scheduled = Infinity;
+                                    var record = cursor.value;
+                                    if (record.expiry > Date.now() && Number.isFinite(record.expiry)) {
+                                        scheduled = Infinity;
+                                        return void _this.schedule(record.expiry);
+                                    }
+                                    void _this.channel.delete(record.key);
+                                    return void cursor.continue();
+                                });
+                            }, date - Date.now());
+                        };
+                    }();
+                    void Object.freeze(this);
+                    void this.schedule(Date.now());
                 }
                 ExpiryStore.configure = function () {
                     return {
@@ -2890,8 +2880,18 @@ require = function e(t, n, r) {
                         }
                     };
                 };
+                ExpiryStore.prototype.set = function (key, age) {
+                    if (age === Infinity)
+                        return void this.delete(key);
+                    var expiry = Date.now() + age;
+                    void this.schedule(expiry);
+                    void this.store.set(key, new ExpiryRecord(key, expiry));
+                };
+                ExpiryStore.prototype.delete = function (key) {
+                    void this.store.delete(key);
+                };
                 return ExpiryStore;
-            }(store_1.KeyValueStore);
+            }();
             exports.ExpiryStore = ExpiryStore;
             var ExpiryRecord = function () {
                 function ExpiryRecord(key, expiry) {
@@ -2901,10 +2901,7 @@ require = function e(t, n, r) {
                 return ExpiryRecord;
             }();
         },
-        {
-            '../../../../data/es/store': 29,
-            '../../../../data/kvs/store': 30
-        }
+        { '../../../../data/kvs/store': 30 }
     ],
     39: [
         function (require, module, exports) {
@@ -3044,6 +3041,8 @@ require = function e(t, n, r) {
                             attr
                         ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.send, attr, newValue, oldValue));
                         var _a;
+                    }, function () {
+                        return void _this.log(key);
                     })).get(key);
                 };
                 StoreChannel.prototype.destroy = function () {
@@ -3328,7 +3327,7 @@ require = function e(t, n, r) {
                     switch (command) {
                     case 'open':
                     case 'close':
-                        return void event_1.idbEventStream_.once([
+                        return void event_1.idbEventStream.once([
                             database,
                             event_1.IDBEventType.destroy
                         ], function () {
@@ -3341,8 +3340,6 @@ require = function e(t, n, r) {
                 if (state_1.states.has(database)) {
                     return void request(database, function () {
                         return void 0;
-                    }, function () {
-                        return void 0;
                     });
                 } else {
                     return void mutation_1.handle(database);
@@ -3354,7 +3351,10 @@ require = function e(t, n, r) {
                         return void 0;
                     };
                 }
-                return state_1.requests.has(database) ? void state_1.requests.get(database).add(success, failure) : void failure();
+                if (!state_1.requests.has(database))
+                    return void failure();
+                void state_1.requests.get(database).enqueue(success, failure);
+                void mutation_1.handle(database);
             }
         },
         {
@@ -3400,7 +3400,8 @@ require = function e(t, n, r) {
             var state_1 = require('./state');
             var event_1 = require('./event');
             function handle(database) {
-                return void handleFromInitialState(new state_1.InitialState(database));
+                var state = state_1.states.get(database);
+                return state instanceof state_1.SuccessState ? void handleFromSuccessState(state) : void handleFromInitialState(new state_1.InitialState(database));
             }
             exports.handle = handle;
             function handleFromInitialState(state) {
@@ -3472,12 +3473,12 @@ require = function e(t, n, r) {
             function handleFromSuccessState(state) {
                 if (!state.alive)
                     return;
-                var database = state.database, connection = state.connection, requests = state.requests;
+                var database = state.database, connection = state.connection, queue = state.queue;
                 connection.onversionchange = function () {
                     return void connection.close(), void event_1.idbEventStream_.emit([
                         database,
                         event_1.IDBEventType.destroy
-                    ], new event_1.IDBEvent(database, event_1.IDBEventType.destroy)), void requests.clear(), void handleFromEndState(new state_1.EndState(state));
+                    ], new event_1.IDBEvent(database, event_1.IDBEventType.destroy)), void handleFromEndState(new state_1.EndState(state));
                 };
                 connection.onerror = function (event) {
                     return void handleFromErrorState(new state_1.ErrorState(state, event.target.error, event));
@@ -3487,15 +3488,6 @@ require = function e(t, n, r) {
                 };
                 connection.onclose = function () {
                     return void handleFromEndState(new state_1.EndState(state));
-                };
-                state.close = function () {
-                    return void handleFromSuccessState(state);
-                };
-                state.destroy = function () {
-                    return void handleFromSuccessState(state);
-                };
-                state.drain = function () {
-                    return void handleFromSuccessState(state);
                 };
                 switch (state.command) {
                 case 'open': {
@@ -3515,13 +3507,18 @@ require = function e(t, n, r) {
                             database,
                             event_1.IDBEventType.connect
                         ], new event_1.IDBEvent(database, event_1.IDBEventType.connect));
-                        return void requests.resolve(state, function (reason) {
+                        try {
+                            while (queue.size > 0 && state.alive) {
+                                void queue.dequeue().success(connection);
+                            }
+                            return;
+                        } catch (reason) {
                             void new Promise(function (_, reject) {
                                 return void reject(reason);
                             });
                             void connection.close();
-                            void handleFromCrashState(new state_1.CrashState(state, reason));
-                        });
+                            return void handleFromCrashState(new state_1.CrashState(state, reason));
+                        }
                     }
                 case 'close':
                     void connection.close();
@@ -3582,7 +3579,7 @@ require = function e(t, n, r) {
                     return void event_1.idbEventStream_.emit([
                         database,
                         event_1.IDBEventType.destroy
-                    ], new event_1.IDBEvent(database, event_1.IDBEventType.destroy)), void state.requests.clear(), void handleFromEndState(new state_1.EndState(state));
+                    ], new event_1.IDBEvent(database, event_1.IDBEventType.destroy)), void handleFromEndState(new state_1.EndState(state));
                 };
                 deleteRequest.onerror = function (event) {
                     return void handleFromErrorState(new state_1.ErrorState(state, deleteRequest.error, event));
@@ -3646,27 +3643,25 @@ require = function e(t, n, r) {
                     this.database = database;
                     this.queue = [];
                 }
-                RequestQueue.prototype.add = function (success, failure) {
+                RequestQueue.prototype.enqueue = function (success, failure) {
                     var state = exports.states.get(this.database);
-                    if (!state)
+                    if (!state || !state.alive || state.queue !== this)
                         return void failure();
                     void this.queue.push({
                         success: success,
                         failure: failure
                     });
-                    if (!(state instanceof SuccessState))
-                        return;
-                    void state.drain();
                 };
-                RequestQueue.prototype.resolve = function (state, catcher) {
-                    try {
-                        while (this.queue.length > 0 && state.alive) {
-                            void this.queue.shift().success(state.connection);
-                        }
-                    } catch (reason) {
-                        void catcher(reason);
-                    }
+                RequestQueue.prototype.dequeue = function () {
+                    return this.queue.shift();
                 };
+                Object.defineProperty(RequestQueue.prototype, 'size', {
+                    get: function () {
+                        return this.queue.length;
+                    },
+                    enumerable: true,
+                    configurable: true
+                });
                 RequestQueue.prototype.clear = function () {
                     try {
                         while (this.queue.length > 0) {
@@ -3724,7 +3719,7 @@ require = function e(t, n, r) {
                     enumerable: true,
                     configurable: true
                 });
-                Object.defineProperty(State.prototype, 'requests', {
+                Object.defineProperty(State.prototype, 'queue', {
                     get: function () {
                         return exports.requests.get(this.database) || new RequestQueue(this.database);
                     },
@@ -3838,16 +3833,18 @@ require = function e(t, n, r) {
                 EndState.prototype.complete = function () {
                     if (!this.alive)
                         return;
-                    var command = this.command;
-                    this.alive = false;
-                    void exports.states.delete(this.database);
-                    switch (command) {
+                    switch (this.command) {
                     case 'close':
                     case 'destroy':
+                        if (exports.requests.has(this.database)) {
+                            void exports.requests.get(this.database).clear();
+                        }
                         void exports.commands.delete(this.database);
                         void exports.configs.delete(this.database);
                         void exports.requests.delete(this.database);
                     }
+                    this.alive = false;
+                    void exports.states.delete(this.database);
                 };
                 return EndState;
             }(State);
