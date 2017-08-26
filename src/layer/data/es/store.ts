@@ -461,7 +461,14 @@ export namespace EventStore {
     }
   }
   export import EventType = EventRecordType;
-  export class Record<K extends string, V extends Value> extends UnstoredEventRecord<K, V> { }
+  export class Record<K extends string, V extends Value> extends UnstoredEventRecord<K, V> {
+    constructor(
+      key: K,
+      value: Partial<V>,
+    ) {
+      super(key, value);
+    }
+  }
   export class Value extends EventRecordValue {
   }
   export class InternalEvent<K extends string> {
@@ -512,7 +519,11 @@ export function compose<K extends string, V extends EventStore.Value>(
   function group(events: E[]): E[][] {
     return events
       .map<[E, number]>((e, i) => [e, i])
-      .sort(([a, ai], [b, bi]) => indexedDB.cmp(a.key, b.key) || b.date - a.date || b.id - a.id || bi - ai)
+      .sort(([a, ai], [b, bi]) => void 0
+        || indexedDB.cmp(a.key, b.key)
+        || b.date - a.date
+        || b.id * a.id > 0 && b.id - a.id
+        || bi - ai)
       .reduceRight<E[][]>(([head, ...tail], [event]) => {
         const prev = head[0];
         if (!prev) return [[event]];

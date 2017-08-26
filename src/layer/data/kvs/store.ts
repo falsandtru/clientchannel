@@ -49,10 +49,10 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     }, () => void cb(void 0, new Error('Access has failed.')));
     return this.cache.get(key);
   }
-  public set(key: K, value: V, cb: (key: K, error: DOMException | DOMError) => void = noop): V | undefined {
+  public set(key: K, value: V, cb: (key: K, error: DOMException | DOMError) => void = noop): V {
     return this.put(value, key, cb);
   }
-  private put(value: V, key: K, cb: (key: K, error: DOMException | DOMError | Error) => void = noop): V | undefined {
+  private put(value: V, key: K, cb: (key: K, error: DOMException | DOMError | Error) => void = noop): V {
     void this.cache.set(key, value);
     void this.events.access.emit([key], [[key], KeyValueStore.EventType.put]);
     void this.listen(db => {
@@ -67,7 +67,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
           .put(this.cache.get(key), key);
       tx.oncomplete = tx.onerror = tx.onabort = () => void cb(key, tx.error);
     }, () => void cb(key, new Error('Access has failed.')));
-    return this.cache.get(key);
+    return value;
   }
   public delete(key: K, cb: (error: DOMException | DOMError | Error) => void = noop): void {
     void this.cache.delete(key);
