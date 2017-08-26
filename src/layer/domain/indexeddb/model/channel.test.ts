@@ -102,27 +102,8 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
       });
     });
 
-    it('size', done => {
-      const chan = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, 1, Infinity);
-
-      chan.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
-      assert(chan.has('a') === true);
-      chan.add(new ChannelStore.Record('b', new CustomSocketValue(0)));
-      assert(chan.has('a') === true);
-      assert(chan.has('b') === true);
-      setTimeout(() => {
-        assert(chan.has('a') === false);
-        chan.recent(Infinity, keys => {
-          assert.deepStrictEqual(keys, ['b']);
-          assert(chan.has('b') === true);
-          chan.destroy();
-          done();
-        });
-      }, 4000);
-    });
-
-    it('expiry', done => {
-      const chan = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity, 6000);
+    it('age', done => {
+      const chan = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, 6000, Infinity);
 
       chan.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
       chan.expire('b', 1000);
@@ -144,6 +125,25 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
               done();
             });
           }, 4000);
+        });
+      }, 4000);
+    });
+
+    it('size', done => {
+      const chan = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity, 1);
+
+      chan.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
+      assert(chan.has('a') === true);
+      chan.add(new ChannelStore.Record('b', new CustomSocketValue(0)));
+      assert(chan.has('a') === true);
+      assert(chan.has('b') === true);
+      setTimeout(() => {
+        assert(chan.has('a') === false);
+        chan.recent(Infinity, keys => {
+          assert.deepStrictEqual(keys, ['b']);
+          assert(chan.has('b') === true);
+          chan.destroy();
+          done();
         });
       }, 4000);
     });

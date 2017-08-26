@@ -8,7 +8,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
     readonly loss: Observer<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', StoreChannelEventType], StoreChannelEvent<K, V>, void>
   };
   sync(keys: K[], cb?: (errs: [K, DOMException | DOMError][]) => void): void;
-  link(key: K, expiry?: number): V;
+  link(key: K, age?: number): V;
   delete(key: K): void;
   recent(limit: number, cb: (keys: K[], err?: DOMException | DOMError | null) => void): void;
   close(): void;
@@ -17,7 +17,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
 export interface StoreChannelConfig<K extends string, V extends StoreChannelObject<K>> {
   Schema: new () => V;
   size?: number;
-  expiry?: number;
+  age?: number;
   migrate?(link: V): void;
   destroy?(reason: any, event?: Event): boolean;
 }

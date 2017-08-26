@@ -11,10 +11,10 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
     private readonly Schema: new () => V,
     migrate: (link: V) => void = () => void 0,
     destroy: (reason: any, ev?: Event) => boolean = () => true,
+    age: number = Infinity,
     size: number = Infinity,
-    expiry: number = Infinity,
   ) {
-    super(name, Object.keys(new Schema()).filter(isValidPropertyName).filter(isValidPropertyValue(new Schema())), destroy, size, expiry);
+    super(name, Object.keys(new Schema()).filter(isValidPropertyName).filter(isValidPropertyValue(new Schema())), destroy, age, size);
     const attrs = <(keyof V)[]>Object.keys(new Schema())
       .filter(isValidPropertyName)
       .filter(isValidPropertyValue(new Schema()));
@@ -67,8 +67,8 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
   private readonly broadcast = new BroadcastChannel<K>(this.name);
   private readonly links = new Map<K, V>();
   private readonly sources = new Map<K, Partial<V>>();
-  public link(key: K, expiry?: number): V {
-    void this.expire(key, expiry);
+  public link(key: K, age?: number): V {
+    void this.expire(key, age);
     return this.links.has(key)
       ? this.links.get(key)!
       : this.links.set(key, build(

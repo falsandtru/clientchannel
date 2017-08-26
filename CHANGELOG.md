@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.20.0
+
+- Change expiry option to age.
+
 ## 0.19.4
 
 - Improve metadata control.

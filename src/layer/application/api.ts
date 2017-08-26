@@ -12,11 +12,11 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
       Schema,
       migrate = () => void 0,
       destroy = () => true,
+      age = Infinity,
       size = Infinity,
-      expiry = Infinity,
     }: StoreChannelConfig<K, V>
   ) {
-    super(name, Schema, migrate, destroy, size, expiry);
+    super(name, Schema, migrate, destroy, age, size);
   }
 }
 

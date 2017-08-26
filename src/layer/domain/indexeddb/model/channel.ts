@@ -15,8 +15,8 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     public readonly name: string,
     attrs: string[],
     destroy: (reason: any, event?: Event) => boolean,
+    private readonly age: number,
     private readonly size: number,
-    private readonly expiry: number,
   ) {
     if (cache.has(name)) throw new Error(`ClientChannel: Specified database channel "${name}" is already created.`);
     void cache.set(name, this);
@@ -100,7 +100,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   public add(record: DataStore.Record<K, V>): void {
     assert(record.type === DataStore.EventType.put);
     void this.schema.access.set(record.key);
-    void this.schema.expire.set(record.key, this.ages.get(record.key) || this.expiry);
+    void this.schema.expire.set(record.key, this.ages.get(record.key) || this.age);
     void this.schema.data.add(record);
   }
   public delete(key: K): void {
@@ -111,10 +111,10 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   protected log(key: K): void {
     if (!this.has(key)) return;
     void this.schema.access.set(key);
-    void this.schema.expire.set(key, this.ages.get(key) || this.expiry);
+    void this.schema.expire.set(key, this.ages.get(key) || this.age);
   }
   private readonly ages = new Map<K, number>();
-  public expire(key: K, age: number = this.expiry): void {
+  public expire(key: K, age: number = this.age): void {
     assert(age > 0);
     return void this.ages.set(key, age);
   }

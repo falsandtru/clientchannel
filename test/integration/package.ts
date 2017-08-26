@@ -3,7 +3,7 @@ import { StorageChannel, StorageChannelObject } from '../../index';
 
 describe('Integration: Package', function () {
   describe('usage', function () {
-    it('persistence', () => {
+    it('store', () => {
       interface Value extends StoreChannelObject<string> {
       }
       class Value {
@@ -24,8 +24,10 @@ describe('Integration: Package', function () {
 
       const chan = new StoreChannel('domain', {
         Schema: Value,
-        // delete linked record 3 days later since last access.
-        expiry: 3 * 24 * 60 * 60 * 1e3,
+        // delete linked records 3 days later since last access.
+        age: 3 * 24 * 60 * 60 * 1e3,
+        // delete linked records overed 100 in order of oldest or cache algorithm.
+        size: 100,
       });
       // load data from indexeddb a little later.
       const link = chan.link('path');
