@@ -12,7 +12,6 @@ export class DataStore<K extends string, V extends DataStore.Value> extends Even
     listen: Listen,
   ) {
     super(name, attrs, listen);
-    void Object.freeze(this);
   }
 }
 export namespace DataStore {

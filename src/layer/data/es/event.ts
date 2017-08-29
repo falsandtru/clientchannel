@@ -6,7 +6,7 @@ import { isStorable } from '../database/value';
 export const EventRecordType = {
   put: <EventRecordType.Put>'put',
   delete: <EventRecordType.Delete>'delete',
-  snapshot: <EventRecordType.Snapshot>'snapshot'
+  snapshot: <EventRecordType.Snapshot>'snapshot',
 };
 export type EventRecordType = StoreChannelEventType
 export namespace EventRecordType {

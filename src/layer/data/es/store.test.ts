@@ -288,14 +288,12 @@ describe('Unit: layers/data/es/store', function () {
     it('CRUD', done => {
       const es = new Store<string, Value>('test', open('test', Store.configure('test')));
 
-      assert(es.observes('a') === false);
       assert(es.has('a') === false);
       assert(es.meta('a').id === 0);
       assert(es.meta('a').key === 'a');
       assert(es.meta('a').date === 0);
       assert(es.get('a').value === void 0);
       es.add(new UnstoredEventRecord('a', new Value(0)));
-      assert(es.observes('a') === true);
       assert(es.has('a') === true);
       assert(es.meta('a').id === 0);
       assert(es.meta('a').key === 'a');
@@ -303,14 +301,12 @@ describe('Unit: layers/data/es/store', function () {
       assert(es.get('a').value === 0);
       es.events.save
         .once(['a', 'value', 'put'], () => {
-          assert(es.observes('a') === true);
           assert(es.has('a') === true);
           assert(es.meta('a').id === 1);
           assert(es.meta('a').key === 'a');
           assert(es.meta('a').date > 0);
           assert(es.get('a').value === 0);
           es.delete('a');
-          assert(es.observes('a') === true);
           assert(es.has('a') === false);
           assert(es.meta('a').id === 1);
           assert(es.meta('a').key === 'a');
@@ -318,7 +314,6 @@ describe('Unit: layers/data/es/store', function () {
           assert(es.get('a').value === void 0);
           es.events.save
             .once(['a', '', 'delete'], () => {
-              assert(es.observes('a') === true);
               assert(es.has('a') === false);
               assert(es.meta('a').id === 2);
               assert(es.meta('a').key === 'a');
@@ -327,25 +322,6 @@ describe('Unit: layers/data/es/store', function () {
               done();
             });
         });
-    });
-
-    it('sync', done => {
-      const es = new Store<string, Value>('test', open('test', Store.configure('test')));
-
-      let cnt = 0;
-      es.sync([''], err => {
-        assert(++cnt === 1);
-        assert.deepStrictEqual(err, []);
-      });
-      es.sync([''], err => {
-        assert(++cnt === 2);
-        assert.deepStrictEqual(err, []);
-        es.sync([''], err => {
-          assert(++cnt === 3);
-          assert.deepStrictEqual(err, []);
-          done();
-        });
-      });
     });
 
     it('clean', done => {
@@ -358,19 +334,15 @@ describe('Unit: layers/data/es/store', function () {
           es.delete('a');
           es.events.save
             .once(['a', '', 'delete'], () => {
-              assert(es.observes('a') === true);
               assert(es.has('a') === false);
               assert(es.meta('a').id === 3);
               assert(es.get('a').value === void 0);
-              assert(es.observes('b') === true);
               assert(es.has('b') === true);
               assert(es.meta('b').id === 2);
               assert(es.get('b').value === 0);
               setTimeout(() => {
-                assert(es.observes('a') === true);
                 assert(es.has('a') === false);
                 assert(es.meta('a').id === 0);
-                assert(es.observes('b') === true);
                 assert(es.has('b') === true);
                 assert(es.meta('b').id === 2);
                 done();

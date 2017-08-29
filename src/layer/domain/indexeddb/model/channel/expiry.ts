@@ -1,6 +1,7 @@
-import { Cancellee } from 'spica/cancellation';
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
+import { Cancellee } from 'spica/cancellation';
+import { Channel } from '../../../broadcast/channel';
 
 const name = 'expiry';
 
@@ -40,37 +41,42 @@ export class ExpiryStore<K extends string> {
     };
   }
   constructor(
-    private readonly channel: {
+    private readonly chan: {
+      meta(key: K): { id: number; };
+      has(key: K): boolean;
       delete(key: K): void;
     },
     private readonly cancellation: Cancellee<void>,
+    private readonly channel: Channel<K>,
     private readonly listen: Listen,
   ) {
+    void this.schedule(Date.now() + 60 * 1000);
     void Object.freeze(this);
-    void this.schedule(Date.now());
   }
   private store = new class extends KeyValueStore<K, ExpiryRecord<K>> { }(name, ExpiryStoreSchema.key, this.listen);
   private schedule = ((timer = 0, scheduled = Infinity) => {
-    void this.cancellation.register(() => void clearTimeout(timer));
     return (date: number): void => {
       assert(date > Date.now() - 10);
-      if (scheduled < date) return;
-      void clearTimeout(timer);
+      if (date >= scheduled) return;
       scheduled = date;
+      void clearTimeout(timer);
       timer = setTimeout(() => {
-        scheduled = 0;
-        void this.store.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', cursor => {
-          if (!cursor) return scheduled = Infinity;
-          const record: ExpiryRecord<K> = cursor.value;
-          if (record.expiry > Date.now() && Number.isFinite(record.expiry)) {
-            scheduled = Infinity;
-            return void this.schedule(record.expiry);
-          }
-          void this.channel.delete(record.key);
+        scheduled = Infinity;
+        let count = 0;
+        return void this.store.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', (cursor, error) => {
+          if (this.cancellation.canceled) return;
+          if (error) return void this.schedule(Date.now() + 10 * 1000);
+          if (!cursor) return;
+          const { key, expiry }: ExpiryRecord<K> = cursor.value;
+          if (expiry > Date.now()) return void this.schedule(expiry);
+          if (!this.chan.has(key) && this.chan.meta(key).id > 0) return void cursor.continue();
+          if (!this.channel.ownership.take(key, 0)) return void cursor.continue();
+          if (++count > 10) return void this.schedule(Date.now() + 5 * 1000);
+          void this.chan.delete(key);
           return void cursor.continue();
         });
-      }, date - Date.now());
-    }
+      }, Math.max(date - Date.now(), 3 * 1000));
+    };
   })();
   public set(key: K, age: number): void {
     if (age === Infinity) return void this.delete(key);
@@ -88,6 +94,7 @@ class ExpiryRecord<K extends string> {
     public readonly key: K,
     public readonly expiry: number
   ) {
+    assert(Number.isFinite(expiry));
     assert(Number.isSafeInteger(expiry));
     assert(expiry >= Date.now());
   }

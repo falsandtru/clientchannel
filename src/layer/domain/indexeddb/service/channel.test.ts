@@ -58,8 +58,8 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       listen_('test', db => {
         db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { n: 1 })));
         db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { s: '1' }))).onsuccess = () => {
-          chan.sync(['a'], errs => {
-            assert.deepStrictEqual(errs, []);
+          chan.sync(['a'], results => {
+            assert.deepStrictEqual(results, [['a', null]]);
             const link = chan.link('a');
             assert(link.__id === 2);
             assert(link.__key === 'a');
@@ -149,10 +149,13 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       link.n = 1;
       chan.events.save.once(['a', 'n', 'put'], () => {
         chan.close();
-        chan = new StoreChannel('test', Value, link => {
-          assert(link.__id === 1);
-          assert(link.n === 1);
-          link.n = 2;
+        chan = new StoreChannel('test', Value, {
+          Schema: Value,
+          migrate: link => {
+            assert(link.__id === 1);
+            assert(link.n === 1);
+            link.n = 2;
+          }
         });
         const link = chan.link('a');
         chan.events.load.once(['a', 'n', 'put'], () => {

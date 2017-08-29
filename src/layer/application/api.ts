@@ -8,15 +8,9 @@ export * from '../domain/webstorage/api';
 export class StoreChannel<K extends string, V extends StoreChannelObject<K>> extends BaseStoreChannel<K, V> {
   constructor(
     name: string,
-    {
-      Schema,
-      migrate = () => void 0,
-      destroy = () => true,
-      age = Infinity,
-      size = Infinity,
-    }: StoreChannelConfig<K, V>
+    config: StoreChannelConfig<K, V>,
   ) {
-    super(name, Schema, migrate, destroy, age, size);
+    super(name, config.Schema, config);
   }
 }
 

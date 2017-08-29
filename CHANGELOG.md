@@ -2,7 +2,10 @@
 
 ## 0.20.0
 
+- Fix expiry processing.
 - Change expiry option to age.
+- Remove store size limitation feature.
+- Refine sync method.
 
 ## 0.19.4
 

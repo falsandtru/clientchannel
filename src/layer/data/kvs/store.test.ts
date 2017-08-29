@@ -51,19 +51,19 @@ describe('Unit: layers/data/kvs/store', function () {
       kvs.set('a', 0, (key, err) => {
         assert(key === 'a');
         assert(err === null);
-        kvs.get('a', (value, err) => {
-          assert(value === 0);
+        kvs.fetch('a', (err) => {
+          assert(kvs.get('a') === 0);
           assert(err === null);
           kvs.set('a', 1, (key, err) => {
             assert(key === 'a');
             assert(err === null);
-            kvs.get('a', (value, err) => {
-              assert(value === 1);
+            kvs.fetch('a', (err) => {
+              assert(kvs.get('a') === 1);
               assert(err === null);
               kvs.delete('a', (err) => {
                 assert(err === null);
-                kvs.get('a', (value, err) => {
-                  assert(value === void 0);
+                kvs.fetch('a', (err) => {
+                  assert(kvs.get('a') === void 0);
                   assert(err === null);
                   done();
                 });

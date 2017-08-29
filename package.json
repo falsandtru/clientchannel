@@ -62,9 +62,9 @@
     "pump": "^1.0.2",
     "run-sequence": "^2.1.0",
     "semver": "^5.4.1",
-    "spica": "0.0.102",
+    "spica": "0.0.103",
     "tsify": "^3.0.1",
-    "typescript": "2.6.0-dev.20170819",
+    "typescript": "2.6.0-dev.20170826",
     "vinyl-buffer": "^1.0.0",
     "vinyl-source-stream": "^1.1.0"
   },

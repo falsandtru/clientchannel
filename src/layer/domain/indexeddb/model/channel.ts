@@ -6,6 +6,7 @@ import { open, Listen, close, destroy, idbEventStream, IDBEventType } from '../.
 import { DataStore } from './channel/data';
 import { AccessStore } from './channel/access';
 import { ExpiryStore } from './channel/expiry';
+import { Channel, ChannelMessage, ChannelEvent } from '../../broadcast/channel';
 import { noop } from '../../../../lib/noop';
 
 const cache = new Map<string, ChannelStore<string, StoreChannelObject<string>>>();
@@ -17,12 +18,14 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     destroy: (reason: any, event?: Event) => boolean,
     private readonly age: number,
     private readonly size: number,
+    private readonly debug: boolean = false,
   ) {
     if (cache.has(name)) throw new Error(`ClientChannel: Specified database channel "${name}" is already created.`);
     void cache.set(name, this);
     void this.cancellation.register(() =>
-        void cache.delete(name));
-    this.schema = new Schema<K, V>(this, attrs, open(name, {
+      void cache.delete(name));
+
+    this.schema = new Schema<K, V>(this, this.channel, attrs, open(name, {
       make(db) {
         return DataStore.configure().make(db)
             && AccessStore.configure().make(db)
@@ -40,53 +43,103 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
             && destroy(reason, ev);
       },
     }));
+    void this.cancellation.register(idbEventStream.on([name, IDBEventType.destroy], () =>
+      void this.schema.rebuild()));
     void this.cancellation.register(() =>
-        void this.schema.close());
-    void this.cancellation.register(
-      idbEventStream.on([name, IDBEventType.destroy], () =>
-        cache.get(name) === this &&
-        void this.schema.rebuild()));
-    if (size < Infinity) {
-      const keys = new Cache<K>(this.size, k =>
-        void this.delete(k));
+      void this.schema.close());
 
-      void this.events_.load.monitor([], ({ key, type }) =>
-        type === ChannelStore.EventType.delete
-          ? void keys.delete(key)
-          : void keys.put(key));
-      void this.events_.save.monitor([], ({ key, type }) =>
-        type === ChannelStore.EventType.delete
-          ? void keys.delete(key)
-          : void keys.put(key));
-      const limit = () =>
-        cache.get(name) === this &&
-        void this.recent(Infinity, (ks, err) => {
-          if (cache.get(name) !== this) return;
-          if (err) return void setTimeout(limit, 1000);
-          return void ks
-            .reverse()
-            .forEach(k =>
-              void keys.put(k));
-        });
-      void limit();
-    }
+    void this.cancellation.register(this.channel.listen(ChannelEvent.save, ({ key }) =>
+      void this.fetch(key)));
+    void this.cancellation.register(() =>
+      void this.channel.close());
+
+    void this.events_.save.monitor([], ({ key }) =>
+      void this.channel.post(new ChannelMessage.Save(key)));
+
+    void this.events_.clean.monitor([], (cleared, [key]) => {
+      if (!cleared) return;
+      void this.channel.ownership.take(key, 30 * 1000);
+      void this.schema.access.delete(key);
+      void this.schema.expire.delete(key);
+    });
+
+    if (!Number.isFinite(this.size)) return;
+
+    void this.events_.load.monitor([], ({ key, type }) =>
+      type === ChannelStore.EventType.delete
+        ? void this.keys.delete(key)
+        : void this.keys.put(key));
+    void this.events_.save.monitor([], ({ key, type }) =>
+      type === ChannelStore.EventType.delete
+        ? void this.keys.delete(key)
+        : void this.keys.put(key));
+
+    const limit = () => {
+      if (!Number.isFinite(size)) return;
+      if (this.cancellation.canceled) return;
+      void this.recent(Infinity, (ks, error) => {
+        if (error) return void setTimeout(limit, 10 * 1000);
+        return void ks
+          .reverse()
+          .forEach(key =>
+            void this.keys.put(key));
+      });
+    };
+    void limit();
   }
-  private cancellation = new Cancellation();
+  private readonly cancellation = new Cancellation();
   private readonly schema: Schema<K, V>;
+  private readonly keys = new Cache<K>(this.size, (() => {
+    const keys = new Set<K>();
+    let timer = 0;
+    const resolve = (): void => {
+      timer = 0;
+      let count = 0;
+      for (const key of Array.from(keys)) {
+        void keys.delete(key);
+        if (this.cancellation.canceled) return;
+        if (this.keys.has(key)) continue;
+        if (!this.has(key) && this.meta(key).id > 0) continue;
+        if (!this.channel.ownership.take(key, 0)) continue;
+        void this.delete(key);
+        if (++count > 10) break;
+      }
+      if (keys.size === 0) return;
+      if (timer > 0) return;
+      timer = setTimeout(resolve, (Math.random() * 10 * 1000 + 5 * 1000) | 0);
+    };
+    return (key: K): void => {
+      if (!this.has(key) && this.meta(key).id > 0) return void keys.delete(key);
+      void keys.add(key);
+      if (timer > 0) return;
+      timer = setTimeout(resolve, (Math.random() * 10 * 1000 + 5 * 1000) | 0);
+    };
+  })());
+  private readonly channel = new Channel<K>(this.name, this.debug);
   public readonly events_ = Object.freeze({
     load: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
     save: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
+    clean: new Observation<never[] | [K], boolean, void>(),
   });
   public readonly events = Object.freeze({
     load: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
     save: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
     loss: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>()
   });
-  public sync(keys: K[], cb: (errs: [K, DOMException | DOMError][]) => void = noop): void {
-    return this.schema.data.sync(keys, cb);
+  public sync(keys: K[], cb: (results: [K, DOMException | DOMError | null][]) => void = noop, timeout = Infinity): void {
+    const cancellation = new Cancellation();
+    if (Number.isFinite(timeout)) {
+      void setTimeout(cancellation.cancel, timeout);
+    }
+    return void Promise.all(keys.map(key =>
+      new Promise(resolve =>
+        void this.fetch(key, error =>
+          void resolve([key, error]), cancellation))))
+      .then(cb);
   }
-  public fetch(key: K, cb: (err?: DOMException | DOMError) => void = noop): void {
-    return this.schema.data.fetch(key, cb);
+  public fetch(key: K, cb: (error: DOMException | DOMError | Error | null) => void = noop, cancellation = new Cancellation()): void {
+    void this.schema.access.fetch(key);
+    return this.schema.data.fetch(key, cb, cancellation);
   }
   public has(key: K): boolean {
     return this.schema.data.has(key);
@@ -95,18 +148,25 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     return this.schema.data.meta(key);
   }
   public get(key: K): Partial<V> {
+    void this.log(key);
     return this.schema.data.get(key);
   }
   public add(record: DataStore.Record<K, V>): void {
     assert(record.type === DataStore.EventType.put);
-    void this.schema.access.set(record.key);
-    void this.schema.expire.set(record.key, this.ages.get(record.key) || this.age);
+    const key = record.key;
+    void this.schema.access.set(key);
+    void this.schema.expire.set(key, this.ages.get(key) || this.age);
     void this.schema.data.add(record);
+    void this.events_.save.once([record.key, record.attr, record.type], () => (
+      void this.schema.access.set(key),
+      void this.schema.expire.set(key, this.ages.get(key) || this.age)));
   }
   public delete(key: K): void {
+    if (this.cancellation.canceled) return;
+    void this.channel.ownership.take(key, 30 * 1000);
+    void this.schema.access.set(key);
+    void this.schema.expire.set(key, this.ages.get(key) || this.age);
     void this.schema.data.delete(key);
-    void this.schema.access.delete(key);
-    void this.schema.expire.delete(key);
   }
   protected log(key: K): void {
     if (!this.has(key)) return;
@@ -118,7 +178,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     assert(age > 0);
     return void this.ages.set(key, age);
   }
-  public recent(limit: number, cb: (keys: K[], err: DOMException | DOMError | null) => void): void {
+  public recent(limit: number, cb: (keys: K[], error: DOMException | DOMError | null) => void): void {
     return this.schema.access.recent(limit, cb);
   }
   public close(): void {
@@ -139,6 +199,7 @@ export namespace ChannelStore {
 class Schema<K extends string, V extends StoreChannelObject<K>> {
   constructor(
     private readonly store_: ChannelStore<K, V>,
+    private readonly channel_: Channel<K>,
     private readonly attrs_: string[],
     private readonly listen_: Listen,
   ) {
@@ -150,15 +211,16 @@ class Schema<K extends string, V extends StoreChannelObject<K>> {
 
     this.data = new DataStore<K, V>(this.attrs_, this.listen_);
     this.access = new AccessStore<K>(this.listen_);
-    this.expire = new ExpiryStore<K>(this.store_, this.cancellation_, this.listen_);
+    this.expire = new ExpiryStore<K>(this.store_, this.cancellation_, this.channel_, this.listen_);
 
     void this.cancellation_.register(this.store_.events_.load.relay(this.data.events.load));
     void this.cancellation_.register(this.store_.events_.save.relay(this.data.events.save));
+    void this.cancellation_.register(this.store_.events_.clean.relay(this.data.events.clean));
     void this.cancellation_.register(this.store_.events.load.relay(this.data.events.load));
     void this.cancellation_.register(this.store_.events.save.relay(this.data.events.save));
     void this.cancellation_.register(this.store_.events.loss.relay(this.data.events.loss));
 
-    void this.data.sync(keys);
+    void this.store_.sync(keys);
   }
   public rebuild(): void {
     void this.close();

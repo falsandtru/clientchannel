@@ -102,53 +102,46 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     load: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
     save: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
     loss: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
+    clean: new Observation<never[] | [K], boolean, void>(),
   });
   private readonly events_ = Object.freeze({
     memory: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', string], UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>, void>(),
   });
-  private readonly syncState = new Map<K, boolean | undefined>();
-  private readonly syncWaits = new Observation<[K], DOMException | DOMError | void, any>();
-  public sync(keys: K[], cb: (errs: [K, DOMException | DOMError][]) => void = noop): void {
-    type SyncErrorInfo = [K, DOMException | DOMError];
-    return void Promise.all(keys
-      .map<Promise<SyncErrorInfo | void>>(key => {
-        switch (this.syncState.get(key)) {
-          case true:
-            return Promise.resolve();
-          case false:
-            return new Promise<SyncErrorInfo | void>(resolve => void (
-              void this.syncWaits.once([key], err => void resolve(err ? [key, err] : void 0))));
-          default:
-            return new Promise<SyncErrorInfo | void>(resolve => void (
-              void this.syncWaits.once([key], err => void resolve(err ? [key, err] : void 0)),
-              void this.fetch(key, err => void this.syncWaits.emit([key], err))));
-        }
-      }))
-      .then(rs =>
-        void cb(rs.filter(r => r) as SyncErrorInfo[]));
+  private tx_: {
+    rw?: IDBTransaction;
+    rwc: number;
+  } = {
+    rwc: 0,
+  };
+  private get txrw(): IDBTransaction | undefined {
+    if (++this.tx_.rwc > 25) {
+      this.tx_.rwc = 0;
+      this.tx_.rw = void 0;
+      return;
+    }
+    return this.tx_.rw;
   }
-  public fetch(key: K, cb: (err?: DOMException | DOMError) => void = noop): void {
+  private set txrw(tx: IDBTransaction | undefined) {
+    if (!tx) return;
+    assert(tx.mode === 'readwrite');
+    if (this.tx_.rw && this.tx_.rw === tx) return;
+    this.tx_.rwc = 0;
+    this.tx_.rw = tx;
+    void tick(() => this.tx_.rw = void 0);
+  }
+  public fetch(key: K, cb: (error: DOMException | DOMError | Error | null) => void = noop, cancellation = new Cancellation()): void {
     const events: LoadedEventRecord<K, V>[] = [];
-    const updateSyncState = (state?: boolean) =>
-      void this.syncState.set(key, state || this.syncState.get(key) || void 0);
-    void updateSyncState(this.syncState.get(key) === true);
     return void this.listen(db => {
-      const tx = db
-        .transaction(this.name, 'readonly');
+      if (cancellation.canceled) return void cb(new Error('Cancelled.'));
+      const tx = db.transaction(this.name, 'readonly');
       const req = tx
         .objectStore(this.name)
         .index(EventStoreSchema.key)
         .openCursor(key, 'prev');
-      const unbind = () => void (
-        req.onsuccess = tx.onerror = tx.onabort = null as any);
-      const proc = (cursor: IDBCursorWithValue | null, err: DOMException | DOMError | null): void => {
-        if (err) return (
-          void cb(err),
-          void updateSyncState(),
-          void unbind());
+      const proc = (cursor: IDBCursorWithValue | null, error: DOMException | DOMError | Error | null): void => {
+        if (error) return;
         if (!cursor || new LoadedEventRecord<K, V>(cursor.value).date < this.meta(key).date) {
           // register latest events
-          void updateSyncState(true);
           void Array.from(
             events
               // remove overridable event
@@ -170,13 +163,12 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
               void this.events_.memory
                 .emit([e.key, e.attr, sqid(e.id)], e)));
           try {
-            void cb();
+            void cb(req.error);
           }
           catch (reason) {
             void new Promise((_, reject) =>
               void reject(reason));
           }
-          void unbind();
           if (events.length >= this.snapshotCycle) {
             void this.snapshot(key);
           }
@@ -184,22 +176,27 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         }
         else {
           const event = new LoadedEventRecord<K, V>(cursor.value);
-          if (this.memory.refs([event.key, event.attr, sqid(event.id)]).length > 0) return void proc(null, err);
+          if (this.memory.refs([event.key, event.attr, sqid(event.id)]).length > 0) return void proc(null, error);
           try {
             void events.unshift(event);
           }
-          catch (err) {
+          catch (error) {
             void tx.objectStore(this.name).delete(cursor.primaryKey);
             void new Promise((_, reject) =>
-              void reject(err));
+              void reject(error));
           }
-          if (event.type !== EventStore.EventType.put) return void proc(null, err);
+          if (event.type !== EventStore.EventType.put) return void proc(null, error);
           return void cursor.continue();
         }
       };
-      req.onsuccess = () => void proc(req.result, req.error);
-      tx.onerror = tx.onabort = () => void cb(tx.error);
-    }, updateSyncState);
+      void req.addEventListener('success', () => void proc(req.result, req.error));
+      void tx.addEventListener('error', () => void cb(tx.error || req.error));
+      void tx.addEventListener('abort', () => void cb(tx.error || req.error));
+      void cancellation.register(() =>
+        events.length === 0 &&
+        void tx.abort());
+      return;
+    }, () => void cb(new Error('Access has failed.')));
   }
   public keys(): K[] {
     return this.memory.reflect([])
@@ -209,9 +206,6 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           : keys
       , [])
       .sort();
-  }
-  public observes(key: K): boolean {
-    return this.syncState.has(key);
   }
   public has(key: K): boolean {
     return compose(key, this.attrs, this.memory.reflect([key])).type !== EventStore.EventType.delete;
@@ -229,18 +223,11 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     });
   }
   public get(key: K): Partial<V> {
-    if (!this.observes(key)) {
-      void this.fetch(key);
-    }
     return Object.assign(Object.create(null), compose(key, this.attrs, this.memory.reflect([key])).value);
   }
   public add(event: UnstoredEventRecord<K, V>, tx?: IDBTransaction): void {
     assert(event instanceof UnstoredEventRecord);
     assert(event.type === EventStore.EventType.snapshot ? tx : true);
-    assert(!tx || tx.mode === 'readwrite')
-    if (!this.observes(event.key)) {
-      void this.fetch(event.key);
-    }
     switch (event.type) {
       case EventStore.EventType.put: {
         void this.memory
@@ -266,63 +253,47 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       .on([event.key, event.attr, sqid(0), sqid()], () => event);
     void this.events_.memory
       .emit([event.key, event.attr, sqid(0)], event);
-    return void new Promise<void>((resolve, reject): void => {
-      const cont = (tx: IDBTransaction): void => {
-        const active = (): boolean =>
-          this.memory.refs([event.key, event.attr, sqid(0)])
-            .some(({ listener }) => listener(void 0, [event.key, event.attr, sqid(0)]) === event);
-        if (!active()) return void resolve();
-        const req = tx
-          .objectStore(this.name)
-          .add(adjust(event));
-        const success = () => {
-          assert(req.result > 0);
-          void clean();
-          const savedEvent = new SavedEventRecord(makeEventId(req.result as number), event.key, event.value, event.type, event.date);
-          void this.memory
-            .off([savedEvent.key, savedEvent.attr, sqid(savedEvent.id)]);
-          void this.memory
-            .on([savedEvent.key, savedEvent.attr, sqid(savedEvent.id)], () => savedEvent);
-          void this.events_.memory
-            .emit([savedEvent.key, savedEvent.attr, sqid(savedEvent.id)], savedEvent);
-          void resolve();
-          const events: StoredEventRecord<K, V>[] = this.memory.refs([savedEvent.key])
-            .map(({ listener }) =>
-              listener(void 0, [savedEvent.key]) as UnstoredEventRecord<K, V> | StoredEventRecord<K, V>)
-            .reduce<StoredEventRecord<K, V>[]>((es, e) =>
-              e instanceof StoredEventRecord
-                ? concat(es, [e])
-                : es
-            , []);
-          if (events.length >= this.snapshotCycle || hasBinary(event.value)) {
-            void this.snapshot(savedEvent.key);
-          }
-        };
-        const fail = () => (
-          active()
-            ? void reject()
-            : void resolve(),
-          void clean());
-        tx.addEventListener('complete', success);
-        tx.addEventListener('error', fail);
-        tx.addEventListener('abort', fail);
-      };
-      if (tx) return void cont(tx);
-      const cancellation = new Cancellation();
-      void cancellation.register(reject);
-      void cancellation.register(clean);
-      void tick(() => (
-        void setTimeout(cancellation.cancel, 1000),
-        void this.listen(
-          db => (
-            void cancellation.close(),
-            void cancellation.maybe(db)
-              .fmap(db => void cont(db.transaction(this.name, 'readwrite')))
-              .extract(() => void 0)),
-          cancellation.cancel)));
-    })
-      .catch(() =>
-        void this.events.loss.emit([event.key, event.attr, event.type], new EventStore.Event<K, V>(event.type, makeEventId(0), event.key, event.attr, event.date)));
+    const loss = () =>
+      void this.events.loss.emit([event.key, event.attr, event.type], new EventStore.Event<K, V>(event.type, makeEventId(0), event.key, event.attr, event.date));
+    return void this.listen(db => {
+      tx = this.txrw = tx || this.txrw || db.transaction(this.name, 'readwrite');
+      const active = (): boolean =>
+        this.memory.refs([event.key, event.attr, sqid(0)])
+          .some(({ listener }) => listener(void 0, [event.key, event.attr, sqid(0)]) === event);
+      if (!active()) return;
+      const req = tx
+        .objectStore(this.name)
+        .add(adjust(event));
+      void tx.addEventListener('complete', () => {
+        assert(req.result > 0);
+        void clean();
+        const savedEvent = new SavedEventRecord(makeEventId(req.result as number), event.key, event.value, event.type, event.date);
+        void this.memory
+          .off([savedEvent.key, savedEvent.attr, sqid(savedEvent.id)]);
+        void this.memory
+          .on([savedEvent.key, savedEvent.attr, sqid(savedEvent.id)], () => savedEvent);
+        void this.events_.memory
+          .emit([savedEvent.key, savedEvent.attr, sqid(savedEvent.id)], savedEvent);
+        const events: StoredEventRecord<K, V>[] = this.memory.refs([savedEvent.key])
+          .map(({ listener }) =>
+            listener(void 0, [savedEvent.key]) as UnstoredEventRecord<K, V> | StoredEventRecord<K, V>)
+          .reduce<StoredEventRecord<K, V>[]>((es, e) =>
+            e instanceof StoredEventRecord
+              ? concat(es, [e])
+              : es
+          , []);
+        if (events.length >= this.snapshotCycle || hasBinary(event.value)) {
+          void this.snapshot(savedEvent.key);
+        }
+      });
+      const fail = () => (
+        void clean(),
+        active()
+          ? void loss()
+          : void 0);
+      void tx.addEventListener('error', fail);
+      void tx.addEventListener('abort', fail);
+    }, () => void clean() || void loss());
   }
   public delete(key: K): void {
     return void this.add(new UnstoredEventRecord<K, V>(key, new EventStore.Value(), EventStore.EventType.delete));
@@ -330,24 +301,24 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   private readonly snapshotCycle: number = 9;
   private snapshot(key: K): void {
     return void this.listen(db => {
-      if (!this.observes(key)) return;
-      const tx = db.transaction(this.name, 'readwrite');
+      if (!this.has(key) || this.meta(key).id === 0) return;
+      const tx = this.txrw = this.txrw || db.transaction(this.name, 'readwrite');
       const store = tx.objectStore(this.name);
       const req = store
         .index(EventStoreSchema.key)
         .openCursor(key, 'prev');
       const events: StoredEventRecord<K, V>[] = [];
-      req.onsuccess = (): void => {
+      void req.addEventListener('success', (): void => {
         const cursor: IDBCursorWithValue | null = req.result;
         if (cursor) {
           const event = new LoadedEventRecord<K, V>(cursor.value);
           try {
             void events.unshift(event);
           }
-          catch (err) {
+          catch (error) {
             void cursor.delete();
             void new Promise((_, reject) =>
-              void reject(err));
+              void reject(error));
           }
         }
         if (!cursor) {
@@ -372,59 +343,58 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         else {
           return void cursor.continue();
         }
-      };
+      });
     });
   }
-  private clean(key: K): void {
+  public clean(key: K): void {
     const events: StoredEventRecord<K, V>[] = [];
     const cleanState = new Map<K, boolean>();
+    const cleared = new Cancellation();
     return void this.cursor(
-      IDBKeyRange.bound(key, key),
+      IDBKeyRange.only(key),
       EventStoreSchema.key,
       'prev',
       'readwrite',
-      cursor => {
+      (cursor, error) => {
+        if (error) return;
         if (!cursor) {
-          return void events
+          void events
             .reduce<void>((_, event) => (
               void this.memory
                 .off([event.key, event.attr, sqid(event.id)]),
               void this.events_.memory
                 .off([event.key, event.attr, sqid(event.id)]))
             , void 0);
+          return void this.events.clean.emit([key], !cleared.canceled);
         }
         else {
           const event = new LoadedEventRecord<K, V>(cursor.value);
           switch (event.type) {
-            case EventStore.EventType.put: {
+            case EventStore.EventType.put:
+              void cleared.cancel();
               void cleanState.set(event.key, cleanState.get(event.key) || false);
-              break;
-            }
-            case EventStore.EventType.snapshot: {
-              if (!cleanState.get(event.key)) {
-                void cleanState.set(event.key, true);
-                void cursor.continue();
-                return;
-              }
-              break;
-            }
-            case EventStore.EventType.delete: {
+              if (cleanState.get(event.key)) break;
+              return void cursor.continue();
+            case EventStore.EventType.snapshot:
+              void cleared.cancel();
+              if (cleanState.get(event.key)) break;
+              void cleanState.set(event.key, true);
+              return void cursor.continue();
+            case EventStore.EventType.delete:
+              void cleared.close();
+              if (cleanState.get(event.key)) break;
               void cleanState.set(event.key, true);
               break;
-            }
           }
-          if (cleanState.get(event.key)) {
-            void cursor.delete();
-            void events.unshift(event);
-          }
+          void cursor.delete();
+          void events.unshift(event);
           return void cursor.continue();
         }
       });
   }
   public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMException | DOMError | Error | null) => void): void {
     return void this.listen(db => {
-      const tx = db
-        .transaction(this.name, mode);
+      const tx = db.transaction(this.name, mode);
       const req = index
         ? tx
           .objectStore(this.name)
@@ -433,9 +403,14 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         : tx
           .objectStore(this.name)
           .openCursor(query, direction);
-      req.onsuccess = () => req.result && void cb(req.result, req.error);
-      tx.oncomplete = () => void cb(null, tx.error);
-      tx.onerror = tx.onabort = () => void cb(null, tx.error);
+      void req.addEventListener('success', () => {
+        const cursor: IDBCursorWithValue = req.result;
+        if (!cursor) return;
+        void cb(cursor, req.error);
+      });
+      void tx.addEventListener('complete', () => void cb(null, tx.error || req.error));
+      void tx.addEventListener('error', () => void cb(null, tx.error || req.error));
+      void tx.addEventListener('abort ', () => void cb(null, tx.error || req.error));
     }, () => void cb(null, new Error('Access has failed.')));
   }
 }
@@ -464,21 +439,6 @@ export namespace EventStore {
   }
   export class Value extends EventRecordValue {
   }
-  export class InternalEvent<K extends string> {
-    constructor(
-      public readonly type: InternalEventType,
-      public readonly id: EventId,
-      public readonly key: K,
-      public readonly attr: string
-    ) {
-      void Object.freeze(this);
-    }
-  }
-  export const InternalEventType = {
-    ...EventRecordType,
-    query: <'query'>'query'
-  };
-  export type InternalEventType = EventType | typeof InternalEventType.query;
 }
 
 interface MetaData<K extends string> {
