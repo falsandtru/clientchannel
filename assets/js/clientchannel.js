@@ -1,4 +1,4 @@
-/*! clientchannel v0.19.4 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.20.0 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -162,14 +162,22 @@ require = function e(t, n, r) {
                     void this.put(key, value, log);
                     return value;
                 };
-                Cache.prototype.get = function (key) {
+                Cache.prototype.get = function (key, log) {
+                    if (log === void 0) {
+                        log = true;
+                    }
+                    if (!log)
+                        return this.store.get(key);
                     void this.access(key);
                     return this.store.get(key);
                 };
                 Cache.prototype.has = function (key) {
                     return this.store.has(key);
                 };
-                Cache.prototype.delete = function (key) {
+                Cache.prototype.delete = function (key, log) {
+                    if (log === void 0) {
+                        log = true;
+                    }
                     if (!this.store.has(key))
                         return false;
                     var _a = this.stats, LRU = _a.LRU, LFU = _a.LFU;
@@ -177,25 +185,32 @@ require = function e(t, n, r) {
                                 LFU,
                                 LRU
                             ]; _i < _b.length; _i++) {
-                        var log = _b[_i];
-                        var index = equal_1.findIndex(key, log);
+                        var stat = _b[_i];
+                        var index = equal_1.findIndex(key, stat);
                         if (index === -1)
                             continue;
                         var val = this.store.get(key);
-                        void this.store.delete(log.splice(index, 1)[0]);
+                        void this.store.delete(stat.splice(index, 1)[0]);
+                        if (!log)
+                            return true;
                         void this.callback(key, val);
                         return true;
                     }
                     return false;
                 };
-                Cache.prototype.clear = function () {
+                Cache.prototype.clear = function (log) {
                     var _this = this;
+                    if (log === void 0) {
+                        log = true;
+                    }
                     var entries = Array.from(this);
                     this.store = new Map();
                     this.stats = {
                         LRU: [],
                         LFU: []
                     };
+                    if (!log)
+                        return;
                     return void entries.forEach(function (_a) {
                         var key = _a[0], val = _a[1];
                         return void _this.callback(key, val);
@@ -1258,13 +1273,8 @@ require = function e(t, n, r) {
             __export(require('../domain/webstorage/api'));
             var StoreChannel = function (_super) {
                 __extends(StoreChannel, _super);
-                function StoreChannel(name, _a) {
-                    var Schema = _a.Schema, _b = _a.migrate, migrate = _b === void 0 ? function () {
-                            return void 0;
-                        } : _b, _c = _a.destroy, destroy = _c === void 0 ? function () {
-                            return true;
-                        } : _c, _d = _a.size, size = _d === void 0 ? Infinity : _d, _e = _a.expiry, expiry = _e === void 0 ? Infinity : _e;
-                    return _super.call(this, name, Schema, migrate, destroy, size, expiry) || this;
+                function StoreChannel(name, config) {
+                    return _super.call(this, name, config.Schema, config) || this;
                 }
                 return StoreChannel;
             }(api_1.StoreChannel);
@@ -1547,11 +1557,11 @@ require = function e(t, n, r) {
                     this.events = Object.freeze({
                         load: new observation_1.Observation(),
                         save: new observation_1.Observation(),
-                        loss: new observation_1.Observation()
+                        loss: new observation_1.Observation(),
+                        clean: new observation_1.Observation()
                     });
                     this.events_ = Object.freeze({ memory: new observation_1.Observation() });
-                    this.syncState = new Map();
-                    this.syncWaits = new observation_1.Observation();
+                    this.tx_ = { rwc: 0 };
                     this.snapshotCycle = 9;
                     var states = new (function () {
                         function class_1() {
@@ -1623,63 +1633,48 @@ require = function e(t, n, r) {
                         }
                     };
                 };
-                EventStore.prototype.sync = function (keys, cb) {
+                Object.defineProperty(EventStore.prototype, 'txrw', {
+                    get: function () {
+                        if (++this.tx_.rwc > 25) {
+                            this.tx_.rwc = 0;
+                            this.tx_.rw = void 0;
+                            return;
+                        }
+                        return this.tx_.rw;
+                    },
+                    set: function (tx) {
+                        var _this = this;
+                        if (!tx)
+                            return;
+                        if (this.tx_.rw && this.tx_.rw === tx)
+                            return;
+                        this.tx_.rwc = 0;
+                        this.tx_.rw = tx;
+                        void tick_1.tick(function () {
+                            return _this.tx_.rw = void 0;
+                        });
+                    },
+                    enumerable: true,
+                    configurable: true
+                });
+                EventStore.prototype.fetch = function (key, cb, cancellation) {
                     var _this = this;
                     if (cb === void 0) {
                         cb = noop_1.noop;
                     }
-                    return void Promise.all(keys.map(function (key) {
-                        switch (_this.syncState.get(key)) {
-                        case true:
-                            return Promise.resolve();
-                        case false:
-                            return new Promise(function (resolve) {
-                                return void void _this.syncWaits.once([key], function (err) {
-                                    return void resolve(err ? [
-                                        key,
-                                        err
-                                    ] : void 0);
-                                });
-                            });
-                        default:
-                            return new Promise(function (resolve) {
-                                return void (void _this.syncWaits.once([key], function (err) {
-                                    return void resolve(err ? [
-                                        key,
-                                        err
-                                    ] : void 0);
-                                }), void _this.fetch(key, function (err) {
-                                    return void _this.syncWaits.emit([key], err);
-                                }));
-                            });
-                        }
-                    })).then(function (rs) {
-                        return void cb(rs.filter(function (r) {
-                            return r;
-                        }));
-                    });
-                };
-                EventStore.prototype.fetch = function (key, cb) {
-                    var _this = this;
-                    if (cb === void 0) {
-                        cb = noop_1.noop;
+                    if (cancellation === void 0) {
+                        cancellation = new cancellation_1.Cancellation();
                     }
                     var events = [];
-                    var updateSyncState = function (state) {
-                        return void _this.syncState.set(key, state || _this.syncState.get(key) || void 0);
-                    };
-                    void updateSyncState(this.syncState.get(key) === true);
                     return void this.listen(function (db) {
+                        if (cancellation.canceled)
+                            return void cb(new Error('Cancelled.'));
                         var tx = db.transaction(_this.name, 'readonly');
                         var req = tx.objectStore(_this.name).index(EventStoreSchema.key).openCursor(key, 'prev');
-                        var unbind = function () {
-                            return void (req.onsuccess = tx.onerror = tx.onabort = null);
-                        };
-                        var proc = function (cursor, err) {
-                            if (err)
-                                return void cb(err), void updateSyncState(), void unbind();
+                        var proc = function (cursor, error) {
+                            if (error)
+                                return;
                             if (!cursor || new event_1.LoadedEventRecord(cursor.value).date < _this.meta(key).date) {
-                                void updateSyncState(true);
                                 void Array.from(events.reduceRight(function (es, e) {
                                     return es.length === 0 || es[0].type === EventStore.EventType.put ? concat_1.concat(es, [e]) : es;
                                 }, []).reduceRight(function (dict, e) {
@@ -1704,13 +1699,12 @@ require = function e(t, n, r) {
                                     ], e);
                                 });
                                 try {
-                                    void cb();
+                                    void cb(req.error);
                                 } catch (reason) {
                                     void new Promise(function (_, reject) {
                                         return void reject(reason);
                                     });
                                 }
-                                void unbind();
                                 if (events.length >= _this.snapshotCycle) {
                                     void _this.snapshot(key);
                                 }
@@ -1722,35 +1716,41 @@ require = function e(t, n, r) {
                                         event_2.attr,
                                         sqid_1.sqid(event_2.id)
                                     ]).length > 0)
-                                    return void proc(null, err);
+                                    return void proc(null, error);
                                 try {
                                     void events.unshift(event_2);
-                                } catch (err) {
+                                } catch (error) {
                                     void tx.objectStore(_this.name).delete(cursor.primaryKey);
                                     void new Promise(function (_, reject) {
-                                        return void reject(err);
+                                        return void reject(error);
                                     });
                                 }
                                 if (event_2.type !== EventStore.EventType.put)
-                                    return void proc(null, err);
+                                    return void proc(null, error);
                                 return void cursor.continue();
                             }
                         };
-                        req.onsuccess = function () {
+                        void req.addEventListener('success', function () {
                             return void proc(req.result, req.error);
-                        };
-                        tx.onerror = tx.onabort = function () {
-                            return void cb(tx.error);
-                        };
-                    }, updateSyncState);
+                        });
+                        void tx.addEventListener('error', function () {
+                            return void cb(tx.error || req.error);
+                        });
+                        void tx.addEventListener('abort', function () {
+                            return void cb(tx.error || req.error);
+                        });
+                        void cancellation.register(function () {
+                            return events.length === 0 && void tx.abort();
+                        });
+                        return;
+                    }, function () {
+                        return void cb(new Error('Access has failed.'));
+                    });
                 };
                 EventStore.prototype.keys = function () {
                     return this.memory.reflect([]).reduce(function (keys, e) {
                         return keys.length === 0 || keys[keys.length - 1] !== e.key ? concat_1.concat(keys, [e.key]) : keys;
                     }, []).sort();
-                };
-                EventStore.prototype.observes = function (key) {
-                    return this.syncState.has(key);
                 };
                 EventStore.prototype.has = function (key) {
                     return compose(key, this.attrs, this.memory.reflect([key])).type !== EventStore.EventType.delete;
@@ -1768,16 +1768,10 @@ require = function e(t, n, r) {
                     });
                 };
                 EventStore.prototype.get = function (key) {
-                    if (!this.observes(key)) {
-                        void this.fetch(key);
-                    }
                     return Object.assign(Object.create(null), compose(key, this.attrs, this.memory.reflect([key])).value);
                 };
                 EventStore.prototype.add = function (event, tx) {
                     var _this = this;
-                    if (!this.observes(event.key)) {
-                        void this.fetch(event.key);
-                    }
                     switch (event.type) {
                     case EventStore.EventType.put: {
                             void this.memory.off([
@@ -1825,83 +1819,69 @@ require = function e(t, n, r) {
                         event.attr,
                         sqid_1.sqid(0)
                     ], event);
-                    return void new Promise(function (resolve, reject) {
-                        var cont = function (tx) {
-                            var active = function () {
-                                return _this.memory.refs([
-                                    event.key,
-                                    event.attr,
-                                    sqid_1.sqid(0)
-                                ]).some(function (_a) {
-                                    var listener = _a.listener;
-                                    return listener(void 0, [
-                                        event.key,
-                                        event.attr,
-                                        sqid_1.sqid(0)
-                                    ]) === event;
-                                });
-                            };
-                            if (!active())
-                                return void resolve();
-                            var req = tx.objectStore(_this.name).add(adjust(event));
-                            var success = function () {
-                                void clean();
-                                var savedEvent = new event_1.SavedEventRecord(identifier_1.makeEventId(req.result), event.key, event.value, event.type, event.date);
-                                void _this.memory.off([
-                                    savedEvent.key,
-                                    savedEvent.attr,
-                                    sqid_1.sqid(savedEvent.id)
-                                ]);
-                                void _this.memory.on([
-                                    savedEvent.key,
-                                    savedEvent.attr,
-                                    sqid_1.sqid(savedEvent.id)
-                                ], function () {
-                                    return savedEvent;
-                                });
-                                void _this.events_.memory.emit([
-                                    savedEvent.key,
-                                    savedEvent.attr,
-                                    sqid_1.sqid(savedEvent.id)
-                                ], savedEvent);
-                                void resolve();
-                                var events = _this.memory.refs([savedEvent.key]).map(function (_a) {
-                                    var listener = _a.listener;
-                                    return listener(void 0, [savedEvent.key]);
-                                }).reduce(function (es, e) {
-                                    return e instanceof event_1.StoredEventRecord ? concat_1.concat(es, [e]) : es;
-                                }, []);
-                                if (events.length >= _this.snapshotCycle || value_1.hasBinary(event.value)) {
-                                    void _this.snapshot(savedEvent.key);
-                                }
-                            };
-                            var fail = function () {
-                                return active() ? void reject() : void resolve(), void clean();
-                            };
-                            tx.addEventListener('complete', success);
-                            tx.addEventListener('error', fail);
-                            tx.addEventListener('abort', fail);
-                        };
-                        if (tx)
-                            return void cont(tx);
-                        var cancellation = new cancellation_1.Cancellation();
-                        void cancellation.register(reject);
-                        void cancellation.register(clean);
-                        void tick_1.tick(function () {
-                            return void setTimeout(cancellation.cancel, 1000), void _this.listen(function (db) {
-                                return void cancellation.close(), void cancellation.maybe(db).fmap(function (db) {
-                                    return void cont(db.transaction(_this.name, 'readwrite'));
-                                }).extract(function () {
-                                    return void 0;
-                                });
-                            }, cancellation.cancel);
-                        });
-                    }).catch(function () {
+                    var loss = function () {
                         return void _this.events.loss.emit([
                             event.key,
                             event.attr,
                             event.type
                         ], new EventStore.Event(event.type, identifier_1.makeEventId(0), event.key, event.attr, event.date));
+                    };
+                    return void this.listen(function (db) {
+                        tx = _this.txrw = tx || _this.txrw || db.transaction(_this.name, 'readwrite');
+                        var active = function () {
+                            return _this.memory.refs([
+                                event.key,
+                                event.attr,
+                                sqid_1.sqid(0)
+                            ]).some(function (_a) {
+                                var listener = _a.listener;
+                                return listener(void 0, [
+                                    event.key,
+                                    event.attr,
+                                    sqid_1.sqid(0)
+                                ]) === event;
+                            });
+                        };
+                        if (!active())
+                            return;
+                        var req = tx.objectStore(_this.name).add(adjust(event));
+                        void tx.addEventListener('complete', function () {
+                            void clean();
+                            var savedEvent = new event_1.SavedEventRecord(identifier_1.makeEventId(req.result), event.key, event.value, event.type, event.date);
+                            void _this.memory.off([
+                                savedEvent.key,
+                                savedEvent.attr,
+                                sqid_1.sqid(savedEvent.id)
+                            ]);
+                            void _this.memory.on([
+                                savedEvent.key,
+                                savedEvent.attr,
+                                sqid_1.sqid(savedEvent.id)
+                            ], function () {
+                                return savedEvent;
+                            });
+                            void _this.events_.memory.emit([
+                                savedEvent.key,
+                                savedEvent.attr,
+                                sqid_1.sqid(savedEvent.id)
+                            ], savedEvent);
+                            var events = _this.memory.refs([savedEvent.key]).map(function (_a) {
+                                var listener = _a.listener;
+                                return listener(void 0, [savedEvent.key]);
+                            }).reduce(function (es, e) {
+                                return e instanceof event_1.StoredEventRecord ? concat_1.concat(es, [e]) : es;
+                            }, []);
+                            if (events.length >= _this.snapshotCycle || value_1.hasBinary(event.value)) {
+                                void _this.snapshot(savedEvent.key);
+                            }
+                        });
+                        var fail = function () {
+                            return void clean(), active() ? void loss() : void 0;
+                        };
+                        void tx.addEventListener('error', fail);
+                        void tx.addEventListener('abort', fail);
+                    }, function () {
+                        return void clean() || void loss();
                     });
                 };
                 EventStore.prototype.delete = function (key) {
@@ -1910,22 +1890,22 @@ require = function e(t, n, r) {
                 EventStore.prototype.snapshot = function (key) {
                     var _this = this;
                     return void this.listen(function (db) {
-                        if (!_this.observes(key))
+                        if (!_this.has(key) || _this.meta(key).id === 0)
                             return;
-                        var tx = db.transaction(_this.name, 'readwrite');
+                        var tx = _this.txrw = _this.txrw || db.transaction(_this.name, 'readwrite');
                         var store = tx.objectStore(_this.name);
                         var req = store.index(EventStoreSchema.key).openCursor(key, 'prev');
                         var events = [];
-                        req.onsuccess = function () {
+                        void req.addEventListener('success', function () {
                             var cursor = req.result;
                             if (cursor) {
                                 var event_3 = new event_1.LoadedEventRecord(cursor.value);
                                 try {
                                     void events.unshift(event_3);
-                                } catch (err) {
+                                } catch (error) {
                                     void cursor.delete();
                                     void new Promise(function (_, reject) {
-                                        return void reject(err);
+                                        return void reject(error);
                                     });
                                 }
                             }
@@ -1947,16 +1927,19 @@ require = function e(t, n, r) {
                             } else {
                                 return void cursor.continue();
                             }
-                        };
+                        });
                     });
                 };
                 EventStore.prototype.clean = function (key) {
                     var _this = this;
                     var events = [];
                     var cleanState = new Map();
-                    return void this.cursor(api_1.IDBKeyRange.bound(key, key), EventStoreSchema.key, 'prev', 'readwrite', function (cursor) {
+                    var cleared = new cancellation_1.Cancellation();
+                    return void this.cursor(api_1.IDBKeyRange.only(key), EventStoreSchema.key, 'prev', 'readwrite', function (cursor, error) {
+                        if (error)
+                            return;
                         if (!cursor) {
-                            return void events.reduce(function (_, event) {
+                            void events.reduce(function (_, event) {
                                 return void _this.memory.off([
                                     event.key,
                                     event.attr,
@@ -1967,30 +1950,31 @@ require = function e(t, n, r) {
                                     sqid_1.sqid(event.id)
                                 ]);
                             }, void 0);
+                            return void _this.events.clean.emit([key], !cleared.canceled);
                         } else {
                             var event_4 = new event_1.LoadedEventRecord(cursor.value);
                             switch (event_4.type) {
-                            case EventStore.EventType.put: {
-                                    void cleanState.set(event_4.key, cleanState.get(event_4.key) || false);
+                            case EventStore.EventType.put:
+                                void cleared.cancel();
+                                void cleanState.set(event_4.key, cleanState.get(event_4.key) || false);
+                                if (cleanState.get(event_4.key))
                                     break;
-                                }
-                            case EventStore.EventType.snapshot: {
-                                    if (!cleanState.get(event_4.key)) {
-                                        void cleanState.set(event_4.key, true);
-                                        void cursor.continue();
-                                        return;
-                                    }
+                                return void cursor.continue();
+                            case EventStore.EventType.snapshot:
+                                void cleared.cancel();
+                                if (cleanState.get(event_4.key))
                                     break;
-                                }
-                            case EventStore.EventType.delete: {
-                                    void cleanState.set(event_4.key, true);
+                                void cleanState.set(event_4.key, true);
+                                return void cursor.continue();
+                            case EventStore.EventType.delete:
+                                void cleared.close();
+                                if (cleanState.get(event_4.key))
                                     break;
-                                }
+                                void cleanState.set(event_4.key, true);
+                                break;
                             }
-                            if (cleanState.get(event_4.key)) {
-                                void cursor.delete();
-                                void events.unshift(event_4);
-                            }
+                            void cursor.delete();
+                            void events.unshift(event_4);
                             return void cursor.continue();
                         }
                     });
@@ -2000,15 +1984,21 @@ require = function e(t, n, r) {
                     return void this.listen(function (db) {
                         var tx = db.transaction(_this.name, mode);
                         var req = index ? tx.objectStore(_this.name).index(index).openCursor(query, direction) : tx.objectStore(_this.name).openCursor(query, direction);
-                        req.onsuccess = function () {
-                            return req.result && void cb(req.result, req.error);
-                        };
-                        tx.oncomplete = function () {
-                            return void cb(null, tx.error);
-                        };
-                        tx.onerror = tx.onabort = function () {
-                            return void cb(null, tx.error);
-                        };
+                        void req.addEventListener('success', function () {
+                            var cursor = req.result;
+                            if (!cursor)
+                                return;
+                            void cb(cursor, req.error);
+                        });
+                        void tx.addEventListener('complete', function () {
+                            return void cb(null, tx.error || req.error);
+                        });
+                        void tx.addEventListener('error', function () {
+                            return void cb(null, tx.error || req.error);
+                        });
+                        void tx.addEventListener('abort ', function () {
+                            return void cb(null, tx.error || req.error);
+                        });
                     }, function () {
                         return void cb(null, new Error('Access has failed.'));
                     });
@@ -2047,18 +2037,6 @@ require = function e(t, n, r) {
                     return Value;
                 }(event_1.EventRecordValue);
                 EventStore.Value = Value;
-                var InternalEvent = function () {
-                    function InternalEvent(type, id, key, attr) {
-                        this.type = type;
-                        this.id = id;
-                        this.key = key;
-                        this.attr = attr;
-                        void Object.freeze(this);
-                    }
-                    return InternalEvent;
-                }();
-                EventStore.InternalEvent = InternalEvent;
-                EventStore.InternalEventType = __assign({}, event_1.EventRecordType, { query: 'query' });
             }(EventStore = exports.EventStore || (exports.EventStore = {})));
             exports.EventStore = EventStore;
             function adjust(event) {
@@ -2125,12 +2103,15 @@ require = function e(t, n, r) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var noop_1 = require('../../../lib/noop');
+            var cancellation_1 = require('spica/cancellation');
+            var tick_1 = require('spica/tick');
             var KeyValueStore = function () {
                 function KeyValueStore(name, index, listen) {
                     this.name = name;
                     this.index = index;
                     this.listen = listen;
                     this.cache = new Map();
+                    this.tx_ = { rwc: 0 };
                     if (typeof index !== 'string')
                         throw new TypeError();
                 }
@@ -2147,27 +2128,64 @@ require = function e(t, n, r) {
                         }
                     };
                 };
-                KeyValueStore.prototype.get = function (key, cb) {
+                Object.defineProperty(KeyValueStore.prototype, 'txrw', {
+                    get: function () {
+                        if (++this.tx_.rwc > 25) {
+                            this.tx_.rwc = 0;
+                            this.tx_.rw = void 0;
+                            return;
+                        }
+                        return this.tx_.rw;
+                    },
+                    set: function (tx) {
+                        var _this = this;
+                        if (!tx)
+                            return;
+                        if (this.tx_.rw && this.tx_.rw === tx)
+                            return;
+                        this.tx_.rwc = 0;
+                        this.tx_.rw = tx;
+                        void tick_1.tick(function () {
+                            return _this.tx_.rw = void 0;
+                        });
+                    },
+                    enumerable: true,
+                    configurable: true
+                });
+                KeyValueStore.prototype.fetch = function (key, cb, cancellation) {
                     var _this = this;
                     if (cb === void 0) {
                         cb = noop_1.noop;
                     }
-                    void this.listen(function (db) {
+                    if (cancellation === void 0) {
+                        cancellation = new cancellation_1.Cancellation();
+                    }
+                    return void this.listen(function (db) {
+                        if (cancellation.canceled)
+                            return void cb(new Error('Cancelled.'));
                         var tx = db.transaction(_this.name, 'readonly');
                         var req = _this.index ? tx.objectStore(_this.name).index(_this.index).get(key) : tx.objectStore(_this.name).get(key);
-                        var result;
-                        req.onsuccess = function () {
-                            return result = req.result !== void 0 && req.result !== null ? req.result : _this.cache.get(key);
-                        };
-                        tx.oncomplete = function () {
-                            return cb(result, tx.error);
-                        };
-                        tx.onerror = tx.onabort = function () {
-                            return cb(void 0, tx.error);
-                        };
+                        void req.addEventListener('success', function () {
+                            return void cb(req.error);
+                        });
+                        void tx.addEventListener('error', function () {
+                            return void cb(req.error);
+                        });
+                        void tx.addEventListener('abort', function () {
+                            return void cb(req.error);
+                        });
+                        void cancellation.register(function () {
+                            return void tx.abort();
+                        });
+                        return;
                     }, function () {
-                        return void cb(void 0, new Error('Access has failed.'));
+                        return void cb(new Error('Access has failed.'));
                     });
+                };
+                KeyValueStore.prototype.has = function (key) {
+                    return this.cache.has(key);
+                };
+                KeyValueStore.prototype.get = function (key) {
                     return this.cache.get(key);
                 };
                 KeyValueStore.prototype.set = function (key, value, cb) {
@@ -2185,11 +2203,17 @@ require = function e(t, n, r) {
                     void this.listen(function (db) {
                         if (!_this.cache.has(key))
                             return;
-                        var tx = db.transaction(_this.name, 'readwrite');
+                        var tx = _this.txrw = _this.txrw || db.transaction(_this.name, 'readwrite');
                         _this.index ? tx.objectStore(_this.name).put(_this.cache.get(key)) : tx.objectStore(_this.name).put(_this.cache.get(key), key);
-                        tx.oncomplete = tx.onerror = tx.onabort = function () {
+                        void tx.addEventListener('complete', function () {
                             return void cb(key, tx.error);
-                        };
+                        });
+                        void tx.addEventListener('error', function () {
+                            return void cb(key, tx.error);
+                        });
+                        void tx.addEventListener('abort', function () {
+                            return void cb(key, tx.error);
+                        });
                     }, function () {
                         return void cb(key, new Error('Access has failed.'));
                     });
@@ -2202,11 +2226,17 @@ require = function e(t, n, r) {
                     }
                     void this.cache.delete(key);
                     void this.listen(function (db) {
-                        var tx = db.transaction(_this.name, 'readwrite');
+                        var tx = _this.txrw = _this.txrw || db.transaction(_this.name, 'readwrite');
                         void tx.objectStore(_this.name).delete(key);
-                        tx.oncomplete = tx.onerror = tx.onabort = function () {
+                        void tx.addEventListener('complete', function () {
                             return void cb(tx.error);
-                        };
+                        });
+                        void tx.addEventListener('error', function () {
+                            return void cb(tx.error);
+                        });
+                        void tx.addEventListener('abort', function () {
+                            return void cb(tx.error);
+                        });
                     }, function () {
                         return void cb(new Error('Access has failed.'));
                     });
@@ -2216,15 +2246,22 @@ require = function e(t, n, r) {
                     void this.listen(function (db) {
                         var tx = db.transaction(_this.name, mode);
                         var req = index ? tx.objectStore(_this.name).index(index).openCursor(query, direction) : tx.objectStore(_this.name).openCursor(query, direction);
-                        req.onsuccess = function () {
-                            return req.result && void cb(req.result, req.error);
-                        };
-                        tx.oncomplete = function () {
-                            return void cb(null, tx.error);
-                        };
-                        tx.onerror = tx.onabort = function () {
-                            return void cb(null, tx.error);
-                        };
+                        void req.addEventListener('success', function () {
+                            var cursor = req.result;
+                            if (!cursor)
+                                return;
+                            void _this.cache.set(cursor.primaryKey, Object.assign({}, cursor.value));
+                            void cb(cursor, req.error);
+                        });
+                        void tx.addEventListener('complete', function () {
+                            return void cb(null, req.error);
+                        });
+                        void tx.addEventListener('error', function () {
+                            return void cb(null, req.error);
+                        });
+                        void tx.addEventListener('abort', function () {
+                            return void cb(null, req.error);
+                        });
                     }, function () {
                         return void cb(null, new Error('Access has failed.'));
                     });
@@ -2241,49 +2278,169 @@ require = function e(t, n, r) {
             }(KeyValueStore = exports.KeyValueStore || (exports.KeyValueStore = {})));
             exports.KeyValueStore = KeyValueStore;
         },
-        { '../../../lib/noop': 53 }
+        {
+            '../../../lib/noop': 53,
+            'spica/cancellation': 5,
+            'spica/tick': 21
+        }
     ],
     31: [
         function (require, module, exports) {
             'use strict';
+            var __extends = this && this.__extends || function () {
+                var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
+                    d.__proto__ = b;
+                } || function (d, b) {
+                    for (var p in b)
+                        if (b.hasOwnProperty(p))
+                            d[p] = b[p];
+                };
+                return function (d, b) {
+                    extendStatics(d, b);
+                    function __() {
+                        this.constructor = d;
+                    }
+                    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+                };
+            }();
             Object.defineProperty(exports, '__esModule', { value: true });
             var api_1 = require('../../infrastructure/webstorage/api');
-            var Channel = function () {
-                function Channel(name) {
-                    this.name = name;
-                    return typeof BroadcastChannel === 'function' ? new Broadcast(name) : new Storage(name);
+            var ChannelMessage;
+            (function (ChannelMessage) {
+                ChannelMessage.version = 1;
+                function parse(msg) {
+                    if (msg.version !== ChannelMessage.version)
+                        return;
+                    switch (msg.type) {
+                    case ChannelEvent.save:
+                        return new Save(msg.key);
+                    case ChannelEvent.ownership:
+                        return new Ownership(msg.key, msg.priority);
+                    default:
+                        return;
+                    }
                 }
-                Channel.prototype.listen = function (_listener) {
+                ChannelMessage.parse = parse;
+                var Message = function () {
+                    function Message(key, type) {
+                        this.key = key;
+                        this.type = type;
+                        this.version = ChannelMessage.version;
+                    }
+                    return Message;
+                }();
+                var Save = function (_super) {
+                    __extends(Save, _super);
+                    function Save(key) {
+                        var _this = _super.call(this, key, ChannelEvent.save) || this;
+                        _this.key = key;
+                        return _this;
+                    }
+                    return Save;
+                }(Message);
+                ChannelMessage.Save = Save;
+                var Ownership = function (_super) {
+                    __extends(Ownership, _super);
+                    function Ownership(key, priority) {
+                        var _this = _super.call(this, key, ChannelEvent.ownership) || this;
+                        _this.key = key;
+                        _this.priority = priority;
+                        return _this;
+                    }
+                    return Ownership;
+                }(Message);
+                ChannelMessage.Ownership = Ownership;
+            }(ChannelMessage = exports.ChannelMessage || (exports.ChannelMessage = {})));
+            var ChannelEvent;
+            (function (ChannelEvent) {
+                ChannelEvent.save = 'save';
+                ChannelEvent.ownership = 'ownership';
+            }(ChannelEvent = exports.ChannelEvent || (exports.ChannelEvent = {})));
+            var Ownership = function () {
+                function Ownership(channel) {
+                    var _this = this;
+                    this.channel = channel;
+                    this.store = new Map();
+                    void this.channel.listen(ChannelEvent.ownership, function (_a) {
+                        var key = _a.key, priority = _a.priority;
+                        return priority > _this.priority(key) ? void _this.store.set(key, -priority) : void _this.channel.post(new ChannelMessage.Ownership(key, _this.priority(key)));
+                    });
+                }
+                Ownership.priority = function (expiry) {
+                    if (expiry === void 0) {
+                        expiry = Date.now();
+                    }
+                    return +('' + expiry).slice(-13) + +('' + (Math.random() * 1000 | 0)).slice(-3);
+                };
+                Ownership.prototype.priority = function (key) {
+                    return this.store.get(key) || 0;
+                };
+                Ownership.prototype.take = function (key, age) {
+                    var priority = Ownership.priority(Date.now() + Math.min(Math.max(age, 1 * 1000), 60 * 1000));
+                    if (priority <= Math.abs(this.priority(key)))
+                        return this.priority(key) > 0;
+                    void this.store.set(key, priority);
+                    void this.channel.post(new ChannelMessage.Ownership(key, this.priority(key)));
+                    return true;
+                };
+                return Ownership;
+            }();
+            var Channel = function () {
+                function Channel(name, debug) {
+                    this.name = name;
+                    this.debug = debug;
+                    return typeof BroadcastChannel === 'function' ? new Broadcast(name, debug) : new Storage(name, debug);
+                }
+                Channel.prototype.listen = function (type, listener) {
+                    type;
+                    listener;
                     return function () {
                         return void 0;
                     };
                 };
-                Channel.prototype.post = function (_message) {
+                Channel.prototype.post = function (msg) {
+                    msg;
                 };
                 Channel.prototype.close = function () {
                 };
                 return Channel;
             }();
-            exports.BroadcastChannel = Channel;
+            exports.Channel = Channel;
             var Broadcast = function () {
-                function Broadcast(name) {
+                function Broadcast(name, debug) {
                     this.name = name;
+                    this.debug = debug;
+                    this.id = ('' + '0'.repeat(3) + (Math.random() * 1000 | 0)).slice(-3);
                     this.channel = new BroadcastChannel(this.name);
                     this.listeners = new Set();
+                    this.ownership = new Ownership(this);
+                    this.alive = true;
                 }
-                Broadcast.prototype.listen = function (listener) {
+                Broadcast.prototype.listen = function (type, listener) {
                     var _this = this;
-                    void this.listeners.add(listener);
-                    void this.channel.addEventListener('message', listener);
+                    void this.listeners.add(handler);
+                    void this.channel.addEventListener('message', handler);
+                    var _a = this, debug = _a.debug, id = _a.id;
                     return function () {
-                        return void _this.listeners.delete(listener), void _this.channel.removeEventListener('message', listener);
+                        return void _this.listeners.delete(handler), void _this.channel.removeEventListener('message', handler);
                     };
+                    function handler(ev) {
+                        var msg = ChannelMessage.parse(ev.data);
+                        if (!msg || msg.type !== type)
+                            return;
+                        debug && console.log(id, 'recv', msg);
+                        return void listener(msg);
+                    }
                 };
-                Broadcast.prototype.post = function (message) {
-                    void this.channel.postMessage(message);
+                Broadcast.prototype.post = function (msg) {
+                    if (!this.alive)
+                        return;
+                    this.debug && console.log(this.id, 'send', msg);
+                    void this.channel.postMessage(msg);
                 };
                 Broadcast.prototype.close = function () {
                     var _this = this;
+                    this.alive = false;
                     void this.listeners.forEach(function (listener) {
                         return void _this.channel.removeEventListener('message', listener);
                     });
@@ -2292,38 +2449,48 @@ require = function e(t, n, r) {
                 return Broadcast;
             }();
             var Storage = function () {
-                function Storage(name) {
+                function Storage(name, debug) {
                     var _this = this;
                     this.name = name;
+                    this.debug = debug;
                     this.storage = api_1.localStorage;
                     this.listeners = new Set();
+                    this.ownership = new Ownership(this);
+                    this.alive = true;
                     void self.addEventListener('unload', function () {
                         return void _this.storage.removeItem(_this.name);
                     }, true);
                 }
-                Storage.prototype.listen = function (listener_) {
+                Storage.prototype.listen = function (type, listener) {
                     var _this = this;
-                    var listener = function (ev) {
-                        return typeof ev.newValue === 'string' && void listener_(ev);
-                    };
-                    void this.listeners.add(listener);
+                    void this.listeners.add(handler);
                     void api_1.storageEventStream.on([
                         'local',
                         this.name
-                    ], listener);
+                    ], handler);
                     return function () {
-                        return void _this.listeners.delete(listener), void api_1.storageEventStream.off([
+                        return void _this.listeners.delete(handler), void api_1.storageEventStream.off([
                             'local',
                             _this.name
-                        ], listener);
+                        ], handler);
                     };
+                    function handler(ev) {
+                        if (typeof ev.newValue !== 'string')
+                            return;
+                        var msg = ChannelMessage.parse(JSON.parse(ev.newValue));
+                        if (!msg || msg.type !== type)
+                            return;
+                        return void listener(msg);
+                    }
                 };
-                Storage.prototype.post = function (message) {
-                    void this.storage.removeItem(this.name);
-                    void this.storage.setItem(this.name, message);
+                Storage.prototype.post = function (msg) {
+                    if (!this.alive)
+                        return;
+                    void this.storage.setItem(this.name, JSON.stringify(msg));
                 };
                 Storage.prototype.close = function () {
                     var _this = this;
+                    this.alive = false;
                     void this.listeners.forEach(function (listener) {
                         return void api_1.storageEventStream.off([
                             'local',
@@ -2470,18 +2637,61 @@ require = function e(t, n, r) {
             var data_1 = require('./channel/data');
             var access_1 = require('./channel/access');
             var expiry_1 = require('./channel/expiry');
+            var channel_1 = require('../../broadcast/channel');
             var noop_1 = require('../../../../lib/noop');
             var cache = new Map();
             var ChannelStore = function () {
-                function ChannelStore(name, attrs, destroy, size, expiry) {
+                function ChannelStore(name, attrs, destroy, age, size, debug) {
+                    if (debug === void 0) {
+                        debug = false;
+                    }
                     var _this = this;
                     this.name = name;
+                    this.age = age;
                     this.size = size;
-                    this.expiry = expiry;
+                    this.debug = debug;
                     this.cancellation = new cancellation_1.Cancellation();
+                    this.keys = new cache_1.Cache(this.size, function () {
+                        var keys = new Set();
+                        var timer = 0;
+                        var resolve = function () {
+                            timer = 0;
+                            var count = 0;
+                            for (var _i = 0, _a = Array.from(keys); _i < _a.length; _i++) {
+                                var key = _a[_i];
+                                void keys.delete(key);
+                                if (_this.cancellation.canceled)
+                                    return;
+                                if (_this.keys.has(key))
+                                    continue;
+                                if (!_this.has(key) && _this.meta(key).id > 0)
+                                    continue;
+                                if (!_this.channel.ownership.take(key, 0))
+                                    continue;
+                                void _this.delete(key);
+                                if (++count > 10)
+                                    break;
+                            }
+                            if (keys.size === 0)
+                                return;
+                            if (timer > 0)
+                                return;
+                            timer = setTimeout(resolve, Math.random() * 10 * 1000 + 5 * 1000 | 0);
+                        };
+                        return function (key) {
+                            if (!_this.has(key) && _this.meta(key).id > 0)
+                                return void keys.delete(key);
+                            void keys.add(key);
+                            if (timer > 0)
+                                return;
+                            timer = setTimeout(resolve, Math.random() * 10 * 1000 + 5 * 1000 | 0);
+                        };
+                    }());
+                    this.channel = new channel_1.Channel(this.name, this.debug);
                     this.events_ = Object.freeze({
                         load: new observation_1.Observation(),
-                        save: new observation_1.Observation()
+                        save: new observation_1.Observation(),
+                        clean: new observation_1.Observation()
                     });
                     this.events = Object.freeze({
                         load: new observation_1.Observation(),
@@ -2495,7 +2705,7 @@ require = function e(t, n, r) {
                     void this.cancellation.register(function () {
                         return void cache.delete(name);
                     });
-                    this.schema = new Schema(this, attrs, api_1.open(name, {
+                    this.schema = new Schema(this, this.channel, attrs, api_1.open(name, {
                         make: function (db) {
                             return data_1.DataStore.configure().make(db) && access_1.AccessStore.configure().make(db) && expiry_1.ExpiryStore.configure().make(db);
                         },
@@ -2506,52 +2716,91 @@ require = function e(t, n, r) {
                             return data_1.DataStore.configure().destroy(reason, ev) && access_1.AccessStore.configure().destroy(reason, ev) && expiry_1.ExpiryStore.configure().destroy(reason, ev) && destroy(reason, ev);
                         }
                     }));
-                    void this.cancellation.register(function () {
-                        return void _this.schema.close();
-                    });
                     void this.cancellation.register(api_1.idbEventStream.on([
                         name,
                         api_1.IDBEventType.destroy
                     ], function () {
-                        return cache.get(name) === _this && void _this.schema.rebuild();
+                        return void _this.schema.rebuild();
                     }));
-                    if (size < Infinity) {
-                        var keys_1 = new cache_1.Cache(this.size, function (k) {
-                            return void _this.delete(k);
-                        });
-                        void this.events_.load.monitor([], function (_a) {
-                            var key = _a.key, type = _a.type;
-                            return type === ChannelStore.EventType.delete ? void keys_1.delete(key) : void keys_1.put(key);
-                        });
-                        void this.events_.save.monitor([], function (_a) {
-                            var key = _a.key, type = _a.type;
-                            return type === ChannelStore.EventType.delete ? void keys_1.delete(key) : void keys_1.put(key);
-                        });
-                        var limit_1 = function () {
-                            return cache.get(name) === _this && void _this.recent(Infinity, function (ks, err) {
-                                if (cache.get(name) !== _this)
-                                    return;
-                                if (err)
-                                    return void setTimeout(limit_1, 1000);
-                                return void ks.reverse().forEach(function (k) {
-                                    return void keys_1.put(k);
-                                });
+                    void this.cancellation.register(function () {
+                        return void _this.schema.close();
+                    });
+                    void this.cancellation.register(this.channel.listen(channel_1.ChannelEvent.save, function (_a) {
+                        var key = _a.key;
+                        return void _this.fetch(key);
+                    }));
+                    void this.cancellation.register(function () {
+                        return void _this.channel.close();
+                    });
+                    void this.events_.save.monitor([], function (_a) {
+                        var key = _a.key;
+                        return void _this.channel.post(new channel_1.ChannelMessage.Save(key));
+                    });
+                    void this.events_.clean.monitor([], function (cleared, _a) {
+                        var key = _a[0];
+                        if (!cleared)
+                            return;
+                        void _this.channel.ownership.take(key, 30 * 1000);
+                        void _this.schema.access.delete(key);
+                        void _this.schema.expire.delete(key);
+                    });
+                    if (!Number.isFinite(this.size))
+                        return;
+                    void this.events_.load.monitor([], function (_a) {
+                        var key = _a.key, type = _a.type;
+                        return type === ChannelStore.EventType.delete ? void _this.keys.delete(key) : void _this.keys.put(key);
+                    });
+                    void this.events_.save.monitor([], function (_a) {
+                        var key = _a.key, type = _a.type;
+                        return type === ChannelStore.EventType.delete ? void _this.keys.delete(key) : void _this.keys.put(key);
+                    });
+                    var limit = function () {
+                        if (!Number.isFinite(size))
+                            return;
+                        if (_this.cancellation.canceled)
+                            return;
+                        void _this.recent(Infinity, function (ks, error) {
+                            if (error)
+                                return void setTimeout(limit, 10 * 1000);
+                            return void ks.reverse().forEach(function (key) {
+                                return void _this.keys.put(key);
                             });
-                        };
-                        void limit_1();
-                    }
+                        });
+                    };
+                    void limit();
                 }
-                ChannelStore.prototype.sync = function (keys, cb) {
+                ChannelStore.prototype.sync = function (keys, cb, timeout) {
+                    var _this = this;
                     if (cb === void 0) {
                         cb = noop_1.noop;
                     }
-                    return this.schema.data.sync(keys, cb);
+                    if (timeout === void 0) {
+                        timeout = Infinity;
+                    }
+                    var cancellation = new cancellation_1.Cancellation();
+                    if (Number.isFinite(timeout)) {
+                        void setTimeout(cancellation.cancel, timeout);
+                    }
+                    return void Promise.all(keys.map(function (key) {
+                        return new Promise(function (resolve) {
+                            return void _this.fetch(key, function (error) {
+                                return void resolve([
+                                    key,
+                                    error
+                                ]);
+                            }, cancellation);
+                        });
+                    })).then(cb);
                 };
-                ChannelStore.prototype.fetch = function (key, cb) {
+                ChannelStore.prototype.fetch = function (key, cb, cancellation) {
                     if (cb === void 0) {
                         cb = noop_1.noop;
                     }
-                    return this.schema.data.fetch(key, cb);
+                    if (cancellation === void 0) {
+                        cancellation = new cancellation_1.Cancellation();
+                    }
+                    void this.schema.access.fetch(key);
+                    return this.schema.data.fetch(key, cb, cancellation);
                 };
                 ChannelStore.prototype.has = function (key) {
                     return this.schema.data.has(key);
@@ -2560,27 +2809,40 @@ require = function e(t, n, r) {
                     return this.schema.data.meta(key);
                 };
                 ChannelStore.prototype.get = function (key) {
+                    void this.log(key);
                     return this.schema.data.get(key);
                 };
                 ChannelStore.prototype.add = function (record) {
-                    void this.schema.access.set(record.key);
-                    void this.schema.expire.set(record.key, this.ages.get(record.key) || this.expiry);
+                    var _this = this;
+                    var key = record.key;
+                    void this.schema.access.set(key);
+                    void this.schema.expire.set(key, this.ages.get(key) || this.age);
                     void this.schema.data.add(record);
+                    void this.events_.save.once([
+                        record.key,
+                        record.attr,
+                        record.type
+                    ], function () {
+                        return void _this.schema.access.set(key), void _this.schema.expire.set(key, _this.ages.get(key) || _this.age);
+                    });
                 };
                 ChannelStore.prototype.delete = function (key) {
+                    if (this.cancellation.canceled)
+                        return;
+                    void this.channel.ownership.take(key, 30 * 1000);
+                    void this.schema.access.set(key);
+                    void this.schema.expire.set(key, this.ages.get(key) || this.age);
                     void this.schema.data.delete(key);
-                    void this.schema.access.delete(key);
-                    void this.schema.expire.delete(key);
                 };
                 ChannelStore.prototype.log = function (key) {
                     if (!this.has(key))
                         return;
                     void this.schema.access.set(key);
-                    void this.schema.expire.set(key, this.ages.get(key) || this.expiry);
+                    void this.schema.expire.set(key, this.ages.get(key) || this.age);
                 };
                 ChannelStore.prototype.expire = function (key, age) {
                     if (age === void 0) {
-                        age = this.expiry;
+                        age = this.age;
                     }
                     return void this.ages.set(key, age);
                 };
@@ -2605,8 +2867,9 @@ require = function e(t, n, r) {
             }(ChannelStore = exports.ChannelStore || (exports.ChannelStore = {})));
             exports.ChannelStore = ChannelStore;
             var Schema = function () {
-                function Schema(store_, attrs_, listen_) {
+                function Schema(store_, channel_, attrs_, listen_) {
                     this.store_ = store_;
+                    this.channel_ = channel_;
                     this.attrs_ = attrs_;
                     this.listen_ = listen_;
                     this.cancellation_ = new cancellation_1.Cancellation();
@@ -2616,13 +2879,14 @@ require = function e(t, n, r) {
                     var keys = this.data ? this.data.keys() : [];
                     this.data = new data_1.DataStore(this.attrs_, this.listen_);
                     this.access = new access_1.AccessStore(this.listen_);
-                    this.expire = new expiry_1.ExpiryStore(this.store_, this.cancellation_, this.listen_);
+                    this.expire = new expiry_1.ExpiryStore(this.store_, this.cancellation_, this.channel_, this.listen_);
                     void this.cancellation_.register(this.store_.events_.load.relay(this.data.events.load));
                     void this.cancellation_.register(this.store_.events_.save.relay(this.data.events.save));
+                    void this.cancellation_.register(this.store_.events_.clean.relay(this.data.events.clean));
                     void this.cancellation_.register(this.store_.events.load.relay(this.data.events.load));
                     void this.cancellation_.register(this.store_.events.save.relay(this.data.events.save));
                     void this.cancellation_.register(this.store_.events.loss.relay(this.data.events.loss));
-                    void this.data.sync(keys);
+                    void this.store_.sync(keys);
                 };
                 Schema.prototype.rebuild = function () {
                     void this.close();
@@ -2638,6 +2902,7 @@ require = function e(t, n, r) {
         {
             '../../../../lib/noop': 53,
             '../../../infrastructure/indexeddb/api': 43,
+            '../../broadcast/channel': 31,
             './channel/access': 36,
             './channel/data': 37,
             './channel/expiry': 38,
@@ -2710,14 +2975,23 @@ require = function e(t, n, r) {
                 };
                 AccessStore.prototype.recent = function (limit, cb) {
                     var keys = [];
-                    return void this.store.cursor(null, AccessStoreSchema.date, 'prev', 'readonly', function (cursor, err) {
+                    return void this.store.cursor(null, AccessStoreSchema.date, 'prev', 'readonly', function (cursor, error) {
+                        if (error)
+                            return void cb([], error);
                         if (!cursor)
-                            return void cb(keys, err);
+                            return void cb(keys);
                         if (--limit < 0)
                             return;
-                        void keys.push(cursor.primaryKey);
+                        var key = cursor.value.key;
+                        void keys.push(key);
                         void cursor.continue();
                     });
+                };
+                AccessStore.prototype.fetch = function (key) {
+                    return this.store.fetch(key);
+                };
+                AccessStore.prototype.get = function (key) {
+                    return this.store.has(key) ? this.store.get(key).date : 0;
                 };
                 AccessStore.prototype.set = function (key) {
                     void this.store.set(key, new AccessRecord(key));
@@ -2763,9 +3037,7 @@ require = function e(t, n, r) {
             var DataStore = function (_super) {
                 __extends(DataStore, _super);
                 function DataStore(attrs, listen) {
-                    var _this = _super.call(this, exports.name, attrs, listen) || this;
-                    void Object.freeze(_this);
-                    return _this;
+                    return _super.call(this, exports.name, attrs, listen) || this;
                 }
                 DataStore.configure = function () {
                     return store_1.EventStore.configure(exports.name);
@@ -2811,10 +3083,11 @@ require = function e(t, n, r) {
                 ExpiryStoreSchema.expiry = 'expiry';
             }(ExpiryStoreSchema || (ExpiryStoreSchema = {})));
             var ExpiryStore = function () {
-                function ExpiryStore(channel, cancellation, listen) {
+                function ExpiryStore(chan, cancellation, channel, listen) {
                     var _this = this;
-                    this.channel = channel;
+                    this.chan = chan;
                     this.cancellation = cancellation;
+                    this.channel = channel;
                     this.listen = listen;
                     this.store = new (function (_super) {
                         __extends(class_1, _super);
@@ -2830,32 +3103,38 @@ require = function e(t, n, r) {
                         if (scheduled === void 0) {
                             scheduled = Infinity;
                         }
-                        void _this.cancellation.register(function () {
-                            return void clearTimeout(timer);
-                        });
                         return function (date) {
-                            if (scheduled < date)
+                            if (date >= scheduled)
                                 return;
-                            void clearTimeout(timer);
                             scheduled = date;
+                            void clearTimeout(timer);
                             timer = setTimeout(function () {
-                                scheduled = 0;
-                                void _this.store.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', function (cursor) {
+                                scheduled = Infinity;
+                                var count = 0;
+                                return void _this.store.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', function (cursor, error) {
+                                    if (_this.cancellation.canceled)
+                                        return;
+                                    if (error)
+                                        return void _this.schedule(Date.now() + 10 * 1000);
                                     if (!cursor)
-                                        return scheduled = Infinity;
-                                    var record = cursor.value;
-                                    if (record.expiry > Date.now() && Number.isFinite(record.expiry)) {
-                                        scheduled = Infinity;
-                                        return void _this.schedule(record.expiry);
-                                    }
-                                    void _this.channel.delete(record.key);
+                                        return;
+                                    var _a = cursor.value, key = _a.key, expiry = _a.expiry;
+                                    if (expiry > Date.now())
+                                        return void _this.schedule(expiry);
+                                    if (!_this.chan.has(key) && _this.chan.meta(key).id > 0)
+                                        return void cursor.continue();
+                                    if (!_this.channel.ownership.take(key, 0))
+                                        return void cursor.continue();
+                                    if (++count > 10)
+                                        return void _this.schedule(Date.now() + 5 * 1000);
+                                    void _this.chan.delete(key);
                                     return void cursor.continue();
                                 });
-                            }, date - Date.now());
+                            }, Math.max(date - Date.now(), 3 * 1000));
                         };
                     }();
+                    void this.schedule(Date.now() + 60 * 1000);
                     void Object.freeze(this);
-                    void this.schedule(Date.now());
                 }
                 ExpiryStore.configure = function () {
                     return {
@@ -2927,39 +3206,19 @@ require = function e(t, n, r) {
             var api_1 = require('../../dao/api');
             var channel_1 = require('../model/channel');
             var api_2 = require('../../webstorage/api');
-            var api_3 = require('../../broadcast/api');
             var StoreChannel = function (_super) {
                 __extends(StoreChannel, _super);
-                function StoreChannel(name, Schema, migrate, destroy, size, expiry) {
-                    if (migrate === void 0) {
-                        migrate = function () {
+                function StoreChannel(name, Schema, _a) {
+                    var _b = _a === void 0 ? { Schema: Schema } : _a, _c = _b.migrate, migrate = _c === void 0 ? function () {
                             return void 0;
-                        };
-                    }
-                    if (destroy === void 0) {
-                        destroy = function () {
+                        } : _c, _d = _b.destroy, destroy = _d === void 0 ? function () {
                             return true;
-                        };
-                    }
-                    if (size === void 0) {
-                        size = Infinity;
-                    }
-                    if (expiry === void 0) {
-                        expiry = Infinity;
-                    }
-                    var _this = _super.call(this, name, Object.keys(new Schema()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(new Schema())), destroy, size, expiry) || this;
+                        } : _d, _e = _b.age, age = _e === void 0 ? Infinity : _e, _f = _b.size, size = _f === void 0 ? Infinity : _f, _g = _b.debug, debug = _g === void 0 ? false : _g;
+                    var _this = _super.call(this, name, Object.keys(new Schema()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(new Schema())), destroy, age, size, debug) || this;
                     _this.Schema = Schema;
-                    _this.broadcast = new api_3.BroadcastChannel(_this.name);
                     _this.links = new Map();
                     _this.sources = new Map();
                     var attrs = Object.keys(new Schema()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(new Schema()));
-                    void _this.broadcast.listen(function (ev) {
-                        return void _this.fetch(ev instanceof MessageEvent ? ev.data : ev.newValue);
-                    });
-                    void _this.events_.save.monitor([], function (_a) {
-                        var key = _a.key;
-                        return void _this.broadcast.post(key);
-                    });
                     void _this.events_.load.monitor([], function (_a) {
                         var key = _a.key, attr = _a.attr, type = _a.type;
                         if (!_this.sources.has(key))
@@ -3008,9 +3267,10 @@ require = function e(t, n, r) {
                     void Object.freeze(_this);
                     return _this;
                 }
-                StoreChannel.prototype.link = function (key, expiry) {
+                StoreChannel.prototype.link = function (key, age) {
                     var _this = this;
-                    void this.expire(key, expiry);
+                    void this.fetch(key);
+                    void this.expire(key, age);
                     return this.links.has(key) ? this.links.get(key) : this.links.set(key, api_1.build(Object.defineProperties(this.sources.set(key, this.get(key)).get(key), {
                         __meta: {
                             get: function () {
@@ -3046,7 +3306,6 @@ require = function e(t, n, r) {
                     })).get(key);
                 };
                 StoreChannel.prototype.destroy = function () {
-                    void this.broadcast.close();
                     void _super.prototype.destroy.call(this);
                 };
                 return StoreChannel;
@@ -3057,7 +3316,6 @@ require = function e(t, n, r) {
             }
         },
         {
-            '../../broadcast/api': 31,
             '../../dao/api': 32,
             '../../webstorage/api': 40,
             '../model/channel': 35,
