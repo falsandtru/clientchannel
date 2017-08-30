@@ -115,16 +115,21 @@ function handleFromSuccessState(state: SuccessState): void {
         assert(!console.error(reason + ''));
         void new Promise((_, reject) =>
           void reject(reason));
+        const curr = new CrashState(state, reason);
         void connection.close();
-        return void handleFromCrashState(new CrashState(state, reason));
+        return void handleFromCrashState(curr);
       }
     }
-    case Command.close:
+    case Command.close: {
+      const curr = new EndState(state);
       void connection.close();
-      return void handleFromEndState(new EndState(state));
-    case Command.destroy:
+      return void handleFromEndState(curr);
+    }
+    case Command.destroy: {
+      const curr = new DestroyState(state);
       void connection.close();
-      return void handleFromDestroyState(new DestroyState(state));
+      return void handleFromDestroyState(curr);
+    }
   }
 }
 

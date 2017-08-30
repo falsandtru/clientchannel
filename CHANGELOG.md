@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.20.2
+
+- Fix database state transition control.
+
 ## 0.20.1
 
 - Fix database state transition control.
