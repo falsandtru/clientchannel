@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.20.1
+
+- Fix database state transition control.
+
 ## 0.20.0
 
 - Fix expiry processing.

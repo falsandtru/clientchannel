@@ -1,5 +1,5 @@
 import { states, commands, configs, requests, Command, Config } from './state';
-import { handle } from './mutation';
+import { handle } from './transition';
 import { idbEventStream, IDBEventType } from './event';
 
 export type Listen = (success: (db: IDBDatabase) => void, failure?: () => void) => void;

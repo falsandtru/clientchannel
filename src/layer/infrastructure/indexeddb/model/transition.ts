@@ -76,10 +76,12 @@ function handleFromSuccessState(state: SuccessState): void {
   if (!state.alive) return;
   const { database, connection, queue } = state;
 
-  connection.onversionchange = () => (
-    void connection.close(),
-    void idbEventStream_.emit([database, IDBEventType.destroy], new IDBEvent(database, IDBEventType.destroy)),
-    void handleFromEndState(new EndState(state)));
+  connection.onversionchange = () => {
+    const curr = new EndState(state);
+    void connection.close();
+    void idbEventStream_.emit([database, IDBEventType.destroy], new IDBEvent(database, IDBEventType.destroy));
+    void handleFromEndState(curr);
+  };
   connection.onerror = event =>
     void handleFromErrorState(new ErrorState(state, (event.target as any).error, event));
   connection.onabort = event =>
