@@ -1,4 +1,4 @@
-/*! clientchannel v0.20.0 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.20.1 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function e(t, n, r) {
     function s(o, u) {
         if (!n[o]) {
@@ -3542,7 +3542,7 @@ require = function e(t, n, r) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var state_1 = require('./state');
-            var mutation_1 = require('./mutation');
+            var transition_1 = require('./transition');
             var event_1 = require('./event');
             function open(database, config) {
                 void operate(database, 'open', config);
@@ -3600,7 +3600,7 @@ require = function e(t, n, r) {
                         return void 0;
                     });
                 } else {
-                    return void mutation_1.handle(database);
+                    return void transition_1.handle(database);
                 }
             }
             function request(database, success, failure) {
@@ -3612,13 +3612,13 @@ require = function e(t, n, r) {
                 if (!state_1.requests.has(database))
                     return void failure();
                 void state_1.requests.get(database).enqueue(success, failure);
-                void mutation_1.handle(database);
+                void transition_1.handle(database);
             }
         },
         {
             './event': 45,
-            './mutation': 46,
-            './state': 47
+            './state': 46,
+            './transition': 47
         }
     ],
     45: [
@@ -3651,223 +3651,6 @@ require = function e(t, n, r) {
         { 'spica/observation': 19 }
     ],
     46: [
-        function (require, module, exports) {
-            'use strict';
-            Object.defineProperty(exports, '__esModule', { value: true });
-            var global_1 = require('../module/global');
-            var state_1 = require('./state');
-            var event_1 = require('./event');
-            function handle(database) {
-                var state = state_1.states.get(database);
-                return state instanceof state_1.SuccessState ? void handleFromSuccessState(state) : void handleFromInitialState(new state_1.InitialState(database));
-            }
-            exports.handle = handle;
-            function handleFromInitialState(state) {
-                if (!state.alive)
-                    return;
-                var database = state.database, version = state.version;
-                try {
-                    var openRequest_1 = version ? global_1.indexedDB.open(database, version) : global_1.indexedDB.open(database);
-                    openRequest_1.onblocked = function () {
-                        return void handleFromBlockedState(new state_1.BlockState(state, openRequest_1));
-                    };
-                    openRequest_1.onupgradeneeded = function () {
-                        return void handleFromUpgradeState(new state_1.UpgradeState(state, openRequest_1));
-                    };
-                    openRequest_1.onsuccess = function () {
-                        return void handleFromSuccessState(new state_1.SuccessState(state, openRequest_1.result));
-                    };
-                    openRequest_1.onerror = function (event) {
-                        return void handleFromErrorState(new state_1.ErrorState(state, openRequest_1.error, event));
-                    };
-                } catch (reason) {
-                    void handleFromCrashState(new state_1.CrashState(state, reason));
-                }
-            }
-            function handleFromBlockedState(state) {
-                if (!state.alive)
-                    return;
-                var database = state.database, session = state.session;
-                session.onblocked = function () {
-                    return void handleFromBlockedState(new state_1.BlockState(state, session));
-                };
-                session.onupgradeneeded = function () {
-                    return void handleFromUpgradeState(new state_1.UpgradeState(state, session));
-                };
-                session.onsuccess = function () {
-                    return void handleFromSuccessState(new state_1.SuccessState(state, session.result));
-                };
-                session.onerror = function (event) {
-                    return void handleFromErrorState(new state_1.ErrorState(state, session.error, event));
-                };
-                void event_1.idbEventStream_.emit([
-                    database,
-                    event_1.IDBEventType.block
-                ], new event_1.IDBEvent(database, event_1.IDBEventType.block));
-            }
-            function handleFromUpgradeState(state) {
-                if (!state.alive)
-                    return;
-                var session = state.session;
-                var db = session.transaction.db;
-                var _a = state.config, make = _a.make, destroy = _a.destroy;
-                try {
-                    if (make(session.transaction)) {
-                        session.onsuccess = function () {
-                            return void handleFromSuccessState(new state_1.SuccessState(state, db));
-                        };
-                        session.onerror = function (event) {
-                            return void handleFromErrorState(new state_1.ErrorState(state, session.error, event));
-                        };
-                    } else {
-                        session.onsuccess = session.onerror = function (event) {
-                            return void db.close(), destroy(session.error, event) ? void handleFromDestroyState(new state_1.DestroyState(state)) : void handleFromEndState(new state_1.EndState(state));
-                        };
-                    }
-                } catch (reason) {
-                    void handleFromCrashState(new state_1.CrashState(state, reason));
-                }
-            }
-            function handleFromSuccessState(state) {
-                if (!state.alive)
-                    return;
-                var database = state.database, connection = state.connection, queue = state.queue;
-                connection.onversionchange = function () {
-                    return void connection.close(), void event_1.idbEventStream_.emit([
-                        database,
-                        event_1.IDBEventType.destroy
-                    ], new event_1.IDBEvent(database, event_1.IDBEventType.destroy)), void handleFromEndState(new state_1.EndState(state));
-                };
-                connection.onerror = function (event) {
-                    return void handleFromErrorState(new state_1.ErrorState(state, event.target.error, event));
-                };
-                connection.onabort = function (event) {
-                    return void handleFromAbortState(new state_1.AbortState(state, event));
-                };
-                connection.onclose = function () {
-                    return void handleFromEndState(new state_1.EndState(state));
-                };
-                switch (state.command) {
-                case 'open': {
-                        var verify = state.config.verify;
-                        VERIFY: {
-                            try {
-                                if (verify(connection))
-                                    break VERIFY;
-                                void connection.close();
-                                return void handleFromEndState(new state_1.EndState(state, connection.version + 1));
-                            } catch (reason) {
-                                void connection.close();
-                                return void handleFromCrashState(new state_1.CrashState(state, reason));
-                            }
-                        }
-                        void event_1.idbEventStream_.emit([
-                            database,
-                            event_1.IDBEventType.connect
-                        ], new event_1.IDBEvent(database, event_1.IDBEventType.connect));
-                        try {
-                            while (queue.size > 0 && state.alive) {
-                                void queue.dequeue().success(connection);
-                            }
-                            return;
-                        } catch (reason) {
-                            void new Promise(function (_, reject) {
-                                return void reject(reason);
-                            });
-                            void connection.close();
-                            return void handleFromCrashState(new state_1.CrashState(state, reason));
-                        }
-                    }
-                case 'close':
-                    void connection.close();
-                    return void handleFromEndState(new state_1.EndState(state));
-                case 'destroy':
-                    void connection.close();
-                    return void handleFromDestroyState(new state_1.DestroyState(state));
-                }
-            }
-            function handleFromErrorState(state) {
-                if (!state.alive)
-                    return;
-                var database = state.database, error = state.error, event = state.event;
-                void event.preventDefault();
-                void event_1.idbEventStream_.emit([
-                    database,
-                    event_1.IDBEventType.error
-                ], new event_1.IDBEvent(database, event_1.IDBEventType.error));
-                var destroy = state.config.destroy;
-                if (destroy(error, event)) {
-                    return void handleFromDestroyState(new state_1.DestroyState(state));
-                } else {
-                    return void handleFromEndState(new state_1.EndState(state));
-                }
-            }
-            function handleFromAbortState(state) {
-                if (!state.alive)
-                    return;
-                var database = state.database, event = state.event;
-                void event.preventDefault();
-                void event_1.idbEventStream_.emit([
-                    database,
-                    event_1.IDBEventType.abort
-                ], new event_1.IDBEvent(database, event_1.IDBEventType.abort));
-                return void handleFromEndState(new state_1.EndState(state));
-            }
-            function handleFromCrashState(state) {
-                if (!state.alive)
-                    return;
-                var database = state.database, reason = state.reason;
-                void event_1.idbEventStream_.emit([
-                    database,
-                    event_1.IDBEventType.crash
-                ], new event_1.IDBEvent(database, event_1.IDBEventType.crash));
-                var destroy = state.config.destroy;
-                if (destroy(reason)) {
-                    return void handleFromDestroyState(new state_1.DestroyState(state));
-                } else {
-                    return void handleFromEndState(new state_1.EndState(state));
-                }
-            }
-            function handleFromDestroyState(state) {
-                if (!state.alive)
-                    return;
-                var database = state.database;
-                var deleteRequest = global_1.indexedDB.deleteDatabase(database);
-                deleteRequest.onsuccess = function () {
-                    return void event_1.idbEventStream_.emit([
-                        database,
-                        event_1.IDBEventType.destroy
-                    ], new event_1.IDBEvent(database, event_1.IDBEventType.destroy)), void handleFromEndState(new state_1.EndState(state));
-                };
-                deleteRequest.onerror = function (event) {
-                    return void handleFromErrorState(new state_1.ErrorState(state, deleteRequest.error, event));
-                };
-            }
-            function handleFromEndState(state) {
-                if (!state.alive)
-                    return;
-                var database = state.database, version = state.version, command = state.command;
-                void state.complete();
-                void event_1.idbEventStream_.emit([
-                    database,
-                    event_1.IDBEventType.disconnect
-                ], new event_1.IDBEvent(database, event_1.IDBEventType.disconnect));
-                switch (state_1.commands.get(database) || command) {
-                case 'open':
-                    return void handleFromInitialState(new state_1.InitialState(database, version));
-                case 'close':
-                case 'destroy':
-                    return;
-                }
-            }
-        },
-        {
-            '../module/global': 48,
-            './event': 45,
-            './state': 47
-        }
-    ],
-    47: [
         function (require, module, exports) {
             'use strict';
             var __extends = this && this.__extends || function () {
@@ -4109,6 +3892,226 @@ require = function e(t, n, r) {
             exports.EndState = EndState;
         },
         {}
+    ],
+    47: [
+        function (require, module, exports) {
+            'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
+            var global_1 = require('../module/global');
+            var state_1 = require('./state');
+            var event_1 = require('./event');
+            function handle(database) {
+                var state = state_1.states.get(database);
+                return state instanceof state_1.SuccessState ? void handleFromSuccessState(state) : void handleFromInitialState(new state_1.InitialState(database));
+            }
+            exports.handle = handle;
+            function handleFromInitialState(state) {
+                if (!state.alive)
+                    return;
+                var database = state.database, version = state.version;
+                try {
+                    var openRequest_1 = version ? global_1.indexedDB.open(database, version) : global_1.indexedDB.open(database);
+                    openRequest_1.onblocked = function () {
+                        return void handleFromBlockedState(new state_1.BlockState(state, openRequest_1));
+                    };
+                    openRequest_1.onupgradeneeded = function () {
+                        return void handleFromUpgradeState(new state_1.UpgradeState(state, openRequest_1));
+                    };
+                    openRequest_1.onsuccess = function () {
+                        return void handleFromSuccessState(new state_1.SuccessState(state, openRequest_1.result));
+                    };
+                    openRequest_1.onerror = function (event) {
+                        return void handleFromErrorState(new state_1.ErrorState(state, openRequest_1.error, event));
+                    };
+                } catch (reason) {
+                    void handleFromCrashState(new state_1.CrashState(state, reason));
+                }
+            }
+            function handleFromBlockedState(state) {
+                if (!state.alive)
+                    return;
+                var database = state.database, session = state.session;
+                session.onblocked = function () {
+                    return void handleFromBlockedState(new state_1.BlockState(state, session));
+                };
+                session.onupgradeneeded = function () {
+                    return void handleFromUpgradeState(new state_1.UpgradeState(state, session));
+                };
+                session.onsuccess = function () {
+                    return void handleFromSuccessState(new state_1.SuccessState(state, session.result));
+                };
+                session.onerror = function (event) {
+                    return void handleFromErrorState(new state_1.ErrorState(state, session.error, event));
+                };
+                void event_1.idbEventStream_.emit([
+                    database,
+                    event_1.IDBEventType.block
+                ], new event_1.IDBEvent(database, event_1.IDBEventType.block));
+            }
+            function handleFromUpgradeState(state) {
+                if (!state.alive)
+                    return;
+                var session = state.session;
+                var db = session.transaction.db;
+                var _a = state.config, make = _a.make, destroy = _a.destroy;
+                try {
+                    if (make(session.transaction)) {
+                        session.onsuccess = function () {
+                            return void handleFromSuccessState(new state_1.SuccessState(state, db));
+                        };
+                        session.onerror = function (event) {
+                            return void handleFromErrorState(new state_1.ErrorState(state, session.error, event));
+                        };
+                    } else {
+                        session.onsuccess = session.onerror = function (event) {
+                            return void db.close(), destroy(session.error, event) ? void handleFromDestroyState(new state_1.DestroyState(state)) : void handleFromEndState(new state_1.EndState(state));
+                        };
+                    }
+                } catch (reason) {
+                    void handleFromCrashState(new state_1.CrashState(state, reason));
+                }
+            }
+            function handleFromSuccessState(state) {
+                if (!state.alive)
+                    return;
+                var database = state.database, connection = state.connection, queue = state.queue;
+                connection.onversionchange = function () {
+                    var curr = new state_1.EndState(state);
+                    void connection.close();
+                    void event_1.idbEventStream_.emit([
+                        database,
+                        event_1.IDBEventType.destroy
+                    ], new event_1.IDBEvent(database, event_1.IDBEventType.destroy));
+                    void handleFromEndState(curr);
+                };
+                connection.onerror = function (event) {
+                    return void handleFromErrorState(new state_1.ErrorState(state, event.target.error, event));
+                };
+                connection.onabort = function (event) {
+                    return void handleFromAbortState(new state_1.AbortState(state, event));
+                };
+                connection.onclose = function () {
+                    return void handleFromEndState(new state_1.EndState(state));
+                };
+                switch (state.command) {
+                case 'open': {
+                        var verify = state.config.verify;
+                        VERIFY: {
+                            try {
+                                if (verify(connection))
+                                    break VERIFY;
+                                void connection.close();
+                                return void handleFromEndState(new state_1.EndState(state, connection.version + 1));
+                            } catch (reason) {
+                                void connection.close();
+                                return void handleFromCrashState(new state_1.CrashState(state, reason));
+                            }
+                        }
+                        void event_1.idbEventStream_.emit([
+                            database,
+                            event_1.IDBEventType.connect
+                        ], new event_1.IDBEvent(database, event_1.IDBEventType.connect));
+                        try {
+                            while (queue.size > 0 && state.alive) {
+                                void queue.dequeue().success(connection);
+                            }
+                            return;
+                        } catch (reason) {
+                            void new Promise(function (_, reject) {
+                                return void reject(reason);
+                            });
+                            void connection.close();
+                            return void handleFromCrashState(new state_1.CrashState(state, reason));
+                        }
+                    }
+                case 'close':
+                    void connection.close();
+                    return void handleFromEndState(new state_1.EndState(state));
+                case 'destroy':
+                    void connection.close();
+                    return void handleFromDestroyState(new state_1.DestroyState(state));
+                }
+            }
+            function handleFromErrorState(state) {
+                if (!state.alive)
+                    return;
+                var database = state.database, error = state.error, event = state.event;
+                void event.preventDefault();
+                void event_1.idbEventStream_.emit([
+                    database,
+                    event_1.IDBEventType.error
+                ], new event_1.IDBEvent(database, event_1.IDBEventType.error));
+                var destroy = state.config.destroy;
+                if (destroy(error, event)) {
+                    return void handleFromDestroyState(new state_1.DestroyState(state));
+                } else {
+                    return void handleFromEndState(new state_1.EndState(state));
+                }
+            }
+            function handleFromAbortState(state) {
+                if (!state.alive)
+                    return;
+                var database = state.database, event = state.event;
+                void event.preventDefault();
+                void event_1.idbEventStream_.emit([
+                    database,
+                    event_1.IDBEventType.abort
+                ], new event_1.IDBEvent(database, event_1.IDBEventType.abort));
+                return void handleFromEndState(new state_1.EndState(state));
+            }
+            function handleFromCrashState(state) {
+                if (!state.alive)
+                    return;
+                var database = state.database, reason = state.reason;
+                void event_1.idbEventStream_.emit([
+                    database,
+                    event_1.IDBEventType.crash
+                ], new event_1.IDBEvent(database, event_1.IDBEventType.crash));
+                var destroy = state.config.destroy;
+                if (destroy(reason)) {
+                    return void handleFromDestroyState(new state_1.DestroyState(state));
+                } else {
+                    return void handleFromEndState(new state_1.EndState(state));
+                }
+            }
+            function handleFromDestroyState(state) {
+                if (!state.alive)
+                    return;
+                var database = state.database;
+                var deleteRequest = global_1.indexedDB.deleteDatabase(database);
+                deleteRequest.onsuccess = function () {
+                    return void event_1.idbEventStream_.emit([
+                        database,
+                        event_1.IDBEventType.destroy
+                    ], new event_1.IDBEvent(database, event_1.IDBEventType.destroy)), void handleFromEndState(new state_1.EndState(state));
+                };
+                deleteRequest.onerror = function (event) {
+                    return void handleFromErrorState(new state_1.ErrorState(state, deleteRequest.error, event));
+                };
+            }
+            function handleFromEndState(state) {
+                if (!state.alive)
+                    return;
+                var database = state.database, version = state.version, command = state.command;
+                void state.complete();
+                void event_1.idbEventStream_.emit([
+                    database,
+                    event_1.IDBEventType.disconnect
+                ], new event_1.IDBEvent(database, event_1.IDBEventType.disconnect));
+                switch (state_1.commands.get(database) || command) {
+                case 'open':
+                    return void handleFromInitialState(new state_1.InitialState(database, version));
+                case 'close':
+                case 'destroy':
+                    return;
+                }
+            }
+        },
+        {
+            '../module/global': 48,
+            './event': 45,
+            './state': 46
+        }
     ],
     48: [
         function (require, module, exports) {
