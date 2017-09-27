@@ -55,34 +55,32 @@ export class ExpiryStore<K extends string> {
   }
   private store = new class extends KeyValueStore<K, ExpiryRecord<K>> { }(name, ExpiryStoreSchema.key, this.listen);
   private schedule = ((timer = 0, scheduled = Infinity) => {
-    return (date: number): void => {
-      assert(date > Date.now() - 10);
-      if (date >= scheduled) return;
-      scheduled = date;
+    return (timeout: number): void => {
+      if (Date.now() + timeout >= scheduled) return;
+      scheduled = Date.now() + timeout;
       void clearTimeout(timer);
       timer = setTimeout(() => {
         scheduled = Infinity;
+        const since = Date.now();
         let count = 0;
         return void this.store.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', (cursor, error) => {
           if (this.cancellation.canceled) return;
-          if (error) return void this.schedule(Date.now() + 10 * 1000);
+          if (error) return void this.schedule(Math.max(60 * 1000, (Date.now() - since) * 3));
           if (!cursor) return;
           const { key, expiry }: ExpiryRecord<K> = cursor.value;
-          if (expiry > Date.now()) return void this.schedule(expiry);
-          if (!this.chan.has(key) && this.chan.meta(key).id > 0) return void cursor.continue();
+          if (expiry > Date.now()) return void this.schedule(Math.max(expiry - Date.now(), (Date.now() - since) * 3));
           if (!this.channel.ownership.take(key, 0)) return void cursor.continue();
-          if (++count > 10) return void this.schedule(Date.now() + 5 * 1000);
+          if (++count > 10) return void this.schedule((Date.now() - since) * 3);
           void this.chan.delete(key);
           return void cursor.continue();
         });
-      }, Math.max(date - Date.now(), 3 * 1000));
+      }, Math.max(timeout, 3 * 1000));
     };
   })();
   public set(key: K, age: number): void {
     if (age === Infinity) return void this.delete(key);
-    const expiry = Date.now() + age;
-    void this.schedule(expiry);
-    void this.store.set(key, new ExpiryRecord(key, expiry));
+    void this.schedule(age);
+    void this.store.set(key, new ExpiryRecord(key, Date.now() + age));
   }
   public delete(key: K): void {
     void this.store.delete(key);

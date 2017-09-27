@@ -48,8 +48,9 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     void this.cancellation.register(() =>
       void this.schema.close());
 
-    void this.cancellation.register(this.channel.listen(ChannelEvent.save, ({ key }) =>
-      void this.fetch(key)));
+    void this.cancellation.register(this.channel.listen(ChannelEvent.save, ({ key }) => (
+      void this.keys.delete(key) || void this.keys_.delete(key),
+      void this.fetch(key))));
     void this.cancellation.register(() =>
       void this.channel.close());
 
@@ -67,11 +68,11 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
 
     void this.events_.load.monitor([], ({ key, type }) =>
       type === ChannelStore.EventType.delete
-        ? void this.keys.delete(key)
+        ? void this.keys.delete(key) || void this.keys_.delete(key)
         : void this.keys.put(key));
     void this.events_.save.monitor([], ({ key, type }) =>
       type === ChannelStore.EventType.delete
-        ? void this.keys.delete(key)
+        ? void this.keys.delete(key) || void this.keys_.delete(key)
         : void this.keys.put(key));
 
     const limit = () => {
@@ -89,32 +90,32 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   }
   private readonly cancellation = new Cancellation();
   private readonly schema: Schema<K, V>;
+  private readonly keys_ = new Set<K>();
   private readonly keys = new Cache<K>(this.size, (() => {
-    const keys = new Set<K>();
+    const keys = this.keys_;
     let timer = 0;
     const resolve = (): void => {
       timer = 0;
+      const since = Date.now();
       let count = 0;
       for (const key of keys) {
+        if (this.cancellation.canceled) return void this.keys.clear(), void keys.clear();
         void keys.delete(key);
-        if (this.cancellation.canceled) return;
         if (this.keys.has(key)) continue;
-        if (!this.has(key) && this.meta(key).id > 0) continue;
         if (!this.channel.ownership.take(key, 0)) continue;
-        void this.delete(key);
-        if (++count > 10) break;
+        if (++count > 10) return void setTimeout(resolve, (Date.now() - since) * 3);
+        void this.schema.expire.set(key, 0);
+        if (timer > 0) return;
+        timer = setTimeout(resolve, 5 * 1000);
+        return void setTimeout(resolve, 5 * 1000);
       }
-      if (keys.size === 0) return;
-      if (timer > 0) return;
-      timer = setTimeout(resolve, (Math.random() * 10 * 1000 + 5 * 1000) | 0);
     };
     return (key: K): void => {
-      if (!this.has(key) && this.meta(key).id > 0) return void keys.delete(key);
       void keys.add(key);
       if (timer > 0) return;
-      timer = setTimeout(resolve, (Math.random() * 10 * 1000 + 5 * 1000) | 0);
+      timer = setTimeout(resolve, 3 * 1000);
     };
-  })());
+  })(), { ignore: { delete: true } });
   private readonly channel = new Channel<K>(this.name, this.debug);
   public readonly events_ = Object.freeze({
     load: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
@@ -154,29 +155,26 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   public add(record: DataStore.Record<K, V>): void {
     assert(record.type === DataStore.EventType.put);
     const key = record.key;
-    void this.schema.access.set(key);
-    void this.schema.expire.set(key, this.ages.get(key) || this.age);
+    void this.log(key);
     void this.schema.data.add(record);
     void this.events_.save.once([record.key, record.attr, record.type], () => (
-      void this.schema.access.set(key),
-      void this.schema.expire.set(key, this.ages.get(key) || this.age)));
+      void this.log(key)));
   }
   public delete(key: K): void {
     if (this.cancellation.canceled) return;
     void this.channel.ownership.take(key, 30 * 1000);
-    void this.schema.access.set(key);
-    void this.schema.expire.set(key, this.ages.get(key) || this.age);
+    void this.log(key);
     void this.schema.data.delete(key);
   }
   protected log(key: K): void {
-    if (!this.has(key)) return;
     void this.schema.access.set(key);
     void this.schema.expire.set(key, this.ages.get(key) || this.age);
   }
   private readonly ages = new Map<K, number>();
   public expire(key: K, age: number = this.age): void {
     assert(age > 0);
-    return void this.ages.set(key, age);
+    void this.ages.set(key, age);
+    return void this.schema.expire.set(key, age);
   }
   public recent(limit: number, cb: (keys: K[], error: DOMException | DOMError | null) => void): void {
     return this.schema.access.recent(limit, cb);

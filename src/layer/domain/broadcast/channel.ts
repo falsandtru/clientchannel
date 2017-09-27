@@ -111,14 +111,13 @@ class Broadcast<K extends string> implements Channel<K> {
     public readonly debug: boolean,
   ) {
   }
-  private readonly id = `${'0'.repeat(3)}${Math.random() * 1e3 | 0}`.slice(-3);
   private readonly channel = new BroadcastChannel(this.name);
   private readonly listeners = new Set<(ev: MessageEvent) => void>();
   public readonly ownership: Ownership<K> = new Ownership(this);
   public listen<C extends keyof ChannelMessageMap<K>>(type: C, listener: (msg: ChannelMessageMap<K>[C]) => void): () => void {
     void this.listeners.add(handler);
     void this.channel.addEventListener('message', handler);
-    const { debug, id } = this;
+    const { debug } = this;
     return () => (
       void this.listeners.delete(handler),
       void this.channel.removeEventListener('message', handler));
@@ -126,13 +125,13 @@ class Broadcast<K extends string> implements Channel<K> {
     function handler(ev: MessageEvent): void {
       const msg = ChannelMessage.parse<K>(ev.data);
       if (!msg || msg.type !== type) return;
-      debug && console.log(id, 'recv', msg);
+      debug && console.log('recv', msg);
       return void listener(msg);
     }
   }
   public post(msg: ChannelMessage<K>): void {
     if (!this.alive) return;
-    this.debug && console.log(this.id, 'send', msg);
+    this.debug && console.log('send', msg);
     void this.channel.postMessage(msg);
   }
   private alive = true;
