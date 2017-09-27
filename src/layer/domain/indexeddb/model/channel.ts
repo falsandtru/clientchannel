@@ -95,7 +95,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     const resolve = (): void => {
       timer = 0;
       let count = 0;
-      for (const key of Array.from(keys)) {
+      for (const key of keys) {
         void keys.delete(key);
         if (this.cancellation.canceled) return;
         if (this.keys.has(key)) continue;

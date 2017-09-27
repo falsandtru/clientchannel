@@ -129,7 +129,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
       void req.addEventListener('success', () => {
         const cursor: IDBCursorWithValue = req.result;
         if (!cursor) return;
-        void this.cache.set(cursor.primaryKey, Object.assign({}, cursor.value));
+        void this.cache.set(cursor.primaryKey, { ...cursor.value });
         void cb(cursor, req.error);
       });
       void tx.addEventListener('complete', () =>

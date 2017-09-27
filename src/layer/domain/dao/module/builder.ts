@@ -35,34 +35,36 @@ export function build<V extends object>(
     .map(prop => SCHEMA[prop].NAME)
     .reduce((_, prop) => { delete dao[prop] }, void 0);
   if (typeof source[SCHEMA.KEY.NAME] !== 'string') throw new TypeError(`ClientChannel: DAO: Invalid key: ${source[SCHEMA.KEY.NAME]}`);
-  const descmap: PropertyDescriptorMap = Object.assign(Object.keys(dao)
-    .filter(isValidPropertyName)
-    .filter(isValidPropertyValue(dao))
-    .reduce<PropertyDescriptorMap>((map, prop) => {
-      {
-        const desc = Object.getOwnPropertyDescriptor(dao, prop)
-        if (desc && (desc.get || desc.set)) return map;
-      }
-      const iniVal = dao[prop];
-      if (source[prop] === void 0) {
-        source[prop] = iniVal;
-      }
-      map[prop] = {
-        enumerable: true,
-        get: () => {
-          const val = source[prop] === void 0 ? iniVal : source[prop];
-          void get(prop, val);
-          return val;
-        },
-        set: newVal => {
-          if (!isValidPropertyValue({ [prop]: newVal })(prop)) throw new TypeError(`ClientChannel: DAO: Invalid value: ${JSON.stringify(newVal)}`);
-          const oldVal = source[prop];
-          source[prop] = newVal === void 0 ? iniVal : newVal;
-          void set(prop, newVal, oldVal);
-        },
-      };
-      return map;
-    }, {}), {
+  const descmap: PropertyDescriptorMap = {
+    ...Object.keys(dao)
+      .filter(isValidPropertyName)
+      .filter(isValidPropertyValue(dao))
+      .reduce<PropertyDescriptorMap>((map, prop) => {
+        {
+          const desc = Object.getOwnPropertyDescriptor(dao, prop)
+          if (desc && (desc.get || desc.set)) return map;
+        }
+        const iniVal = dao[prop];
+        if (source[prop] === void 0) {
+          source[prop] = iniVal;
+        }
+        map[prop] = {
+          enumerable: true,
+          get: () => {
+            const val = source[prop] === void 0 ? iniVal : source[prop];
+            void get(prop, val);
+            return val;
+          },
+          set: newVal => {
+            if (!isValidPropertyValue({ [prop]: newVal })(prop)) throw new TypeError(`ClientChannel: DAO: Invalid value: ${JSON.stringify(newVal)}`);
+            const oldVal = source[prop];
+            source[prop] = newVal === void 0 ? iniVal : newVal;
+            void set(prop, newVal, oldVal);
+          },
+        };
+        return map;
+      }, {}),
+    ... {
       [SCHEMA.META.NAME]: {
         configurable: false,
         enumerable: false,
@@ -87,8 +89,9 @@ export function build<V extends object>(
         configurable: false,
         enumerable: false,
         get: () => source[SCHEMA.EVENT.NAME]
-      }
-    });
+      },
+    }
+  };
   void Object.defineProperties(dao, descmap);
   void Object.seal(dao);
   return dao;

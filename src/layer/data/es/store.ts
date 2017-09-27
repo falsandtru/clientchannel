@@ -142,8 +142,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         if (error) return;
         if (!cursor || new LoadedEventRecord<K, V>(cursor.value).date < this.meta(key).date) {
           // register latest events
-          void Array.from(
-            events
+          void [
+            ...events
               // remove overridable event
               .reduceRight<LoadedEventRecord<K, V>[]>((es, e) =>
                 es.length === 0 || es[0].type === EventStore.EventType.put
@@ -153,7 +153,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
               .reduceRight<Map<string, LoadedEventRecord<K, V>>>((dict, e) =>
                 dict.set(e.attr, e)
               , new Map())
-              .values())
+              .values()
+          ]
             .sort((a, b) => a.date - b.date || a.id - b.id)
             .forEach(e => (
               void this.memory
