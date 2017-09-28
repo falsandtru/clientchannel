@@ -2,6 +2,7 @@
 
 ## 0.20.2
 
+- Improve typings.
 - Fix database state transition control.
 
 ## 0.20.1

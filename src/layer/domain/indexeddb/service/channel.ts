@@ -1,10 +1,10 @@
-import { StoreChannel as IStoreChannel, StoreChannelConfig, StoreChannelObject as ChannelObject } from '../../../../../';
+import { StoreChannel as IStoreChannel, StoreChannelConfig, StoreChannelObject } from '../../../../../';
 import { Observation } from 'spica/observation';
 import { build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { ChannelStore } from '../model/channel';
 import { StorageChannel } from '../../webstorage/api';
 
-export class StoreChannel<K extends string, V extends ChannelObject<K>> extends ChannelStore<K, V> implements IStoreChannel<K, V> {
+export class StoreChannel<K extends string, V extends StoreChannelObject<K>> extends ChannelStore<K, V> implements IStoreChannel<K, V> {
   constructor(
     name: string,
     private readonly Schema: new () => V,
@@ -108,10 +108,10 @@ export class StoreChannel<K extends string, V extends ChannelObject<K>> extends 
   }
 }
 
-function cast<K extends string, V extends ChannelObject<K>>(source: Partial<V>) {
-  return source as V & InternalChannelObject<K>;
+function cast<K extends string, V extends StoreChannelObject<K>>(source: Partial<V>) {
+  return source as V & StoreChannelInternalObject<K>;
 
-  interface InternalChannelObject<K extends string> extends ChannelObject<K> {
+  interface StoreChannelInternalObject<K extends string> extends StoreChannelObject<K> {
     readonly __event: Observation<[StorageChannel.EventType] | [StorageChannel.EventType, keyof this], StorageChannel.Event<this>, any>;
   }
 }
