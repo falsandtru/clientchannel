@@ -112,6 +112,6 @@ function cast<K extends string, V extends StoreChannelObject<K>>(source: Partial
   return source as V & StoreChannelInternalObject<K>;
 
   interface StoreChannelInternalObject<K extends string> extends StoreChannelObject<K> {
-    readonly __event: Observation<[StorageChannel.EventType] | [StorageChannel.EventType, keyof this], StorageChannel.Event<this>, any>;
+    readonly __event: Observation<[StorageChannel.EventType] | [StorageChannel.EventType, keyof Diff<typeof source, StoreChannelObject<K>>], StorageChannel.Event<typeof source & StoreChannelObject<K>>, any>;
   }
 }
