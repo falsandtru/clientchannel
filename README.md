@@ -6,19 +6,19 @@
 
 Store and sync values by communication between tabs via IndexedDB and LocalStorage.
 
-## Feature
+## Features
 
 - Tab communication.
 - Bidirectional persistent data binding.
 - Expiration by data.
 
-## Demo
+## Demos
 
 Text and Canvas.
 
 https://falsandtru.github.io/clientchannel/
 
-## API
+## APIs
 
 [index.d.ts](index.d.ts)
 
@@ -101,11 +101,13 @@ link.event.on(['recv', 'version'], ({ newValue }) => {
 link.version = VERSION;
 ```
 
-## Browser
+## Browsers
 
-Requires es6 support.
+Requires es6 and modern DOM API support.
 
 - Chrome
 - Firefox
 - Edge (without iframe)
 - Safari
+
+Polyfill: https://cdn.polyfill.io
