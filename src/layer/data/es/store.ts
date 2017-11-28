@@ -97,7 +97,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         }
       });
   }
-  private readonly memory = new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', string], void, UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>>();
+  private readonly memory = new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', string] | [K, keyof V | '', string, string], void, UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>>();
   public readonly events = Object.freeze({
     load: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
     save: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
@@ -417,7 +417,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
 }
 export namespace EventStore {
   export class Event<K extends string, V extends Value> {
-    private EVENT: K;
+    private readonly EVENT!: K;
     constructor(
       public readonly type: EventType,
       public readonly id: EventId,

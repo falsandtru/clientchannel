@@ -63,7 +63,7 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
   public readonly attr: keyof V | '';
 }
 export class UnstoredEventRecord<K extends string, V extends EventRecordValue> extends EventRecord<K, V> {
-  private EVENT_RECORD: this;
+  private readonly EVENT_RECORD!: this;
   constructor(
     key: K,
     value: Partial<V>,
@@ -77,7 +77,7 @@ export class UnstoredEventRecord<K extends string, V extends EventRecordValue> e
   }
 }
 export abstract class StoredEventRecord<K extends string, V extends EventRecordValue> extends EventRecord<K, V> {
-  protected EVENT_RECORD: this;
+  protected readonly EVENT_RECORD!: this;
   constructor(
     id: EventId,
     key: K,
@@ -90,7 +90,7 @@ export abstract class StoredEventRecord<K extends string, V extends EventRecordV
   }
 }
 export class LoadedEventRecord<K extends string, V extends EventRecordValue> extends StoredEventRecord<K, V> {
-  protected EVENT_RECORD: this;
+  protected readonly EVENT_RECORD!: this;
   constructor(
     {
       id,
@@ -105,7 +105,7 @@ export class LoadedEventRecord<K extends string, V extends EventRecordValue> ext
   }
 }
 export class SavedEventRecord<K extends string, V extends EventRecordValue> extends StoredEventRecord<K, V> {
-  protected EVENT_RECORD: this;
+  protected readonly EVENT_RECORD!: this;
   constructor(
     id: EventId,
     key: K,

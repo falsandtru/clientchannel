@@ -104,7 +104,7 @@ abstract class State {
 }
 
 export class InitialState extends State {
-  private readonly STATE: this;
+  private readonly STATE!: this;
   constructor(
     database: string,
     public readonly version: number = 0,
@@ -115,7 +115,7 @@ export class InitialState extends State {
 }
 
 export class BlockState extends State {
-  private readonly STATE: this;
+  private readonly STATE!: this;
   constructor(
     state: InitialState | BlockState,
     public readonly session: IDBOpenDBRequest
@@ -126,7 +126,7 @@ export class BlockState extends State {
 }
 
 export class UpgradeState extends State {
-  private readonly STATE: this;
+  private readonly STATE!: this;
   constructor(
     state: InitialState | BlockState,
     public readonly session: IDBOpenDBRequest
@@ -137,7 +137,7 @@ export class UpgradeState extends State {
 }
 
 export class SuccessState extends State {
-  private readonly STATE: this;
+  private readonly STATE!: this;
   constructor(
     state: InitialState | BlockState | UpgradeState,
     public readonly connection: IDBDatabase
@@ -148,7 +148,7 @@ export class SuccessState extends State {
 }
 
 export class ErrorState extends State {
-  private readonly STATE: this;
+  private readonly STATE!: this;
   constructor(
     state: InitialState | BlockState | UpgradeState | SuccessState | DestroyState,
     public readonly error: DOMException | DOMError,
@@ -160,7 +160,7 @@ export class ErrorState extends State {
 }
 
 export class AbortState extends State {
-  private readonly STATE: this;
+  private readonly STATE!: this;
   constructor(
     state: SuccessState,
     public readonly event: Event
@@ -171,7 +171,7 @@ export class AbortState extends State {
 }
 
 export class CrashState extends State {
-  private readonly STATE: this;
+  private readonly STATE!: this;
   constructor(
     state: InitialState | UpgradeState | SuccessState,
     public readonly reason: any
@@ -182,7 +182,7 @@ export class CrashState extends State {
 }
 
 export class DestroyState extends State {
-  private readonly STATE: this;
+  private readonly STATE!: this;
   constructor(
     state: UpgradeState | SuccessState | ErrorState | AbortState | CrashState,
   ) {
@@ -192,7 +192,7 @@ export class DestroyState extends State {
 }
 
 export class EndState extends State {
-  private readonly STATE: this;
+  private readonly STATE!: this;
   constructor(
     state: UpgradeState | SuccessState | ErrorState | AbortState | CrashState | DestroyState,
     public readonly version: number = 0,

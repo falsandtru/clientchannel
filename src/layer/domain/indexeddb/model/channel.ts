@@ -224,9 +224,9 @@ class Schema<K extends string, V extends StoreChannelObject<K>> {
     void this.close();
     void this.build();
   }
-  public data: DataStore<K, V>;
-  public access: AccessStore<K>;
-  public expire: ExpiryStore<K>;
+  public data!: DataStore<K, V>;
+  public access!: AccessStore<K>;
+  public expire!: ExpiryStore<K>;
   public close(): void {
     void this.cancellation_.cancel();
     this.cancellation_ = new Cancellation();

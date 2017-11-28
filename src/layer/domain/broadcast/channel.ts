@@ -92,7 +92,7 @@ export class Channel<K extends string> {
       ? new Broadcast<K>(name, debug)
       : new Storage<K>(name, debug);
   }
-  public readonly ownership: Ownership<K>;
+  public readonly ownership: Ownership<K> = new Ownership(this);
   public listen<C extends keyof ChannelMessageMap<K>>(type: C, listener: (msg: ChannelMessageMap<K>[C]) => void): () => void {
     type;
     listener;
