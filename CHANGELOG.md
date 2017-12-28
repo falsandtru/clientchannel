@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.21.0
+
+- Compile to es2016.
+
 ## 0.20.2
 
 - Improve typings.
