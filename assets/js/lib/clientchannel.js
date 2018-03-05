@@ -1,29 +1,32 @@
-/*! clientchannel v0.20.2 https://github.com/falsandtru/clientchannel | (c) 2017, falsandtru | (Apache-2.0 AND MPL-2.0) License */
-require = function e(t, n, r) {
-    function s(o, u) {
-        if (!n[o]) {
-            if (!t[o]) {
-                var a = typeof require == 'function' && require;
-                if (!u && a)
-                    return a(o, !0);
-                if (i)
-                    return i(o, !0);
-                var f = new Error('Cannot find module \'' + o + '\'');
-                throw f.code = 'MODULE_NOT_FOUND', f;
+/*! clientchannel v0.21.0 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+require = function () {
+    function e(t, n, r) {
+        function s(o, u) {
+            if (!n[o]) {
+                if (!t[o]) {
+                    var a = typeof require == 'function' && require;
+                    if (!u && a)
+                        return a(o, !0);
+                    if (i)
+                        return i(o, !0);
+                    var f = new Error('Cannot find module \'' + o + '\'');
+                    throw f.code = 'MODULE_NOT_FOUND', f;
+                }
+                var l = n[o] = { exports: {} };
+                t[o][0].call(l.exports, function (e) {
+                    var n = t[o][1][e];
+                    return s(n ? n : e);
+                }, l, l.exports, e, t, n, r);
             }
-            var l = n[o] = { exports: {} };
-            t[o][0].call(l.exports, function (e) {
-                var n = t[o][1][e];
-                return s(n ? n : e);
-            }, l, l.exports, e, t, n, r);
+            return n[o].exports;
         }
-        return n[o].exports;
+        var i = typeof require == 'function' && require;
+        for (var o = 0; o < r.length; o++)
+            s(r[o]);
+        return s;
     }
-    var i = typeof require == 'function' && require;
-    for (var o = 0; o < r.length; o++)
-        s(r[o]);
-    return s;
-}({
+    return e;
+}()({
     1: [
         function (require, module, exports) {
         },
@@ -38,51 +41,29 @@ require = function e(t, n, r) {
     3: [
         function (require, module, exports) {
             'use strict';
-            var __values = this && this.__values || function (o) {
-                var m = typeof Symbol === 'function' && o[Symbol.iterator], i = 0;
-                if (m)
-                    return m.call(o);
-                return {
-                    next: function () {
-                        if (o && i >= o.length)
-                            o = void 0;
-                        return {
-                            value: o && o[i++],
-                            done: !o
-                        };
-                    }
-                };
-            };
             Object.defineProperty(exports, '__esModule', { value: true });
-            var type_1 = require('./type');
-            exports.assign = template(function (key, target, source) {
-                return target[key] = source[key];
-            });
-            exports.clone = template(function (key, target, source) {
+            const type_1 = require('./type');
+            exports.assign = template((key, target, source) => target[key] = source[key]);
+            exports.clone = template((key, target, source) => {
                 switch (type_1.type(source[key])) {
                 case 'Array':
                     return target[key] = exports.clone([], source[key]);
                 case 'Object':
-                    return target[key] = exports.clone({}, source[key]);
+                    return target[key] = source[key] instanceof Object ? exports.clone({}, source[key]) : source[key];
                 default:
                     return target[key] = source[key];
                 }
             });
-            exports.extend = template(function (key, target, source) {
+            exports.extend = template((key, target, source) => {
                 switch (type_1.type(source[key])) {
                 case 'Array':
-                    switch (type_1.type(target[key])) {
-                    case 'Array':
-                        return target[key] = exports.extend([], source[key]);
-                    default:
-                        return target[key] = source[key];
-                    }
+                    return target[key] = exports.extend([], source[key]);
                 case 'Object':
                     switch (type_1.type(target[key])) {
                     case 'Object':
-                        return target[key] = exports.extend(target[key], source[key]);
+                        return target[key] = source[key] instanceof Object ? exports.extend(target[key], source[key]) : source[key];
                     default:
-                        return target[key] = source[key];
+                        return target[key] = source[key] instanceof Object ? exports.extend({}, source[key]) : source[key];
                     }
                 default:
                     return target[key] = source[key];
@@ -90,53 +71,22 @@ require = function e(t, n, r) {
             });
             function template(strategy) {
                 return walk;
-                function walk(target) {
-                    var sources = [];
-                    for (var _i = 1; _i < arguments.length; _i++) {
-                        sources[_i - 1] = arguments[_i];
-                    }
+                function walk(target, ...sources) {
                     if (target === undefined || target === null) {
-                        throw new TypeError('Spica: assign: Cannot walk on ' + target + '.');
+                        throw new TypeError(`Spica: assign: Cannot walk on ${ target }.`);
                     }
-                    try {
-                        for (var sources_1 = __values(sources), sources_1_1 = sources_1.next(); !sources_1_1.done; sources_1_1 = sources_1.next()) {
-                            var source = sources_1_1.value;
-                            if (source === undefined || source === null) {
-                                continue;
-                            }
-                            try {
-                                for (var _a = __values(Object.keys(Object(source))), _b = _a.next(); !_b.done; _b = _a.next()) {
-                                    var key = _b.value;
-                                    var desc = Object.getOwnPropertyDescriptor(Object(source), key);
-                                    if (desc !== undefined && desc.enumerable) {
-                                        void strategy(key, Object(target), Object(source));
-                                    }
-                                }
-                            } catch (e_1_1) {
-                                e_1 = { error: e_1_1 };
-                            } finally {
-                                try {
-                                    if (_b && !_b.done && (_c = _a.return))
-                                        _c.call(_a);
-                                } finally {
-                                    if (e_1)
-                                        throw e_1.error;
-                                }
-                            }
+                    for (const source of sources) {
+                        if (source === undefined || source === null) {
+                            continue;
                         }
-                    } catch (e_2_1) {
-                        e_2 = { error: e_2_1 };
-                    } finally {
-                        try {
-                            if (sources_1_1 && !sources_1_1.done && (_d = sources_1.return))
-                                _d.call(sources_1);
-                        } finally {
-                            if (e_2)
-                                throw e_2.error;
+                        for (const key of Object.keys(Object(source))) {
+                            const desc = Object.getOwnPropertyDescriptor(Object(source), key);
+                            if (desc !== undefined && desc.enumerable) {
+                                void strategy(key, Object(target), Object(source));
+                            }
                         }
                     }
                     return Object(target);
-                    var e_2, _d, e_1, _c;
                 }
             }
         },
@@ -145,61 +95,11 @@ require = function e(t, n, r) {
     4: [
         function (require, module, exports) {
             'use strict';
-            var __read = this && this.__read || function (o, n) {
-                var m = typeof Symbol === 'function' && o[Symbol.iterator];
-                if (!m)
-                    return o;
-                var i = m.call(o), r, ar = [], e;
-                try {
-                    while ((n === void 0 || n-- > 0) && !(r = i.next()).done)
-                        ar.push(r.value);
-                } catch (error) {
-                    e = { error: error };
-                } finally {
-                    try {
-                        if (r && !r.done && (m = i['return']))
-                            m.call(i);
-                    } finally {
-                        if (e)
-                            throw e.error;
-                    }
-                }
-                return ar;
-            };
-            var __spread = this && this.__spread || function () {
-                for (var ar = [], i = 0; i < arguments.length; i++)
-                    ar = ar.concat(__read(arguments[i]));
-                return ar;
-            };
-            var __values = this && this.__values || function (o) {
-                var m = typeof Symbol === 'function' && o[Symbol.iterator], i = 0;
-                if (m)
-                    return m.call(o);
-                return {
-                    next: function () {
-                        if (o && i >= o.length)
-                            o = void 0;
-                        return {
-                            value: o && o[i++],
-                            done: !o
-                        };
-                    }
-                };
-            };
             Object.defineProperty(exports, '__esModule', { value: true });
-            var assign_1 = require('./assign');
-            var equal_1 = require('./equal');
-            var Cache = function () {
-                function Cache(size, callback, opts) {
-                    if (callback === void 0) {
-                        callback = function () {
-                            return void 0;
-                        };
-                    }
-                    if (opts === void 0) {
-                        opts = {};
-                    }
-                    var _this = this;
+            const assign_1 = require('./assign');
+            const equal_1 = require('./equal');
+            class Cache {
+                constructor(size, callback = () => undefined, opts = {}) {
                     this.size = size;
                     this.callback = callback;
                     this.opts = {
@@ -209,110 +109,91 @@ require = function e(t, n, r) {
                         }
                     };
                     if (size > 0 === false)
-                        throw new Error('Spica: Cache: Cache size must be greater than 0.');
+                        throw new Error(`Spica: Cache: Cache size must be greater than 0.`);
                     void Object.freeze(assign_1.extend(this.opts, opts));
-                    var _a = opts.data || {
-                            stats: [
-                                [],
-                                []
-                            ],
-                            entries: []
-                        }, stats = _a.stats, entries = _a.entries;
-                    var LFU = stats[1].slice(0, size);
-                    var LRU = stats[0].slice(0, size - LFU.length);
+                    const {stats, entries} = opts.data || {
+                        stats: [
+                            [],
+                            []
+                        ],
+                        entries: []
+                    };
+                    const LFU = stats[1].slice(0, size);
+                    const LRU = stats[0].slice(0, size - LFU.length);
                     this.stats = {
-                        LRU: LRU,
-                        LFU: LFU
+                        LRU,
+                        LFU
                     };
                     this.store = new Map(entries);
-                    void __spread(stats[1], stats[0]).slice(LFU.length + LRU.length).forEach(function (k) {
-                        return void _this.store.delete(k);
-                    });
+                    void [
+                        ...stats[1],
+                        ...stats[0]
+                    ].slice(LFU.length + LRU.length).forEach(k => void this.store.delete(k));
                     if (this.store.size !== LFU.length + LRU.length)
-                        throw new Error('Spica: Cache: Size of stats and entries is not matched.');
-                    if (!__spread(LFU, LRU).every(function (k) {
-                            return _this.store.has(k);
-                        }))
-                        throw new Error('Spica: Cache: Keys of stats and entries is not matched.');
+                        throw new Error(`Spica: Cache: Size of stats and entries is not matched.`);
+                    if (![
+                            ...LFU,
+                            ...LRU
+                        ].every(k => this.store.has(k)))
+                        throw new Error(`Spica: Cache: Keys of stats and entries is not matched.`);
                 }
-                Cache.prototype.put = function (key, value, log) {
-                    if (log === void 0) {
-                        log = true;
-                    }
+                put(key, value, log = true) {
                     if (!log && this.store.has(key))
                         return void this.store.set(key, value), true;
                     if (this.access(key))
                         return void this.store.set(key, value), true;
-                    var _a = this.stats, LRU = _a.LRU, LFU = _a.LFU;
+                    const {LRU, LFU} = this.stats;
                     if (LRU.length + LFU.length === this.size && LRU.length < LFU.length) {
-                        var key_1 = LFU.pop();
-                        var val = this.store.get(key_1);
-                        void this.store.delete(key_1);
-                        void this.callback(key_1, val);
+                        const key = LFU.pop();
+                        const val = this.store.get(key);
+                        void this.store.delete(key);
+                        void this.callback(key, val);
                     }
                     void LRU.unshift(key);
                     void this.store.set(key, value);
                     if (LRU.length + LFU.length > this.size) {
-                        var key_2 = LRU.pop();
-                        var val = this.store.get(key_2);
-                        void this.store.delete(key_2);
-                        void this.callback(key_2, val);
+                        const key = LRU.pop();
+                        const val = this.store.get(key);
+                        void this.store.delete(key);
+                        void this.callback(key, val);
                     }
                     return false;
-                };
-                Cache.prototype.set = function (key, value, log) {
+                }
+                set(key, value, log) {
                     void this.put(key, value, log);
                     return value;
-                };
-                Cache.prototype.get = function (key, log) {
-                    if (log === void 0) {
-                        log = true;
-                    }
+                }
+                get(key, log = true) {
                     if (!log)
                         return this.store.get(key);
                     void this.access(key);
                     return this.store.get(key);
-                };
-                Cache.prototype.has = function (key) {
+                }
+                has(key) {
                     return this.store.has(key);
-                };
-                Cache.prototype.delete = function (key) {
+                }
+                delete(key) {
                     if (!this.store.has(key))
                         return false;
-                    var _a = this.stats, LRU = _a.LRU, LFU = _a.LFU;
-                    try {
-                        for (var _b = __values([
-                                    LFU,
-                                    LRU
-                                ]), _c = _b.next(); !_c.done; _c = _b.next()) {
-                            var stat = _c.value;
-                            var index = equal_1.findIndex(key, stat);
-                            if (index === -1)
-                                continue;
-                            var val = this.store.get(key);
-                            void this.store.delete(stat.splice(index, 1)[0]);
-                            if (this.opts.ignore.delete)
-                                return true;
-                            void this.callback(key, val);
+                    const {LRU, LFU} = this.stats;
+                    for (const stat of [
+                            LFU,
+                            LRU
+                        ]) {
+                        const index = equal_1.findIndex(key, stat);
+                        if (index === -1)
+                            continue;
+                        const val = this.store.get(key);
+                        void this.store.delete(stat.splice(index, 1)[0]);
+                        if (this.opts.ignore.delete)
                             return true;
-                        }
-                    } catch (e_1_1) {
-                        e_1 = { error: e_1_1 };
-                    } finally {
-                        try {
-                            if (_c && !_c.done && (_d = _b.return))
-                                _d.call(_b);
-                        } finally {
-                            if (e_1)
-                                throw e_1.error;
-                        }
+                        void this.callback(key, val);
+                        return true;
                     }
                     return false;
-                    var e_1, _d;
-                };
-                Cache.prototype.clear = function () {
-                    var _this = this;
-                    var store = this.store;
+                }
+                clear() {
+                    const store = this.store;
                     this.store = new Map();
                     this.stats = {
                         LRU: [],
@@ -320,56 +201,52 @@ require = function e(t, n, r) {
                     };
                     if (this.opts.ignore.clear)
                         return;
-                    return void __spread(store).forEach(function (_a) {
-                        var _b = __read(_a, 2), key = _b[0], val = _b[1];
-                        return void _this.callback(key, val);
-                    });
-                };
-                Cache.prototype[Symbol.iterator] = function () {
+                    return void [...store].forEach(([key, val]) => void this.callback(key, val));
+                }
+                [Symbol.iterator]() {
                     return this.store[Symbol.iterator]();
-                };
-                Cache.prototype.export = function () {
+                }
+                export() {
                     return {
                         stats: [
                             this.stats.LRU.slice(),
                             this.stats.LFU.slice()
                         ],
-                        entries: __spread(this)
+                        entries: [...this]
                     };
-                };
-                Cache.prototype.inspect = function () {
-                    var _a = this.stats, LRU = _a.LRU, LFU = _a.LFU;
+                }
+                inspect() {
+                    const {LRU, LFU} = this.stats;
                     return [
                         LRU.slice(),
                         LFU.slice()
                     ];
-                };
-                Cache.prototype.access = function (key) {
+                }
+                access(key) {
                     return this.accessLFU(key) || this.accessLRU(key);
-                };
-                Cache.prototype.accessLRU = function (key) {
+                }
+                accessLRU(key) {
                     if (!this.store.has(key))
                         return false;
-                    var LRU = this.stats.LRU;
-                    var index = equal_1.findIndex(key, LRU);
+                    const {LRU} = this.stats;
+                    const index = equal_1.findIndex(key, LRU);
                     if (index === -1)
                         return false;
-                    var LFU = this.stats.LFU;
-                    void LFU.unshift.apply(LFU, __spread(LRU.splice(index, 1)));
+                    const {LFU} = this.stats;
+                    void LFU.unshift(...LRU.splice(index, 1));
                     return true;
-                };
-                Cache.prototype.accessLFU = function (key) {
+                }
+                accessLFU(key) {
                     if (!this.store.has(key))
                         return false;
-                    var LFU = this.stats.LFU;
-                    var index = equal_1.findIndex(key, LFU);
+                    const {LFU} = this.stats;
+                    const index = equal_1.findIndex(key, LFU);
                     if (index === -1)
                         return false;
-                    void LFU.unshift.apply(LFU, __spread(LFU.splice(index, 1)));
+                    void LFU.unshift(...LFU.splice(index, 1));
                     return true;
-                };
-                return Cache;
-            }();
+                }
+            }
             exports.Cache = Cache;
         },
         {
@@ -380,57 +257,21 @@ require = function e(t, n, r) {
     5: [
         function (require, module, exports) {
             'use strict';
-            var __read = this && this.__read || function (o, n) {
-                var m = typeof Symbol === 'function' && o[Symbol.iterator];
-                if (!m)
-                    return o;
-                var i = m.call(o), r, ar = [], e;
-                try {
-                    while ((n === void 0 || n-- > 0) && !(r = i.next()).done)
-                        ar.push(r.value);
-                } catch (error) {
-                    e = { error: error };
-                } finally {
-                    try {
-                        if (r && !r.done && (m = i['return']))
-                            m.call(i);
-                    } finally {
-                        if (e)
-                            throw e.error;
-                    }
-                }
-                return ar;
-            };
-            var __spread = this && this.__spread || function () {
-                for (var ar = [], i = 0; i < arguments.length; i++)
-                    ar = ar.concat(__read(arguments[i]));
-                return ar;
-            };
             Object.defineProperty(exports, '__esModule', { value: true });
-            var exception_1 = require('./exception');
-            var maybe_1 = require('./monad/maybe');
-            var either_1 = require('./monad/either');
-            var Cancellation = function () {
-                function Cancellation(cancelees) {
-                    if (cancelees === void 0) {
-                        cancelees = [];
-                    }
-                    var _this = this;
+            const exception_1 = require('./exception');
+            const maybe_1 = require('./monad/maybe');
+            const either_1 = require('./monad/either');
+            class Cancellation {
+                constructor(cancelees = []) {
                     this.done = false;
                     this.listeners = new Set();
-                    this.register = function (listener) {
-                        if (_this.canceled)
-                            return void handler(_this.reason), function () {
-                                return void 0;
-                            };
-                        if (_this.done)
-                            return function () {
-                                return void 0;
-                            };
-                        void _this.listeners.add(handler);
-                        return function () {
-                            return _this.done ? void 0 : void _this.listeners.delete(handler);
-                        };
+                    this.register = listener => {
+                        if (this.canceled)
+                            return void handler(this.reason), () => undefined;
+                        if (this.done)
+                            return () => undefined;
+                        void this.listeners.add(handler);
+                        return () => this.done ? undefined : void this.listeners.delete(handler);
                         function handler(reason) {
                             try {
                                 void listener(reason);
@@ -439,43 +280,30 @@ require = function e(t, n, r) {
                             }
                         }
                     };
-                    this.cancel = function (reason) {
-                        if (_this.done)
+                    this.cancel = reason => {
+                        if (this.done)
                             return;
-                        _this.done = true;
-                        _this.canceled = true;
-                        _this.reason = reason;
-                        void Object.freeze(_this.listeners);
-                        void Object.freeze(_this);
-                        void _this.listeners.forEach(function (cb) {
-                            return void cb(reason);
-                        });
+                        this.done = true;
+                        this.canceled = true;
+                        this.reason = reason;
+                        void Object.freeze(this.listeners);
+                        void Object.freeze(this);
+                        void this.listeners.forEach(cb => void cb(reason));
                     };
-                    this.close = function () {
-                        if (_this.done)
+                    this.close = () => {
+                        if (this.done)
                             return;
-                        _this.done = true;
-                        void Object.freeze(_this.listeners);
-                        void Object.freeze(_this);
+                        this.done = true;
+                        void Object.freeze(this.listeners);
+                        void Object.freeze(this);
                     };
                     this.canceled = false;
-                    this.promise = function (val) {
-                        return _this.canceled ? new Promise(function (_, reject) {
-                            return void reject(_this.reason);
-                        }) : Promise.resolve(val);
-                    };
-                    this.maybe = function (val) {
-                        return _this.canceled ? maybe_1.Nothing : maybe_1.Just(val);
-                    };
-                    this.either = function (val) {
-                        return _this.canceled ? either_1.Left(_this.reason) : either_1.Right(val);
-                    };
-                    void __spread(cancelees).forEach(function (cancellee) {
-                        return void cancellee.register(_this.cancel);
-                    });
+                    this.promise = val => this.canceled ? new Promise((_, reject) => void reject(this.reason)) : Promise.resolve(val);
+                    this.maybe = val => this.canceled ? maybe_1.Nothing : maybe_1.Just(val);
+                    this.either = val => this.canceled ? either_1.Left(this.reason) : either_1.Right(val);
+                    void [...cancelees].forEach(cancellee => void cancellee.register(this.cancel));
                 }
-                return Cancellation;
-            }();
+            }
             exports.Cancellation = Cancellation;
         },
         {
@@ -489,8 +317,8 @@ require = function e(t, n, r) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             function concat(target, source) {
-                for (var i = 0, len = source.length, offset = target.length; i < len; ++i) {
-                    target[i + offset] = source[i];
+                for (let i = 0, offset = target.length, len = source.length; i < len; ++i) {
+                    target[offset + i] = source[i];
                 }
                 return target;
             }
@@ -502,19 +330,9 @@ require = function e(t, n, r) {
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.curry = function (f, ctx) {
-                return f.length === 0 ? function () {
-                    return f.call(ctx);
-                } : curry_(f, [], ctx);
-            };
+            exports.curry = (f, ctx) => f.length === 0 ? () => f.call(ctx) : curry_(f, [], ctx);
             function curry_(f, xs, ctx) {
-                return f.length <= xs.length ? f.apply(ctx, xs.slice(0, f.length)) : function () {
-                    var ys = [];
-                    for (var _i = 0; _i < arguments.length; _i++) {
-                        ys[_i] = arguments[_i];
-                    }
-                    return curry_(f, xs.concat(ys), ctx);
-                };
+                return f.length <= xs.length ? f.apply(ctx, xs.slice(0, f.length)) : (...ys) => curry_(f, xs.concat(ys), ctx);
             }
         },
         {}
@@ -524,9 +342,9 @@ require = function e(t, n, r) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             function findIndex(a1, as) {
-                var isNaN = a1 !== a1;
-                for (var i = 0; i < as.length; ++i) {
-                    var a2 = as[i];
+                const isNaN = a1 !== a1;
+                for (let i = 0; i < as.length; ++i) {
+                    const a2 = as[i];
                     if (isNaN ? a2 !== a2 : a2 === a1)
                         return i;
                 }
@@ -541,14 +359,12 @@ require = function e(t, n, r) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             function causeAsyncException(reason) {
-                void new Promise(function (_, reject) {
-                    return void reject(reason);
-                });
+                void new Promise((_, reject) => void reject(reason));
             }
             exports.causeAsyncException = causeAsyncException;
             function stringify(target) {
                 try {
-                    return target instanceof Error && typeof target.stack === 'string' ? target.stack : target !== void 0 && target !== null && typeof target.toString === 'function' ? target + '' : Object.prototype.toString.call(target);
+                    return target instanceof Error && typeof target.stack === 'string' ? target.stack : target !== undefined && target !== null && typeof target.toString === 'function' ? target + '' : Object.prototype.toString.call(target);
                 } catch (reason) {
                     return stringify(reason);
                 }
@@ -559,46 +375,18 @@ require = function e(t, n, r) {
     10: [
         function (require, module, exports) {
             'use strict';
-            var __extends = this && this.__extends || function () {
-                var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
-                    d.__proto__ = b;
-                } || function (d, b) {
-                    for (var p in b)
-                        if (b.hasOwnProperty(p))
-                            d[p] = b[p];
-                };
-                return function (d, b) {
-                    extendStatics(d, b);
-                    function __() {
-                        this.constructor = d;
-                    }
-                    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-                };
-            }();
             Object.defineProperty(exports, '__esModule', { value: true });
-            var functor_1 = require('./functor');
-            var curry_1 = require('../curry');
-            var Applicative = function (_super) {
-                __extends(Applicative, _super);
-                function Applicative() {
-                    return _super !== null && _super.apply(this, arguments) || this;
-                }
-                return Applicative;
-            }(functor_1.Functor);
+            const functor_1 = require('./functor');
+            const curry_1 = require('../curry');
+            class Applicative extends functor_1.Functor {
+            }
             exports.Applicative = Applicative;
             (function (Applicative) {
                 function ap(af, aa) {
-                    return aa ? af.bind(function (f) {
-                        return aa.fmap(function (a) {
-                            return f.length === 0 ? f(a) : curry_1.curry(f)(a);
-                        });
-                    }) : function (aa) {
-                        return ap(af, aa);
-                    };
+                    return aa ? af.bind(f => aa.fmap(a => f.length === 0 ? f(a) : curry_1.curry(f)(a))) : aa => ap(af, aa);
                 }
                 Applicative.ap = ap;
             }(Applicative = exports.Applicative || (exports.Applicative = {})));
-            exports.Applicative = Applicative;
         },
         {
             '../curry': 7,
@@ -608,43 +396,22 @@ require = function e(t, n, r) {
     11: [
         function (require, module, exports) {
             'use strict';
-            var __extends = this && this.__extends || function () {
-                var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
-                    d.__proto__ = b;
-                } || function (d, b) {
-                    for (var p in b)
-                        if (b.hasOwnProperty(p))
-                            d[p] = b[p];
-                };
-                return function (d, b) {
-                    extendStatics(d, b);
-                    function __() {
-                        this.constructor = d;
-                    }
-                    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-                };
-            }();
             Object.defineProperty(exports, '__esModule', { value: true });
-            var monad_1 = require('./monad');
-            var Either = function (_super) {
-                __extends(Either, _super);
-                function Either(thunk) {
-                    var _this = _super.call(this, thunk) || this;
-                    void _this.EITHER;
-                    return _this;
+            const monad_1 = require('./monad');
+            class Either extends monad_1.Monad {
+                constructor(thunk) {
+                    super(thunk);
+                    void this.EITHER;
                 }
-                Either.prototype.fmap = function (f) {
-                    return this.bind(function (b) {
-                        return new Right(f(b));
-                    });
-                };
-                Either.prototype.ap = function (b) {
+                fmap(f) {
+                    return this.bind(b => new Right(f(b)));
+                }
+                ap(b) {
                     return Either.ap(this, b);
-                };
-                Either.prototype.bind = function (f) {
-                    var _this = this;
-                    return new Either(function () {
-                        var m = _this.evaluate();
+                }
+                bind(f) {
+                    return new Either(() => {
+                        const m = this.evaluate();
                         if (m instanceof Left) {
                             return m;
                         }
@@ -654,14 +421,16 @@ require = function e(t, n, r) {
                         if (m instanceof Either) {
                             return m.bind(f);
                         }
-                        throw new TypeError('Spica: Either: Invalid monad value.\n\t' + m);
+                        throw new TypeError(`Spica: Either: Invalid monad value.\n\t${ m }`);
                     });
-                };
-                Either.prototype.extract = function (left, right) {
+                }
+                join() {
+                    return this.bind(m => m);
+                }
+                extract(left, right) {
                     return !right ? this.evaluate().extract(left) : this.fmap(right).extract(left);
-                };
-                return Either;
-            }(monad_1.Monad);
+                }
+            }
             exports.Either = Either;
             (function (Either) {
                 function pure(b) {
@@ -669,49 +438,43 @@ require = function e(t, n, r) {
                 }
                 Either.pure = pure;
                 Either.Return = pure;
-            }(Either = exports.Either || (exports.Either = {})));
-            exports.Either = Either;
-            var Left = function (_super) {
-                __extends(Left, _super);
-                function Left(a) {
-                    var _this = _super.call(this, throwCallError) || this;
-                    _this.a = a;
-                    void _this.LEFT;
-                    return _this;
+                function sequence(ms) {
+                    return ms.reduce((acc, m) => acc.bind(bs => m.fmap(b => bs.concat([b]))), Either.Return([]));
                 }
-                Left.prototype.bind = function (_) {
+                Either.sequence = sequence;
+            }(Either = exports.Either || (exports.Either = {})));
+            class Left extends Either {
+                constructor(a) {
+                    super(throwCallError);
+                    this.a = a;
+                    void this.LEFT;
+                }
+                bind(_) {
                     return this;
-                };
-                Left.prototype.extract = function (left) {
+                }
+                extract(left) {
                     if (!left)
                         throw this.a;
                     return left(this.a);
-                };
-                return Left;
-            }(Either);
-            exports.Left = Left;
-            var Right = function (_super) {
-                __extends(Right, _super);
-                function Right(b) {
-                    var _this = _super.call(this, throwCallError) || this;
-                    _this.b = b;
-                    void _this.RIGHT;
-                    return _this;
                 }
-                Right.prototype.bind = function (f) {
-                    var _this = this;
-                    return new Either(function () {
-                        return f(_this.extract());
-                    });
-                };
-                Right.prototype.extract = function (_, right) {
+            }
+            exports.Left = Left;
+            class Right extends Either {
+                constructor(b) {
+                    super(throwCallError);
+                    this.b = b;
+                    void this.RIGHT;
+                }
+                bind(f) {
+                    return new Either(() => f(this.extract()));
+                }
+                extract(_, right) {
                     return !right ? this.b : right(this.b);
-                };
-                return Right;
-            }(Either);
+                }
+            }
             exports.Right = Right;
             function throwCallError() {
-                throw new Error('Spica: Either: Invalid thunk call.');
+                throw new Error(`Spica: Either: Invalid thunk call.`);
             }
         },
         { './monad': 17 }
@@ -720,7 +483,7 @@ require = function e(t, n, r) {
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            var Monad = require('./either.impl');
+            const Monad = require('./either.impl');
             var Either;
             (function (Either) {
                 Either.fmap = Monad.Either.fmap;
@@ -728,6 +491,7 @@ require = function e(t, n, r) {
                 Either.ap = Monad.Either.ap;
                 Either.Return = Monad.Either.Return;
                 Either.bind = Monad.Either.bind;
+                Either.sequence = Monad.Either.sequence;
             }(Either = exports.Either || (exports.Either = {})));
             function Left(a) {
                 return new Monad.Left(a);
@@ -743,41 +507,17 @@ require = function e(t, n, r) {
     13: [
         function (require, module, exports) {
             'use strict';
-            var __extends = this && this.__extends || function () {
-                var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
-                    d.__proto__ = b;
-                } || function (d, b) {
-                    for (var p in b)
-                        if (b.hasOwnProperty(p))
-                            d[p] = b[p];
-                };
-                return function (d, b) {
-                    extendStatics(d, b);
-                    function __() {
-                        this.constructor = d;
-                    }
-                    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-                };
-            }();
             Object.defineProperty(exports, '__esModule', { value: true });
-            var lazy_1 = require('./lazy');
-            var Functor = function (_super) {
-                __extends(Functor, _super);
-                function Functor() {
-                    return _super !== null && _super.apply(this, arguments) || this;
-                }
-                return Functor;
-            }(lazy_1.Lazy);
+            const lazy_1 = require('./lazy');
+            class Functor extends lazy_1.Lazy {
+            }
             exports.Functor = Functor;
             (function (Functor) {
                 function fmap(m, f) {
-                    return f ? m.fmap(f) : function (f) {
-                        return m.fmap(f);
-                    };
+                    return f ? m.fmap(f) : f => m.fmap(f);
                 }
                 Functor.fmap = fmap;
             }(Functor = exports.Functor || (exports.Functor = {})));
-            exports.Functor = Functor;
         },
         { './lazy': 14 }
     ],
@@ -785,15 +525,14 @@ require = function e(t, n, r) {
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            var Lazy = function () {
-                function Lazy(thunk) {
+            class Lazy {
+                constructor(thunk) {
                     this.thunk = thunk;
                 }
-                Lazy.prototype.evaluate = function () {
+                evaluate() {
                     return this.memory_ = this.memory_ || this.thunk();
-                };
-                return Lazy;
-            }();
+                }
+            }
             exports.Lazy = Lazy;
         },
         {}
@@ -801,43 +540,22 @@ require = function e(t, n, r) {
     15: [
         function (require, module, exports) {
             'use strict';
-            var __extends = this && this.__extends || function () {
-                var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
-                    d.__proto__ = b;
-                } || function (d, b) {
-                    for (var p in b)
-                        if (b.hasOwnProperty(p))
-                            d[p] = b[p];
-                };
-                return function (d, b) {
-                    extendStatics(d, b);
-                    function __() {
-                        this.constructor = d;
-                    }
-                    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-                };
-            }();
             Object.defineProperty(exports, '__esModule', { value: true });
-            var monadplus_1 = require('./monadplus');
-            var Maybe = function (_super) {
-                __extends(Maybe, _super);
-                function Maybe(thunk) {
-                    var _this = _super.call(this, thunk) || this;
-                    void _this.MAYBE;
-                    return _this;
+            const monadplus_1 = require('./monadplus');
+            class Maybe extends monadplus_1.MonadPlus {
+                constructor(thunk) {
+                    super(thunk);
+                    void this.MAYBE;
                 }
-                Maybe.prototype.fmap = function (f) {
-                    return this.bind(function (a) {
-                        return new Just(f(a));
-                    });
-                };
-                Maybe.prototype.ap = function (a) {
+                fmap(f) {
+                    return this.bind(a => new Just(f(a)));
+                }
+                ap(a) {
                     return Maybe.ap(this, a);
-                };
-                Maybe.prototype.bind = function (f) {
-                    var _this = this;
-                    return new Maybe(function () {
-                        var m = _this.evaluate();
+                }
+                bind(f) {
+                    return new Maybe(() => {
+                        const m = this.evaluate();
                         if (m instanceof Just) {
                             return f(m.extract());
                         }
@@ -847,14 +565,19 @@ require = function e(t, n, r) {
                         if (m instanceof Maybe) {
                             return m.bind(f);
                         }
-                        throw new TypeError('Spica: Maybe: Invalid monad value.\n\t' + m);
+                        throw new TypeError(`Spica: Maybe: Invalid monad value.\n\t${ m }`);
                     });
-                };
-                Maybe.prototype.extract = function (nothing, just) {
+                }
+                guard(cond) {
+                    return cond ? this : Maybe.mzero;
+                }
+                join() {
+                    return this.bind(m => m);
+                }
+                extract(nothing, just) {
                     return !just ? this.evaluate().extract(nothing) : this.fmap(just).extract(nothing);
-                };
-                return Maybe;
-            }(monadplus_1.MonadPlus);
+                }
+            }
             exports.Maybe = Maybe;
             (function (Maybe) {
                 function pure(a) {
@@ -862,62 +585,49 @@ require = function e(t, n, r) {
                 }
                 Maybe.pure = pure;
                 Maybe.Return = pure;
+                function sequence(ms) {
+                    return ms.reduce((acc, m) => acc.bind(as => m.fmap(a => as.concat([a]))), Maybe.Return([]));
+                }
+                Maybe.sequence = sequence;
             }(Maybe = exports.Maybe || (exports.Maybe = {})));
-            exports.Maybe = Maybe;
-            var Just = function (_super) {
-                __extends(Just, _super);
-                function Just(a) {
-                    var _this = _super.call(this, throwCallError) || this;
-                    _this.a = a;
-                    void _this.JUST;
-                    return _this;
+            class Just extends Maybe {
+                constructor(a) {
+                    super(throwCallError);
+                    this.a = a;
+                    void this.JUST;
                 }
-                Just.prototype.bind = function (f) {
-                    var _this = this;
-                    return new Maybe(function () {
-                        return f(_this.extract());
-                    });
-                };
-                Just.prototype.extract = function (_, just) {
+                bind(f) {
+                    return new Maybe(() => f(this.extract()));
+                }
+                extract(_, just) {
                     return !just ? this.a : just(this.a);
-                };
-                return Just;
-            }(Maybe);
-            exports.Just = Just;
-            var Nothing = function (_super) {
-                __extends(Nothing, _super);
-                function Nothing() {
-                    var _this = _super.call(this, throwCallError) || this;
-                    void _this.NOTHING;
-                    return _this;
                 }
-                Nothing.prototype.bind = function (_) {
+            }
+            exports.Just = Just;
+            class Nothing extends Maybe {
+                constructor() {
+                    super(throwCallError);
+                    void this.NOTHING;
+                }
+                bind(_) {
                     return this;
-                };
-                Nothing.prototype.extract = function (nothing) {
+                }
+                extract(nothing) {
                     if (!nothing)
-                        throw void 0;
+                        throw undefined;
                     return nothing();
-                };
-                return Nothing;
-            }(Maybe);
+                }
+            }
             exports.Nothing = Nothing;
             (function (Maybe) {
                 Maybe.mzero = new Nothing();
                 function mplus(ml, mr) {
-                    return new Maybe(function () {
-                        return ml.fmap(function () {
-                            return ml;
-                        }).extract(function () {
-                            return mr;
-                        });
-                    });
+                    return new Maybe(() => ml.fmap(() => ml).extract(() => mr));
                 }
                 Maybe.mplus = mplus;
             }(Maybe = exports.Maybe || (exports.Maybe = {})));
-            exports.Maybe = Maybe;
             function throwCallError() {
-                throw new Error('Spica: Maybe: Invalid thunk call.');
+                throw new Error(`Spica: Maybe: Invalid thunk call.`);
             }
         },
         { './monadplus': 18 }
@@ -926,7 +636,7 @@ require = function e(t, n, r) {
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            var Monad = require('./maybe.impl');
+            const Monad = require('./maybe.impl');
             var Maybe;
             (function (Maybe) {
                 Maybe.fmap = Monad.Maybe.fmap;
@@ -934,6 +644,7 @@ require = function e(t, n, r) {
                 Maybe.ap = Monad.Maybe.ap;
                 Maybe.Return = Monad.Maybe.Return;
                 Maybe.bind = Monad.Maybe.bind;
+                Maybe.sequence = Monad.Maybe.sequence;
                 Maybe.mzero = Monad.Maybe.mzero;
                 Maybe.mplus = Monad.Maybe.mplus;
             }(Maybe = exports.Maybe || (exports.Maybe = {})));
@@ -948,167 +659,96 @@ require = function e(t, n, r) {
     17: [
         function (require, module, exports) {
             'use strict';
-            var __extends = this && this.__extends || function () {
-                var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
-                    d.__proto__ = b;
-                } || function (d, b) {
-                    for (var p in b)
-                        if (b.hasOwnProperty(p))
-                            d[p] = b[p];
-                };
-                return function (d, b) {
-                    extendStatics(d, b);
-                    function __() {
-                        this.constructor = d;
-                    }
-                    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-                };
-            }();
             Object.defineProperty(exports, '__esModule', { value: true });
-            var applicative_1 = require('./applicative');
-            var Monad = function (_super) {
-                __extends(Monad, _super);
-                function Monad() {
-                    return _super !== null && _super.apply(this, arguments) || this;
-                }
-                return Monad;
-            }(applicative_1.Applicative);
+            const applicative_1 = require('./applicative');
+            class Monad extends applicative_1.Applicative {
+            }
             exports.Monad = Monad;
             (function (Monad) {
                 function bind(m, f) {
-                    return f ? m.bind(f) : function (f) {
-                        return bind(m, f);
-                    };
+                    return f ? m.bind(f) : f => bind(m, f);
                 }
                 Monad.bind = bind;
             }(Monad = exports.Monad || (exports.Monad = {})));
-            exports.Monad = Monad;
         },
         { './applicative': 10 }
     ],
     18: [
         function (require, module, exports) {
             'use strict';
-            var __extends = this && this.__extends || function () {
-                var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
-                    d.__proto__ = b;
-                } || function (d, b) {
-                    for (var p in b)
-                        if (b.hasOwnProperty(p))
-                            d[p] = b[p];
-                };
-                return function (d, b) {
-                    extendStatics(d, b);
-                    function __() {
-                        this.constructor = d;
-                    }
-                    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-                };
-            }();
             Object.defineProperty(exports, '__esModule', { value: true });
-            var monad_1 = require('./monad');
-            var MonadPlus = function (_super) {
-                __extends(MonadPlus, _super);
-                function MonadPlus() {
-                    return _super !== null && _super.apply(this, arguments) || this;
-                }
-                return MonadPlus;
-            }(monad_1.Monad);
+            const monad_1 = require('./monad');
+            class MonadPlus extends monad_1.Monad {
+            }
             exports.MonadPlus = MonadPlus;
             (function (MonadPlus) {
             }(MonadPlus = exports.MonadPlus || (exports.MonadPlus = {})));
-            exports.MonadPlus = MonadPlus;
         },
         { './monad': 17 }
     ],
     19: [
         function (require, module, exports) {
             'use strict';
-            var __values = this && this.__values || function (o) {
-                var m = typeof Symbol === 'function' && o[Symbol.iterator], i = 0;
-                if (m)
-                    return m.call(o);
-                return {
-                    next: function () {
-                        if (o && i >= o.length)
-                            o = void 0;
-                        return {
-                            value: o && o[i++],
-                            done: !o
-                        };
-                    }
-                };
-            };
             Object.defineProperty(exports, '__esModule', { value: true });
-            var concat_1 = require('./concat');
-            var equal_1 = require('./equal');
-            var exception_1 = require('./exception');
+            const concat_1 = require('./concat');
+            const equal_1 = require('./equal');
+            const exception_1 = require('./exception');
             var RegisterItemType;
             (function (RegisterItemType) {
                 RegisterItemType.monitor = 'monitor';
                 RegisterItemType.subscriber = 'subscriber';
             }(RegisterItemType = exports.RegisterItemType || (exports.RegisterItemType = {})));
-            var Observation = function () {
-                function Observation() {
+            class Observation {
+                constructor() {
                     this.relaySources = new WeakSet();
                     this.node_ = {
-                        parent: void 0,
+                        parent: undefined,
                         children: new Map(),
                         childrenNames: [],
                         items: []
                     };
                 }
-                Observation.prototype.monitor = function (namespace, listener, _a) {
-                    var _this = this;
-                    var _b = (_a === void 0 ? {} : _a).once, once = _b === void 0 ? false : _b;
+                monitor(namespace, listener, {
+                    once = false
+                } = {}) {
                     void throwTypeErrorIfInvalidListener(listener, namespace);
-                    var items = this.seekNode_(namespace).items;
+                    const {items} = this.seekNode_(namespace);
                     if (isRegistered(items, RegisterItemType.monitor, namespace, listener))
-                        return function () {
-                            return void 0;
-                        };
+                        return () => undefined;
                     void items.push({
                         type: RegisterItemType.monitor,
-                        namespace: namespace,
-                        listener: listener,
-                        options: { once: once }
+                        namespace,
+                        listener,
+                        options: { once }
                     });
-                    return function () {
-                        return _this.off(namespace, listener, RegisterItemType.monitor);
-                    };
-                };
-                Observation.prototype.on = function (namespace, listener, _a) {
-                    var _this = this;
-                    var _b = (_a === void 0 ? {} : _a).once, once = _b === void 0 ? false : _b;
+                    return () => this.off(namespace, listener, RegisterItemType.monitor);
+                }
+                on(namespace, listener, {
+                    once = false
+                } = {}) {
                     void throwTypeErrorIfInvalidListener(listener, namespace);
-                    var items = this.seekNode_(namespace).items;
+                    const {items} = this.seekNode_(namespace);
                     if (isRegistered(items, RegisterItemType.subscriber, namespace, listener))
-                        return function () {
-                            return void 0;
-                        };
+                        return () => undefined;
                     void items.push({
                         type: RegisterItemType.subscriber,
-                        namespace: namespace,
-                        listener: listener,
-                        options: { once: once }
+                        namespace,
+                        listener,
+                        options: { once }
                     });
-                    return function () {
-                        return _this.off(namespace, listener);
-                    };
-                };
-                Observation.prototype.once = function (namespace, listener) {
+                    return () => this.off(namespace, listener);
+                }
+                once(namespace, listener) {
                     void throwTypeErrorIfInvalidListener(listener, namespace);
                     return this.on(namespace, listener, { once: true });
-                };
-                Observation.prototype.off = function (namespace, listener, type) {
-                    var _this = this;
-                    if (type === void 0) {
-                        type = RegisterItemType.subscriber;
-                    }
+                }
+                off(namespace, listener, type = RegisterItemType.subscriber) {
                     switch (typeof listener) {
                     case 'function':
-                        return void this.seekNode_(namespace).items.some(function (_a, i, items) {
-                            var type_ = _a.type, listener_ = _a.listener;
+                        return void this.seekNode_(namespace).items.some(({
+                            type: type_,
+                            listener: listener_
+                        }, i, items) => {
                             if (listener_ !== listener)
                                 return false;
                             if (type_ !== type)
@@ -1123,83 +763,76 @@ require = function e(t, n, r) {
                             }
                         });
                     case 'undefined': {
-                            var node_1 = this.seekNode_(namespace);
-                            void node_1.childrenNames.slice().forEach(function (name) {
-                                void _this.off(namespace.concat([name]));
-                                var child = node_1.children.get(name);
+                            const node = this.seekNode_(namespace);
+                            void node.childrenNames.slice().forEach(name => {
+                                void this.off(namespace.concat([name]));
+                                const child = node.children.get(name);
                                 if (!child)
                                     return;
                                 if (child.items.length + child.childrenNames.length > 0)
                                     return;
-                                void node_1.children.delete(name);
-                                void node_1.childrenNames.splice(equal_1.findIndex(name, node_1.childrenNames), 1);
+                                void node.children.delete(name);
+                                void node.childrenNames.splice(equal_1.findIndex(name, node.childrenNames), 1);
                             });
-                            node_1.items = node_1.items.filter(function (_a) {
-                                var type = _a.type;
-                                return type === RegisterItemType.monitor;
-                            });
+                            node.items = node.items.filter(({type}) => type === RegisterItemType.monitor);
                             return;
                         }
                     default:
                         throw throwTypeErrorIfInvalidListener(listener, namespace);
                     }
-                };
-                Observation.prototype.emit = function (namespace, data, tracker) {
+                }
+                emit(namespace, data, tracker) {
                     void this.drain_(namespace, data, tracker);
-                };
-                Observation.prototype.reflect = function (namespace, data) {
-                    var results = [];
-                    void this.emit(namespace, data, function (_, r) {
-                        return results = r;
-                    });
+                }
+                reflect(namespace, data) {
+                    let results = [];
+                    void this.emit(namespace, data, (_, r) => results = r);
                     return results;
-                };
-                Observation.prototype.relay = function (source) {
-                    var _this = this;
+                }
+                relay(source) {
                     if (this.relaySources.has(source))
-                        return function () {
-                            return void 0;
-                        };
+                        return () => undefined;
                     void this.relaySources.add(source);
-                    var unbind = source.monitor([], function (data, namespace) {
-                        return void _this.emit(namespace, data);
-                    });
-                    return function () {
-                        return void _this.relaySources.delete(source), unbind();
-                    };
-                };
-                Observation.prototype.drain_ = function (namespace, data, tracker) {
-                    var _this = this;
-                    var results = [];
-                    void this.refsBelow_(this.seekNode_(namespace)).reduce(function (_, _a) {
-                        var type = _a.type, listener = _a.listener, once = _a.options.once;
+                    const unbind = source.monitor([], (data, namespace) => void this.emit(namespace, data));
+                    return () => (void this.relaySources.delete(source), unbind());
+                }
+                drain_(namespace, data, tracker) {
+                    const results = [];
+                    void this.refsBelow_(this.seekNode_(namespace)).reduce((_, {
+                        type,
+                        listener,
+                        options: {once}
+                    }) => {
                         if (type !== RegisterItemType.subscriber)
                             return;
                         if (once) {
-                            void _this.off(namespace, listener);
+                            void this.off(namespace, listener);
                         }
                         try {
-                            var result = listener(data, namespace);
+                            const result = listener(data, namespace);
                             if (tracker) {
                                 results[results.length] = result;
                             }
                         } catch (reason) {
                             void exception_1.causeAsyncException(reason);
                         }
-                    }, void 0);
-                    void this.refsAbove_(this.seekNode_(namespace)).reduce(function (_, _a) {
-                        var type = _a.type, listener = _a.listener, once = _a.options.once;
+                    }, undefined);
+                    void this.refsAbove_(this.seekNode_(namespace)).reduce((_, {
+                        type,
+                        listener,
+                        options: {once}
+                    }) => {
                         if (type !== RegisterItemType.monitor)
                             return;
                         if (once) {
-                            void _this.off(namespace, listener, RegisterItemType.monitor);
+                            void this.off(namespace, listener, RegisterItemType.monitor);
                         }
                         try {
                             void listener(data, namespace);
                         } catch (reason) {
                             void exception_1.causeAsyncException(reason);
                         }
-                    }, void 0);
+                    }, undefined);
                     if (tracker) {
                         try {
                             void tracker(data, results);
@@ -1207,82 +840,64 @@ require = function e(t, n, r) {
                             void exception_1.causeAsyncException(reason);
                         }
                     }
-                };
-                Observation.prototype.refs = function (namespace) {
+                }
+                refs(namespace) {
                     return this.refsBelow_(this.seekNode_(namespace));
-                };
-                Observation.prototype.refsAbove_ = function (_a) {
-                    var parent = _a.parent, items = _a.items;
+                }
+                refsAbove_({parent, items}) {
                     items = concat_1.concat([], items);
                     while (parent) {
                         items = concat_1.concat(items, parent.items);
                         parent = parent.parent;
                     }
                     return items;
-                };
-                Observation.prototype.refsBelow_ = function (_a) {
-                    var childrenNames = _a.childrenNames, children = _a.children, items = _a.items;
+                }
+                refsBelow_({childrenNames, children, items}) {
                     items = concat_1.concat([], items);
-                    for (var i = 0; i < childrenNames.length; ++i) {
-                        var name_1 = childrenNames[i];
-                        var below = this.refsBelow_(children.get(name_1));
+                    for (let i = 0; i < childrenNames.length; ++i) {
+                        const name = childrenNames[i];
+                        const below = this.refsBelow_(children.get(name));
                         items = concat_1.concat(items, below);
                         if (below.length === 0) {
-                            void children.delete(name_1);
-                            void childrenNames.splice(equal_1.findIndex(name_1, childrenNames), 1);
+                            void children.delete(name);
+                            void childrenNames.splice(equal_1.findIndex(name, childrenNames), 1);
                             void --i;
                         }
                     }
                     return items;
-                };
-                Observation.prototype.seekNode_ = function (namespace) {
-                    var node = this.node_;
-                    try {
-                        for (var namespace_1 = __values(namespace), namespace_1_1 = namespace_1.next(); !namespace_1_1.done; namespace_1_1 = namespace_1.next()) {
-                            var name_2 = namespace_1_1.value;
-                            var children = node.children;
-                            if (!children.has(name_2)) {
-                                void node.childrenNames.push(name_2);
-                                children.set(name_2, {
-                                    parent: node,
-                                    children: new Map(),
-                                    childrenNames: [],
-                                    items: []
-                                });
-                            }
-                            node = children.get(name_2);
+                }
+                seekNode_(namespace) {
+                    let node = this.node_;
+                    for (const name of namespace) {
+                        const {children} = node;
+                        if (!children.has(name)) {
+                            void node.childrenNames.push(name);
+                            children.set(name, {
+                                parent: node,
+                                children: new Map(),
+                                childrenNames: [],
+                                items: []
+                            });
                         }
-                    } catch (e_1_1) {
-                        e_1 = { error: e_1_1 };
-                    } finally {
-                        try {
-                            if (namespace_1_1 && !namespace_1_1.done && (_a = namespace_1.return))
-                                _a.call(namespace_1);
-                        } finally {
-                            if (e_1)
-                                throw e_1.error;
-                        }
+                        node = children.get(name);
                     }
                     return node;
-                    var e_1, _a;
-                };
-                return Observation;
-            }();
+                }
+            }
             exports.Observation = Observation;
             function isRegistered(items, type, namespace, listener) {
-                return items.some(function (_a) {
-                    var t = _a.type, n = _a.namespace, l = _a.listener;
-                    return t === type && n.length === namespace.length && n.every(function (_, i) {
-                        return n[i] === namespace[i];
-                    }) && l === listener;
-                });
+                return items.some(({
+                    type: t,
+                    namespace: n,
+                    listener: l
+                }) => t === type && n.length === namespace.length && n.every((_, i) => n[i] === namespace[i]) && l === listener);
             }
             function throwTypeErrorIfInvalidListener(listener, types) {
                 switch (typeof listener) {
                 case 'function':
                     return;
                 default:
-                    throw new TypeError('Spica: Observation: Invalid listener.\n\t' + types + ' ' + listener);
+                    throw new TypeError(`Spica: Observation: Invalid listener.\n\t${ types } ${ listener }`);
                 }
             }
         },
@@ -1296,18 +911,18 @@ require = function e(t, n, r) {
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            var zeros = '0'.repeat(15);
-            var cnt = 0;
+            const zeros = '0'.repeat(15);
+            let cnt = 0;
             function sqid(id) {
                 if (arguments.length > 0) {
                     if (typeof id !== 'number')
-                        throw new TypeError('Spica: sqid: A parameter value must be a number: ' + id);
+                        throw new TypeError(`Spica: sqid: A parameter value must be a number: ${ id }`);
                     if (id >= 0 === false)
-                        throw new TypeError('Spica: sqid: A parameter value must be a positive number: ' + id);
+                        throw new TypeError(`Spica: sqid: A parameter value must be a positive number: ${ id }`);
                     if (id % 1 !== 0)
-                        throw new TypeError('Spica: sqid: A parameter value must be an integer: ' + id);
+                        throw new TypeError(`Spica: sqid: A parameter value must be an integer: ${ id }`);
                 }
-                return id === void 0 ? (zeros + ++cnt).slice(-15) : (zeros + id).slice(-15);
+                return id === undefined ? (zeros + ++cnt).slice(-15) : (zeros + id).slice(-15);
             }
             exports.sqid = sqid;
         },
@@ -1317,13 +932,10 @@ require = function e(t, n, r) {
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            var exception_1 = require('./exception');
-            var queue = [];
-            var register = new WeakSet();
-            function tick(cb, dedup) {
-                if (dedup === void 0) {
-                    dedup = false;
-                }
+            const exception_1 = require('./exception');
+            let queue = [];
+            let register = new WeakSet();
+            function tick(cb, dedup = false) {
                 if (dedup) {
                     if (register.has(cb))
                         return;
@@ -1333,14 +945,14 @@ require = function e(t, n, r) {
                 void schedule();
             }
             exports.tick = tick;
-            var scheduler = Promise.resolve();
+            const scheduler = Promise.resolve();
             function schedule() {
                 if (queue.length !== 1)
                     return;
                 void scheduler.then(run);
             }
             function run() {
-                var cbs = flush();
+                const cbs = flush();
                 while (true) {
                     try {
                         while (cbs.length > 0) {
@@ -1354,7 +966,7 @@ require = function e(t, n, r) {
                 }
             }
             function flush() {
-                var cbs = queue;
+                const cbs = queue;
                 queue = [];
                 register = new WeakSet();
                 return cbs;
@@ -1367,7 +979,7 @@ require = function e(t, n, r) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             function type(target) {
-                var type = Object.prototype.toString.call(target).split(' ').pop().slice(0, -1);
+                const type = Object.prototype.toString.call(target).split(' ').pop().slice(0, -1);
                 if (typeof target !== 'object' && target instanceof Object === false || target === null)
                     return type.toLowerCase();
                 return type;
@@ -1379,49 +991,20 @@ require = function e(t, n, r) {
     23: [
         function (require, module, exports) {
             'use strict';
-            var __values = this && this.__values || function (o) {
-                var m = typeof Symbol === 'function' && o[Symbol.iterator], i = 0;
-                if (m)
-                    return m.call(o);
-                return {
-                    next: function () {
-                        if (o && i >= o.length)
-                            o = void 0;
-                        return {
-                            value: o && o[i++],
-                            done: !o
-                        };
-                    }
-                };
-            };
             Object.defineProperty(exports, '__esModule', { value: true });
-            var FORMAT_V4 = Object.freeze('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.split(''));
+            const FORMAT_V4 = Object.freeze('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.split(''));
             function uuid() {
-                var acc = '';
-                try {
-                    for (var FORMAT_V4_1 = __values(FORMAT_V4), FORMAT_V4_1_1 = FORMAT_V4_1.next(); !FORMAT_V4_1_1.done; FORMAT_V4_1_1 = FORMAT_V4_1.next()) {
-                        var c = FORMAT_V4_1_1.value;
-                        if (c === 'x' || c === 'y') {
-                            var r = Math.random() * 16 | 0;
-                            var v = c == 'x' ? r : r & 3 | 8;
-                            acc += v.toString(16);
-                        } else {
-                            acc += c;
-                        }
-                    }
-                } catch (e_1_1) {
-                    e_1 = { error: e_1_1 };
-                } finally {
-                    try {
-                        if (FORMAT_V4_1_1 && !FORMAT_V4_1_1.done && (_a = FORMAT_V4_1.return))
-                            _a.call(FORMAT_V4_1);
-                    } finally {
-                        if (e_1)
-                            throw e_1.error;
+                let acc = '';
+                for (const c of FORMAT_V4) {
+                    if (c === 'x' || c === 'y') {
+                        const r = Math.random() * 16 | 0;
+                        const v = c == 'x' ? r : r & 3 | 8;
+                        acc += v.toString(16);
+                    } else {
+                        acc += c;
                     }
                 }
                 return acc.toLowerCase();
-                var e_1, _a;
             }
             exports.uuid = uuid;
         },
@@ -1443,50 +1026,27 @@ require = function e(t, n, r) {
     25: [
         function (require, module, exports) {
             'use strict';
-            var __extends = this && this.__extends || function () {
-                var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
-                    d.__proto__ = b;
-                } || function (d, b) {
-                    for (var p in b)
-                        if (b.hasOwnProperty(p))
-                            d[p] = b[p];
-                };
-                return function (d, b) {
-                    extendStatics(d, b);
-                    function __() {
-                        this.constructor = d;
-                    }
-                    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-                };
-            }();
             function __export(m) {
                 for (var p in m)
                     if (!exports.hasOwnProperty(p))
                         exports[p] = m[p];
             }
             Object.defineProperty(exports, '__esModule', { value: true });
-            var api_1 = require('../domain/indexeddb/api');
-            var api_2 = require('../domain/webstorage/api');
+            const api_1 = require('../domain/indexeddb/api');
+            const api_2 = require('../domain/webstorage/api');
             __export(require('../domain/indexeddb/api'));
             __export(require('../domain/webstorage/api'));
-            var StoreChannel = function (_super) {
-                __extends(StoreChannel, _super);
-                function StoreChannel(name, config) {
-                    return _super.call(this, name, config.Schema, config) || this;
+            class StoreChannel extends api_1.StoreChannel {
+                constructor(name, config) {
+                    super(name, config.Schema, config);
                 }
-                return StoreChannel;
-            }(api_1.StoreChannel);
+            }
             exports.StoreChannel = StoreChannel;
-            var StorageChannel = function (_super) {
-                __extends(StorageChannel, _super);
-                function StorageChannel(name, _a) {
-                    var Schema = _a.Schema, _b = _a.migrate, migrate = _b === void 0 ? function () {
-                            return void 0;
-                        } : _b;
-                    return _super.call(this, name, api_2.localStorage, Schema, migrate) || this;
+            class StorageChannel extends api_2.StorageChannel {
+                constructor(name, {Schema, migrate = () => void 0}) {
+                    super(name, api_2.localStorage, Schema, migrate);
                 }
-                return StorageChannel;
-            }(api_2.StorageChannel);
+            }
             exports.StorageChannel = StorageChannel;
         },
         {
@@ -1507,9 +1067,7 @@ require = function e(t, n, r) {
                     return true;
                 case 'object':
                     try {
-                        return value === null || isBinary(value) || Object.keys(value).every(function (key) {
-                            return isStorable(value[key]);
-                        });
+                        return value === null || isBinary(value) || Object.keys(value).every(key => isStorable(value[key]));
                     } catch (_) {
                         return false;
                     }
@@ -1519,9 +1077,7 @@ require = function e(t, n, r) {
             }
             exports.isStorable = isStorable;
             function hasBinary(value) {
-                return value instanceof Object ? isBinary(value) || Object.keys(value).some(function (key) {
-                    return hasBinary(value[key]);
-                }) : false;
+                return value instanceof Object ? isBinary(value) || Object.keys(value).some(key => hasBinary(value[key])) : false;
             }
             exports.hasBinary = hasBinary;
             function isBinary(value) {
@@ -1533,177 +1089,107 @@ require = function e(t, n, r) {
     27: [
         function (require, module, exports) {
             'use strict';
-            var __extends = this && this.__extends || function () {
-                var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
-                    d.__proto__ = b;
-                } || function (d, b) {
-                    for (var p in b)
-                        if (b.hasOwnProperty(p))
-                            d[p] = b[p];
-                };
-                return function (d, b) {
-                    extendStatics(d, b);
-                    function __() {
-                        this.constructor = d;
-                    }
-                    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-                };
-            }();
-            var __read = this && this.__read || function (o, n) {
-                var m = typeof Symbol === 'function' && o[Symbol.iterator];
-                if (!m)
-                    return o;
-                var i = m.call(o), r, ar = [], e;
-                try {
-                    while ((n === void 0 || n-- > 0) && !(r = i.next()).done)
-                        ar.push(r.value);
-                } catch (error) {
-                    e = { error: error };
-                } finally {
-                    try {
-                        if (r && !r.done && (m = i['return']))
-                            m.call(i);
-                    } finally {
-                        if (e)
-                            throw e.error;
-                    }
-                }
-                return ar;
-            };
-            var __spread = this && this.__spread || function () {
-                for (var ar = [], i = 0; i < arguments.length; i++)
-                    ar = ar.concat(__read(arguments[i]));
-                return ar;
-            };
             Object.defineProperty(exports, '__esModule', { value: true });
-            var assign_1 = require('spica/assign');
-            var identifier_1 = require('./identifier');
-            var value_1 = require('../database/value');
+            const assign_1 = require('spica/assign');
+            const identifier_1 = require('./identifier');
+            const value_1 = require('../database/value');
             exports.EventRecordType = {
                 put: 'put',
                 delete: 'delete',
                 snapshot: 'snapshot'
             };
-            var EventRecord = function () {
-                function EventRecord(id, type, key, value, date) {
+            class EventRecord {
+                constructor(id, type, key, value, date) {
                     this.id = id;
                     this.type = type;
                     this.key = key;
                     this.value = value;
                     this.date = date;
                     if (typeof this.id !== 'number' || !Number.isFinite(this.id) || this.id >= 0 === false || !Number.isSafeInteger(this.id))
-                        throw new TypeError('ClientChannel: EventRecord: Invalid event id: ' + this.id);
+                        throw new TypeError(`ClientChannel: EventRecord: Invalid event id: ${ this.id }`);
                     if (typeof this.type !== 'string')
-                        throw new TypeError('ClientChannel: EventRecord: Invalid event type: ' + this.type);
+                        throw new TypeError(`ClientChannel: EventRecord: Invalid event type: ${ this.type }`);
                     if (typeof this.key !== 'string')
-                        throw new TypeError('ClientChannel: EventRecord: Invalid event key: ' + this.key);
+                        throw new TypeError(`ClientChannel: EventRecord: Invalid event key: ${ this.key }`);
                     if (typeof this.value !== 'object' || !this.value)
-                        throw new TypeError('ClientChannel: EventRecord: Invalid event value: ' + JSON.stringify(this.value));
+                        throw new TypeError(`ClientChannel: EventRecord: Invalid event value: ${ JSON.stringify(this.value) }`);
                     if (typeof this.date !== 'number' || !Number.isFinite(this.date) || this.date >= 0 === false)
-                        throw new TypeError('ClientChannel: EventRecord: Invalid event date: ' + this.date);
+                        throw new TypeError(`ClientChannel: EventRecord: Invalid event date: ${ this.date }`);
                     this.attr = this.type === exports.EventRecordType.put ? Object.keys(value).filter(isValidPropertyName)[0] : '';
                     if (typeof this.attr !== 'string')
-                        throw new TypeError('ClientChannel: EventRecord: Invalid event attr: ' + this.key);
+                        throw new TypeError(`ClientChannel: EventRecord: Invalid event attr: ${ this.key }`);
                     switch (type) {
                     case exports.EventRecordType.put:
                         if (!isValidPropertyName(this.attr))
-                            throw new TypeError('ClientChannel: EventRecord: Invalid event attr with ' + this.type + ': ' + this.attr);
-                        this.value = value = new EventRecordValue((_a = {}, _a[this.attr] = value[this.attr], _a));
+                            throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${ this.type }: ${ this.attr }`);
+                        this.value = value = new EventRecordValue({ [this.attr]: value[this.attr] });
                         void Object.freeze(this.value);
                         void Object.freeze(this);
                         return;
                     case exports.EventRecordType.snapshot:
                         if (this.attr !== '')
-                            throw new TypeError('ClientChannel: EventRecord: Invalid event attr with ' + this.type + ': ' + this.attr);
+                            throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${ this.type }: ${ this.attr }`);
                         this.value = value = new EventRecordValue(value);
                         void Object.freeze(this.value);
                         void Object.freeze(this);
                         return;
                     case exports.EventRecordType.delete:
                         if (this.attr !== '')
-                            throw new TypeError('ClientChannel: EventRecord: Invalid event attr with ' + this.type + ': ' + this.attr);
+                            throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${ this.type }: ${ this.attr }`);
                         this.value = value = new EventRecordValue();
                         void Object.freeze(this.value);
                         void Object.freeze(this);
                         return;
                     default:
-                        throw new TypeError('ClientChannel: EventRecord: Invalid event type: ' + type);
+                        throw new TypeError(`ClientChannel: EventRecord: Invalid event type: ${ type }`);
                     }
-                    var _a;
                 }
-                return EventRecord;
-            }();
-            var UnstoredEventRecord = function (_super) {
-                __extends(UnstoredEventRecord, _super);
-                function UnstoredEventRecord(key, value, type, date) {
-                    if (type === void 0) {
-                        type = exports.EventRecordType.put;
-                    }
-                    if (date === void 0) {
-                        date = Date.now();
-                    }
-                    var _this = _super.call(this, identifier_1.makeEventId(0), type, key, value, date) || this;
-                    _this.EVENT_RECORD;
-                    if (_this.id !== 0)
-                        throw new TypeError('ClientChannel: UnstoredEventRecord: Invalid event id: ' + _this.id);
-                    return _this;
+            }
+            class UnstoredEventRecord extends EventRecord {
+                constructor(key, value, type = exports.EventRecordType.put, date = Date.now()) {
+                    super(identifier_1.makeEventId(0), type, key, value, date);
+                    this.EVENT_RECORD;
+                    if (this.id !== 0)
+                        throw new TypeError(`ClientChannel: UnstoredEventRecord: Invalid event id: ${ this.id }`);
                 }
-                return UnstoredEventRecord;
-            }(EventRecord);
+            }
             exports.UnstoredEventRecord = UnstoredEventRecord;
-            var StoredEventRecord = function (_super) {
-                __extends(StoredEventRecord, _super);
-                function StoredEventRecord(id, key, value, type, date) {
-                    var _this = _super.call(this, id, type, key, value, date) || this;
-                    if (_this.id > 0 === false)
-                        throw new TypeError('ClientChannel: StoredEventRecord: Invalid event id: ' + _this.id);
-                    return _this;
+            class StoredEventRecord extends EventRecord {
+                constructor(id, key, value, type, date) {
+                    super(id, type, key, value, date);
+                    if (this.id > 0 === false)
+                        throw new TypeError(`ClientChannel: StoredEventRecord: Invalid event id: ${ this.id }`);
                 }
-                return StoredEventRecord;
-            }(EventRecord);
+            }
             exports.StoredEventRecord = StoredEventRecord;
-            var LoadedEventRecord = function (_super) {
-                __extends(LoadedEventRecord, _super);
-                function LoadedEventRecord(_a) {
-                    var id = _a.id, key = _a.key, value = _a.value, type = _a.type, date = _a.date;
-                    var _this = _super.call(this, id, key, value, type, date) || this;
-                    _this.EVENT_RECORD;
-                    return _this;
+            class LoadedEventRecord extends StoredEventRecord {
+                constructor({id, key, value, type, date}) {
+                    super(id, key, value, type, date);
+                    this.EVENT_RECORD;
                 }
-                return LoadedEventRecord;
-            }(StoredEventRecord);
+            }
             exports.LoadedEventRecord = LoadedEventRecord;
-            var SavedEventRecord = function (_super) {
-                __extends(SavedEventRecord, _super);
-                function SavedEventRecord(id, key, value, type, date) {
-                    var _this = _super.call(this, id, key, value, type, date) || this;
-                    _this.EVENT_RECORD;
-                    return _this;
+            class SavedEventRecord extends StoredEventRecord {
+                constructor(id, key, value, type, date) {
+                    super(id, key, value, type, date);
+                    this.EVENT_RECORD;
                 }
-                return SavedEventRecord;
-            }(StoredEventRecord);
+            }
             exports.SavedEventRecord = SavedEventRecord;
-            var EventRecordValue = function () {
-                function EventRecordValue() {
-                    var sources = [];
-                    for (var _i = 0; _i < arguments.length; _i++) {
-                        sources[_i] = arguments[_i];
-                    }
-                    void assign_1.clone.apply(void 0, __spread([this], sources));
+            class EventRecordValue {
+                constructor(...sources) {
+                    void assign_1.clone(this, ...sources);
                 }
-                return EventRecordValue;
-            }();
+            }
             exports.EventRecordValue = EventRecordValue;
-            var RegValidValueNameFormat = /^[a-zA-Z][0-9a-zA-Z_]*$/;
-            var RegInvalidValueNameFormat = /^[0-9A-Z_]+$/;
+            const RegValidValueNameFormat = /^[a-zA-Z][0-9a-zA-Z_]*$/;
+            const RegInvalidValueNameFormat = /^[0-9A-Z_]+$/;
             function isValidPropertyName(prop) {
                 return prop.length > 0 && !prop.startsWith('_') && !prop.endsWith('_') && !RegInvalidValueNameFormat.test(prop) && RegValidValueNameFormat.test(prop);
             }
             exports.isValidPropertyName = isValidPropertyName;
             function isValidPropertyValue(dao) {
-                return function (prop) {
-                    return value_1.isStorable(dao[prop]);
-                };
+                return prop => value_1.isStorable(dao[prop]);
             }
             exports.isValidPropertyValue = isValidPropertyValue;
         },
@@ -1730,76 +1216,24 @@ require = function e(t, n, r) {
     29: [
         function (require, module, exports) {
             'use strict';
-            var __extends = this && this.__extends || function () {
-                var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
-                    d.__proto__ = b;
-                } || function (d, b) {
-                    for (var p in b)
-                        if (b.hasOwnProperty(p))
-                            d[p] = b[p];
-                };
-                return function (d, b) {
-                    extendStatics(d, b);
-                    function __() {
-                        this.constructor = d;
-                    }
-                    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-                };
-            }();
-            var __assign = this && this.__assign || Object.assign || function (t) {
-                for (var s, i = 1, n = arguments.length; i < n; i++) {
-                    s = arguments[i];
-                    for (var p in s)
-                        if (Object.prototype.hasOwnProperty.call(s, p))
-                            t[p] = s[p];
-                }
-                return t;
-            };
-            var __read = this && this.__read || function (o, n) {
-                var m = typeof Symbol === 'function' && o[Symbol.iterator];
-                if (!m)
-                    return o;
-                var i = m.call(o), r, ar = [], e;
-                try {
-                    while ((n === void 0 || n-- > 0) && !(r = i.next()).done)
-                        ar.push(r.value);
-                } catch (error) {
-                    e = { error: error };
-                } finally {
-                    try {
-                        if (r && !r.done && (m = i['return']))
-                            m.call(i);
-                    } finally {
-                        if (e)
-                            throw e.error;
-                    }
-                }
-                return ar;
-            };
-            var __spread = this && this.__spread || function () {
-                for (var ar = [], i = 0; i < arguments.length; i++)
-                    ar = ar.concat(__read(arguments[i]));
-                return ar;
-            };
             Object.defineProperty(exports, '__esModule', { value: true });
-            var observation_1 = require('spica/observation');
-            var cancellation_1 = require('spica/cancellation');
-            var tick_1 = require('spica/tick');
-            var sqid_1 = require('spica/sqid');
-            var concat_1 = require('spica/concat');
-            var api_1 = require('../../infrastructure/indexeddb/api');
-            var identifier_1 = require('./identifier');
-            var event_1 = require('./event');
-            var value_1 = require('../database/value');
-            var noop_1 = require('../../../lib/noop');
+            const observation_1 = require('spica/observation');
+            const cancellation_1 = require('spica/cancellation');
+            const tick_1 = require('spica/tick');
+            const sqid_1 = require('spica/sqid');
+            const concat_1 = require('spica/concat');
+            const api_1 = require('../../infrastructure/indexeddb/api');
+            const identifier_1 = require('./identifier');
+            const event_1 = require('./event');
+            const value_1 = require('../database/value');
+            const noop_1 = require('../../../lib/noop');
             var EventStoreSchema;
             (function (EventStoreSchema) {
                 EventStoreSchema.id = 'id';
                 EventStoreSchema.key = 'key';
             }(EventStoreSchema || (EventStoreSchema = {})));
-            var EventStore = function () {
-                function EventStore(name, attrs, listen) {
-                    var _this = this;
+            class EventStore {
+                constructor(name, attrs, listen) {
                     this.name = name;
                     this.attrs = attrs;
                     this.listen = listen;
@@ -1813,29 +1247,28 @@ require = function e(t, n, r) {
                     this.events_ = Object.freeze({ memory: new observation_1.Observation() });
                     this.tx_ = { rwc: 0 };
                     this.snapshotCycle = 9;
-                    var states = new (function () {
-                        function class_1() {
+                    const states = new class {
+                        constructor() {
                             this.ids = new Map();
                             this.dates = new Map();
                         }
-                        class_1.prototype.update = function (event) {
+                        update(event) {
                             void this.ids.set(event.key, identifier_1.makeEventId(Math.max(event.id, this.ids.get(event.key) || 0)));
                             void this.dates.set(event.key, Math.max(event.date, this.dates.get(event.key) || 0));
-                        };
-                        return class_1;
-                    }())();
-                    void this.events_.memory.monitor([], function (event) {
+                        }
+                    }();
+                    void this.events_.memory.monitor([], event => {
                         if (event.date <= states.dates.get(event.key) && event.id <= states.ids.get(event.key))
                             return;
                         if (event instanceof event_1.LoadedEventRecord) {
-                            return void _this.events.load.emit([
+                            return void this.events.load.emit([
                                 event.key,
                                 event.attr,
                                 event.type
                             ], new EventStore.Event(event.type, event.id, event.key, event.attr, event.date));
                         }
                         if (event instanceof event_1.SavedEventRecord) {
-                            return void _this.events.save.emit([
+                            return void this.events.save.emit([
                                 event.key,
                                 event.attr,
                                 event.type
@@ -1843,27 +1276,21 @@ require = function e(t, n, r) {
                         }
                         return;
                     });
-                    void this.events_.memory.monitor([], function (event) {
-                        return void states.update(new EventStore.Event(event.type, event.id, event.key, event.attr, event.date));
-                    });
-                    void this.events.load.monitor([], function (event) {
-                        return void states.update(event);
-                    });
-                    void this.events.save.monitor([], function (event) {
-                        return void states.update(event);
-                    });
-                    void this.events.save.monitor([], function (event) {
+                    void this.events_.memory.monitor([], event => void states.update(new EventStore.Event(event.type, event.id, event.key, event.attr, event.date)));
+                    void this.events.load.monitor([], event => void states.update(event));
+                    void this.events.save.monitor([], event => void states.update(event));
+                    void this.events.save.monitor([], event => {
                         switch (event.type) {
                         case EventStore.EventType.delete:
                         case EventStore.EventType.snapshot:
-                            void _this.clean(event.key);
+                            void this.clean(event.key);
                         }
                     });
                 }
-                EventStore.configure = function (name) {
+                static configure(name) {
                     return {
-                        make: function (tx) {
-                            var store = tx.db.objectStoreNames.contains(name) ? tx.objectStore(name) : tx.db.createObjectStore(name, {
+                        make(tx) {
+                            const store = tx.db.objectStoreNames.contains(name) ? tx.objectStore(name) : tx.db.createObjectStore(name, {
                                 keyPath: EventStoreSchema.id,
                                 autoIncrement: true
                             });
@@ -1875,153 +1302,108 @@ require = function e(t, n, r) {
                             }
                             return true;
                         },
-                        verify: function (db) {
+                        verify(db) {
                             return db.objectStoreNames.contains(name) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.id) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.key);
                         },
-                        destroy: function () {
+                        destroy() {
                             return true;
                         }
                     };
-                };
-                Object.defineProperty(EventStore.prototype, 'txrw', {
-                    get: function () {
-                        if (++this.tx_.rwc > 25) {
-                            this.tx_.rwc = 0;
-                            this.tx_.rw = void 0;
-                            return;
-                        }
-                        return this.tx_.rw;
-                    },
-                    set: function (tx) {
-                        var _this = this;
-                        if (!tx)
-                            return;
-                        if (this.tx_.rw && this.tx_.rw === tx)
-                            return;
+                }
+                get txrw() {
+                    if (++this.tx_.rwc > 25) {
                         this.tx_.rwc = 0;
-                        this.tx_.rw = tx;
-                        void tick_1.tick(function () {
-                            return _this.tx_.rw = void 0;
-                        });
-                    },
-                    enumerable: true,
-                    configurable: true
-                });
-                EventStore.prototype.fetch = function (key, cb, cancellation) {
-                    var _this = this;
-                    if (cb === void 0) {
-                        cb = noop_1.noop;
+                        this.tx_.rw = void 0;
+                        return;
                     }
-                    if (cancellation === void 0) {
-                        cancellation = new cancellation_1.Cancellation();
-                    }
-                    var events = [];
-                    return void this.listen(function (db) {
+                    return this.tx_.rw;
+                }
+                set txrw(tx) {
+                    if (!tx)
+                        return;
+                    if (this.tx_.rw && this.tx_.rw === tx)
+                        return;
+                    this.tx_.rwc = 0;
+                    this.tx_.rw = tx;
+                    void tick_1.tick(() => this.tx_.rw = void 0);
+                }
+                fetch(key, cb = noop_1.noop, cancellation = new cancellation_1.Cancellation()) {
+                    const events = [];
+                    return void this.listen(db => {
                         if (cancellation.canceled)
                             return void cb(new Error('Cancelled.'));
-                        var tx = db.transaction(_this.name, 'readonly');
-                        var req = tx.objectStore(_this.name).index(EventStoreSchema.key).openCursor(key, 'prev');
-                        var proc = function (cursor, error) {
+                        const tx = db.transaction(this.name, 'readonly');
+                        const req = tx.objectStore(this.name).index(EventStoreSchema.key).openCursor(key, 'prev');
+                        const proc = (cursor, error) => {
                             if (error)
                                 return;
-                            if (!cursor || new event_1.LoadedEventRecord(cursor.value).date < _this.meta(key).date) {
-                                void __spread(events.reduceRight(function (es, e) {
-                                    return es.length === 0 || es[0].type === EventStore.EventType.put ? concat_1.concat(es, [e]) : es;
-                                }, []).reduceRight(function (dict, e) {
-                                    return dict.set(e.attr, e);
-                                }, new Map()).values()).sort(function (a, b) {
-                                    return a.date - b.date || a.id - b.id;
-                                }).forEach(function (e) {
-                                    return void _this.memory.off([
-                                        e.key,
-                                        e.attr,
-                                        sqid_1.sqid(e.id)
-                                    ]), void _this.memory.on([
-                                        e.key,
-                                        e.attr,
-                                        sqid_1.sqid(e.id)
-                                    ], function () {
-                                        return e;
-                                    }), void _this.events_.memory.emit([
-                                        e.key,
-                                        e.attr,
-                                        sqid_1.sqid(e.id)
-                                    ], e);
-                                });
+                            if (!cursor || new event_1.LoadedEventRecord(cursor.value).date < this.meta(key).date) {
+                                void [...events.reduceRight((es, e) => es.length === 0 || es[0].type === EventStore.EventType.put ? concat_1.concat(es, [e]) : es, []).reduceRight((dict, e) => dict.set(e.attr, e), new Map()).values()].sort((a, b) => a.date - b.date || a.id - b.id).forEach(e => (void this.memory.off([
+                                    e.key,
+                                    e.attr,
+                                    sqid_1.sqid(e.id)
+                                ]), void this.memory.on([
+                                    e.key,
+                                    e.attr,
+                                    sqid_1.sqid(e.id)
+                                ], () => e), void this.events_.memory.emit([
+                                    e.key,
+                                    e.attr,
+                                    sqid_1.sqid(e.id)
+                                ], e)));
                                 try {
                                     void cb(req.error);
                                 } catch (reason) {
-                                    void new Promise(function (_, reject) {
-                                        return void reject(reason);
-                                    });
+                                    void new Promise((_, reject) => void reject(reason));
                                 }
-                                if (events.length >= _this.snapshotCycle) {
-                                    void _this.snapshot(key);
+                                if (events.length >= this.snapshotCycle) {
+                                    void this.snapshot(key);
                                 }
                                 return;
                             } else {
-                                var event_2 = new event_1.LoadedEventRecord(cursor.value);
-                                if (_this.memory.refs([
-                                        event_2.key,
-                                        event_2.attr,
-                                        sqid_1.sqid(event_2.id)
+                                const event = new event_1.LoadedEventRecord(cursor.value);
+                                if (this.memory.refs([
+                                        event.key,
+                                        event.attr,
+                                        sqid_1.sqid(event.id)
                                     ]).length > 0)
                                     return void proc(null, error);
                                 try {
-                                    void events.unshift(event_2);
+                                    void events.unshift(event);
                                 } catch (error) {
-                                    void tx.objectStore(_this.name).delete(cursor.primaryKey);
-                                    void new Promise(function (_, reject) {
-                                        return void reject(error);
-                                    });
+                                    void tx.objectStore(this.name).delete(cursor.primaryKey);
+                                    void new Promise((_, reject) => void reject(error));
                                 }
-                                if (event_2.type !== EventStore.EventType.put)
+                                if (event.type !== EventStore.EventType.put)
                                     return void proc(null, error);
                                 return void cursor.continue();
                             }
                         };
-                        void req.addEventListener('success', function () {
-                            return void proc(req.result, req.error);
-                        });
-                        void tx.addEventListener('error', function () {
-                            return void cb(tx.error || req.error);
-                        });
-                        void tx.addEventListener('abort', function () {
-                            return void cb(tx.error || req.error);
-                        });
-                        void cancellation.register(function () {
-                            return events.length === 0 && void tx.abort();
-                        });
+                        void req.addEventListener('success', () => void proc(req.result, req.error));
+                        void tx.addEventListener('error', () => void cb(tx.error || req.error));
+                        void tx.addEventListener('abort', () => void cb(tx.error || req.error));
+                        void cancellation.register(() => events.length === 0 && void tx.abort());
                         return;
-                    }, function () {
-                        return void cb(new Error('Access has failed.'));
-                    });
-                };
-                EventStore.prototype.keys = function () {
-                    return this.memory.reflect([]).reduce(function (keys, e) {
-                        return keys.length === 0 || keys[keys.length - 1] !== e.key ? concat_1.concat(keys, [e.key]) : keys;
-                    }, []).sort();
-                };
-                EventStore.prototype.has = function (key) {
+                    }, () => void cb(new Error('Access has failed.')));
+                }
+                keys() {
+                    return this.memory.reflect([]).reduce((keys, e) => keys.length === 0 || keys[keys.length - 1] !== e.key ? concat_1.concat(keys, [e.key]) : keys, []).sort();
+                }
+                has(key) {
                     return compose(key, this.attrs, this.memory.reflect([key])).type !== EventStore.EventType.delete;
-                };
-                EventStore.prototype.meta = function (key) {
-                    var events = this.memory.reflect([key]);
+                }
+                meta(key) {
+                    const events = this.memory.reflect([key]);
                     return Object.freeze({
                         key: key,
-                        id: events.reduce(function (id, e) {
-                            return e.id > id ? e.id : id;
-                        }, 0),
-                        date: events.reduce(function (date, e) {
-                            return e.date > date ? e.date : date;
-                        }, 0)
+                        id: events.reduce((id, e) => e.id > id ? e.id : id, 0),
+                        date: events.reduce((date, e) => e.date > date ? e.date : date, 0)
                     });
-                };
-                EventStore.prototype.get = function (key) {
+                }
+                get(key) {
                     return Object.assign(Object.create(null), compose(key, this.attrs, this.memory.reflect([key])).value);
-                };
-                EventStore.prototype.add = function (event, tx) {
-                    var _this = this;
+                }
+                add(event, tx) {
                     switch (event.type) {
                     case EventStore.EventType.put: {
                             void this.memory.off([
@@ -2038,227 +1420,187 @@ require = function e(t, n, r) {
                         }
                     case EventStore.EventType.delete:
                     case EventStore.EventType.snapshot: {
-                            void this.memory.refs([event.key]).filter(function (_a) {
-                                var _b = __read(_a.namespace, 3), id = _b[2];
-                                return id === sqid_1.sqid(0);
-                            }).forEach(function (_a) {
-                                var _b = __read(_a.namespace, 3), key = _b[0], attr = _b[1], id = _b[2];
-                                return void _this.memory.off([
-                                    key,
-                                    attr,
-                                    id
-                                ]), void _this.events_.memory.off([
-                                    key,
-                                    attr,
-                                    id
-                                ]);
-                            });
+                            void this.memory.refs([event.key]).filter(({
+                                namespace: [, , id]
+                            }) => id === sqid_1.sqid(0)).forEach(({
+                                namespace: [key, attr, id]
+                            }) => (void this.memory.off([
+                                key,
+                                attr,
+                                id
+                            ]), void this.events_.memory.off([
+                                key,
+                                attr,
+                                id
+                            ])));
                             break;
                         }
                     }
-                    var clean = this.memory.on([
+                    const clean = this.memory.on([
                         event.key,
                         event.attr,
                         sqid_1.sqid(0),
                         sqid_1.sqid()
-                    ], function () {
-                        return event;
-                    });
+                    ], () => event);
                     void this.events_.memory.emit([
                         event.key,
                         event.attr,
                         sqid_1.sqid(0)
                     ], event);
-                    var loss = function () {
-                        return void _this.events.loss.emit([
+                    const loss = () => void this.events.loss.emit([
+                        event.key,
+                        event.attr,
+                        event.type
+                    ], new EventStore.Event(event.type, identifier_1.makeEventId(0), event.key, event.attr, event.date));
+                    return void this.listen(db => {
+                        tx = this.txrw = tx || this.txrw || db.transaction(this.name, 'readwrite');
+                        const active = () => this.memory.refs([
                             event.key,
                             event.attr,
-                            event.type
-                        ], new EventStore.Event(event.type, identifier_1.makeEventId(0), event.key, event.attr, event.date));
-                    };
-                    return void this.listen(function (db) {
-                        tx = _this.txrw = tx || _this.txrw || db.transaction(_this.name, 'readwrite');
-                        var active = function () {
-                            return _this.memory.refs([
-                                event.key,
-                                event.attr,
-                                sqid_1.sqid(0)
-                            ]).some(function (_a) {
-                                var listener = _a.listener;
-                                return listener(void 0, [
-                                    event.key,
-                                    event.attr,
-                                    sqid_1.sqid(0)
-                                ]) === event;
-                            });
-                        };
+                            sqid_1.sqid(0)
+                        ]).some(({listener}) => listener(void 0, [
+                            event.key,
+                            event.attr,
+                            sqid_1.sqid(0)
+                        ]) === event);
                         if (!active())
                             return;
-                        var req = tx.objectStore(_this.name).add(adjust(event));
-                        void tx.addEventListener('complete', function () {
+                        const req = tx.objectStore(this.name).add(adjust(event));
+                        void tx.addEventListener('complete', () => {
                             void clean();
-                            var savedEvent = new event_1.SavedEventRecord(identifier_1.makeEventId(req.result), event.key, event.value, event.type, event.date);
-                            void _this.memory.off([
+                            const savedEvent = new event_1.SavedEventRecord(identifier_1.makeEventId(req.result), event.key, event.value, event.type, event.date);
+                            void this.memory.off([
                                 savedEvent.key,
                                 savedEvent.attr,
                                 sqid_1.sqid(savedEvent.id)
                             ]);
-                            void _this.memory.on([
+                            void this.memory.on([
                                 savedEvent.key,
                                 savedEvent.attr,
                                 sqid_1.sqid(savedEvent.id)
-                            ], function () {
-                                return savedEvent;
-                            });
-                            void _this.events_.memory.emit([
+                            ], () => savedEvent);
+                            void this.events_.memory.emit([
                                 savedEvent.key,
                                 savedEvent.attr,
                                 sqid_1.sqid(savedEvent.id)
                             ], savedEvent);
-                            var events = _this.memory.refs([savedEvent.key]).map(function (_a) {
-                                var listener = _a.listener;
-                                return listener(void 0, [savedEvent.key]);
-                            }).reduce(function (es, e) {
-                                return e instanceof event_1.StoredEventRecord ? concat_1.concat(es, [e]) : es;
-                            }, []);
-                            if (events.length >= _this.snapshotCycle || value_1.hasBinary(event.value)) {
-                                void _this.snapshot(savedEvent.key);
+                            const events = this.memory.refs([savedEvent.key]).map(({listener}) => listener(void 0, [savedEvent.key])).reduce((es, e) => e instanceof event_1.StoredEventRecord ? concat_1.concat(es, [e]) : es, []);
+                            if (events.length >= this.snapshotCycle || value_1.hasBinary(event.value)) {
+                                void this.snapshot(savedEvent.key);
                             }
                         });
-                        var fail = function () {
-                            return void clean(), active() ? void loss() : void 0;
-                        };
+                        const fail = () => (void clean(), active() ? void loss() : void 0);
                         void tx.addEventListener('error', fail);
                         void tx.addEventListener('abort', fail);
-                    }, function () {
-                        return void clean() || void loss();
-                    });
-                };
-                EventStore.prototype.delete = function (key) {
+                    }, () => void clean() || void loss());
+                }
+                delete(key) {
                     return void this.add(new event_1.UnstoredEventRecord(key, new EventStore.Value(), EventStore.EventType.delete));
-                };
-                EventStore.prototype.snapshot = function (key) {
-                    var _this = this;
-                    return void this.listen(function (db) {
-                        if (!_this.has(key) || _this.meta(key).id === 0)
+                }
+                snapshot(key) {
+                    return void this.listen(db => {
+                        if (!this.has(key) || this.meta(key).id === 0)
                             return;
-                        var tx = _this.txrw = _this.txrw || db.transaction(_this.name, 'readwrite');
-                        var store = tx.objectStore(_this.name);
-                        var req = store.index(EventStoreSchema.key).openCursor(key, 'prev');
-                        var events = [];
-                        void req.addEventListener('success', function () {
-                            var cursor = req.result;
+                        const tx = this.txrw = this.txrw || db.transaction(this.name, 'readwrite');
+                        const store = tx.objectStore(this.name);
+                        const req = store.index(EventStoreSchema.key).openCursor(key, 'prev');
+                        const events = [];
+                        void req.addEventListener('success', () => {
+                            const cursor = req.result;
                             if (cursor) {
-                                var event_3 = new event_1.LoadedEventRecord(cursor.value);
+                                const event = new event_1.LoadedEventRecord(cursor.value);
                                 try {
-                                    void events.unshift(event_3);
+                                    void events.unshift(event);
                                 } catch (error) {
                                     void cursor.delete();
-                                    void new Promise(function (_, reject) {
-                                        return void reject(error);
-                                    });
+                                    void new Promise((_, reject) => void reject(error));
                                 }
                             }
                             if (!cursor) {
                                 if (events.length === 0)
                                     return;
-                                var composedEvent = compose(key, _this.attrs, events);
+                                const composedEvent = compose(key, this.attrs, events);
                                 if (composedEvent instanceof event_1.StoredEventRecord)
                                     return;
                                 switch (composedEvent.type) {
                                 case EventStore.EventType.snapshot:
-                                    return void _this.add(new event_1.UnstoredEventRecord(composedEvent.key, composedEvent.value, composedEvent.type, events.reduce(function (date, e) {
-                                        return e.date > date ? e.date : date;
-                                    }, 0)), tx);
+                                    return void this.add(new event_1.UnstoredEventRecord(composedEvent.key, composedEvent.value, composedEvent.type, events.reduce((date, e) => e.date > date ? e.date : date, 0)), tx);
                                 case EventStore.EventType.delete:
                                     return;
                                 }
-                                throw new TypeError('ClientChannel: EventStore: Invalid event type: ' + composedEvent.type);
+                                throw new TypeError(`ClientChannel: EventStore: Invalid event type: ${ composedEvent.type }`);
                             } else {
                                 return void cursor.continue();
                             }
                         });
                     });
-                };
-                EventStore.prototype.clean = function (key) {
-                    var _this = this;
-                    var events = [];
-                    var cleanState = new Map();
-                    var cleared = new cancellation_1.Cancellation();
-                    return void this.cursor(api_1.IDBKeyRange.only(key), EventStoreSchema.key, 'prev', 'readwrite', function (cursor, error) {
+                }
+                clean(key) {
+                    const events = [];
+                    const cleanState = new Map();
+                    const cleared = new cancellation_1.Cancellation();
+                    return void this.cursor(api_1.IDBKeyRange.only(key), EventStoreSchema.key, 'prev', 'readwrite', (cursor, error) => {
                         if (error)
                             return;
                         if (!cursor) {
-                            void events.reduce(function (_, event) {
-                                return void _this.memory.off([
-                                    event.key,
-                                    event.attr,
-                                    sqid_1.sqid(event.id)
-                                ]), void _this.events_.memory.off([
-                                    event.key,
-                                    event.attr,
-                                    sqid_1.sqid(event.id)
-                                ]);
-                            }, void 0);
-                            return void _this.events.clean.emit([key], !cleared.canceled);
+                            void events.reduce((_, event) => (void this.memory.off([
+                                event.key,
+                                event.attr,
+                                sqid_1.sqid(event.id)
+                            ]), void this.events_.memory.off([
+                                event.key,
+                                event.attr,
+                                sqid_1.sqid(event.id)
+                            ])), void 0);
+                            return void this.events.clean.emit([key], !cleared.canceled);
                         } else {
-                            var event_4 = new event_1.LoadedEventRecord(cursor.value);
-                            switch (event_4.type) {
+                            const event = new event_1.LoadedEventRecord(cursor.value);
+                            switch (event.type) {
                             case EventStore.EventType.put:
                                 void cleared.cancel();
-                                void cleanState.set(event_4.key, cleanState.get(event_4.key) || false);
-                                if (cleanState.get(event_4.key))
+                                void cleanState.set(event.key, cleanState.get(event.key) || false);
+                                if (cleanState.get(event.key))
                                     break;
                                 return void cursor.continue();
                             case EventStore.EventType.snapshot:
                                 void cleared.cancel();
-                                if (cleanState.get(event_4.key))
+                                if (cleanState.get(event.key))
                                     break;
-                                void cleanState.set(event_4.key, true);
+                                void cleanState.set(event.key, true);
                                 return void cursor.continue();
                             case EventStore.EventType.delete:
                                 void cleared.close();
-                                if (cleanState.get(event_4.key))
+                                if (cleanState.get(event.key))
                                     break;
-                                void cleanState.set(event_4.key, true);
+                                void cleanState.set(event.key, true);
                                 break;
                             }
                             void cursor.delete();
-                            void events.unshift(event_4);
+                            void events.unshift(event);
                             return void cursor.continue();
                         }
                     });
-                };
-                EventStore.prototype.cursor = function (query, index, direction, mode, cb) {
-                    var _this = this;
-                    return void this.listen(function (db) {
-                        var tx = db.transaction(_this.name, mode);
-                        var req = index ? tx.objectStore(_this.name).index(index).openCursor(query, direction) : tx.objectStore(_this.name).openCursor(query, direction);
-                        void req.addEventListener('success', function () {
-                            var cursor = req.result;
+                }
+                cursor(query, index, direction, mode, cb) {
+                    return void this.listen(db => {
+                        const tx = db.transaction(this.name, mode);
+                        const req = index ? tx.objectStore(this.name).index(index).openCursor(query, direction) : tx.objectStore(this.name).openCursor(query, direction);
+                        void req.addEventListener('success', () => {
+                            const cursor = req.result;
                             if (!cursor)
                                 return;
                             void cb(cursor, req.error);
                         });
-                        void tx.addEventListener('complete', function () {
-                            return void cb(null, tx.error || req.error);
-                        });
-                        void tx.addEventListener('error', function () {
-                            return void cb(null, tx.error || req.error);
-                        });
-                        void tx.addEventListener('abort ', function () {
-                            return void cb(null, tx.error || req.error);
-                        });
-                    }, function () {
-                        return void cb(null, new Error('Access has failed.'));
-                    });
-                };
-                return EventStore;
-            }();
+                        void tx.addEventListener('complete', () => void cb(null, tx.error || req.error));
+                        void tx.addEventListener('error', () => void cb(null, tx.error || req.error));
+                        void tx.addEventListener('abort ', () => void cb(null, tx.error || req.error));
+                    }, () => void cb(null, new Error('Access has failed.')));
+                }
+            }
             exports.EventStore = EventStore;
             (function (EventStore) {
-                var Event = function () {
-                    function Event(type, id, key, attr, date) {
+                class Event {
+                    constructor(type, id, key, attr, date) {
                         this.type = type;
                         this.id = id;
                         this.key = key;
@@ -2267,54 +1609,33 @@ require = function e(t, n, r) {
                         this.EVENT;
                         void Object.freeze(this);
                     }
-                    return Event;
-                }();
+                }
                 EventStore.Event = Event;
                 EventStore.EventType = event_1.EventRecordType;
-                var Record = function (_super) {
-                    __extends(Record, _super);
-                    function Record(key, value) {
-                        return _super.call(this, key, value) || this;
+                class Record extends event_1.UnstoredEventRecord {
+                    constructor(key, value) {
+                        super(key, value);
                     }
-                    return Record;
-                }(event_1.UnstoredEventRecord);
+                }
                 EventStore.Record = Record;
-                var Value = function (_super) {
-                    __extends(Value, _super);
-                    function Value() {
-                        return _super !== null && _super.apply(this, arguments) || this;
-                    }
-                    return Value;
-                }(event_1.EventRecordValue);
+                class Value extends event_1.EventRecordValue {
+                }
                 EventStore.Value = Value;
             }(EventStore = exports.EventStore || (exports.EventStore = {})));
-            exports.EventStore = EventStore;
             function adjust(event) {
-                var ret = __assign({}, event);
+                const ret = Object.assign({}, event);
                 delete ret.id;
                 return ret;
             }
             exports.adjust = adjust;
             function compose(key, attrs, events) {
-                return group(events).map(function (events) {
-                    return events.reduceRight(compose, new event_1.UnstoredEventRecord(key, new EventStore.Value(), EventStore.EventType.delete, 0));
-                }).reduce(function (e) {
-                    return e;
-                });
+                return group(events).map(events => events.reduceRight(compose, new event_1.UnstoredEventRecord(key, new EventStore.Value(), EventStore.EventType.delete, 0))).reduce(e => e);
                 function group(events) {
-                    return events.map(function (e, i) {
-                        return [
-                            e,
-                            i
-                        ];
-                    }).sort(function (_a, _b) {
-                        var _c = __read(_a, 2), a = _c[0], ai = _c[1];
-                        var _d = __read(_b, 2), b = _d[0], bi = _d[1];
-                        return void 0 || indexedDB.cmp(a.key, b.key) || b.date - a.date || b.id * a.id > 0 && b.id - a.id || bi - ai;
-                    }).reduceRight(function (_a, _b) {
-                        var _c = __read(_a), head = _c[0], tail = _c.slice(1);
-                        var _d = __read(_b, 1), event = _d[0];
-                        var prev = head[0];
+                    return events.map((e, i) => [
+                        e,
+                        i
+                    ]).sort(([a, ai], [b, bi]) => void 0 || indexedDB.cmp(a.key, b.key) || b.date - a.date || b.id * a.id > 0 && b.id - a.id || bi - ai).reduceRight(([head, ...tail], [event]) => {
+                        const prev = head[0];
                         if (!prev)
                             return [[event]];
                         return prev.key === event.key ? concat_1.concat([concat_1.concat([event], head)], tail) : concat_1.concat([[event]], concat_1.concat([head], tail));
@@ -2323,14 +1644,13 @@ require = function e(t, n, r) {
                 function compose(target, source) {
                     switch (source.type) {
                     case EventStore.EventType.put:
-                        return new event_1.UnstoredEventRecord(source.key, new EventStore.Value(target.value, (_a = {}, _a[source.attr] = source.value[source.attr], _a)), EventStore.EventType.snapshot);
+                        return new event_1.UnstoredEventRecord(source.key, new EventStore.Value(target.value, { [source.attr]: source.value[source.attr] }), EventStore.EventType.snapshot);
                     case EventStore.EventType.snapshot:
                         return source;
                     case EventStore.EventType.delete:
                         return source;
                     }
-                    throw new TypeError('ClientChannel: EventStore: Invalid event type: ' + source);
-                    var _a;
+                    throw new TypeError(`ClientChannel: EventStore: Invalid event type: ${ source }`);
                 }
             }
             exports.compose = compose;
@@ -2351,21 +1671,12 @@ require = function e(t, n, r) {
     30: [
         function (require, module, exports) {
             'use strict';
-            var __assign = this && this.__assign || Object.assign || function (t) {
-                for (var s, i = 1, n = arguments.length; i < n; i++) {
-                    s = arguments[i];
-                    for (var p in s)
-                        if (Object.prototype.hasOwnProperty.call(s, p))
-                            t[p] = s[p];
-                }
-                return t;
-            };
             Object.defineProperty(exports, '__esModule', { value: true });
-            var noop_1 = require('../../../lib/noop');
-            var cancellation_1 = require('spica/cancellation');
-            var tick_1 = require('spica/tick');
-            var KeyValueStore = function () {
-                function KeyValueStore(name, index, listen) {
+            const noop_1 = require('../../../lib/noop');
+            const cancellation_1 = require('spica/cancellation');
+            const tick_1 = require('spica/tick');
+            class KeyValueStore {
+                constructor(name, index, listen) {
                     this.name = name;
                     this.index = index;
                     this.listen = listen;
@@ -2374,159 +1685,98 @@ require = function e(t, n, r) {
                     if (typeof index !== 'string')
                         throw new TypeError();
                 }
-                KeyValueStore.configure = function () {
+                static configure() {
                     return {
-                        make: function () {
+                        make() {
                             return true;
                         },
-                        verify: function () {
+                        verify() {
                             return true;
                         },
-                        destroy: function () {
+                        destroy() {
                             return true;
                         }
                     };
-                };
-                Object.defineProperty(KeyValueStore.prototype, 'txrw', {
-                    get: function () {
-                        if (++this.tx_.rwc > 25) {
-                            this.tx_.rwc = 0;
-                            this.tx_.rw = void 0;
-                            return;
-                        }
-                        return this.tx_.rw;
-                    },
-                    set: function (tx) {
-                        var _this = this;
-                        if (!tx)
-                            return;
-                        if (this.tx_.rw && this.tx_.rw === tx)
-                            return;
+                }
+                get txrw() {
+                    if (++this.tx_.rwc > 25) {
                         this.tx_.rwc = 0;
-                        this.tx_.rw = tx;
-                        void tick_1.tick(function () {
-                            return _this.tx_.rw = void 0;
-                        });
-                    },
-                    enumerable: true,
-                    configurable: true
-                });
-                KeyValueStore.prototype.fetch = function (key, cb, cancellation) {
-                    var _this = this;
-                    if (cb === void 0) {
-                        cb = noop_1.noop;
+                        this.tx_.rw = void 0;
+                        return;
                     }
-                    if (cancellation === void 0) {
-                        cancellation = new cancellation_1.Cancellation();
-                    }
-                    return void this.listen(function (db) {
+                    return this.tx_.rw;
+                }
+                set txrw(tx) {
+                    if (!tx)
+                        return;
+                    if (this.tx_.rw && this.tx_.rw === tx)
+                        return;
+                    this.tx_.rwc = 0;
+                    this.tx_.rw = tx;
+                    void tick_1.tick(() => this.tx_.rw = void 0);
+                }
+                fetch(key, cb = noop_1.noop, cancellation = new cancellation_1.Cancellation()) {
+                    return void this.listen(db => {
                         if (cancellation.canceled)
                             return void cb(new Error('Cancelled.'));
-                        var tx = db.transaction(_this.name, 'readonly');
-                        var req = _this.index ? tx.objectStore(_this.name).index(_this.index).get(key) : tx.objectStore(_this.name).get(key);
-                        void req.addEventListener('success', function () {
-                            return void cb(req.error);
-                        });
-                        void tx.addEventListener('error', function () {
-                            return void cb(req.error);
-                        });
-                        void tx.addEventListener('abort', function () {
-                            return void cb(req.error);
-                        });
-                        void cancellation.register(function () {
-                            return void tx.abort();
-                        });
+                        const tx = db.transaction(this.name, 'readonly');
+                        const req = this.index ? tx.objectStore(this.name).index(this.index).get(key) : tx.objectStore(this.name).get(key);
+                        void req.addEventListener('success', () => void cb(req.error));
+                        void tx.addEventListener('error', () => void cb(req.error));
+                        void tx.addEventListener('abort', () => void cb(req.error));
+                        void cancellation.register(() => void tx.abort());
                         return;
-                    }, function () {
-                        return void cb(new Error('Access has failed.'));
-                    });
-                };
-                KeyValueStore.prototype.has = function (key) {
+                    }, () => void cb(new Error('Access has failed.')));
+                }
+                has(key) {
                     return this.cache.has(key);
-                };
-                KeyValueStore.prototype.get = function (key) {
+                }
+                get(key) {
                     return this.cache.get(key);
-                };
-                KeyValueStore.prototype.set = function (key, value, cb) {
-                    if (cb === void 0) {
-                        cb = noop_1.noop;
-                    }
+                }
+                set(key, value, cb = noop_1.noop) {
                     return this.put(value, key, cb);
-                };
-                KeyValueStore.prototype.put = function (value, key, cb) {
-                    var _this = this;
-                    if (cb === void 0) {
-                        cb = noop_1.noop;
-                    }
+                }
+                put(value, key, cb = noop_1.noop) {
                     void this.cache.set(key, value);
-                    void this.listen(function (db) {
-                        if (!_this.cache.has(key))
+                    void this.listen(db => {
+                        if (!this.cache.has(key))
                             return;
-                        var tx = _this.txrw = _this.txrw || db.transaction(_this.name, 'readwrite');
-                        _this.index ? tx.objectStore(_this.name).put(_this.cache.get(key)) : tx.objectStore(_this.name).put(_this.cache.get(key), key);
-                        void tx.addEventListener('complete', function () {
-                            return void cb(key, tx.error);
-                        });
-                        void tx.addEventListener('error', function () {
-                            return void cb(key, tx.error);
-                        });
-                        void tx.addEventListener('abort', function () {
-                            return void cb(key, tx.error);
-                        });
-                    }, function () {
-                        return void cb(key, new Error('Access has failed.'));
-                    });
+                        const tx = this.txrw = this.txrw || db.transaction(this.name, 'readwrite');
+                        this.index ? tx.objectStore(this.name).put(this.cache.get(key)) : tx.objectStore(this.name).put(this.cache.get(key), key);
+                        void tx.addEventListener('complete', () => void cb(key, tx.error));
+                        void tx.addEventListener('error', () => void cb(key, tx.error));
+                        void tx.addEventListener('abort', () => void cb(key, tx.error));
+                    }, () => void cb(key, new Error('Access has failed.')));
                     return value;
-                };
-                KeyValueStore.prototype.delete = function (key, cb) {
-                    var _this = this;
-                    if (cb === void 0) {
-                        cb = noop_1.noop;
-                    }
+                }
+                delete(key, cb = noop_1.noop) {
                     void this.cache.delete(key);
-                    void this.listen(function (db) {
-                        var tx = _this.txrw = _this.txrw || db.transaction(_this.name, 'readwrite');
-                        void tx.objectStore(_this.name).delete(key);
-                        void tx.addEventListener('complete', function () {
-                            return void cb(tx.error);
-                        });
-                        void tx.addEventListener('error', function () {
-                            return void cb(tx.error);
-                        });
-                        void tx.addEventListener('abort', function () {
-                            return void cb(tx.error);
-                        });
-                    }, function () {
-                        return void cb(new Error('Access has failed.'));
-                    });
-                };
-                KeyValueStore.prototype.cursor = function (query, index, direction, mode, cb) {
-                    var _this = this;
-                    void this.listen(function (db) {
-                        var tx = db.transaction(_this.name, mode);
-                        var req = index ? tx.objectStore(_this.name).index(index).openCursor(query, direction) : tx.objectStore(_this.name).openCursor(query, direction);
-                        void req.addEventListener('success', function () {
-                            var cursor = req.result;
+                    void this.listen(db => {
+                        const tx = this.txrw = this.txrw || db.transaction(this.name, 'readwrite');
+                        void tx.objectStore(this.name).delete(key);
+                        void tx.addEventListener('complete', () => void cb(tx.error));
+                        void tx.addEventListener('error', () => void cb(tx.error));
+                        void tx.addEventListener('abort', () => void cb(tx.error));
+                    }, () => void cb(new Error('Access has failed.')));
+                }
+                cursor(query, index, direction, mode, cb) {
+                    void this.listen(db => {
+                        const tx = db.transaction(this.name, mode);
+                        const req = index ? tx.objectStore(this.name).index(index).openCursor(query, direction) : tx.objectStore(this.name).openCursor(query, direction);
+                        void req.addEventListener('success', () => {
+                            const cursor = req.result;
                             if (!cursor)
                                 return;
-                            void _this.cache.set(cursor.primaryKey, __assign({}, cursor.value));
+                            void this.cache.set(cursor.primaryKey, Object.assign({}, cursor.value));
                             void cb(cursor, req.error);
                         });
-                        void tx.addEventListener('complete', function () {
-                            return void cb(null, req.error);
-                        });
-                        void tx.addEventListener('error', function () {
-                            return void cb(null, req.error);
-                        });
-                        void tx.addEventListener('abort', function () {
-                            return void cb(null, req.error);
-                        });
-                    }, function () {
-                        return void cb(null, new Error('Access has failed.'));
-                    });
-                };
-                return KeyValueStore;
-            }();
+                        void tx.addEventListener('complete', () => void cb(null, req.error));
+                        void tx.addEventListener('error', () => void cb(null, req.error));
+                        void tx.addEventListener('abort', () => void cb(null, req.error));
+                    }, () => void cb(null, new Error('Access has failed.')));
+                }
+            }
             exports.KeyValueStore = KeyValueStore;
             (function (KeyValueStore) {
                 KeyValueStore.EventType = {
@@ -2535,7 +1785,6 @@ require = function e(t, n, r) {
                     delete: 'delete'
                 };
             }(KeyValueStore = exports.KeyValueStore || (exports.KeyValueStore = {})));
-            exports.KeyValueStore = KeyValueStore;
         },
         {
             '../../../lib/noop': 53,
@@ -2546,24 +1795,8 @@ require = function e(t, n, r) {
     31: [
         function (require, module, exports) {
             'use strict';
-            var __extends = this && this.__extends || function () {
-                var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
-                    d.__proto__ = b;
-                } || function (d, b) {
-                    for (var p in b)
-                        if (b.hasOwnProperty(p))
-                            d[p] = b[p];
-                };
-                return function (d, b) {
-                    extendStatics(d, b);
-                    function __() {
-                        this.constructor = d;
-                    }
-                    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-                };
-            }();
             Object.defineProperty(exports, '__esModule', { value: true });
-            var api_1 = require('../../infrastructure/webstorage/api');
+            const api_1 = require('../../infrastructure/webstorage/api');
             var ChannelMessage;
             (function (ChannelMessage) {
                 ChannelMessage.version = 1;
@@ -2580,34 +1813,27 @@ require = function e(t, n, r) {
                     }
                 }
                 ChannelMessage.parse = parse;
-                var Message = function () {
-                    function Message(key, type) {
+                class Message {
+                    constructor(key, type) {
                         this.key = key;
                         this.type = type;
                         this.version = ChannelMessage.version;
                     }
-                    return Message;
-                }();
-                var Save = function (_super) {
-                    __extends(Save, _super);
-                    function Save(key) {
-                        var _this = _super.call(this, key, ChannelEvent.save) || this;
-                        _this.key = key;
-                        return _this;
+                }
+                class Save extends Message {
+                    constructor(key) {
+                        super(key, ChannelEvent.save);
+                        this.key = key;
                     }
-                    return Save;
-                }(Message);
+                }
                 ChannelMessage.Save = Save;
-                var Ownership = function (_super) {
-                    __extends(Ownership, _super);
-                    function Ownership(key, priority) {
-                        var _this = _super.call(this, key, ChannelEvent.ownership) || this;
-                        _this.key = key;
-                        _this.priority = priority;
-                        return _this;
+                class Ownership extends Message {
+                    constructor(key, priority) {
+                        super(key, ChannelEvent.ownership);
+                        this.key = key;
+                        this.priority = priority;
                     }
-                    return Ownership;
-                }(Message);
+                }
                 ChannelMessage.Ownership = Ownership;
             }(ChannelMessage = exports.ChannelMessage || (exports.ChannelMessage = {})));
             var ChannelEvent;
@@ -2615,58 +1841,48 @@ require = function e(t, n, r) {
                 ChannelEvent.save = 'save';
                 ChannelEvent.ownership = 'ownership';
             }(ChannelEvent = exports.ChannelEvent || (exports.ChannelEvent = {})));
-            var Ownership = function () {
-                function Ownership(channel) {
-                    var _this = this;
+            class Ownership {
+                constructor(channel) {
                     this.channel = channel;
                     this.store = new Map();
-                    void this.channel.listen(ChannelEvent.ownership, function (_a) {
-                        var key = _a.key, priority = _a.priority;
-                        return priority > _this.priority(key) ? void _this.store.set(key, -priority) : void _this.channel.post(new ChannelMessage.Ownership(key, _this.priority(key)));
-                    });
+                    void this.channel.listen(ChannelEvent.ownership, ({key, priority}) => priority > this.priority(key) ? void this.store.set(key, -priority) : void this.channel.post(new ChannelMessage.Ownership(key, this.priority(key))));
                 }
-                Ownership.priority = function (expiry) {
-                    if (expiry === void 0) {
-                        expiry = Date.now();
-                    }
-                    return +('' + expiry).slice(-13) + +('' + (Math.random() * 1000 | 0)).slice(-3);
-                };
-                Ownership.prototype.priority = function (key) {
+                static priority(expiry = Date.now()) {
+                    return +`${ expiry }`.slice(-13) + +`${ Math.random() * 1000 | 0 }`.slice(-3);
+                }
+                priority(key) {
                     return this.store.get(key) || 0;
-                };
-                Ownership.prototype.take = function (key, age) {
-                    var priority = Ownership.priority(Date.now() + Math.min(Math.max(age, 1 * 1000), 60 * 1000));
+                }
+                take(key, age) {
+                    const priority = Ownership.priority(Date.now() + Math.min(Math.max(age, 1 * 1000), 60 * 1000));
                     if (priority <= Math.abs(this.priority(key)))
                         return this.priority(key) > 0;
                     void this.store.set(key, priority);
                     void this.channel.post(new ChannelMessage.Ownership(key, this.priority(key)));
                     return true;
-                };
-                return Ownership;
-            }();
-            var Channel = function () {
-                function Channel(name, debug) {
+                }
+            }
+            class Channel {
+                constructor(name, debug) {
                     this.name = name;
                     this.debug = debug;
+                    this.ownership = new Ownership(this);
                     return typeof BroadcastChannel === 'function' ? new Broadcast(name, debug) : new Storage(name, debug);
                 }
-                Channel.prototype.listen = function (type, listener) {
+                listen(type, listener) {
                     type;
                     listener;
-                    return function () {
-                        return void 0;
-                    };
-                };
-                Channel.prototype.post = function (msg) {
+                    return () => void 0;
+                }
+                post(msg) {
                     msg;
-                };
-                Channel.prototype.close = function () {
-                };
-                return Channel;
-            }();
+                }
+                close() {
+                }
+            }
             exports.Channel = Channel;
-            var Broadcast = function () {
-                function Broadcast(name, debug) {
+            class Broadcast {
+                constructor(name, debug) {
                     this.name = name;
                     this.debug = debug;
                     this.channel = new BroadcastChannel(this.name);
@@ -2674,92 +1890,75 @@ require = function e(t, n, r) {
                     this.ownership = new Ownership(this);
                     this.alive = true;
                 }
-                Broadcast.prototype.listen = function (type, listener) {
-                    var _this = this;
+                listen(type, listener) {
                     void this.listeners.add(handler);
                     void this.channel.addEventListener('message', handler);
-                    var debug = this.debug;
-                    return function () {
-                        return void _this.listeners.delete(handler), void _this.channel.removeEventListener('message', handler);
-                    };
+                    const {debug} = this;
+                    return () => (void this.listeners.delete(handler), void this.channel.removeEventListener('message', handler));
                     function handler(ev) {
-                        var msg = ChannelMessage.parse(ev.data);
+                        const msg = ChannelMessage.parse(ev.data);
                         if (!msg || msg.type !== type)
                             return;
                         debug && console.log('recv', msg);
                         return void listener(msg);
                     }
-                };
-                Broadcast.prototype.post = function (msg) {
+                }
+                post(msg) {
                     if (!this.alive)
                         return;
                     this.debug && console.log('send', msg);
                     void this.channel.postMessage(msg);
-                };
-                Broadcast.prototype.close = function () {
-                    var _this = this;
+                }
+                close() {
                     this.alive = false;
-                    void this.listeners.forEach(function (listener) {
-                        return void _this.channel.removeEventListener('message', listener);
-                    });
+                    void this.listeners.forEach(listener => void this.channel.removeEventListener('message', listener));
                     void this.listeners.clear();
-                };
-                return Broadcast;
-            }();
-            var Storage = function () {
-                function Storage(name, debug) {
-                    var _this = this;
+                }
+            }
+            class Storage {
+                constructor(name, debug) {
                     this.name = name;
                     this.debug = debug;
                     this.storage = api_1.localStorage;
                     this.listeners = new Set();
                     this.ownership = new Ownership(this);
                     this.alive = true;
-                    void self.addEventListener('unload', function () {
-                        return void _this.storage.removeItem(_this.name);
-                    }, true);
+                    void self.addEventListener('unload', () => void this.storage.removeItem(this.name), true);
                 }
-                Storage.prototype.listen = function (type, listener) {
-                    var _this = this;
+                listen(type, listener) {
                     void this.listeners.add(handler);
                     void api_1.storageEventStream.on([
                         'local',
                         this.name
                     ], handler);
-                    return function () {
-                        return void _this.listeners.delete(handler), void api_1.storageEventStream.off([
-                            'local',
-                            _this.name
-                        ], handler);
-                    };
+                    return () => (void this.listeners.delete(handler), void api_1.storageEventStream.off([
+                        'local',
+                        this.name
+                    ], handler));
                     function handler(ev) {
                         if (typeof ev.newValue !== 'string')
                             return;
-                        var msg = ChannelMessage.parse(JSON.parse(ev.newValue));
+                        const msg = ChannelMessage.parse(JSON.parse(ev.newValue));
                         if (!msg || msg.type !== type)
                             return;
                         return void listener(msg);
                     }
-                };
-                Storage.prototype.post = function (msg) {
+                }
+                post(msg) {
                     if (!this.alive)
                         return;
                     void this.storage.setItem(this.name, JSON.stringify(msg));
-                };
-                Storage.prototype.close = function () {
-                    var _this = this;
+                }
+                close() {
                     this.alive = false;
-                    void this.listeners.forEach(function (listener) {
-                        return void api_1.storageEventStream.off([
-                            'local',
-                            _this.name
-                        ], listener);
-                    });
+                    void this.listeners.forEach(listener => void api_1.storageEventStream.off([
+                        'local',
+                        this.name
+                    ], listener));
                     void this.listeners.clear();
                     void this.storage.removeItem(this.name);
-                };
-                return Storage;
-            }();
+                }
+            }
         },
         { '../../infrastructure/webstorage/api': 49 }
     ],
@@ -2778,20 +1977,11 @@ require = function e(t, n, r) {
     33: [
         function (require, module, exports) {
             'use strict';
-            var __assign = this && this.__assign || Object.assign || function (t) {
-                for (var s, i = 1, n = arguments.length; i < n; i++) {
-                    s = arguments[i];
-                    for (var p in s)
-                        if (Object.prototype.hasOwnProperty.call(s, p))
-                            t[p] = s[p];
-                }
-                return t;
-            };
             Object.defineProperty(exports, '__esModule', { value: true });
-            var event_1 = require('../../../data/es/event');
+            const event_1 = require('../../../data/es/event');
             exports.isValidPropertyName = event_1.isValidPropertyName;
             exports.isValidPropertyValue = event_1.isValidPropertyValue;
-            var noop_1 = require('../../../../lib/noop');
+            const noop_1 = require('../../../../lib/noop');
             exports.SCHEMA = {
                 META: { NAME: '__meta' },
                 ID: { NAME: '__id' },
@@ -2799,83 +1989,69 @@ require = function e(t, n, r) {
                 DATE: { NAME: '__date' },
                 EVENT: { NAME: '__event' }
             };
-            function build(source, factory, set, get) {
-                if (set === void 0) {
-                    set = noop_1.noop;
-                }
-                if (get === void 0) {
-                    get = noop_1.noop;
-                }
-                var dao = factory();
-                void Object.keys(exports.SCHEMA).map(function (prop) {
-                    return exports.SCHEMA[prop].NAME;
-                }).reduce(function (_, prop) {
+            function build(source, factory, set = noop_1.noop, get = noop_1.noop) {
+                const dao = factory();
+                void Object.keys(exports.SCHEMA).map(prop => exports.SCHEMA[prop].NAME).reduce((_, prop) => {
                     delete dao[prop];
                 }, void 0);
                 if (typeof source[exports.SCHEMA.KEY.NAME] !== 'string')
-                    throw new TypeError('ClientChannel: DAO: Invalid key: ' + source[exports.SCHEMA.KEY.NAME]);
-                var descmap = __assign({}, Object.keys(dao).filter(event_1.isValidPropertyName).filter(event_1.isValidPropertyValue(dao)).reduce(function (map, prop) {
+                    throw new TypeError(`ClientChannel: DAO: Invalid key: ${ source[exports.SCHEMA.KEY.NAME] }`);
+                const descmap = Object.assign({}, Object.keys(dao).filter(event_1.isValidPropertyName).filter(event_1.isValidPropertyValue(dao)).reduce((map, prop) => {
                     {
-                        var desc = Object.getOwnPropertyDescriptor(dao, prop);
+                        const desc = Object.getOwnPropertyDescriptor(dao, prop);
                         if (desc && (desc.get || desc.set))
                             return map;
                     }
-                    var iniVal = dao[prop];
+                    const iniVal = dao[prop];
                     if (source[prop] === void 0) {
                         source[prop] = iniVal;
                     }
                     map[prop] = {
                         enumerable: true,
-                        get: function () {
-                            var val = source[prop] === void 0 ? iniVal : source[prop];
+                        get: () => {
+                            const val = source[prop] === void 0 ? iniVal : source[prop];
                             void get(prop, val);
                             return val;
                         },
-                        set: function (newVal) {
-                            if (!event_1.isValidPropertyValue((_a = {}, _a[prop] = newVal, _a))(prop))
-                                throw new TypeError('ClientChannel: DAO: Invalid value: ' + JSON.stringify(newVal));
-                            var oldVal = source[prop];
+                        set: newVal => {
+                            if (!event_1.isValidPropertyValue({ [prop]: newVal })(prop))
+                                throw new TypeError(`ClientChannel: DAO: Invalid value: ${ JSON.stringify(newVal) }`);
+                            const oldVal = source[prop];
                             source[prop] = newVal === void 0 ? iniVal : newVal;
                             void set(prop, newVal, oldVal);
-                            var _a;
                         }
                     };
                     return map;
-                }, {}), (_a = {}, _a[exports.SCHEMA.META.NAME] = {
-                    configurable: false,
-                    enumerable: false,
-                    get: function () {
-                        return source[exports.SCHEMA.META.NAME];
+                }, {}), {
+                    [exports.SCHEMA.META.NAME]: {
+                        configurable: false,
+                        enumerable: false,
+                        get: () => source[exports.SCHEMA.META.NAME]
+                    },
+                    [exports.SCHEMA.ID.NAME]: {
+                        configurable: false,
+                        enumerable: false,
+                        get: () => source[exports.SCHEMA.ID.NAME]
+                    },
+                    [exports.SCHEMA.KEY.NAME]: {
+                        configurable: false,
+                        enumerable: false,
+                        get: () => source[exports.SCHEMA.KEY.NAME]
+                    },
+                    [exports.SCHEMA.DATE.NAME]: {
+                        configurable: false,
+                        enumerable: false,
+                        get: () => source[exports.SCHEMA.DATE.NAME]
+                    },
+                    [exports.SCHEMA.EVENT.NAME]: {
+                        configurable: false,
+                        enumerable: false,
+                        get: () => source[exports.SCHEMA.EVENT.NAME]
                     }
-                }, _a[exports.SCHEMA.ID.NAME] = {
-                    configurable: false,
-                    enumerable: false,
-                    get: function () {
-                        return source[exports.SCHEMA.ID.NAME];
-                    }
-                }, _a[exports.SCHEMA.KEY.NAME] = {
-                    configurable: false,
-                    enumerable: false,
-                    get: function () {
-                        return source[exports.SCHEMA.KEY.NAME];
-                    }
-                }, _a[exports.SCHEMA.DATE.NAME] = {
-                    configurable: false,
-                    enumerable: false,
-                    get: function () {
-                        return source[exports.SCHEMA.DATE.NAME];
-                    }
-                }, _a[exports.SCHEMA.EVENT.NAME] = {
-                    configurable: false,
-                    enumerable: false,
-                    get: function () {
-                        return source[exports.SCHEMA.EVENT.NAME];
-                    }
-                }, _a));
+                });
                 void Object.defineProperties(dao, descmap);
                 void Object.seal(dao);
                 return dao;
-                var _a;
             }
             exports.build = build;
         },
@@ -2896,110 +2072,56 @@ require = function e(t, n, r) {
     35: [
         function (require, module, exports) {
             'use strict';
-            var __values = this && this.__values || function (o) {
-                var m = typeof Symbol === 'function' && o[Symbol.iterator], i = 0;
-                if (m)
-                    return m.call(o);
-                return {
-                    next: function () {
-                        if (o && i >= o.length)
-                            o = void 0;
-                        return {
-                            value: o && o[i++],
-                            done: !o
-                        };
-                    }
-                };
-            };
-            var __read = this && this.__read || function (o, n) {
-                var m = typeof Symbol === 'function' && o[Symbol.iterator];
-                if (!m)
-                    return o;
-                var i = m.call(o), r, ar = [], e;
-                try {
-                    while ((n === void 0 || n-- > 0) && !(r = i.next()).done)
-                        ar.push(r.value);
-                } catch (error) {
-                    e = { error: error };
-                } finally {
-                    try {
-                        if (r && !r.done && (m = i['return']))
-                            m.call(i);
-                    } finally {
-                        if (e)
-                            throw e.error;
-                    }
-                }
-                return ar;
-            };
             Object.defineProperty(exports, '__esModule', { value: true });
-            var observation_1 = require('spica/observation');
-            var cancellation_1 = require('spica/cancellation');
-            var cache_1 = require('spica/cache');
-            var api_1 = require('../../../infrastructure/indexeddb/api');
-            var data_1 = require('./channel/data');
-            var access_1 = require('./channel/access');
-            var expiry_1 = require('./channel/expiry');
-            var channel_1 = require('../../broadcast/channel');
-            var noop_1 = require('../../../../lib/noop');
-            var cache = new Map();
-            var ChannelStore = function () {
-                function ChannelStore(name, attrs, destroy, age, size, debug) {
-                    if (debug === void 0) {
-                        debug = false;
-                    }
-                    var _this = this;
+            const observation_1 = require('spica/observation');
+            const cancellation_1 = require('spica/cancellation');
+            const cache_1 = require('spica/cache');
+            const api_1 = require('../../../infrastructure/indexeddb/api');
+            const data_1 = require('./channel/data');
+            const access_1 = require('./channel/access');
+            const expiry_1 = require('./channel/expiry');
+            const channel_1 = require('../../broadcast/channel');
+            const noop_1 = require('../../../../lib/noop');
+            const cache = new Map();
+            class ChannelStore {
+                constructor(name, attrs, destroy, age, size, debug = false) {
                     this.name = name;
                     this.age = age;
                     this.size = size;
                     this.debug = debug;
                     this.cancellation = new cancellation_1.Cancellation();
                     this.keys_ = new Set();
-                    this.keys = new cache_1.Cache(this.size, function () {
-                        var keys = _this.keys_;
-                        var timer = 0;
-                        var resolve = function () {
+                    this.keys = new cache_1.Cache(this.size, (() => {
+                        const keys = this.keys_;
+                        let timer = 0;
+                        const resolve = () => {
                             timer = 0;
-                            var since = Date.now();
-                            var count = 0;
-                            try {
-                                for (var keys_1 = __values(keys), keys_1_1 = keys_1.next(); !keys_1_1.done; keys_1_1 = keys_1.next()) {
-                                    var key = keys_1_1.value;
-                                    if (_this.cancellation.canceled)
-                                        return void _this.keys.clear(), void keys.clear();
-                                    void keys.delete(key);
-                                    if (_this.keys.has(key))
-                                        continue;
-                                    if (!_this.channel.ownership.take(key, 0))
-                                        continue;
-                                    if (++count > 10)
-                                        return void setTimeout(resolve, (Date.now() - since) * 3);
-                                    void _this.schema.expire.set(key, 0);
-                                    if (timer > 0)
-                                        return;
-                                    timer = setTimeout(resolve, 5 * 1000);
-                                    return void setTimeout(resolve, 5 * 1000);
-                                }
-                            } catch (e_1_1) {
-                                e_1 = { error: e_1_1 };
-                            } finally {
-                                try {
-                                    if (keys_1_1 && !keys_1_1.done && (_a = keys_1.return))
-                                        _a.call(keys_1);
-                                } finally {
-                                    if (e_1)
-                                        throw e_1.error;
-                                }
+                            const since = Date.now();
+                            let count = 0;
+                            for (const key of keys) {
+                                if (this.cancellation.canceled)
+                                    return void this.keys.clear(), void keys.clear();
+                                void keys.delete(key);
+                                if (this.keys.has(key))
+                                    continue;
+                                if (!this.channel.ownership.take(key, 0))
+                                    continue;
+                                if (++count > 10)
+                                    return void setTimeout(resolve, (Date.now() - since) * 3);
+                                void this.schema.expire.set(key, 0);
+                                if (timer > 0)
+                                    return;
+                                timer = setTimeout(resolve, 5 * 1000);
+                                return void setTimeout(resolve, 5 * 1000);
                             }
-                            var e_1, _a;
                         };
-                        return function (key) {
+                        return key => {
                             void keys.add(key);
                             if (timer > 0)
                                 return;
                             timer = setTimeout(resolve, 3 * 1000);
                         };
-                    }(), { ignore: { delete: true } });
+                    })(), { ignore: { delete: true } });
                     this.channel = new channel_1.Channel(this.name, this.debug);
                     this.events_ = Object.freeze({
                         load: new observation_1.Observation(),
@@ -3013,171 +2135,121 @@ require = function e(t, n, r) {
                     });
                     this.ages = new Map();
                     if (cache.has(name))
-                        throw new Error('ClientChannel: Specified database channel "' + name + '" is already created.');
+                        throw new Error(`ClientChannel: Specified database channel "${ name }" is already created.`);
                     void cache.set(name, this);
-                    void this.cancellation.register(function () {
-                        return void cache.delete(name);
-                    });
+                    void this.cancellation.register(() => void cache.delete(name));
                     this.schema = new Schema(this, this.channel, attrs, api_1.open(name, {
-                        make: function (db) {
+                        make(db) {
                             return data_1.DataStore.configure().make(db) && access_1.AccessStore.configure().make(db) && expiry_1.ExpiryStore.configure().make(db);
                         },
-                        verify: function (db) {
+                        verify(db) {
                             return data_1.DataStore.configure().verify(db) && access_1.AccessStore.configure().verify(db) && expiry_1.ExpiryStore.configure().verify(db);
                         },
-                        destroy: function (reason, ev) {
+                        destroy(reason, ev) {
                             return data_1.DataStore.configure().destroy(reason, ev) && access_1.AccessStore.configure().destroy(reason, ev) && expiry_1.ExpiryStore.configure().destroy(reason, ev) && destroy(reason, ev);
                         }
                     }));
                     void this.cancellation.register(api_1.idbEventStream.on([
                         name,
                         api_1.IDBEventType.destroy
-                    ], function () {
-                        return void _this.schema.rebuild();
-                    }));
-                    void this.cancellation.register(function () {
-                        return void _this.schema.close();
-                    });
-                    void this.cancellation.register(this.channel.listen(channel_1.ChannelEvent.save, function (_a) {
-                        var key = _a.key;
-                        return void _this.keys.delete(key) || void _this.keys_.delete(key), void _this.fetch(key);
-                    }));
-                    void this.cancellation.register(function () {
-                        return void _this.channel.close();
-                    });
-                    void this.events_.save.monitor([], function (_a) {
-                        var key = _a.key;
-                        return void _this.channel.post(new channel_1.ChannelMessage.Save(key));
-                    });
-                    void this.events_.clean.monitor([], function (cleared, _a) {
-                        var _b = __read(_a, 1), key = _b[0];
+                    ], () => void this.schema.rebuild()));
+                    void this.cancellation.register(() => void this.schema.close());
+                    void this.cancellation.register(this.channel.listen(channel_1.ChannelEvent.save, ({key}) => (void this.keys.delete(key) || void this.keys_.delete(key), void this.fetch(key))));
+                    void this.cancellation.register(() => void this.channel.close());
+                    void this.events_.save.monitor([], ({key}) => void this.channel.post(new channel_1.ChannelMessage.Save(key)));
+                    void this.events_.clean.monitor([], (cleared, [key]) => {
                         if (!cleared)
                             return;
-                        void _this.channel.ownership.take(key, 30 * 1000);
-                        void _this.schema.access.delete(key);
-                        void _this.schema.expire.delete(key);
+                        void this.channel.ownership.take(key, 30 * 1000);
+                        void this.schema.access.delete(key);
+                        void this.schema.expire.delete(key);
                     });
                     if (!Number.isFinite(this.size))
                         return;
-                    void this.events_.load.monitor([], function (_a) {
-                        var key = _a.key, type = _a.type;
-                        return type === ChannelStore.EventType.delete ? void _this.keys.delete(key) || void _this.keys_.delete(key) : void _this.keys.put(key);
-                    });
-                    void this.events_.save.monitor([], function (_a) {
-                        var key = _a.key, type = _a.type;
-                        return type === ChannelStore.EventType.delete ? void _this.keys.delete(key) || void _this.keys_.delete(key) : void _this.keys.put(key);
-                    });
-                    var limit = function () {
+                    void this.events_.load.monitor([], ({key, type}) => type === ChannelStore.EventType.delete ? void this.keys.delete(key) || void this.keys_.delete(key) : void this.keys.put(key));
+                    void this.events_.save.monitor([], ({key, type}) => type === ChannelStore.EventType.delete ? void this.keys.delete(key) || void this.keys_.delete(key) : void this.keys.put(key));
+                    const limit = () => {
                         if (!Number.isFinite(size))
                             return;
-                        if (_this.cancellation.canceled)
+                        if (this.cancellation.canceled)
                             return;
-                        void _this.recent(Infinity, function (ks, error) {
+                        void this.recent(Infinity, (ks, error) => {
                             if (error)
                                 return void setTimeout(limit, 10 * 1000);
-                            return void ks.reverse().forEach(function (key) {
-                                return void _this.keys.put(key);
-                            });
+                            return void ks.reverse().forEach(key => void this.keys.put(key));
                         });
                     };
                     void limit();
                 }
-                ChannelStore.prototype.sync = function (keys, cb, timeout) {
-                    var _this = this;
-                    if (cb === void 0) {
-                        cb = noop_1.noop;
-                    }
-                    if (timeout === void 0) {
-                        timeout = Infinity;
-                    }
-                    var cancellation = new cancellation_1.Cancellation();
+                sync(keys, cb = noop_1.noop, timeout = Infinity) {
+                    const cancellation = new cancellation_1.Cancellation();
                     if (Number.isFinite(timeout)) {
                         void setTimeout(cancellation.cancel, timeout);
                     }
-                    return void Promise.all(keys.map(function (key) {
-                        return new Promise(function (resolve) {
-                            return void _this.fetch(key, function (error) {
-                                return void resolve([
-                                    key,
-                                    error
-                                ]);
-                            }, cancellation);
-                        });
-                    })).then(cb);
-                };
-                ChannelStore.prototype.fetch = function (key, cb, cancellation) {
-                    if (cb === void 0) {
-                        cb = noop_1.noop;
-                    }
-                    if (cancellation === void 0) {
-                        cancellation = new cancellation_1.Cancellation();
-                    }
+                    return void Promise.all(keys.map(key => new Promise(resolve => void this.fetch(key, error => void resolve([
+                        key,
+                        error
+                    ]), cancellation)))).then(cb);
+                }
+                fetch(key, cb = noop_1.noop, cancellation = new cancellation_1.Cancellation()) {
                     void this.schema.access.fetch(key);
                     return this.schema.data.fetch(key, cb, cancellation);
-                };
-                ChannelStore.prototype.has = function (key) {
+                }
+                has(key) {
                     return this.schema.data.has(key);
-                };
-                ChannelStore.prototype.meta = function (key) {
+                }
+                meta(key) {
                     return this.schema.data.meta(key);
-                };
-                ChannelStore.prototype.get = function (key) {
+                }
+                get(key) {
                     void this.log(key);
                     return this.schema.data.get(key);
-                };
-                ChannelStore.prototype.add = function (record) {
-                    var _this = this;
-                    var key = record.key;
+                }
+                add(record) {
+                    const key = record.key;
                     void this.log(key);
                     void this.schema.data.add(record);
                     void this.events_.save.once([
                         record.key,
                         record.attr,
                         record.type
-                    ], function () {
-                        return void _this.log(key);
-                    });
-                };
-                ChannelStore.prototype.delete = function (key) {
+                    ], () => void this.log(key));
+                }
+                delete(key) {
                     if (this.cancellation.canceled)
                         return;
                     void this.channel.ownership.take(key, 30 * 1000);
                     void this.log(key);
                     void this.schema.data.delete(key);
-                };
-                ChannelStore.prototype.log = function (key) {
+                }
+                log(key) {
                     void this.schema.access.set(key);
                     void this.schema.expire.set(key, this.ages.get(key) || this.age);
-                };
-                ChannelStore.prototype.expire = function (key, age) {
-                    if (age === void 0) {
-                        age = this.age;
-                    }
+                }
+                expire(key, age = this.age) {
                     void this.ages.set(key, age);
                     return void this.schema.expire.set(key, age);
-                };
-                ChannelStore.prototype.recent = function (limit, cb) {
+                }
+                recent(limit, cb) {
                     return this.schema.access.recent(limit, cb);
-                };
-                ChannelStore.prototype.close = function () {
+                }
+                close() {
                     void this.cancellation.cancel();
                     return void api_1.close(this.name);
-                };
-                ChannelStore.prototype.destroy = function () {
+                }
+                destroy() {
                     void this.cancellation.cancel();
                     return void api_1.destroy(this.name);
-                };
-                return ChannelStore;
-            }();
+                }
+            }
             exports.ChannelStore = ChannelStore;
             (function (ChannelStore) {
                 ChannelStore.Event = data_1.DataStore.Event;
                 ChannelStore.EventType = data_1.DataStore.EventType;
                 ChannelStore.Record = data_1.DataStore.Record;
             }(ChannelStore = exports.ChannelStore || (exports.ChannelStore = {})));
-            exports.ChannelStore = ChannelStore;
-            var Schema = function () {
-                function Schema(store_, channel_, attrs_, listen_) {
+            class Schema {
+                constructor(store_, channel_, attrs_, listen_) {
                     this.store_ = store_;
                     this.channel_ = channel_;
                     this.attrs_ = attrs_;
@@ -3185,8 +2257,8 @@ require = function e(t, n, r) {
                     this.cancellation_ = new cancellation_1.Cancellation();
                     void this.build();
                 }
-                Schema.prototype.build = function () {
-                    var keys = this.data ? this.data.keys() : [];
+                build() {
+                    const keys = this.data ? this.data.keys() : [];
                     this.data = new data_1.DataStore(this.attrs_, this.listen_);
                     this.access = new access_1.AccessStore(this.listen_);
                     this.expire = new expiry_1.ExpiryStore(this.store_, this.cancellation_, this.channel_, this.listen_);
@@ -3197,17 +2269,16 @@ require = function e(t, n, r) {
                     void this.cancellation_.register(this.store_.events.save.relay(this.data.events.save));
                     void this.cancellation_.register(this.store_.events.loss.relay(this.data.events.loss));
                     void this.store_.sync(keys);
-                };
-                Schema.prototype.rebuild = function () {
+                }
+                rebuild() {
                     void this.close();
                     void this.build();
-                };
-                Schema.prototype.close = function () {
+                }
+                close() {
                     void this.cancellation_.cancel();
                     this.cancellation_ = new cancellation_1.Cancellation();
-                };
-                return Schema;
-            }();
+                }
+            }
         },
         {
             '../../../../lib/noop': 53,
@@ -3224,46 +2295,25 @@ require = function e(t, n, r) {
     36: [
         function (require, module, exports) {
             'use strict';
-            var __extends = this && this.__extends || function () {
-                var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
-                    d.__proto__ = b;
-                } || function (d, b) {
-                    for (var p in b)
-                        if (b.hasOwnProperty(p))
-                            d[p] = b[p];
-                };
-                return function (d, b) {
-                    extendStatics(d, b);
-                    function __() {
-                        this.constructor = d;
-                    }
-                    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-                };
-            }();
             Object.defineProperty(exports, '__esModule', { value: true });
-            var store_1 = require('../../../../data/kvs/store');
+            const store_1 = require('../../../../data/kvs/store');
             exports.name = 'access';
             var AccessStoreSchema;
             (function (AccessStoreSchema) {
                 AccessStoreSchema.key = 'key';
                 AccessStoreSchema.date = 'date';
             }(AccessStoreSchema || (AccessStoreSchema = {})));
-            var AccessStore = function () {
-                function AccessStore(listen) {
+            class AccessStore {
+                constructor(listen) {
                     this.listen = listen;
-                    this.store = new (function (_super) {
-                        __extends(class_1, _super);
-                        function class_1() {
-                            return _super !== null && _super.apply(this, arguments) || this;
-                        }
-                        return class_1;
-                    }(store_1.KeyValueStore))(exports.name, AccessStoreSchema.key, this.listen);
+                    this.store = new class extends store_1.KeyValueStore {
+                    }(exports.name, AccessStoreSchema.key, this.listen);
                     void Object.freeze(this);
                 }
-                AccessStore.configure = function () {
+                static configure() {
                     return {
-                        make: function (tx) {
-                            var store = tx.db.objectStoreNames.contains(exports.name) ? tx.objectStore(exports.name) : tx.db.createObjectStore(exports.name, {
+                        make(tx) {
+                            const store = tx.db.objectStoreNames.contains(exports.name) ? tx.objectStore(exports.name) : tx.db.createObjectStore(exports.name, {
                                 keyPath: AccessStoreSchema.key,
                                 autoIncrement: false
                             });
@@ -3275,85 +2325,65 @@ require = function e(t, n, r) {
                             }
                             return true;
                         },
-                        verify: function (db) {
+                        verify(db) {
                             return db.objectStoreNames.contains(exports.name) && db.transaction(exports.name).objectStore(exports.name).indexNames.contains(AccessStoreSchema.key) && db.transaction(exports.name).objectStore(exports.name).indexNames.contains(AccessStoreSchema.date);
                         },
-                        destroy: function () {
+                        destroy() {
                             return true;
                         }
                     };
-                };
-                AccessStore.prototype.recent = function (limit, cb) {
-                    var keys = [];
-                    return void this.store.cursor(null, AccessStoreSchema.date, 'prev', 'readonly', function (cursor, error) {
+                }
+                recent(limit, cb) {
+                    const keys = [];
+                    return void this.store.cursor(null, AccessStoreSchema.date, 'prev', 'readonly', (cursor, error) => {
                         if (error)
                             return void cb([], error);
                         if (!cursor)
                             return void cb(keys);
                         if (--limit < 0)
                             return;
-                        var key = cursor.value.key;
+                        const {key} = cursor.value;
                         void keys.push(key);
                         void cursor.continue();
                     });
-                };
-                AccessStore.prototype.fetch = function (key) {
+                }
+                fetch(key) {
                     return this.store.fetch(key);
-                };
-                AccessStore.prototype.get = function (key) {
+                }
+                get(key) {
                     return this.store.has(key) ? this.store.get(key).date : 0;
-                };
-                AccessStore.prototype.set = function (key) {
+                }
+                set(key) {
                     void this.store.set(key, new AccessRecord(key));
-                };
-                AccessStore.prototype.delete = function (key) {
+                }
+                delete(key) {
                     void this.store.delete(key);
-                };
-                return AccessStore;
-            }();
+                }
+            }
             exports.AccessStore = AccessStore;
-            var AccessRecord = function () {
-                function AccessRecord(key) {
+            class AccessRecord {
+                constructor(key) {
                     this.key = key;
                     this.date = Date.now();
                 }
-                return AccessRecord;
-            }();
+            }
         },
         { '../../../../data/kvs/store': 30 }
     ],
     37: [
         function (require, module, exports) {
             'use strict';
-            var __extends = this && this.__extends || function () {
-                var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
-                    d.__proto__ = b;
-                } || function (d, b) {
-                    for (var p in b)
-                        if (b.hasOwnProperty(p))
-                            d[p] = b[p];
-                };
-                return function (d, b) {
-                    extendStatics(d, b);
-                    function __() {
-                        this.constructor = d;
-                    }
-                    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-                };
-            }();
             Object.defineProperty(exports, '__esModule', { value: true });
-            var store_1 = require('../../../../data/es/store');
+            const store_1 = require('../../../../data/es/store');
             exports.name = 'data';
-            var DataStore = function (_super) {
-                __extends(DataStore, _super);
-                function DataStore(attrs, listen) {
-                    return _super.call(this, exports.name, attrs, listen) || this;
+            class DataStore extends store_1.EventStore {
+                constructor(attrs, listen) {
+                    super(exports.name, attrs, listen);
                 }
-                DataStore.configure = function () {
+                static configure() {
                     return store_1.EventStore.configure(exports.name);
-                };
-                return DataStore;
-            }(store_1.EventStore);
+                }
+            }
             exports.DataStore = DataStore;
             (function (DataStore) {
                 DataStore.Event = store_1.EventStore.Event;
@@ -3361,94 +2391,65 @@ require = function e(t, n, r) {
                 DataStore.Record = store_1.EventStore.Record;
                 DataStore.Value = store_1.EventStore.Value;
             }(DataStore = exports.DataStore || (exports.DataStore = {})));
-            exports.DataStore = DataStore;
         },
         { '../../../../data/es/store': 29 }
     ],
     38: [
         function (require, module, exports) {
             'use strict';
-            var __extends = this && this.__extends || function () {
-                var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
-                    d.__proto__ = b;
-                } || function (d, b) {
-                    for (var p in b)
-                        if (b.hasOwnProperty(p))
-                            d[p] = b[p];
-                };
-                return function (d, b) {
-                    extendStatics(d, b);
-                    function __() {
-                        this.constructor = d;
-                    }
-                    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-                };
-            }();
             Object.defineProperty(exports, '__esModule', { value: true });
-            var store_1 = require('../../../../data/kvs/store');
-            var name = 'expiry';
+            const store_1 = require('../../../../data/kvs/store');
+            const name = 'expiry';
             var ExpiryStoreSchema;
             (function (ExpiryStoreSchema) {
                 ExpiryStoreSchema.key = 'key';
                 ExpiryStoreSchema.expiry = 'expiry';
             }(ExpiryStoreSchema || (ExpiryStoreSchema = {})));
-            var ExpiryStore = function () {
-                function ExpiryStore(chan, cancellation, channel, listen) {
-                    var _this = this;
+            class ExpiryStore {
+                constructor(chan, cancellation, channel, listen) {
                     this.chan = chan;
                     this.cancellation = cancellation;
                     this.channel = channel;
                     this.listen = listen;
-                    this.store = new (function (_super) {
-                        __extends(class_1, _super);
-                        function class_1() {
-                            return _super !== null && _super.apply(this, arguments) || this;
-                        }
-                        return class_1;
-                    }(store_1.KeyValueStore))(name, ExpiryStoreSchema.key, this.listen);
-                    this.schedule = function (timer, scheduled) {
-                        if (timer === void 0) {
-                            timer = 0;
-                        }
-                        if (scheduled === void 0) {
-                            scheduled = Infinity;
-                        }
-                        return function (timeout) {
+                    this.store = new class extends store_1.KeyValueStore {
+                    }(name, ExpiryStoreSchema.key, this.listen);
+                    this.schedule = ((timer = 0, scheduled = Infinity) => {
+                        return timeout => {
                             if (Date.now() + timeout >= scheduled)
                                 return;
                             scheduled = Date.now() + timeout;
                             void clearTimeout(timer);
-                            timer = setTimeout(function () {
+                            timer = setTimeout(() => {
                                 scheduled = Infinity;
-                                var since = Date.now();
-                                var count = 0;
-                                return void _this.store.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', function (cursor, error) {
-                                    if (_this.cancellation.canceled)
+                                const since = Date.now();
+                                let count = 0;
+                                return void this.store.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', (cursor, error) => {
+                                    if (this.cancellation.canceled)
                                         return;
                                     if (error)
-                                        return void _this.schedule(Math.max(60 * 1000, (Date.now() - since) * 3));
+                                        return void this.schedule(Math.max(60 * 1000, (Date.now() - since) * 3));
                                     if (!cursor)
                                         return;
-                                    var _a = cursor.value, key = _a.key, expiry = _a.expiry;
+                                    const {key, expiry} = cursor.value;
                                     if (expiry > Date.now())
-                                        return void _this.schedule(Math.max(expiry - Date.now(), (Date.now() - since) * 3));
-                                    if (!_this.channel.ownership.take(key, 0))
+                                        return void this.schedule(Math.max(expiry - Date.now(), (Date.now() - since) * 3));
+                                    if (!this.channel.ownership.take(key, 0))
                                         return void cursor.continue();
                                     if (++count > 10)
-                                        return void _this.schedule((Date.now() - since) * 3);
-                                    void _this.chan.delete(key);
+                                        return void this.schedule((Date.now() - since) * 3);
+                                    void this.chan.delete(key);
                                     return void cursor.continue();
                                 });
                             }, Math.max(timeout, 3 * 1000));
                         };
-                    }();
+                    })();
                     void this.schedule(Date.now() + 60 * 1000);
                     void Object.freeze(this);
                 }
-                ExpiryStore.configure = function () {
+                static configure() {
                     return {
-                        make: function (tx) {
-                            var store = tx.db.objectStoreNames.contains(name) ? tx.objectStore(name) : tx.db.createObjectStore(name, {
+                        make(tx) {
+                            const store = tx.db.objectStoreNames.contains(name) ? tx.objectStore(name) : tx.db.createObjectStore(name, {
                                 keyPath: ExpiryStoreSchema.key,
                                 autoIncrement: false
                             });
@@ -3460,167 +2461,106 @@ require = function e(t, n, r) {
                             }
                             return true;
                         },
-                        verify: function (db) {
+                        verify(db) {
                             return db.objectStoreNames.contains(name) && db.transaction(name).objectStore(name).indexNames.contains(ExpiryStoreSchema.key) && db.transaction(name).objectStore(name).indexNames.contains(ExpiryStoreSchema.expiry);
                         },
-                        destroy: function () {
+                        destroy() {
                             return true;
                         }
                     };
-                };
-                ExpiryStore.prototype.set = function (key, age) {
+                }
+                set(key, age) {
                     if (age === Infinity)
                         return void this.delete(key);
                     void this.schedule(age);
                     void this.store.set(key, new ExpiryRecord(key, Date.now() + age));
-                };
-                ExpiryStore.prototype.delete = function (key) {
+                }
+                delete(key) {
                     void this.store.delete(key);
-                };
-                return ExpiryStore;
-            }();
+                }
+            }
             exports.ExpiryStore = ExpiryStore;
-            var ExpiryRecord = function () {
-                function ExpiryRecord(key, expiry) {
+            class ExpiryRecord {
+                constructor(key, expiry) {
                     this.key = key;
                     this.expiry = expiry;
                 }
-                return ExpiryRecord;
-            }();
+            }
         },
         { '../../../../data/kvs/store': 30 }
     ],
     39: [
         function (require, module, exports) {
             'use strict';
-            var __extends = this && this.__extends || function () {
-                var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
-                    d.__proto__ = b;
-                } || function (d, b) {
-                    for (var p in b)
-                        if (b.hasOwnProperty(p))
-                            d[p] = b[p];
-                };
-                return function (d, b) {
-                    extendStatics(d, b);
-                    function __() {
-                        this.constructor = d;
-                    }
-                    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-                };
-            }();
             Object.defineProperty(exports, '__esModule', { value: true });
-            var observation_1 = require('spica/observation');
-            var api_1 = require('../../dao/api');
-            var channel_1 = require('../model/channel');
-            var api_2 = require('../../webstorage/api');
-            var StoreChannel = function (_super) {
-                __extends(StoreChannel, _super);
-                function StoreChannel(name, Schema, _a) {
-                    var _b = _a === void 0 ? { Schema: Schema } : _a, _c = _b.migrate, migrate = _c === void 0 ? function () {
-                            return void 0;
-                        } : _c, _d = _b.destroy, destroy = _d === void 0 ? function () {
-                            return true;
-                        } : _d, _e = _b.age, age = _e === void 0 ? Infinity : _e, _f = _b.size, size = _f === void 0 ? Infinity : _f, _g = _b.debug, debug = _g === void 0 ? false : _g;
-                    var _this = _super.call(this, name, Object.keys(new Schema()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(new Schema())), destroy, age, size, debug) || this;
-                    _this.Schema = Schema;
-                    _this.links = new Map();
-                    _this.sources = new Map();
-                    var attrs = Object.keys(new Schema()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(new Schema()));
-                    void _this.events_.load.monitor([], function (_a) {
-                        var key = _a.key, attr = _a.attr, type = _a.type;
-                        if (!_this.sources.has(key))
+            const observation_1 = require('spica/observation');
+            const api_1 = require('../../dao/api');
+            const channel_1 = require('../model/channel');
+            const api_2 = require('../../webstorage/api');
+            class StoreChannel extends channel_1.ChannelStore {
+                constructor(name, Schema, {migrate = () => void 0, destroy = () => true, age = Infinity, size = Infinity, debug = false} = { Schema }) {
+                    super(name, Object.keys(new Schema()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(new Schema())), destroy, age, size, debug);
+                    this.Schema = Schema;
+                    this.links = new Map();
+                    this.sources = new Map();
+                    const attrs = Object.keys(new Schema()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(new Schema()));
+                    void this.events_.load.monitor([], ({key, attr, type}) => {
+                        if (!this.sources.has(key))
                             return;
-                        var source = _this.sources.get(key);
-                        var memory = _this.get(key);
-                        var link = _this.link(key);
+                        const source = this.sources.get(key);
+                        const memory = this.get(key);
+                        const link = this.link(key);
                         switch (type) {
                         case channel_1.ChannelStore.EventType.put:
-                            return void update(attrs.filter(function (a) {
-                                return a === attr;
-                            }));
+                            return void update(attrs.filter(a => a === attr));
                         case channel_1.ChannelStore.EventType.delete:
                         case channel_1.ChannelStore.EventType.snapshot:
                             return void update(attrs);
                         }
                         return;
                         function update(attrs) {
-                            var changes = attrs.filter(function (attr) {
-                                return attr in memory;
-                            }).map(function (attr) {
-                                var newVal = memory[attr];
-                                var oldVal = source[attr];
+                            const changes = attrs.filter(attr => attr in memory).map(attr => {
+                                const newVal = memory[attr];
+                                const oldVal = source[attr];
                                 source[attr] = newVal;
                                 return {
-                                    attr: attr,
-                                    newVal: newVal,
-                                    oldVal: oldVal
+                                    attr,
+                                    newVal,
+                                    oldVal
                                 };
-                            }).filter(function (_a) {
-                                var newVal = _a.newVal, oldVal = _a.oldVal;
-                                return newVal !== oldVal || !(Number.isNaN(newVal) && Number.isNaN(oldVal));
-                            });
+                            }).filter(({newVal, oldVal}) => newVal !== oldVal || !(Number.isNaN(newVal) && Number.isNaN(oldVal)));
                             if (changes.length === 0)
                                 return;
                             void migrate(link);
-                            void changes.forEach(function (_a) {
-                                var attr = _a.attr, oldVal = _a.oldVal;
-                                return void cast(source).__event.emit([
-                                    api_2.StorageChannel.EventType.recv,
-                                    attr
-                                ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.recv, attr, memory[attr], oldVal));
-                            });
+                            void changes.forEach(({attr, oldVal}) => void cast(source.__event).emit([
+                                api_2.StorageChannel.EventType.recv,
+                                attr
+                            ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.recv, attr, memory[attr], oldVal)));
                         }
                     });
-                    void Object.freeze(_this);
-                    return _this;
+                    void Object.freeze(this);
                 }
-                StoreChannel.prototype.link = function (key, age) {
-                    var _this = this;
+                link(key, age) {
                     void this.fetch(key);
                     void this.expire(key, age);
                     return this.links.has(key) ? this.links.get(key) : this.links.set(key, api_1.build(Object.defineProperties(this.sources.set(key, this.get(key)).get(key), {
-                        __meta: {
-                            get: function () {
-                                return _this.meta(key);
-                            }
-                        },
-                        __id: {
-                            get: function () {
-                                return _this.meta(key).id;
-                            }
-                        },
-                        __key: {
-                            get: function () {
-                                return _this.meta(key).key;
-                            }
-                        },
-                        __date: {
-                            get: function () {
-                                return _this.meta(key).date;
-                            }
-                        },
+                        __meta: { get: () => this.meta(key) },
+                        __id: { get: () => this.meta(key).id },
+                        __key: { get: () => this.meta(key).key },
+                        __date: { get: () => this.meta(key).date },
                         __event: { value: new observation_1.Observation() }
-                    }), function () {
-                        return new _this.Schema();
-                    }, function (attr, newValue, oldValue) {
-                        return void _this.add(new channel_1.ChannelStore.Record(key, (_a = {}, _a[attr] = newValue, _a))), void cast(_this.sources.get(key)).__event.emit([
-                            api_2.StorageChannel.EventType.send,
-                            attr
-                        ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.send, attr, newValue, oldValue));
-                        var _a;
-                    }, function () {
-                        return void _this.log(key);
-                    })).get(key);
-                };
-                StoreChannel.prototype.destroy = function () {
-                    void _super.prototype.destroy.call(this);
-                };
-                return StoreChannel;
-            }(channel_1.ChannelStore);
+                    }), () => new this.Schema(), (attr, newValue, oldValue) => (void this.add(new channel_1.ChannelStore.Record(key, { [attr]: newValue })), void cast(this.sources.get(key).__event).emit([
+                        api_2.StorageChannel.EventType.send,
+                        attr
+                    ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.send, attr, newValue, oldValue))), () => void this.log(key))).get(key);
+                }
+                destroy() {
+                    void super.destroy();
+                }
+            }
             exports.StoreChannel = StoreChannel;
-            function cast(source) {
-                return source;
+            function cast(o) {
+                return o;
             }
         },
         {
@@ -3649,31 +2589,26 @@ require = function e(t, n, r) {
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            var Storage = function () {
-                function Storage() {
+            class Storage {
+                constructor() {
                     this.store = new Map();
                 }
-                Object.defineProperty(Storage.prototype, 'length', {
-                    get: function () {
-                        return this.store.size;
-                    },
-                    enumerable: true,
-                    configurable: true
-                });
-                Storage.prototype.getItem = function (key) {
+                get length() {
+                    return this.store.size;
+                }
+                getItem(key) {
                     return this.store.has(key) ? this.store.get(key) : null;
-                };
-                Storage.prototype.setItem = function (key, data) {
+                }
+                setItem(key, data) {
                     void this.store.set(key, data);
-                };
-                Storage.prototype.removeItem = function (key) {
+                }
+                removeItem(key) {
                     void this.store.delete(key);
-                };
-                Storage.prototype.clear = function () {
+                }
+                clear() {
                     void this.store.clear();
-                };
-                return Storage;
-            }();
+                }
+            }
             exports.fakeStorage = new Storage();
         },
         {}
@@ -3681,41 +2616,20 @@ require = function e(t, n, r) {
     42: [
         function (require, module, exports) {
             'use strict';
-            var __assign = this && this.__assign || Object.assign || function (t) {
-                for (var s, i = 1, n = arguments.length; i < n; i++) {
-                    s = arguments[i];
-                    for (var p in s)
-                        if (Object.prototype.hasOwnProperty.call(s, p))
-                            t[p] = s[p];
-                }
-                return t;
-            };
             Object.defineProperty(exports, '__esModule', { value: true });
-            var observation_1 = require('spica/observation');
-            var cancellation_1 = require('spica/cancellation');
-            var api_1 = require('../../dao/api');
-            var api_2 = require('../../../infrastructure/webstorage/api');
-            var storage_1 = require('../model/storage');
-            var cache = new Map();
-            var StorageChannel = function () {
-                function StorageChannel(name, storage, Schema, migrate, log) {
-                    if (storage === void 0) {
-                        storage = api_2.sessionStorage || storage_1.fakeStorage;
+            const observation_1 = require('spica/observation');
+            const cancellation_1 = require('spica/cancellation');
+            const api_1 = require('../../dao/api');
+            const api_2 = require('../../../infrastructure/webstorage/api');
+            const storage_1 = require('../model/storage');
+            const cache = new Map();
+            class StorageChannel {
+                constructor(name, storage = api_2.sessionStorage || storage_1.fakeStorage, Schema, migrate = () => void 0, log = {
+                    update(_name) {
+                    },
+                    delete(_name) {
                     }
-                    if (migrate === void 0) {
-                        migrate = function () {
-                            return void 0;
-                        };
-                    }
-                    if (log === void 0) {
-                        log = {
-                            update: function (_name) {
-                            },
-                            delete: function (_name) {
-                            }
-                        };
-                    }
-                    var _this = this;
+                }) {
                     this.name = name;
                     this.storage = storage;
                     this.cancellation = new cancellation_1.Cancellation();
@@ -3725,87 +2639,77 @@ require = function e(t, n, r) {
                         recv: new observation_1.Observation()
                     });
                     if (cache.has(name))
-                        throw new Error('ClientChannel: Specified storage channel "' + name + '" is already created.');
+                        throw new Error(`ClientChannel: Specified storage channel "${ name }" is already created.`);
                     void cache.set(name, this);
-                    void this.cancellation.register(function () {
-                        return void cache.delete(name);
-                    });
-                    var source = __assign((_a = {}, _a[api_1.SCHEMA.KEY.NAME] = this.name, _a[api_1.SCHEMA.EVENT.NAME] = new observation_1.Observation(), _a), parse(this.storage.getItem(this.name)));
-                    this.link_ = api_1.build(source, function () {
-                        return new Schema();
-                    }, function (attr, newValue, oldValue) {
-                        void log.update(_this.name);
-                        void _this.storage.setItem(_this.name, JSON.stringify(Object.keys(source).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(source)).reduce(function (acc, attr) {
+                    void this.cancellation.register(() => void cache.delete(name));
+                    const source = Object.assign({
+                        [api_1.SCHEMA.KEY.NAME]: this.name,
+                        [api_1.SCHEMA.EVENT.NAME]: new observation_1.Observation()
+                    }, parse(this.storage.getItem(this.name)));
+                    this.link_ = api_1.build(source, () => new Schema(), (attr, newValue, oldValue) => {
+                        void log.update(this.name);
+                        void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(source)).reduce((acc, attr) => {
                             acc[attr] = source[attr];
                             return acc;
                         }, {})));
-                        var event = new StorageChannel.Event(StorageChannel.EventType.send, attr, newValue, oldValue);
+                        const event = new StorageChannel.Event(StorageChannel.EventType.send, attr, newValue, oldValue);
                         void source.__event.emit([
                             event.type,
                             event.attr
                         ], event);
-                        void _this.events.send.emit([event.attr], event);
+                        void this.events.send.emit([event.attr], event);
                     });
                     void migrate(this.link_);
                     void this.cancellation.register(api_2.storageEventStream.on([
                         this.mode,
                         this.name
-                    ], function (_a) {
-                        var newValue = _a.newValue;
-                        var item = parse(newValue);
-                        void Object.keys(item).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(item)).reduce(function (_, attr) {
-                            var oldVal = source[attr];
-                            var newVal = item[attr];
+                    ], ({newValue}) => {
+                        const item = parse(newValue);
+                        void Object.keys(item).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(item)).reduce((_, attr) => {
+                            const oldVal = source[attr];
+                            const newVal = item[attr];
                             if (newVal === oldVal || Number.isNaN(newVal) && Number.isNaN(oldVal))
                                 return;
                             source[attr] = newVal;
-                            void migrate(_this.link_);
-                            var event = new StorageChannel.Event(StorageChannel.EventType.recv, attr, source[attr], oldVal);
+                            void migrate(this.link_);
+                            const event = new StorageChannel.Event(StorageChannel.EventType.recv, attr, source[attr], oldVal);
                             void source.__event.emit([
                                 event.type,
                                 event.attr
                             ], event);
-                            void _this.events.recv.emit([event.attr], event);
+                            void this.events.recv.emit([event.attr], event);
                         }, void 0);
                     }));
                     void log.update(this.name);
-                    void this.cancellation.register(function () {
-                        return void log.delete(_this.name);
-                    });
-                    void this.cancellation.register(function () {
-                        return void _this.storage.removeItem(_this.name);
-                    });
+                    void this.cancellation.register(() => void log.delete(this.name));
+                    void this.cancellation.register(() => void this.storage.removeItem(this.name));
                     void Object.freeze(this);
-                    var _a;
                 }
-                StorageChannel.prototype.link = function () {
+                link() {
                     return this.link_;
-                };
-                StorageChannel.prototype.destroy = function () {
+                }
+                destroy() {
                     void this.cancellation.cancel();
-                };
-                return StorageChannel;
-            }();
+                }
+            }
             exports.StorageChannel = StorageChannel;
             (function (StorageChannel) {
-                var Event = function () {
-                    function Event(type, attr, newValue, oldValue) {
+                class Event {
+                    constructor(type, attr, newValue, oldValue) {
                         this.type = type;
                         this.attr = attr;
                         this.newValue = newValue;
                         this.oldValue = oldValue;
                         void Object.freeze(this);
                     }
-                    return Event;
-                }();
+                }
                 StorageChannel.Event = Event;
-                var EventType;
+                let EventType;
                 (function (EventType) {
                     EventType.send = 'send';
                     EventType.recv = 'recv';
                 }(EventType = StorageChannel.EventType || (StorageChannel.EventType = {})));
             }(StorageChannel = exports.StorageChannel || (exports.StorageChannel = {})));
-            exports.StorageChannel = StorageChannel;
             function parse(item) {
                 try {
                     return JSON.parse(item || '{}') || {};
@@ -3849,26 +2753,24 @@ require = function e(t, n, r) {
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            var state_1 = require('./state');
-            var transition_1 = require('./transition');
-            var event_1 = require('./event');
+            const state_1 = require('./state');
+            const transition_1 = require('./transition');
+            const event_1 = require('./event');
             function open(database, config) {
                 void operate(database, 'open', config);
-                return function (success, failure) {
-                    return void request(database, success, failure);
-                };
+                return (success, failure) => void request(database, success, failure);
             }
             exports.open = open;
             exports.listen_ = request;
             function close(database) {
                 return void operate(database, 'close', {
-                    make: function () {
+                    make() {
                         return false;
                     },
-                    verify: function () {
+                    verify() {
                         return false;
                     },
-                    destroy: function () {
+                    destroy() {
                         return false;
                     }
                 });
@@ -3876,13 +2778,13 @@ require = function e(t, n, r) {
             exports.close = close;
             function destroy(database) {
                 return void operate(database, 'destroy', {
-                    make: function () {
+                    make() {
                         return false;
                     },
-                    verify: function () {
+                    verify() {
                         return false;
                     },
-                    destroy: function () {
+                    destroy() {
                         return true;
                     }
                 });
@@ -3896,27 +2798,18 @@ require = function e(t, n, r) {
                         return void event_1.idbEventStream.once([
                             database,
                             event_1.IDBEventType.destroy
-                        ], function () {
-                            return void operate(database, command, config);
-                        });
+                        ], () => void operate(database, command, config));
                     }
                 }
                 void state_1.commands.set(database, command);
                 void state_1.configs.set(database, config);
                 if (state_1.states.has(database)) {
-                    return void request(database, function () {
-                        return void 0;
-                    });
+                    return void request(database, () => void 0);
                 } else {
                     return void transition_1.handle(database);
                 }
             }
-            function request(database, success, failure) {
-                if (failure === void 0) {
-                    failure = function () {
-                        return void 0;
-                    };
-                }
+            function request(database, success, failure = () => void 0) {
                 if (!state_1.requests.has(database))
                     return void failure();
                 void state_1.requests.get(database).enqueue(success, failure);
@@ -3933,7 +2826,7 @@ require = function e(t, n, r) {
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            var observation_1 = require('spica/observation');
+            const observation_1 = require('spica/observation');
             exports.idbEventStream_ = new observation_1.Observation();
             exports.idbEventStream = exports.idbEventStream_;
             var IDBEventType;
@@ -3946,14 +2839,13 @@ require = function e(t, n, r) {
                 IDBEventType.crash = 'crash';
                 IDBEventType.destroy = 'destroy';
             }(IDBEventType = exports.IDBEventType || (exports.IDBEventType = {})));
-            var IDBEvent = function () {
-                function IDBEvent(name, type) {
+            class IDBEvent {
+                constructor(name, type) {
                     this.name = name;
                     this.type = type;
                     void Object.freeze(this);
                 }
-                return IDBEvent;
-            }();
+            }
             exports.IDBEvent = IDBEvent;
         },
         { 'spica/observation': 19 }
@@ -3961,22 +2853,6 @@ require = function e(t, n, r) {
     46: [
         function (require, module, exports) {
             'use strict';
-            var __extends = this && this.__extends || function () {
-                var extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
-                    d.__proto__ = b;
-                } || function (d, b) {
-                    for (var p in b)
-                        if (b.hasOwnProperty(p))
-                            d[p] = b[p];
-                };
-                return function (d, b) {
-                    extendStatics(d, b);
-                    function __() {
-                        this.constructor = d;
-                    }
-                    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-                };
-            }();
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.commands = new Map();
             var Command;
@@ -3987,31 +2863,27 @@ require = function e(t, n, r) {
             }(Command = exports.Command || (exports.Command = {})));
             exports.configs = new Map();
             exports.requests = new Map();
-            var RequestQueue = function () {
-                function RequestQueue(database) {
+            class RequestQueue {
+                constructor(database) {
                     this.database = database;
                     this.queue = [];
                 }
-                RequestQueue.prototype.enqueue = function (success, failure) {
-                    var state = exports.states.get(this.database);
+                enqueue(success, failure) {
+                    const state = exports.states.get(this.database);
                     if (!state || !state.alive || state.queue !== this)
                         return void failure();
                     void this.queue.push({
-                        success: success,
-                        failure: failure
+                        success,
+                        failure
                     });
-                };
-                RequestQueue.prototype.dequeue = function () {
+                }
+                dequeue() {
                     return this.queue.shift();
-                };
-                Object.defineProperty(RequestQueue.prototype, 'size', {
-                    get: function () {
-                        return this.queue.length;
-                    },
-                    enumerable: true,
-                    configurable: true
-                });
-                RequestQueue.prototype.clear = function () {
+                }
+                get size() {
+                    return this.queue.length;
+                }
+                clear() {
                     try {
                         while (this.queue.length > 0) {
                             void this.queue.shift().failure();
@@ -4019,12 +2891,11 @@ require = function e(t, n, r) {
                     } catch (_) {
                         return this.clear();
                     }
-                };
-                return RequestQueue;
-            }();
+                }
+            }
             exports.states = new Map();
-            var State = function () {
-                function State(database, curr) {
+            class State {
+                constructor(database, curr) {
                     this.database = database;
                     this.alive = true;
                     switch (true) {
@@ -4044,142 +2915,97 @@ require = function e(t, n, r) {
                         curr.alive = false;
                     }
                 }
-                Object.defineProperty(State.prototype, 'command', {
-                    get: function () {
-                        return exports.commands.get(this.database) || 'close';
-                    },
-                    enumerable: true,
-                    configurable: true
-                });
-                Object.defineProperty(State.prototype, 'config', {
-                    get: function () {
-                        return exports.configs.get(this.database) || {
-                            make: function () {
-                                return false;
-                            },
-                            verify: function () {
-                                return false;
-                            },
-                            destroy: function () {
-                                return false;
-                            }
-                        };
-                    },
-                    enumerable: true,
-                    configurable: true
-                });
-                Object.defineProperty(State.prototype, 'queue', {
-                    get: function () {
-                        return exports.requests.get(this.database) || new RequestQueue(this.database);
-                    },
-                    enumerable: true,
-                    configurable: true
-                });
-                return State;
-            }();
-            var InitialState = function (_super) {
-                __extends(InitialState, _super);
-                function InitialState(database, version) {
-                    if (version === void 0) {
-                        version = 0;
-                    }
-                    var _this = _super.call(this, database, exports.states.get(database)) || this;
-                    _this.version = version;
-                    _this.STATE;
-                    return _this;
+                get command() {
+                    return exports.commands.get(this.database) || 'close';
                 }
-                return InitialState;
-            }(State);
+                get config() {
+                    return exports.configs.get(this.database) || {
+                        make() {
+                            return false;
+                        },
+                        verify() {
+                            return false;
+                        },
+                        destroy() {
+                            return false;
+                        }
+                    };
+                }
+                get queue() {
+                    return exports.requests.get(this.database) || new RequestQueue(this.database);
+                }
+            }
+            class InitialState extends State {
+                constructor(database, version = 0) {
+                    super(database, exports.states.get(database));
+                    this.version = version;
+                    this.STATE;
+                }
+            }
             exports.InitialState = InitialState;
-            var BlockState = function (_super) {
-                __extends(BlockState, _super);
-                function BlockState(state, session) {
-                    var _this = _super.call(this, state.database, state) || this;
-                    _this.session = session;
-                    _this.STATE;
-                    return _this;
+            class BlockState extends State {
+                constructor(state, session) {
+                    super(state.database, state);
+                    this.session = session;
+                    this.STATE;
                 }
-                return BlockState;
-            }(State);
+            }
             exports.BlockState = BlockState;
-            var UpgradeState = function (_super) {
-                __extends(UpgradeState, _super);
-                function UpgradeState(state, session) {
-                    var _this = _super.call(this, state.database, state) || this;
-                    _this.session = session;
-                    _this.STATE;
-                    return _this;
+            class UpgradeState extends State {
+                constructor(state, session) {
+                    super(state.database, state);
+                    this.session = session;
+                    this.STATE;
                 }
-                return UpgradeState;
-            }(State);
+            }
             exports.UpgradeState = UpgradeState;
-            var SuccessState = function (_super) {
-                __extends(SuccessState, _super);
-                function SuccessState(state, connection) {
-                    var _this = _super.call(this, state.database, state) || this;
-                    _this.connection = connection;
-                    _this.STATE;
-                    return _this;
+            class SuccessState extends State {
+                constructor(state, connection) {
+                    super(state.database, state);
+                    this.connection = connection;
+                    this.STATE;
                 }
-                return SuccessState;
-            }(State);
+            }
             exports.SuccessState = SuccessState;
-            var ErrorState = function (_super) {
-                __extends(ErrorState, _super);
-                function ErrorState(state, error, event) {
-                    var _this = _super.call(this, state.database, state) || this;
-                    _this.error = error;
-                    _this.event = event;
-                    _this.STATE;
-                    return _this;
+            class ErrorState extends State {
+                constructor(state, error, event) {
+                    super(state.database, state);
+                    this.error = error;
+                    this.event = event;
+                    this.STATE;
                 }
-                return ErrorState;
-            }(State);
+            }
             exports.ErrorState = ErrorState;
-            var AbortState = function (_super) {
-                __extends(AbortState, _super);
-                function AbortState(state, event) {
-                    var _this = _super.call(this, state.database, state) || this;
-                    _this.event = event;
-                    _this.STATE;
-                    return _this;
+            class AbortState extends State {
+                constructor(state, event) {
+                    super(state.database, state);
+                    this.event = event;
+                    this.STATE;
                 }
-                return AbortState;
-            }(State);
+            }
             exports.AbortState = AbortState;
-            var CrashState = function (_super) {
-                __extends(CrashState, _super);
-                function CrashState(state, reason) {
-                    var _this = _super.call(this, state.database, state) || this;
-                    _this.reason = reason;
-                    _this.STATE;
-                    return _this;
+            class CrashState extends State {
+                constructor(state, reason) {
+                    super(state.database, state);
+                    this.reason = reason;
+                    this.STATE;
                 }
-                return CrashState;
-            }(State);
+            }
             exports.CrashState = CrashState;
-            var DestroyState = function (_super) {
-                __extends(DestroyState, _super);
-                function DestroyState(state) {
-                    var _this = _super.call(this, state.database, state) || this;
-                    _this.STATE;
-                    return _this;
+            class DestroyState extends State {
+                constructor(state) {
+                    super(state.database, state);
+                    this.STATE;
                 }
-                return DestroyState;
-            }(State);
+            }
             exports.DestroyState = DestroyState;
-            var EndState = function (_super) {
-                __extends(EndState, _super);
-                function EndState(state, version) {
-                    if (version === void 0) {
-                        version = 0;
-                    }
-                    var _this = _super.call(this, state.database, state) || this;
-                    _this.version = version;
-                    _this.STATE;
-                    return _this;
+            class EndState extends State {
+                constructor(state, version = 0) {
+                    super(state.database, state);
+                    this.version = version;
+                    this.STATE;
                 }
-                EndState.prototype.complete = function () {
+                complete() {
                     if (!this.alive)
                         return;
                     switch (this.command) {
@@ -4194,9 +3020,8 @@ require = function e(t, n, r) {
                     }
                     this.alive = false;
                     void exports.states.delete(this.database);
-                };
-                return EndState;
-            }(State);
+                }
+            }
             exports.EndState = EndState;
         },
         {}
@@ -4205,32 +3030,24 @@ require = function e(t, n, r) {
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            var global_1 = require('../module/global');
-            var state_1 = require('./state');
-            var event_1 = require('./event');
+            const global_1 = require('../module/global');
+            const state_1 = require('./state');
+            const event_1 = require('./event');
             function handle(database) {
-                var state = state_1.states.get(database);
+                const state = state_1.states.get(database);
                 return state instanceof state_1.SuccessState ? void handleFromSuccessState(state) : void handleFromInitialState(new state_1.InitialState(database));
             }
             exports.handle = handle;
             function handleFromInitialState(state) {
                 if (!state.alive)
                     return;
-                var database = state.database, version = state.version;
+                const {database, version} = state;
                 try {
-                    var openRequest_1 = version ? global_1.indexedDB.open(database, version) : global_1.indexedDB.open(database);
-                    openRequest_1.onblocked = function () {
-                        return void handleFromBlockedState(new state_1.BlockState(state, openRequest_1));
-                    };
-                    openRequest_1.onupgradeneeded = function () {
-                        return void handleFromUpgradeState(new state_1.UpgradeState(state, openRequest_1));
-                    };
-                    openRequest_1.onsuccess = function () {
-                        return void handleFromSuccessState(new state_1.SuccessState(state, openRequest_1.result));
-                    };
-                    openRequest_1.onerror = function (event) {
-                        return void handleFromErrorState(new state_1.ErrorState(state, openRequest_1.error, event));
-                    };
+                    const openRequest = version ? global_1.indexedDB.open(database, version) : global_1.indexedDB.open(database);
+                    openRequest.onblocked = () => void handleFromBlockedState(new state_1.BlockState(state, openRequest));
+                    openRequest.onupgradeneeded = () => void handleFromUpgradeState(new state_1.UpgradeState(state, openRequest));
+                    openRequest.onsuccess = () => void handleFromSuccessState(new state_1.SuccessState(state, openRequest.result));
+                    openRequest.onerror = event => void handleFromErrorState(new state_1.ErrorState(state, openRequest.error, event));
                 } catch (reason) {
                     void handleFromCrashState(new state_1.CrashState(state, reason));
                 }
@@ -4238,19 +3055,11 @@ require = function e(t, n, r) {
             function handleFromBlockedState(state) {
                 if (!state.alive)
                     return;
-                var database = state.database, session = state.session;
-                session.onblocked = function () {
-                    return void handleFromBlockedState(new state_1.BlockState(state, session));
-                };
-                session.onupgradeneeded = function () {
-                    return void handleFromUpgradeState(new state_1.UpgradeState(state, session));
-                };
-                session.onsuccess = function () {
-                    return void handleFromSuccessState(new state_1.SuccessState(state, session.result));
-                };
-                session.onerror = function (event) {
-                    return void handleFromErrorState(new state_1.ErrorState(state, session.error, event));
-                };
+                const {database, session} = state;
+                session.onblocked = () => void handleFromBlockedState(new state_1.BlockState(state, session));
+                session.onupgradeneeded = () => void handleFromUpgradeState(new state_1.UpgradeState(state, session));
+                session.onsuccess = () => void handleFromSuccessState(new state_1.SuccessState(state, session.result));
+                session.onerror = event => void handleFromErrorState(new state_1.ErrorState(state, session.error, event));
                 void event_1.idbEventStream_.emit([
                     database,
                     event_1.IDBEventType.block
@@ -4259,21 +3068,15 @@ require = function e(t, n, r) {
             function handleFromUpgradeState(state) {
                 if (!state.alive)
                     return;
-                var session = state.session;
-                var db = session.transaction.db;
-                var _a = state.config, make = _a.make, destroy = _a.destroy;
+                const {session} = state;
+                const db = session.transaction.db;
+                const {make, destroy} = state.config;
                 try {
                     if (make(session.transaction)) {
-                        session.onsuccess = function () {
-                            return void handleFromSuccessState(new state_1.SuccessState(state, db));
-                        };
-                        session.onerror = function (event) {
-                            return void handleFromErrorState(new state_1.ErrorState(state, session.error, event));
-                        };
+                        session.onsuccess = () => void handleFromSuccessState(new state_1.SuccessState(state, db));
+                        session.onerror = event => void handleFromErrorState(new state_1.ErrorState(state, session.error, event));
                     } else {
-                        session.onsuccess = session.onerror = function (event) {
-                            return void db.close(), destroy(session.error, event) ? void handleFromDestroyState(new state_1.DestroyState(state)) : void handleFromEndState(new state_1.EndState(state));
-                        };
+                        session.onsuccess = session.onerror = event => (void db.close(), destroy(session.error, event) ? void handleFromDestroyState(new state_1.DestroyState(state)) : void handleFromEndState(new state_1.EndState(state)));
                     }
                 } catch (reason) {
                     void handleFromCrashState(new state_1.CrashState(state, reason));
@@ -4282,9 +3085,9 @@ require = function e(t, n, r) {
             function handleFromSuccessState(state) {
                 if (!state.alive)
                     return;
-                var database = state.database, connection = state.connection, queue = state.queue;
-                connection.onversionchange = function () {
-                    var curr = new state_1.EndState(state);
+                const {database, connection, queue} = state;
+                connection.onversionchange = () => {
+                    const curr = new state_1.EndState(state);
                     void connection.close();
                     void event_1.idbEventStream_.emit([
                         database,
@@ -4292,18 +3095,12 @@ require = function e(t, n, r) {
                     ], new event_1.IDBEvent(database, event_1.IDBEventType.destroy));
                     void handleFromEndState(curr);
                 };
-                connection.onerror = function (event) {
-                    return void handleFromErrorState(new state_1.ErrorState(state, event.target.error, event));
-                };
-                connection.onabort = function (event) {
-                    return void handleFromAbortState(new state_1.AbortState(state, event));
-                };
-                connection.onclose = function () {
-                    return void handleFromEndState(new state_1.EndState(state));
-                };
+                connection.onerror = event => void handleFromErrorState(new state_1.ErrorState(state, event.target.error, event));
+                connection.onabort = event => void handleFromAbortState(new state_1.AbortState(state, event));
+                connection.onclose = () => void handleFromEndState(new state_1.EndState(state));
                 switch (state.command) {
                 case 'open': {
-                        var verify = state.config.verify;
+                        const {verify} = state.config;
                         VERIFY: {
                             try {
                                 if (verify(connection))
@@ -4325,21 +3122,19 @@ require = function e(t, n, r) {
                             }
                             return;
                         } catch (reason) {
-                            void new Promise(function (_, reject) {
-                                return void reject(reason);
-                            });
-                            var curr = new state_1.CrashState(state, reason);
+                            void new Promise((_, reject) => void reject(reason));
+                            const curr = new state_1.CrashState(state, reason);
                             void connection.close();
                             return void handleFromCrashState(curr);
                         }
                     }
                 case 'close': {
-                        var curr = new state_1.EndState(state);
+                        const curr = new state_1.EndState(state);
                         void connection.close();
                         return void handleFromEndState(curr);
                     }
                 case 'destroy': {
-                        var curr = new state_1.DestroyState(state);
+                        const curr = new state_1.DestroyState(state);
                         void connection.close();
                         return void handleFromDestroyState(curr);
                     }
@@ -4348,13 +3143,13 @@ require = function e(t, n, r) {
             function handleFromErrorState(state) {
                 if (!state.alive)
                     return;
-                var database = state.database, error = state.error, event = state.event;
+                const {database, error, event} = state;
                 void event.preventDefault();
                 void event_1.idbEventStream_.emit([
                     database,
                     event_1.IDBEventType.error
                 ], new event_1.IDBEvent(database, event_1.IDBEventType.error));
-                var destroy = state.config.destroy;
+                const {destroy} = state.config;
                 if (destroy(error, event)) {
                     return void handleFromDestroyState(new state_1.DestroyState(state));
                 } else {
@@ -4364,7 +3159,7 @@ require = function e(t, n, r) {
             function handleFromAbortState(state) {
                 if (!state.alive)
                     return;
-                var database = state.database, event = state.event;
+                const {database, event} = state;
                 void event.preventDefault();
                 void event_1.idbEventStream_.emit([
                     database,
@@ -4375,12 +3170,12 @@ require = function e(t, n, r) {
             function handleFromCrashState(state) {
                 if (!state.alive)
                     return;
-                var database = state.database, reason = state.reason;
+                const {database, reason} = state;
                 void event_1.idbEventStream_.emit([
                     database,
                     event_1.IDBEventType.crash
                 ], new event_1.IDBEvent(database, event_1.IDBEventType.crash));
-                var destroy = state.config.destroy;
+                const {destroy} = state.config;
                 if (destroy(reason)) {
                     return void handleFromDestroyState(new state_1.DestroyState(state));
                 } else {
@@ -4390,22 +3185,18 @@ require = function e(t, n, r) {
             function handleFromDestroyState(state) {
                 if (!state.alive)
                     return;
-                var database = state.database;
-                var deleteRequest = global_1.indexedDB.deleteDatabase(database);
-                deleteRequest.onsuccess = function () {
-                    return void event_1.idbEventStream_.emit([
-                        database,
-                        event_1.IDBEventType.destroy
-                    ], new event_1.IDBEvent(database, event_1.IDBEventType.destroy)), void handleFromEndState(new state_1.EndState(state));
-                };
-                deleteRequest.onerror = function (event) {
-                    return void handleFromErrorState(new state_1.ErrorState(state, deleteRequest.error, event));
-                };
+                const {database} = state;
+                const deleteRequest = global_1.indexedDB.deleteDatabase(database);
+                deleteRequest.onsuccess = () => (void event_1.idbEventStream_.emit([
+                    database,
+                    event_1.IDBEventType.destroy
+                ], new event_1.IDBEvent(database, event_1.IDBEventType.destroy)), void handleFromEndState(new state_1.EndState(state)));
+                deleteRequest.onerror = event => void handleFromErrorState(new state_1.ErrorState(state, deleteRequest.error, event));
             }
             function handleFromEndState(state) {
                 if (!state.alive)
                     return;
-                var database = state.database, version = state.version, command = state.command;
+                const {database, version, command} = state;
                 void state.complete();
                 void event_1.idbEventStream_.emit([
                     database,
@@ -4455,11 +3246,11 @@ require = function e(t, n, r) {
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            var observation_1 = require('spica/observation');
-            var global_1 = require('../module/global');
+            const observation_1 = require('spica/observation');
+            const global_1 = require('../module/global');
             exports.storageEventStream_ = new observation_1.Observation();
             exports.storageEventStream = exports.storageEventStream_;
-            void self.addEventListener('storage', function (event) {
+            void self.addEventListener('storage', event => {
                 switch (event.storageArea) {
                 case global_1.localStorage:
                     return void exports.storageEventStream_.emit(typeof event.key === 'string' ? [
@@ -4485,12 +3276,12 @@ require = function e(t, n, r) {
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            var uuid_1 = require('spica/uuid');
-            var supportsWebStorage = function () {
+            const uuid_1 = require('spica/uuid');
+            const supportsWebStorage = (() => {
                 try {
                     if (!self.navigator.cookieEnabled)
                         throw void 0;
-                    var key = 'clientchannel#' + uuid_1.uuid();
+                    const key = 'clientchannel#' + uuid_1.uuid();
                     void self.sessionStorage.setItem(key, key);
                     if (key !== self.sessionStorage.getItem(key))
                         throw void 0;
@@ -4499,7 +3290,7 @@ require = function e(t, n, r) {
                 } catch (_) {
                     return false;
                 }
-            }();
+            })();
             exports.localStorage = supportsWebStorage ? self.localStorage : void 0;
             exports.sessionStorage = supportsWebStorage ? self.sessionStorage : void 0;
         },
