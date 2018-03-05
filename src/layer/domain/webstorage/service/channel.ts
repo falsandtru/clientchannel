@@ -1,6 +1,7 @@
 import { StorageChannel as IStorageChannel, StorageChannelObject, StorageChannelEvent, StorageChannelEventType } from '../../../../../';
 import { Observation } from 'spica/observation';
 import { Cancellation } from 'spica/cancellation';
+import { DiffStruct } from 'spica/type';
 import { SCHEMA, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { localStorage, sessionStorage, storageEventStream } from '../../../infrastructure/webstorage/api';
 import { StorageLike, fakeStorage } from '../model/storage';
@@ -27,14 +28,14 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
       [SCHEMA.EVENT.NAME]: new Observation<[StorageChannelEventType] | [StorageChannelEventType, keyof V], StorageChannel.Event<V>, void>(),
       ...parse<V>(this.storage.getItem(this.name)) as object
     } as any;
-    this.link_ = build(source, () => new Schema(), (attr: keyof Diff<V, StorageChannelObject>, newValue, oldValue) => {
+    this.link_ = build(source, () => new Schema(), (attr: keyof DiffStruct<V, StorageChannelObject>, newValue, oldValue) => {
       void log.update(this.name);
       void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, attr) => {
         acc[attr] = source[attr];
         return acc;
       }, {})));
       const event = new StorageChannel.Event<V>(StorageChannel.EventType.send, attr, newValue, oldValue);
-      void (source.__event as Observation<[StorageChannelEventType, keyof Diff<V, StorageChannelObject>], StorageChannel.Event<V>, any>).emit([event.type, event.attr], event);
+      void (source.__event as Observation<[StorageChannelEventType, keyof DiffStruct<V, StorageChannelObject>], StorageChannel.Event<V>, any>).emit([event.type, event.attr], event);
       void this.events.send.emit([event.attr], event);
     });
     void migrate(this.link_);
@@ -44,14 +45,14 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
         void Object.keys(item)
           .filter(isValidPropertyName)
           .filter(isValidPropertyValue(item))
-          .reduce<void>((_, attr: keyof V) => {
+          .reduce<void>((_, attr: keyof DiffStruct<V, StorageChannelObject>) => {
             const oldVal = source[attr];
             const newVal = item[attr];
             if (newVal === oldVal || Number.isNaN(newVal) && Number.isNaN(oldVal)) return;
             source[attr] = newVal;
             void migrate(this.link_);
             const event = new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, source[attr], oldVal);
-            void (source.__event as Observation<[StorageChannelEventType, keyof V], StorageChannel.Event<V>, any>).emit([event.type, event.attr], event);
+            void (source.__event as Observation<[StorageChannelEventType, keyof DiffStruct<V, StorageChannelObject>], StorageChannel.Event<V>, any>).emit([event.type, event.attr], event);
             void this.events.recv.emit([event.attr], event);
           }, void 0);
       }));
@@ -65,8 +66,8 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
   private cancellation = new Cancellation();
   private readonly mode = this.storage === localStorage ? 'local' : 'session';
   public readonly events = Object.freeze({
-    send: new Observation<never[] | [keyof Diff<V, StorageChannelObject>], StorageChannel.Event<V>, void>(),
-    recv: new Observation<never[] | [keyof Diff<V, StorageChannelObject>], StorageChannel.Event<V>, void>(),
+    send: new Observation<never[] | [keyof DiffStruct<V, StorageChannelObject>], StorageChannel.Event<V>, void>(),
+    recv: new Observation<never[] | [keyof DiffStruct<V, StorageChannelObject>], StorageChannel.Event<V>, void>(),
   });
   private readonly link_: V;
   public link(): V {
@@ -77,12 +78,12 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
   }
 }
 export namespace StorageChannel {
-  export class Event<V extends StorageChannelObject> implements StorageChannelEvent<V> {
+  export class Event<V> implements StorageChannelEvent<V> {
     constructor(
       public readonly type: EventType,
-      public readonly attr: keyof Diff<V, StorageChannelObject>,
-      public readonly newValue: any,
-      public readonly oldValue: any
+      public readonly attr: keyof DiffStruct<V, StorageChannelObject>,
+      public readonly newValue: V[keyof DiffStruct<V, StorageChannelObject>],
+      public readonly oldValue: V[keyof DiffStruct<V, StorageChannelObject>],
     ) {
       assert(typeof type === 'string');
       assert(typeof attr === 'string');

@@ -1,5 +1,6 @@
 import { StoreChannel as IStoreChannel, StoreChannelConfig, StoreChannelObject } from '../../../../../';
-import { Observation } from 'spica/observation';
+import { Observation, Observer } from 'spica/observation';
+import { DiffStruct } from 'spica/type';
 import { build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { ChannelStore } from '../model/channel';
 import { StorageChannel } from '../../webstorage/api';
@@ -40,7 +41,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
         function update(attrs: (keyof V)[]): void {
           const changes = attrs
             .filter(attr => attr in memory)
-            .map((attr: keyof V) => {
+            .map((attr: keyof DiffStruct<V, StoreChannelObject<K>>) => {
               const newVal = memory[attr];
               const oldVal = source[attr];
               source[attr] = newVal;
@@ -57,8 +58,8 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
           void migrate(link);
           void changes
             .forEach(({ attr, oldVal }) =>
-              void cast(source).__event
-                .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, memory[attr], oldVal)));
+              void cast(source.__event!)
+                .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr as never, memory[attr as never], oldVal as never)));
         }
       });
     void Object.freeze(this);
@@ -96,10 +97,10 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
             }
           ),
           () => new this.Schema(),
-          (attr: keyof V, newValue, oldValue) => (
+        (attr: keyof DiffStruct<V, StoreChannelObject<K>>, newValue, oldValue) => (
             void this.add(new ChannelStore.Record<K, V>(key, { [attr]: newValue } as V)),
-            void cast(this.sources.get(key)!).__event
-              .emit([StorageChannel.EventType.send, attr], new StorageChannel.Event<V>(StorageChannel.EventType.send, attr, newValue, oldValue))),
+            void cast(this.sources.get(key)!.__event!)
+              .emit([StorageChannel.EventType.send, attr], new StorageChannel.Event<V>(StorageChannel.EventType.send, attr as never, newValue, oldValue))),
           () => void this.log(key)))
           .get(key)!;
   }
@@ -108,10 +109,6 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
   }
 }
 
-function cast<K extends string, V extends StoreChannelObject<K>>(source: Partial<V>) {
-  return source as V & StoreChannelInternalObject<K>;
-
-  interface StoreChannelInternalObject<K extends string> extends StoreChannelObject<K> {
-    readonly __event: Observation<[StorageChannel.EventType] | [StorageChannel.EventType, keyof Diff<typeof source, StoreChannelObject<K>>], StorageChannel.Event<typeof source & StoreChannelObject<K>>, any>;
-  }
+function cast<V extends Observer<K, D, R>, K extends any[], D, R>(o: V): Observation<K, D, R> {
+  return o as any;
 }

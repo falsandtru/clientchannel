@@ -1,4 +1,5 @@
-import { StoreChannelEventType } from '../../../../';
+import { StoreChannelEventType, StoreChannelObject } from '../../../../';
+import { DiffStruct } from 'spica/type';
 import { clone } from 'spica/assign';
 import { EventId, makeEventId } from './identifier';
 import { isStorable } from '../database/value';
@@ -29,7 +30,7 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
     if (typeof this.value !== 'object' || !this.value) throw new TypeError(`ClientChannel: EventRecord: Invalid event value: ${JSON.stringify(this.value)}`);
     if (typeof this.date !== 'number' || !Number.isFinite(this.date) || this.date >= 0 === false) throw new TypeError(`ClientChannel: EventRecord: Invalid event date: ${this.date}`);
     this.attr = this.type === EventRecordType.put
-      ? Object.keys(value).filter(isValidPropertyName)[0] as keyof V
+      ? Object.keys(value).filter(isValidPropertyName)[0] as keyof DiffStruct<V, StoreChannelObject<K>>
       : '';
     if (typeof this.attr !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event attr: ${this.key}`);
 
@@ -60,7 +61,7 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
         throw new TypeError(`ClientChannel: EventRecord: Invalid event type: ${type}`);
     }
   }
-  public readonly attr: keyof V | '';
+  public readonly attr: keyof DiffStruct<V, StoreChannelObject<K>> | '';
 }
 export class UnstoredEventRecord<K extends string, V extends EventRecordValue> extends EventRecord<K, V> {
   private readonly EVENT_RECORD!: this;

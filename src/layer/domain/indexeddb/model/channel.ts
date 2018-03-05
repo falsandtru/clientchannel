@@ -1,6 +1,7 @@
 import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../';
 import { Observation } from 'spica/observation';
 import { Cancellation } from 'spica/cancellation';
+import { DiffStruct } from 'spica/type';
 import { Cache } from 'spica/cache';
 import { open, Listen, close, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { DataStore } from './channel/data';
@@ -118,14 +119,14 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   })(), { ignore: { delete: true } });
   private readonly channel = new Channel<K>(this.name, this.debug);
   public readonly events_ = Object.freeze({
-    load: new Observation<never[] | [K] | [K, keyof Diff<V, StoreChannelObject<K>> | ''] | [K, keyof Diff<V, StoreChannelObject<K>> | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
-    save: new Observation<never[] | [K] | [K, keyof Diff<V, StoreChannelObject<K>> | ''] | [K, keyof Diff<V, StoreChannelObject<K>> | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
+    load: new Observation<never[] | [K] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | ''] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
+    save: new Observation<never[] | [K] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | ''] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
     clean: new Observation<never[] | [K], boolean, void>(),
   });
   public readonly events = Object.freeze({
-    load: new Observation<never[] | [K] | [K, keyof Diff<V, StoreChannelObject<K>> | ''] | [K, keyof Diff<V, StoreChannelObject<K>> | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
-    save: new Observation<never[] | [K] | [K, keyof Diff<V, StoreChannelObject<K>> | ''] | [K, keyof Diff<V, StoreChannelObject<K>> | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
-    loss: new Observation<never[] | [K] | [K, keyof Diff<V, StoreChannelObject<K>> | ''] | [K, keyof Diff<V, StoreChannelObject<K>> | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
+    load: new Observation<never[] | [K] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | ''] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
+    save: new Observation<never[] | [K] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | ''] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
+    loss: new Observation<never[] | [K] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | ''] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
   });
   public sync(keys: K[], cb: (results: [K, DOMException | DOMError | null][]) => void = noop, timeout = Infinity): void {
     const cancellation = new Cancellation();

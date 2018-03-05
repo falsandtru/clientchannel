@@ -1,3 +1,5 @@
+import { StoreChannelObject } from '../../../../';
+import { DiffStruct } from 'spica/type';
 import { Observation } from 'spica/observation';
 import { Cancellation } from 'spica/cancellation';
 import { tick } from 'spica/tick';
@@ -99,9 +101,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   }
   private readonly memory = new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', string] | [K, keyof V | '', string, string], void, UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>>();
   public readonly events = Object.freeze({
-    load: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
-    save: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
-    loss: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
+    load: new Observation<never[] | [K] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | ''] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
+    save: new Observation<never[] | [K] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | ''] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
+    loss: new Observation<never[] | [K] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | ''] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
     clean: new Observation<never[] | [K], boolean, void>(),
   });
   private readonly events_ = Object.freeze({
@@ -422,7 +424,7 @@ export namespace EventStore {
       public readonly type: EventType,
       public readonly id: EventId,
       public readonly key: K,
-      public readonly attr: keyof V | '',
+      public readonly attr: '' | keyof DiffStruct<V, StoreChannelObject<K>>,
       public readonly date: number
     ) {
       this.EVENT;
