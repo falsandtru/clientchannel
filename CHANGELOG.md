@@ -3,6 +3,7 @@
 ## 0.21.0
 
 - Compile to es2016.
+- Fix the copyright notice.
 
 ## 0.20.2
 
