@@ -1,28 +1,18 @@
-declare global {
-  interface NumberConstructor {
-    isNaN(target: any): target is number;
-  }
-
-  interface IDBDatabase {
-    onclose: (ev: Event) => void;
-  }
-
-  type IDBValidValue
-    = boolean
-    | IDBValidKey
-    | Object
-    | File
-    | Blob;
-
-  interface Window {
-    IDBKeyRange: typeof IDBKeyRange;
-  }
+interface NumberConstructor {
+  isNaN(target: any): target is number;
 }
 
-import assert from 'power-assert';
+interface IDBDatabase {
+  onclose: (ev: Event) => void;
+}
 
-type Assert = typeof assert;
+type IDBValidValue
+  = boolean
+  | IDBValidKey
+  | Object
+  | File
+  | Blob;
 
-declare global {
-  const assert: Assert;
+interface Window {
+  IDBKeyRange: typeof IDBKeyRange;
 }
