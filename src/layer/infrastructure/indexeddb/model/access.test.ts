@@ -34,7 +34,7 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
     it('open', done => {
       open('test', config)(db => {
         db.transaction('test', 'readonly').objectStore('test').count().onsuccess = event => {
-          assert(event.target['result'] === 0);
+          assert(event.target!['result'] === 0);
           done();
         };
       });
