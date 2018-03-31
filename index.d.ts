@@ -80,3 +80,9 @@ export namespace StorageChannelEventType {
   export type Send = 'send';
   export type Recv = 'recv';
 }
+
+export class Ownership<K extends string> {
+  constructor(name: K);
+  take(key: K, age: number): boolean;
+  close(): void;
+}

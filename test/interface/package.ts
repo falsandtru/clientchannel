@@ -1,4 +1,4 @@
-import { StoreChannel, StorageChannel } from '../../index';
+import { StoreChannel, StorageChannel, Ownership } from '../../index';
 
 describe('Interface: Package', function () {
   describe('clientchannel', function () {
@@ -8,6 +8,10 @@ describe('Interface: Package', function () {
 
     it('StorageChannel', function () {
       assert(typeof StorageChannel === 'function');
+    });
+
+    it('Ownership', function () {
+      assert(typeof Ownership === 'function');
     });
 
   });
