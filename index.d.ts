@@ -57,6 +57,7 @@ export class StorageChannel<V extends StorageChannelObject> {
     readonly recv: Observer<never[] | [keyof DiffStruct<V, StorageChannelObject>], StorageChannelEvent<V>, void>;
   };
   link(): V;
+  close(): void;
   destroy(): void;
 }
 export interface StorageChannelConfig<V extends StorageChannelObject> {

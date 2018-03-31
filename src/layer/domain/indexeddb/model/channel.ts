@@ -7,10 +7,25 @@ import { open, Listen, close, destroy, idbEventStream, IDBEventType } from '../.
 import { DataStore } from './channel/data';
 import { AccessStore } from './channel/access';
 import { ExpiryStore } from './channel/expiry';
-import { Channel, ChannelMessage, ChannelEventType } from '../../broadcast/channel';
+import { Channel, ChannelMessage } from '../../broadcast/channel';
+import { Ownership } from '../../ownership/channel';
 import { noop } from '../../../../lib/noop';
 
-const cache = new Map<string, ChannelStore<string, StoreChannelObject<string>>>();
+declare global {
+  interface ChannelMessageTypeMap<K extends string> {
+    save: SaveMessage<K>;
+  }
+}
+
+class SaveMessage<K extends string> extends ChannelMessage<K> {
+  constructor(
+    public readonly key: K,
+  ) {
+    super(key, 'save');
+  }
+}
+
+const cache = new Set<string>();
 
 export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   constructor(
@@ -21,12 +36,12 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     private readonly size: number,
     private readonly debug: boolean = false,
   ) {
-    if (cache.has(name)) throw new Error(`ClientChannel: Specified database channel "${name}" is already created.`);
-    void cache.set(name, this);
+    if (cache.has(name)) throw new Error(`ClientChannel: Specified database channel "${name}" is already opened.`);
+    void cache.add(name);
     void this.cancellation.register(() =>
       void cache.delete(name));
 
-    this.schema = new Schema<K, V>(this, this.channel, attrs, open(name, {
+    this.schema = new Schema<K, V>(this, this.ownership, attrs, open(name, {
       make(db) {
         return DataStore.configure().make(db)
             && AccessStore.configure().make(db)
@@ -49,18 +64,18 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     void this.cancellation.register(() =>
       void this.schema.close());
 
-    void this.cancellation.register(this.channel.listen(ChannelEventType.save, ({ key }) => (
+    void this.cancellation.register(this.channel.listen('save', ({ key }) => (
       void this.keys.delete(key) || void this.keys_.delete(key),
       void this.fetch(key))));
     void this.cancellation.register(() =>
       void this.channel.close());
 
     void this.events_.save.monitor([], ({ key }) =>
-      void this.channel.post(new ChannelMessage.Save(key)));
+      void this.channel.post(new SaveMessage(key)));
 
     void this.events_.clean.monitor([], (cleared, [key]) => {
       if (!cleared) return;
-      void this.channel.ownership.take(`key:${key}`, 5 * 1000);
+      void this.ownership.take(`key:${key}`, 5 * 1000);
       void this.schema.access.delete(key);
       void this.schema.expire.delete(key);
     });
@@ -93,23 +108,24 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   private readonly schema: Schema<K, V>;
   private readonly keys_ = new Set<K>();
   private readonly channel = new Channel<K>(this.name, this.debug);
+  private readonly ownership: Ownership<string> = new Ownership(this.channel);
   private readonly keys = new Cache<K>(this.size, (() => {
-    void this.channel.ownership.take('store', 0);
+    void this.ownership.take('store', 0);
     const keys = this.keys_;
     let timer = 0;
     const resolve = (): void => {
       timer = 0;
       const since = Date.now();
       let count = 0;
-      if (!this.channel.ownership.take('store', 5 * 1000)) return;
+      if (!this.ownership.take('store', 5 * 1000)) return;
       for (const key of keys) {
         if (this.cancellation.canceled) return void this.keys.clear(), void keys.clear();
         void keys.delete(key);
         if (timer > 0) return;
         if (this.keys.has(key)) continue;
         if (++count > 10) return void setTimeout(resolve, (Date.now() - since) * 3);
-        if (!this.channel.ownership.take('store', 3 * 1000)) return;
-        if (!this.channel.ownership.take(`key:${key}`, 5 * 1000)) continue;
+        if (!this.ownership.take('store', 3 * 1000)) return;
+        if (!this.ownership.take(`key:${key}`, 5 * 1000)) continue;
         void this.schema.expire.set(key, 0);
       }
     };
@@ -164,7 +180,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   }
   public delete(key: K): void {
     if (this.cancellation.canceled) return;
-    void this.channel.ownership.take(`key:${key}`, 5 * 1000);
+    void this.ownership.take(`key:${key}`, 5 * 1000);
     void this.log(key);
     void this.schema.data.delete(key);
   }
@@ -199,7 +215,7 @@ export namespace ChannelStore {
 class Schema<K extends string, V extends StoreChannelObject<K>> {
   constructor(
     private readonly store_: ChannelStore<K, V>,
-    private readonly channel_: Channel<K>,
+    private readonly ownership_: Ownership<string>,
     private readonly attrs_: string[],
     private readonly listen_: Listen,
   ) {
@@ -211,7 +227,7 @@ class Schema<K extends string, V extends StoreChannelObject<K>> {
 
     this.data = new DataStore<K, V>(this.attrs_, this.listen_);
     this.access = new AccessStore<K>(this.listen_);
-    this.expire = new ExpiryStore<K>(this.store_, this.cancellation_, this.channel_, this.listen_);
+    this.expire = new ExpiryStore<K>(this.store_, this.cancellation_, this.ownership_, this.listen_);
 
     void this.cancellation_.register(this.store_.events_.load.relay(this.data.events.load));
     void this.cancellation_.register(this.store_.events_.save.relay(this.data.events.save));

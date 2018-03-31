@@ -6,7 +6,7 @@ import { SCHEMA, build, isValidPropertyName, isValidPropertyValue } from '../../
 import { localStorage, sessionStorage, storageEventStream } from '../../../infrastructure/webstorage/api';
 import { StorageLike, fakeStorage } from '../model/storage';
 
-const cache = new Map<string, StorageChannel<StorageChannelObject>>();
+const cache = new Set<string>();
 
 export class StorageChannel<V extends StorageChannelObject> implements IStorageChannel<V> {
   constructor(
@@ -14,13 +14,9 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
     private readonly storage: StorageLike = sessionStorage || fakeStorage,
     Schema: new () => V,
     migrate: (link: V) => void = () => void 0,
-    log = {
-      update(_name: string) { },
-      delete(_name: string) { }
-    }
   ) {
-    if (cache.has(name)) throw new Error(`ClientChannel: Specified storage channel "${name}" is already created.`);
-    void cache.set(name, this);
+    if (cache.has(name)) throw new Error(`ClientChannel: Specified storage channel "${name}" is already opened.`);
+    void cache.add(name);
     void this.cancellation.register(() =>
       void cache.delete(name));
     const source: V = {
@@ -29,7 +25,6 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
       ...parse<V>(this.storage.getItem(this.name)) as object
     } as any;
     this.link_ = build(source, () => new Schema(), (attr: keyof DiffStruct<V, StorageChannelObject>, newValue, oldValue) => {
-      void log.update(this.name);
       void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, attr) => {
         acc[attr] = source[attr];
         return acc;
@@ -56,11 +51,6 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
             void this.events.recv.emit([event.attr], event);
           }, void 0);
       }));
-    void log.update(this.name);
-    void this.cancellation.register(() =>
-      void log.delete(this.name));
-    void this.cancellation.register(() =>
-        void this.storage.removeItem(this.name));
     void Object.freeze(this);
   }
   private cancellation = new Cancellation();
@@ -73,8 +63,12 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
   public link(): V {
     return this.link_;
   }
+  public close(): void {
+    void this.cancellation.cancel();
+  }
   public destroy(): void {
     void this.cancellation.cancel();
+    void this.storage.removeItem(this.name);
   }
 }
 export namespace StorageChannel {

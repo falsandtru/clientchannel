@@ -1,7 +1,7 @@
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
 import { Cancellee } from 'spica/cancellation';
-import { Channel } from '../../../broadcast/channel';
+import { Ownership } from '../../../ownership/channel';
 
 const name = 'expiry';
 
@@ -47,7 +47,7 @@ export class ExpiryStore<K extends string> {
       delete(key: K): void;
     },
     private readonly cancellation: Cancellee<void>,
-    private readonly channel: Channel<K>,
+    private readonly ownership: Ownership<string>,
     private readonly listen: Listen,
   ) {
     void this.schedule(10 * 1000);
@@ -58,7 +58,7 @@ export class ExpiryStore<K extends string> {
     let timer = 0;
     let scheduled = Infinity;
     let running = false;
-    void this.channel.ownership.take('store', 0);
+    void this.ownership.take('store', 0);
     return (timeout: number): void => {
       timeout = Math.max(timeout, 3 * 1000);
       if (running) return;
@@ -67,7 +67,7 @@ export class ExpiryStore<K extends string> {
       void clearTimeout(timer);
       timer = setTimeout(() => {
         scheduled = Infinity;
-        if (!this.channel.ownership.take('store', 5 * 1000)) return;
+        if (!this.ownership.take('store', 5 * 1000)) return;
         const since = Date.now();
         let count = 0;
         let retry = false;
@@ -77,12 +77,12 @@ export class ExpiryStore<K extends string> {
           if (error) return void this.schedule(Math.max(60 * 1000, (Date.now() - since) * 3));
           if (!cursor && retry) return void this.schedule(Math.max(10 * 1000, (Date.now() - since) * 3));
           if (!cursor) return;
-          if (!this.channel.ownership.take('store', 3 * 1000)) return;
+          if (!this.ownership.take('store', 3 * 1000)) return;
           const { key, expiry }: ExpiryRecord<K> = cursor.value;
           if (expiry > Date.now()) return void this.schedule(Math.max(expiry - Date.now(), (Date.now() - since) * 3));
           if (++count > 50) return void this.schedule((Date.now() - since) * 3);
           running = true;
-          if (!this.channel.ownership.take(`key:${key}`, 5 * 1000)) return retry = true, void cursor.continue();
+          if (!this.ownership.take(`key:${key}`, 5 * 1000)) return retry = true, void cursor.continue();
           void this.chan.delete(key);
           return void cursor.continue();
         });

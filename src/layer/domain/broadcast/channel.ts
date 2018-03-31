@@ -1,117 +1,43 @@
 import { localStorage, storageEventStream } from '../../infrastructure/webstorage/api';
 
-export type ChannelMessage<K extends string> =
-  | ChannelMessage.Save<K>
-  | ChannelMessage.Ownership<K>;
-export namespace ChannelMessage {
-  export const version = 1;
-  export function parse<K extends string>(msg: ChannelMessage<K>): ChannelMessage<K> | void {
-    if (msg.version !== version) return;
-    switch (msg.type) {
-      case ChannelEventType.save:
-        return new Save(msg.key);
-      case ChannelEventType.ownership:
-        return new Ownership(msg.key, (msg as ChannelMessage.Ownership<K>).priority);
-      default:
-        return;
-    }
-  }
-
-  class Message<K extends string> {
-    constructor(
-      public readonly key: K,
-      public readonly type: ChannelEventType,
-    ) {
-    }
-    public readonly version = version;
-  }
-  export class Save<K extends string> extends Message<K> {
-    constructor(
-      public readonly key: K,
-    ) {
-      super(key, ChannelEventType.save);
-    }
-  }
-  export class Ownership<K extends string> extends Message<K> {
-    constructor(
-      public readonly key: K,
-      public readonly priority: number,
-    ) {
-      super(key, ChannelEventType.ownership);
-    }
+declare global {
+  interface ChannelMessageTypeMap<K extends string> {
   }
 }
-interface ChannelMessageMap<K extends string> {
-  save: ChannelMessage.Save<K>;
-  ownership: ChannelMessage.Ownership<K>;
-}
 
-export type ChannelEventType =
-  | ChannelEventType.save
-  | ChannelEventType.ownership;
-export namespace ChannelEventType {
-  export type save = typeof save;
-  export const save = 'save';
-  export type ownership = typeof ownership;
-  export const ownership = 'ownership';
-}
+const version = 1;
 
-class Ownership<K extends string> {
-  private static readonly mergin = 5 * 1000;
-  private static genPriority(age: number): number {
-    return +`${Date.now() + age}`.slice(-13);
-  }
+export class ChannelMessage<K extends string> {
   constructor(
-    private readonly channel: Channel<K>,
+    public readonly key: K,
+    public readonly type: keyof ChannelMessageTypeMap<K>,
   ) {
-    void this.channel.listen(ChannelEventType.ownership, ({ key, priority }) => {
-      assert(priority > 0);
-      if (this.has(key) && this.getPriority(key) < priority - Ownership.mergin) {
-        void this.castPriority(key);
-      }
-      else {
-        void this.setPriority(key, Math.min(-priority, this.getPriority(key)));
-      }
-    });
   }
-  private readonly store: Map<K, number> = new Map();
-  private readonly timer: Map<K, number> = new Map();
-  private getPriority(key: K): number {
-    if (!this.store.has(key)) {
-      void this.setPriority(key, 0); // send a reference of priority
-      void this.setPriority(key, -Ownership.genPriority(Ownership.mergin));
-    }
-    assert(this.store.has(key));
-    return this.store.get(key)!;
+  public readonly version = version;
+}
+
+function parse<K extends string>(msg: ChannelMessage<K>): ChannelMessage<K> | void {
+  if (msg.version !== version) return;
+  return msg;
+}
+
+const cache = new Set<string>();
+
+abstract class AbstractChannel<K extends string> {
+  constructor(
+    public readonly name: string,
+  ) {
+    if (cache.has(name)) throw new Error(`ClientChannel: Specified broadcast channel "${name}" is already opened.`);
+    void cache.add(this.name);
   }
-  private setPriority(key: K, priority: number): void {
-    assert(Math.abs(priority) < 1e15);
-    if (this.store.has(key) && priority === this.getPriority(key)) return;
-    void this.store.set(key, priority);
-    void this.castPriority(key);
-  }
-  private castPriority(key: K): void {
-    if (this.timer.get(key)! > 0) return;
-    if (!this.isTakable(key)) return;
-    void this.channel.post(new ChannelMessage.Ownership(key, this.getPriority(key) + Ownership.mergin));
-  }
-  private has(key: K): boolean {
-    return this.getPriority(key) >= Ownership.genPriority(0);
-  }
-  private isTakable(key: K): boolean {
-    return this.getPriority(key) > 0
-        || Ownership.genPriority(0) > Math.abs(this.getPriority(key));
-  }
-  public take(key: K, age: number): boolean {
-    assert(0 <= age && age < 60 * 1000);
-    age = Math.min(Math.max(age, 1 * 1000), 60 * 1000) + 100;
-    if (!this.isTakable(key)) return false;
-    void this.setPriority(key, Math.max(Ownership.genPriority(age), this.getPriority(key)));
-    return true;
+  public abstract listen<C extends keyof ChannelMessageTypeMap<K>>(type: C, listener: (msg: ChannelMessageTypeMap<K>[C]) => void): () => void;
+  public abstract post(msg: ChannelMessage<K>): void;
+  public close(): void {
+    void cache.delete(this.name);
   }
 }
 
-export class Channel<K extends string> {
+export class Channel<K extends string> implements AbstractChannel<K> {
   constructor(
     public readonly name: string,
     public readonly debug: boolean,
@@ -120,8 +46,7 @@ export class Channel<K extends string> {
       ? new Broadcast<K>(name, debug)
       : new Storage<K>(name, debug);
   }
-  public readonly ownership: Ownership<string> = new Ownership(this);
-  public listen<C extends keyof ChannelMessageMap<K>>(type: C, listener: (msg: ChannelMessageMap<K>[C]) => void): () => void {
+  public listen<C extends keyof ChannelMessageTypeMap<K>>(type: C, listener: (msg: ChannelMessageTypeMap<K>[C]) => void): () => void {
     type;
     listener;
     return () => void 0;
@@ -133,16 +58,16 @@ export class Channel<K extends string> {
   }
 }
 
-class Broadcast<K extends string> implements Channel<K> {
+class Broadcast<K extends string> extends AbstractChannel<K> implements Channel<K> {
   constructor(
     public readonly name: string,
     public readonly debug: boolean,
   ) {
+    super(name);
   }
   private readonly channel = new BroadcastChannel(this.name);
   private readonly listeners = new Set<(ev: MessageEvent) => void>();
-  public readonly ownership: Ownership<K> = new Ownership(this);
-  public listen<C extends keyof ChannelMessageMap<K>>(type: C, listener: (msg: ChannelMessageMap<K>[C]) => void): () => void {
+  public listen<C extends keyof ChannelMessageTypeMap<K>>(type: C, listener: (msg: ChannelMessageTypeMap<K>[C]) => void): () => void {
     void this.listeners.add(handler);
     void this.channel.addEventListener('message', handler);
     const { debug } = this;
@@ -151,7 +76,7 @@ class Broadcast<K extends string> implements Channel<K> {
       void this.channel.removeEventListener('message', handler));
 
     function handler(ev: MessageEvent): void {
-      const msg = ChannelMessage.parse<K>(ev.data);
+      const msg = parse<K>(ev.data);
       if (!msg || msg.type !== type) return;
       debug && console.log('recv', msg);
       return void listener(msg);
@@ -165,6 +90,7 @@ class Broadcast<K extends string> implements Channel<K> {
   private alive = true;
   public close(): void {
     this.alive = false;
+    super.close();
     void this.listeners
       .forEach(listener =>
         void this.channel.removeEventListener('message', listener));
@@ -172,19 +98,19 @@ class Broadcast<K extends string> implements Channel<K> {
   }
 }
 
-class Storage<K extends string> implements Channel<K> {
+class Storage<K extends string> extends AbstractChannel<K> implements Channel<K> {
   constructor(
     public readonly name: string,
     public readonly debug: boolean,
   ) {
+    super(name);
     void self.addEventListener('unload', () =>
       void this.storage.removeItem(this.name)
     , true);
   }
   private readonly storage = localStorage!;
   private readonly listeners = new Set<(ev: StorageEvent) => void>();
-  public readonly ownership: Ownership<K> = new Ownership(this);
-  public listen<C extends keyof ChannelMessageMap<K>>(type: C, listener: (msg: ChannelMessageMap<K>[C]) => void): () => void {
+  public listen<C extends keyof ChannelMessageTypeMap<K>>(type: C, listener: (msg: ChannelMessageTypeMap<K>[C]) => void): () => void {
     void this.listeners.add(handler);
     void storageEventStream.on(['local', this.name], handler);
     return () => (
@@ -193,7 +119,7 @@ class Storage<K extends string> implements Channel<K> {
 
     function handler(ev: StorageEvent): void {
       if (typeof ev.newValue !== 'string') return;
-      const msg = ChannelMessage.parse<K>(JSON.parse(ev.newValue));
+      const msg = parse<K>(JSON.parse(ev.newValue));
       if (!msg || msg.type !== type) return;
       return void listener(msg);
     }
@@ -205,6 +131,7 @@ class Storage<K extends string> implements Channel<K> {
   private alive = true;
   public close(): void {
     this.alive = false;
+    super.close();
     void this.listeners
       .forEach(listener =>
         void storageEventStream.off(['local', this.name], listener));
