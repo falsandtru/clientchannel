@@ -8,9 +8,9 @@ export namespace ChannelMessage {
   export function parse<K extends string>(msg: ChannelMessage<K>): ChannelMessage<K> | void {
     if (msg.version !== version) return;
     switch (msg.type) {
-      case ChannelEvent.save:
+      case ChannelEventType.save:
         return new Save(msg.key);
-      case ChannelEvent.ownership:
+      case ChannelEventType.ownership:
         return new Ownership(msg.key, (msg as ChannelMessage.Ownership<K>).priority);
       default:
         return;
@@ -20,7 +20,7 @@ export namespace ChannelMessage {
   class Message<K extends string> {
     constructor(
       public readonly key: K,
-      public readonly type: ChannelEvent,
+      public readonly type: ChannelEventType,
     ) {
     }
     public readonly version = version;
@@ -29,7 +29,7 @@ export namespace ChannelMessage {
     constructor(
       public readonly key: K,
     ) {
-      super(key, ChannelEvent.save);
+      super(key, ChannelEventType.save);
     }
   }
   export class Ownership<K extends string> extends Message<K> {
@@ -37,7 +37,7 @@ export namespace ChannelMessage {
       public readonly key: K,
       public readonly priority: number,
     ) {
-      super(key, ChannelEvent.ownership);
+      super(key, ChannelEventType.ownership);
     }
   }
 }
@@ -46,10 +46,10 @@ interface ChannelMessageMap<K extends string> {
   ownership: ChannelMessage.Ownership<K>;
 }
 
-export type ChannelEvent =
-  | ChannelEvent.save
-  | ChannelEvent.ownership;
-export namespace ChannelEvent {
+export type ChannelEventType =
+  | ChannelEventType.save
+  | ChannelEventType.ownership;
+export namespace ChannelEventType {
   export type save = typeof save;
   export const save = 'save';
   export type ownership = typeof ownership;
@@ -63,7 +63,7 @@ class Ownership<K extends string> {
   constructor(
     private readonly channel: Channel<K>,
   ) {
-    void this.channel.listen(ChannelEvent.ownership, ({ key, priority }) =>
+    void this.channel.listen(ChannelEventType.ownership, ({ key, priority }) =>
       priority > this.priority(key)
         ? void this.store.set(key, -priority)
         : void this.channel.post(new ChannelMessage.Ownership(key, this.priority(key))));

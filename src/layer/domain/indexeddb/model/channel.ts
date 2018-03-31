@@ -7,7 +7,7 @@ import { open, Listen, close, destroy, idbEventStream, IDBEventType } from '../.
 import { DataStore } from './channel/data';
 import { AccessStore } from './channel/access';
 import { ExpiryStore } from './channel/expiry';
-import { Channel, ChannelMessage, ChannelEvent } from '../../broadcast/channel';
+import { Channel, ChannelMessage, ChannelEventType } from '../../broadcast/channel';
 import { noop } from '../../../../lib/noop';
 
 const cache = new Map<string, ChannelStore<string, StoreChannelObject<string>>>();
@@ -49,7 +49,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     void this.cancellation.register(() =>
       void this.schema.close());
 
-    void this.cancellation.register(this.channel.listen(ChannelEvent.save, ({ key }) => (
+    void this.cancellation.register(this.channel.listen(ChannelEventType.save, ({ key }) => (
       void this.keys.delete(key) || void this.keys_.delete(key),
       void this.fetch(key))));
     void this.cancellation.register(() =>
