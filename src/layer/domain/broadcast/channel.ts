@@ -57,28 +57,56 @@ export namespace ChannelEventType {
 }
 
 class Ownership<K extends string> {
-  private static priority(expiry = Date.now()): number {
-    return +`${expiry}`.slice(-13) + +`${(Math.random() * 1e3) | 0}`.slice(-3);
+  private static readonly mergin = 5 * 1000;
+  private static genPriority(age: number): number {
+    return +`${Date.now() + age}`.slice(-13);
   }
   constructor(
     private readonly channel: Channel<K>,
   ) {
-    void this.channel.listen(ChannelEventType.ownership, ({ key, priority }) =>
-      priority > this.priority(key)
-        ? void this.store.set(key, -priority)
-        : void this.channel.post(new ChannelMessage.Ownership(key, this.priority(key))));
+    void this.channel.listen(ChannelEventType.ownership, ({ key, priority }) => {
+      assert(priority > 0);
+      if (this.has(key) && this.getPriority(key) < priority - Ownership.mergin) {
+        void this.castPriority(key);
+      }
+      else {
+        void this.setPriority(key, Math.min(-priority, this.getPriority(key)));
+      }
+    });
   }
   private readonly store: Map<K, number> = new Map();
-  public priority(key: K): number {
-    return this.store.get(key) || 0;
+  private readonly timer: Map<K, number> = new Map();
+  private getPriority(key: K): number {
+    if (!this.store.has(key)) {
+      void this.setPriority(key, 0); // send a reference of priority
+      void this.setPriority(key, -Ownership.genPriority(Ownership.mergin));
+    }
+    assert(this.store.has(key));
+    return this.store.get(key)!;
+  }
+  private setPriority(key: K, priority: number): void {
+    assert(Math.abs(priority) < 1e15);
+    if (this.store.has(key) && priority === this.getPriority(key)) return;
+    void this.store.set(key, priority);
+    void this.castPriority(key);
+  }
+  private castPriority(key: K): void {
+    if (this.timer.get(key)! > 0) return;
+    if (!this.isTakable(key)) return;
+    void this.channel.post(new ChannelMessage.Ownership(key, this.getPriority(key) + Ownership.mergin));
+  }
+  private has(key: K): boolean {
+    return this.getPriority(key) >= Ownership.genPriority(0);
+  }
+  private isTakable(key: K): boolean {
+    return this.getPriority(key) > 0
+        || Ownership.genPriority(0) > Math.abs(this.getPriority(key));
   }
   public take(key: K, age: number): boolean {
-    assert(age < 60 * 1000);
-    const priority = Ownership.priority(Date.now() + Math.min(Math.max(age, 1 * 1000), 60 * 1000));
-    assert(priority > 0);
-    if (priority <= Math.abs(this.priority(key))) return this.priority(key) > 0;
-    void this.store.set(key, priority);
-    void this.channel.post(new ChannelMessage.Ownership(key, this.priority(key)));
+    assert(0 <= age && age < 60 * 1000);
+    age = Math.min(Math.max(age, 1 * 1000), 60 * 1000) + 100;
+    if (!this.isTakable(key)) return false;
+    void this.setPriority(key, Math.max(Ownership.genPriority(age), this.getPriority(key)));
     return true;
   }
 }
@@ -92,7 +120,7 @@ export class Channel<K extends string> {
       ? new Broadcast<K>(name, debug)
       : new Storage<K>(name, debug);
   }
-  public readonly ownership: Ownership<K> = new Ownership(this);
+  public readonly ownership: Ownership<string> = new Ownership(this);
   public listen<C extends keyof ChannelMessageMap<K>>(type: C, listener: (msg: ChannelMessageMap<K>[C]) => void): () => void {
     type;
     listener;

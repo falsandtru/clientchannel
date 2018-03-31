@@ -60,7 +60,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
 
     void this.events_.clean.monitor([], (cleared, [key]) => {
       if (!cleared) return;
-      void this.channel.ownership.take(key, 30 * 1000);
+      void this.channel.ownership.take(`key:${key}`, 5 * 1000);
       void this.schema.access.delete(key);
       void this.schema.expire.delete(key);
     });
@@ -92,23 +92,25 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   private readonly cancellation = new Cancellation();
   private readonly schema: Schema<K, V>;
   private readonly keys_ = new Set<K>();
+  private readonly channel = new Channel<K>(this.name, this.debug);
   private readonly keys = new Cache<K>(this.size, (() => {
+    void this.channel.ownership.take('store', 0);
     const keys = this.keys_;
     let timer = 0;
     const resolve = (): void => {
       timer = 0;
       const since = Date.now();
       let count = 0;
+      if (!this.channel.ownership.take('store', 5 * 1000)) return;
       for (const key of keys) {
         if (this.cancellation.canceled) return void this.keys.clear(), void keys.clear();
         void keys.delete(key);
-        if (this.keys.has(key)) continue;
-        if (!this.channel.ownership.take(key, 0)) continue;
-        if (++count > 10) return void setTimeout(resolve, (Date.now() - since) * 3);
-        void this.schema.expire.set(key, 0);
         if (timer > 0) return;
-        timer = setTimeout(resolve, 5 * 1000);
-        return void setTimeout(resolve, 5 * 1000);
+        if (this.keys.has(key)) continue;
+        if (++count > 10) return void setTimeout(resolve, (Date.now() - since) * 3);
+        if (!this.channel.ownership.take('store', 3 * 1000)) return;
+        if (!this.channel.ownership.take(`key:${key}`, 5 * 1000)) continue;
+        void this.schema.expire.set(key, 0);
       }
     };
     return (key: K): void => {
@@ -117,7 +119,6 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
       timer = setTimeout(resolve, 3 * 1000);
     };
   })(), { ignore: { delete: true } });
-  private readonly channel = new Channel<K>(this.name, this.debug);
   public readonly events_ = Object.freeze({
     load: new Observation<never[] | [K] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | ''] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
     save: new Observation<never[] | [K] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | ''] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
@@ -163,7 +164,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   }
   public delete(key: K): void {
     if (this.cancellation.canceled) return;
-    void this.channel.ownership.take(key, 30 * 1000);
+    void this.channel.ownership.take(`key:${key}`, 5 * 1000);
     void this.log(key);
     void this.schema.data.delete(key);
   }

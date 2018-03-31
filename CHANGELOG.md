@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.21.1
+
+- Fix expiry processing.
+
 ## 0.21.0
 
 - Compile to es2016.
