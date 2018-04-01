@@ -40,7 +40,7 @@ export class Ownership<K extends string> {
     if (!this.store.has(key)) {
       // initial processing.
       // request replies of foreign priority.
-      void this.setPriority(key, 0);
+      void this.setPriority(key, Math.max(Ownership.genPriority(0) - Ownership.mergin, 0));
       // wait replies.
       void this.setPriority(key, -Ownership.genPriority(Ownership.mergin));
     }
