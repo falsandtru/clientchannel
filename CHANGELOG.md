@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.22.1
+
+- Fix expiry processing.
+
 ## 0.22.0
 
 - Add Ownership feature.

@@ -56,6 +56,7 @@ export class Ownership<K extends string> {
     void this.castPriority(key);
   }
   private castPriority(key: K): void {
+    if (this.getPriority(key) < 0) return;
     if (!this.isTakable(key)) return;
     assert(this.getPriority(key) > 0);
     void this.channel.post(new OwnershipMessage(key, this.getPriority(key) + Ownership.mergin));
