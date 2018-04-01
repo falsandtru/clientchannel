@@ -1,4 +1,4 @@
-/*! clientchannel v0.22.0 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.23.0 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -2097,7 +2097,7 @@ require = function () {
                                     continue;
                                 if (++count > 10)
                                     return void setTimeout(resolve, (Date.now() - since) * 3);
-                                if (!this.ownership.take('store', 3 * 1000))
+                                if (!this.ownership.extend('store', 5 * 1000))
                                     return;
                                 if (!this.ownership.take(`key:${ key }`, 5 * 1000))
                                     continue;
@@ -2406,41 +2406,41 @@ require = function () {
                         let timer = 0;
                         let scheduled = Infinity;
                         let running = false;
+                        let wait = 5 * 1000;
                         void this.ownership.take('store', 0);
                         return timeout => {
                             timeout = Math.max(timeout, 3 * 1000);
-                            if (running)
-                                return;
                             if (Date.now() + timeout >= scheduled)
                                 return;
                             scheduled = Date.now() + timeout;
                             void clearTimeout(timer);
                             timer = setTimeout(() => {
-                                scheduled = Infinity;
-                                if (!this.ownership.take('store', 5 * 1000))
+                                if (running)
                                     return;
+                                scheduled = Infinity;
+                                if (!this.ownership.take('store', wait))
+                                    return this.schedule(wait *= 2);
+                                wait = Math.max(Math.floor(wait / 1.5), 5 * 1000);
                                 const since = Date.now();
-                                let count = 0;
                                 let retry = false;
+                                running = true;
                                 return void this.store.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', (cursor, error) => {
                                     running = false;
                                     if (this.cancellation.canceled)
                                         return;
                                     if (error)
-                                        return void this.schedule(Math.max(60 * 1000, (Date.now() - since) * 3));
-                                    if (!cursor && retry)
-                                        return void this.schedule(Math.max(10 * 1000, (Date.now() - since) * 3));
+                                        return void this.schedule(wait * 10);
                                     if (!cursor)
-                                        return;
-                                    if (!this.ownership.take('store', 3 * 1000))
-                                        return;
+                                        return retry && void this.schedule(wait);
                                     const {key, expiry} = cursor.value;
                                     if (expiry > Date.now())
-                                        return void this.schedule(Math.max(expiry - Date.now(), (Date.now() - since) * 3));
-                                    if (++count > 50)
-                                        return void this.schedule((Date.now() - since) * 3);
+                                        return void this.schedule(expiry - Date.now());
+                                    if (!this.ownership.extend('store', wait))
+                                        return;
+                                    if (Date.now() - since > 1000)
+                                        return void this.schedule(wait / 2);
                                     running = true;
-                                    if (!this.ownership.take(`key:${ key }`, 5 * 1000))
+                                    if (!this.ownership.take(`key:${ key }`, wait))
                                         return retry = true, void cursor.continue();
                                     void this.chan.delete(key);
                                     return void cursor.continue();
@@ -2600,11 +2600,11 @@ require = function () {
                     });
                 }
                 static genPriority(age) {
-                    return +`${ Date.now() + age }`.slice(-13);
+                    return Date.now() + age;
                 }
                 getPriority(key) {
                     if (!this.store.has(key)) {
-                        void this.setPriority(key, 0);
+                        void this.setPriority(key, Math.max(Ownership.genPriority(0) - Ownership.mergin, 0));
                         void this.setPriority(key, -Ownership.genPriority(Ownership.mergin));
                     }
                     return this.store.get(key);
@@ -2612,10 +2612,12 @@ require = function () {
                 setPriority(key, priority) {
                     if (this.store.has(key) && priority === this.getPriority(key))
                         return;
-                    void this.store.set(key, priority + Math.floor(Math.random() * 5 * 1000));
+                    void this.store.set(key, priority + Math.floor(Math.random() * 1 * 1000));
                     void this.castPriority(key);
                 }
                 castPriority(key) {
+                    if (this.getPriority(key) < 0)
+                        return;
                     if (!this.isTakable(key))
                         return;
                     void this.channel.post(new OwnershipMessage(key, this.getPriority(key) + Ownership.mergin));
@@ -2632,6 +2634,9 @@ require = function () {
                         return false;
                     void this.setPriority(key, Math.max(Ownership.genPriority(age), this.getPriority(key)));
                     return true;
+                }
+                extend(key, age) {
+                    return this.has(key) ? this.take(key, age) : false;
                 }
                 close() {
                     void this.channel.close();
