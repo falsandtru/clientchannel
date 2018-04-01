@@ -26,9 +26,11 @@ export class Ownership<K extends string> {
     void this.channel.listen('ownership', ({ key, priority }) => {
       assert(priority > 0);
       if (this.has(key) && this.getPriority(key) < priority - Ownership.mergin) {
+        // reply my priority if I have ownership and the min priority.
         void this.castPriority(key);
       }
       else {
+        // extend my foreign priority as long as possible.
         void this.setPriority(key, Math.min(-priority, this.getPriority(key)));
       }
     });
@@ -36,7 +38,10 @@ export class Ownership<K extends string> {
   private readonly store: Map<K, number> = new Map();
   private getPriority(key: K): number {
     if (!this.store.has(key)) {
-      void this.setPriority(key, 0); // send a reference of priority
+      // initial processing.
+      // request replies of foreign priority.
+      void this.setPriority(key, 0);
+      // wait replies.
       void this.setPriority(key, -Ownership.genPriority(Ownership.mergin));
     }
     assert(this.store.has(key));
@@ -44,12 +49,15 @@ export class Ownership<K extends string> {
   }
   private setPriority(key: K, priority: number): void {
     assert(Math.abs(priority) < 1e15);
+    // don't send the same priority repeatedly.
     if (this.store.has(key) && priority === this.getPriority(key)) return;
+    // add randomness.
     void this.store.set(key, priority + Math.floor(Math.random() * 5 * 1e3));
     void this.castPriority(key);
   }
   private castPriority(key: K): void {
     if (!this.isTakable(key)) return;
+    assert(this.getPriority(key) > 0);
     void this.channel.post(new OwnershipMessage(key, this.getPriority(key) + Ownership.mergin));
   }
   private has(key: K): boolean {
