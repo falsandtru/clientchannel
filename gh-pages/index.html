@@ -107,7 +107,7 @@
     debug: true
   });
   var time = Date.now();
-  for (var i = 0; i < 50; ++i) {
+  for (var i = 0; i < 25; ++i) {
     var link = chan.link('v1/' + ('0'.repeat(4) + (Math.random() * 10000 | 0)).slice(-3));
     link.data = 0;
   }

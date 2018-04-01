@@ -1,7 +1,8 @@
 # Changelog
 
-## 0.22.1
+## 0.23.0
 
+- Add Ownership.extend method.
 - Fix expiry processing.
 
 ## 0.22.0

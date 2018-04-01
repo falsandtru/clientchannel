@@ -124,7 +124,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
         if (timer > 0) return;
         if (this.keys.has(key)) continue;
         if (++count > 10) return void setTimeout(resolve, (Date.now() - since) * 3);
-        if (!this.ownership.take('store', 3 * 1000)) return;
+        if (!this.ownership.extend('store', 5 * 1000)) return;
         if (!this.ownership.take(`key:${key}`, 5 * 1000)) continue;
         void this.schema.expire.set(key, 0);
       }

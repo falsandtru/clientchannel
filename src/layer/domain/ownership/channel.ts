@@ -18,7 +18,7 @@ class OwnershipMessage<K extends string> extends ChannelMessage<K> {
 export class Ownership<K extends string> {
   private static readonly mergin = 5 * 1000;
   private static genPriority(age: number): number {
-    return +`${Date.now() + age}`.slice(-13);
+    return Date.now() + age;
   }
   constructor(
     private readonly channel: Channel<K>,
@@ -52,7 +52,7 @@ export class Ownership<K extends string> {
     // don't send the same priority repeatedly.
     if (this.store.has(key) && priority === this.getPriority(key)) return;
     // add randomness.
-    void this.store.set(key, priority + Math.floor(Math.random() * 5 * 1e3));
+    void this.store.set(key, priority + Math.floor(Math.random() * 1 * 1000));
     void this.castPriority(key);
   }
   private castPriority(key: K): void {
@@ -74,6 +74,11 @@ export class Ownership<K extends string> {
     if (!this.isTakable(key)) return false;
     void this.setPriority(key, Math.max(Ownership.genPriority(age), this.getPriority(key)));
     return true;
+  }
+  public extend(key: K, age: number): boolean {
+    return this.has(key)
+      ? this.take(key, age)
+      : false;
   }
   public close(): void {
     void this.channel.close();

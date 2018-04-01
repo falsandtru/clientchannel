@@ -58,31 +58,32 @@ export class ExpiryStore<K extends string> {
     let timer = 0;
     let scheduled = Infinity;
     let running = false;
+    let wait = 5 * 1000;
     void this.ownership.take('store', 0);
     return (timeout: number): void => {
       timeout = Math.max(timeout, 3 * 1000);
-      if (running) return;
       if (Date.now() + timeout >= scheduled) return;
       scheduled = Date.now() + timeout;
       void clearTimeout(timer);
       timer = setTimeout(() => {
+        if (running) return;
         scheduled = Infinity;
-        if (!this.ownership.take('store', 5 * 1000)) return;
+        if (!this.ownership.take('store', wait)) return this.schedule(wait *= 2);
+        wait = Math.max(Math.floor(wait / 1.5), 5 * 1000);
         const since = Date.now();
-        let count = 0;
         let retry = false;
+        running = true;
         return void this.store.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', (cursor, error) => {
           running = false;
           if (this.cancellation.canceled) return;
-          if (error) return void this.schedule(Math.max(60 * 1000, (Date.now() - since) * 3));
-          if (!cursor && retry) return void this.schedule(Math.max(10 * 1000, (Date.now() - since) * 3));
-          if (!cursor) return;
-          if (!this.ownership.take('store', 3 * 1000)) return;
+          if (error) return void this.schedule(wait * 10);
+          if (!cursor) return retry && void this.schedule(wait);
           const { key, expiry }: ExpiryRecord<K> = cursor.value;
-          if (expiry > Date.now()) return void this.schedule(Math.max(expiry - Date.now(), (Date.now() - since) * 3));
-          if (++count > 50) return void this.schedule((Date.now() - since) * 3);
+          if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
+          if (!this.ownership.extend('store', wait)) return;
+          if (Date.now() - since > 1000) return void this.schedule(wait / 2);
           running = true;
-          if (!this.ownership.take(`key:${key}`, 5 * 1000)) return retry = true, void cursor.continue();
+          if (!this.ownership.take(`key:${key}`, wait)) return retry = true, void cursor.continue();
           void this.chan.delete(key);
           return void cursor.continue();
         });
