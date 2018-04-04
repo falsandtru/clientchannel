@@ -3,9 +3,9 @@ import { KeyValueStore } from '../../../../data/kvs/store';
 
 export const name = 'access';
 
-namespace AccessStoreSchema {
-  export const key = 'key';
-  export const date = 'date';
+const enum AccessStoreSchema {
+  key = 'key',
+  date = 'date',
 }
 
 export class AccessStore<K extends string> {

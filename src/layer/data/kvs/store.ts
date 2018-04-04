@@ -141,14 +141,3 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     }, () => void cb(null, new Error('Access has failed.')));
   }
 }
-export namespace KeyValueStore {
-  export const EventType = {
-    get: <'get'>'get',
-    put: <'put'>'put',
-    delete: <'delete'>'delete'
-  };
-  export type EventType
-    = typeof EventType.get
-    | typeof EventType.put
-    | typeof EventType.delete;
-}

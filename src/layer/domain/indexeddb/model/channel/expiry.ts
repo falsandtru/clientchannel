@@ -5,9 +5,9 @@ import { Ownership } from '../../../ownership/channel';
 
 const name = 'expiry';
 
-namespace ExpiryStoreSchema {
-  export const key = 'key';
-  export const expiry = 'expiry';
+const enum ExpiryStoreSchema {
+  key = 'key',
+  expiry = 'expiry',
 }
 
 export class ExpiryStore<K extends string> {
