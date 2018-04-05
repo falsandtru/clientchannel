@@ -2,6 +2,7 @@
 
 ## 0.23.1
 
+- Don't automatically update deleted key's status.
 - Throttle the frequency of database access logging with cached value reading.
 
 ## 0.23.0

@@ -185,6 +185,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     void this.schema.data.delete(key);
   }
   protected log(key: K): void {
+    if (this.meta(key).id > 0 && !this.has(key)) return;
     void this.schema.access.set(key);
     void this.schema.expire.set(key, this.ages.get(key) || this.age);
   }
