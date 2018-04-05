@@ -1,5 +1,6 @@
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
+import { ChannelStore } from '../channel';
 import { Cancellee } from 'spica/cancellation';
 import { Ownership } from '../../../ownership/channel';
 
@@ -17,9 +18,9 @@ export class ExpiryStore<K extends string> {
         const store = tx.db.objectStoreNames.contains(name)
           ? tx.objectStore(name)
           : tx.db.createObjectStore(name, {
-            keyPath: ExpiryStoreSchema.key,
-            autoIncrement: false
-          });
+              keyPath: ExpiryStoreSchema.key,
+              autoIncrement: false
+            });
         if (!store.indexNames.contains(ExpiryStoreSchema.key)) {
           void store.createIndex(ExpiryStoreSchema.key, ExpiryStoreSchema.key, {
             unique: true
@@ -41,11 +42,7 @@ export class ExpiryStore<K extends string> {
     };
   }
   constructor(
-    private readonly chan: {
-      meta(key: K): { id: number; };
-      has(key: K): boolean;
-      delete(key: K): void;
-    },
+    private readonly chan: ChannelStore<K, any>,
     private readonly cancellation: Cancellee<void>,
     private readonly ownership: Ownership<string>,
     private readonly listen: Listen,

@@ -15,9 +15,9 @@ export class AccessStore<K extends string> {
         const store = tx.db.objectStoreNames.contains(name)
           ? tx.objectStore(name)
           : tx.db.createObjectStore(name, {
-            keyPath: AccessStoreSchema.key,
-            autoIncrement: false
-          });
+              keyPath: AccessStoreSchema.key,
+              autoIncrement: false
+            });
         if (!store.indexNames.contains(AccessStoreSchema.key)) {
           void store.createIndex(AccessStoreSchema.key, AccessStoreSchema.key, {
             unique: true
