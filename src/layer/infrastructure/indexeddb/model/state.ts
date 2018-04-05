@@ -36,7 +36,7 @@ class RequestQueue {
         void this.queue.shift()!.failure();
       }
     }
-    catch (_) {
+    catch {
       return this.clear();
     }
   }

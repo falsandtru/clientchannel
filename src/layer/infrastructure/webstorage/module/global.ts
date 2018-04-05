@@ -9,7 +9,7 @@ const supportsWebStorage: boolean = (() => {
     void self.sessionStorage.removeItem(key);
     return true;
   }
-  catch (_) {
+  catch {
     return false;
   }
 })();

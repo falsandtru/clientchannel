@@ -12,7 +12,7 @@ export function isStorable(value: IDBValidValue): boolean {
             || Object.keys(value)
                  .every(key => isStorable(value[key]));
       }
-      catch (_) {
+      catch {
         return false;
       }
     default:

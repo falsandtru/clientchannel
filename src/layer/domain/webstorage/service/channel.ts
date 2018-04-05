@@ -95,7 +95,7 @@ function parse<V>(item: string | undefined | null): V {
   try {
     return JSON.parse(item || '{}') || {} as V;
   }
-  catch (_) {
+  catch {
     return {} as V;
   }
 }
