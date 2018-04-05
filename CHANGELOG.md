@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.23.1
+
+- Throttle the frequency of database access logging with cached value reading.
+
 ## 0.23.0
 
 - Add Ownership.extend method.

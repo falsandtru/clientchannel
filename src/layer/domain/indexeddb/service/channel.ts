@@ -1,6 +1,7 @@
 import { StoreChannel as IStoreChannel, StoreChannelConfig, StoreChannelObject } from '../../../../../';
 import { Observation, Observer } from 'spica/observation';
 import { DiffStruct } from 'spica/type';
+import { throttle } from 'spica/throttle';
 import { build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { ChannelStore } from '../model/channel';
 import { StorageChannel } from '../../webstorage/api';
@@ -100,7 +101,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
             void this.add(new ChannelStore.Record<K, V>(key, { [attr]: newValue } as V)),
             void cast(this.sources.get(key)!.__event!)
               .emit([StorageChannel.EventType.send, attr], new StorageChannel.Event<V>(StorageChannel.EventType.send, attr as never, newValue, oldValue))),
-          () => void this.log(key)))
+          throttle(100, () => this.has(key) && void this.log(key))))
           .get(key)!;
   }
   public destroy(): void {
