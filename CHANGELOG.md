@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.23.2
+
+- Fix cancel processing with transaction.
+
 ## 0.23.1
 
 - Don't automatically update deleted key's status.

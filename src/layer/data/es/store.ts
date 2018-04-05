@@ -192,13 +192,18 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           return void cursor.continue();
         }
       };
-      void req.addEventListener('success', () => void proc(req.result, req.error));
-      void tx.addEventListener('error', () => void cb(tx.error || req.error));
-      void tx.addEventListener('abort', () => void cb(tx.error || req.error));
+      void req.addEventListener('success', () =>
+        void proc(req.result, req.error));
+      void tx.addEventListener('complete', () =>
+        void cancellation.close());
+      void tx.addEventListener('error', () => (
+        void cancellation.close(),
+        void cb(tx.error || req.error)));
+      void tx.addEventListener('abort', () => (
+        void cancellation.close(),
+        void cb(tx.error || req.error)));
       void cancellation.register(() =>
-        events.length === 0 &&
-        void tx.abort());
-      return;
+        events.length === 0 && void tx.abort());
     }, () => void cb(new Error('Access has failed.')));
   }
   public keys(): K[] {

@@ -61,13 +61,16 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
           .get(key);
       void req.addEventListener('success', () =>
         void cb(req.error));
-      void tx.addEventListener('error', () =>
-        void cb(req.error));
-      void tx.addEventListener('abort', () =>
-        void cb(req.error));
+      void tx.addEventListener('complete', () =>
+        void cancellation.close());
+      void tx.addEventListener('error', () => (
+        void cancellation.close(),
+        void cb(tx.error || req.error)));
+      void tx.addEventListener('abort', () => (
+        void cancellation.close(),
+        void cb(tx.error || req.error)));
       void cancellation.register(() =>
         void tx.abort());
-      return;
     }, () => void cb(new Error('Access has failed.')));
   }
   public has(key: K): boolean {
