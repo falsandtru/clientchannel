@@ -1,4 +1,4 @@
-/*! clientchannel v0.23.1 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.23.2 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -1132,7 +1132,7 @@ require = function () {
                 case 'object':
                     try {
                         return value === null || isBinary(value) || Object.keys(value).every(key => isStorable(value[key]));
-                    } catch (_) {
+                    } catch (_a) {
                         return false;
                     }
                 default:
@@ -1444,10 +1444,10 @@ require = function () {
                             }
                         };
                         void req.addEventListener('success', () => void proc(req.result, req.error));
-                        void tx.addEventListener('error', () => void cb(tx.error || req.error));
-                        void tx.addEventListener('abort', () => void cb(tx.error || req.error));
+                        void tx.addEventListener('complete', () => void cancellation.close());
+                        void tx.addEventListener('error', () => (void cancellation.close(), void cb(tx.error || req.error)));
+                        void tx.addEventListener('abort', () => (void cancellation.close(), void cb(tx.error || req.error)));
                         void cancellation.register(() => events.length === 0 && void tx.abort());
-                        return;
                     }, () => void cb(new Error('Access has failed.')));
                 }
                 keys() {
@@ -1786,10 +1786,10 @@ require = function () {
                         const tx = db.transaction(this.name, 'readonly');
                         const req = this.index ? tx.objectStore(this.name).index(this.index).get(key) : tx.objectStore(this.name).get(key);
                         void req.addEventListener('success', () => void cb(req.error));
-                        void tx.addEventListener('error', () => void cb(req.error));
-                        void tx.addEventListener('abort', () => void cb(req.error));
+                        void tx.addEventListener('complete', () => void cancellation.close());
+                        void tx.addEventListener('error', () => (void cancellation.close(), void cb(tx.error || req.error)));
+                        void tx.addEventListener('abort', () => (void cancellation.close(), void cb(tx.error || req.error)));
                         void cancellation.register(() => void tx.abort());
-                        return;
                     }, () => void cb(new Error('Access has failed.')));
                 }
                 has(key) {
@@ -2831,7 +2831,7 @@ require = function () {
             function parse(item) {
                 try {
                     return JSON.parse(item || '{}') || {};
-                } catch (_) {
+                } catch (_a) {
                     return {};
                 }
             }
@@ -3006,7 +3006,7 @@ require = function () {
                         while (this.queue.length > 0) {
                             void this.queue.shift().failure();
                         }
-                    } catch (_) {
+                    } catch (_a) {
                         return this.clear();
                     }
                 }
@@ -3405,7 +3405,7 @@ require = function () {
                         throw void 0;
                     void self.sessionStorage.removeItem(key);
                     return true;
-                } catch (_) {
+                } catch (_a) {
                     return false;
                 }
             })();
