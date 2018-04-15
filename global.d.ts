@@ -1,7 +1,3 @@
-interface NumberConstructor {
-  isNaN(target: any): target is number;
-}
-
 interface IDBDatabase {
   onclose: (ev: Event) => void;
 }
