@@ -1,4 +1,4 @@
-/*! clientchannel v0.23.2 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.24.0 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -2578,7 +2578,7 @@ require = function () {
                                     newVal,
                                     oldVal
                                 };
-                            }).filter(({newVal, oldVal}) => newVal !== oldVal || !(Number.isNaN(newVal) && Number.isNaN(oldVal)));
+                            }).filter(({newVal, oldVal}) => newVal !== oldVal);
                             if (changes.length === 0)
                                 return;
                             void migrate(link);
@@ -2674,12 +2674,13 @@ require = function () {
                 isTakable(key) {
                     return this.getPriority(key) > 0 || Ownership.genPriority(0) > Math.abs(this.getPriority(key));
                 }
-                take(key, age) {
+                take(key, age, wait) {
                     age = Math.min(Math.max(age, 1 * 1000), 60 * 1000) + 100;
+                    wait = wait === undefined ? wait : Math.max(wait, 0);
                     if (!this.isTakable(key))
                         return false;
-                    void this.setPriority(key, Math.max(Ownership.genPriority(age), this.getPriority(key)));
-                    return true;
+                    void this.setPriority(key, Math.max(Ownership.genPriority(age + (wait || 0)), this.getPriority(key)));
+                    return wait === undefined ? true : new Promise(resolve => setTimeout(resolve, wait)).then(() => this.extend(key, age) ? Promise.resolve() : Promise.reject());
                 }
                 extend(key, age) {
                     return this.has(key) ? this.take(key, age) : false;
@@ -2785,7 +2786,7 @@ require = function () {
                         void Object.keys(item).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(item)).reduce((_, attr) => {
                             const oldVal = source[attr];
                             const newVal = item[attr];
-                            if (newVal === oldVal || Number.isNaN(newVal) && Number.isNaN(oldVal))
+                            if (newVal === oldVal)
                                 return;
                             source[attr] = newVal;
                             void migrate(this.link_);
