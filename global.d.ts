@@ -1,3 +1,7 @@
+interface PromiseConstructor {
+  reject(): Promise<never>;
+}
+
 interface IDBDatabase {
   onclose: (ev: Event) => void;
 }

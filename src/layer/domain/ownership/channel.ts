@@ -68,12 +68,21 @@ export class Ownership<K extends string> {
     return this.getPriority(key) > 0
         || Ownership.genPriority(0) > Math.abs(this.getPriority(key));
   }
-  public take(key: K, age: number): boolean {
+  public take(key: K, age: number): boolean
+  public take(key: K, age: number, wait: number): Promise<void>
+  public take(key: K, age: number, wait?: number): boolean | Promise<void> {
     assert(0 <= age && age < 60 * 1000);
     age = Math.min(Math.max(age, 1 * 1000), 60 * 1000) + 100;
+    wait = wait === undefined ? wait : Math.max(wait, 0);
     if (!this.isTakable(key)) return false;
-    void this.setPriority(key, Math.max(Ownership.genPriority(age), this.getPriority(key)));
-    return true;
+    void this.setPriority(key, Math.max(Ownership.genPriority(age + (wait || 0)), this.getPriority(key)));
+    return wait === undefined
+      ? true
+      : new Promise(resolve => setTimeout(resolve, wait))
+          .then(() =>
+            this.extend(key, age)
+              ? Promise.resolve()
+              : Promise.reject());
   }
   public extend(key: K, age: number): boolean {
     return this.has(key)

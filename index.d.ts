@@ -84,6 +84,7 @@ export namespace StorageChannelEventType {
 export class Ownership<K extends string> {
   constructor(name: K);
   take(key: K, age: number): boolean;
+  take(key: K, age: number, wait: number): Promise<void>;
   extend(key: K, age: number): boolean;
   close(): void;
 }

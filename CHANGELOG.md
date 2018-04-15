@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.24.0
+
+- Extend Ownership.take method.
+
 ## 0.23.2
 
 - Fix cancel processing with transaction.
