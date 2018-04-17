@@ -30,7 +30,7 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
         return acc;
       }, {})));
       const event = new StorageChannel.Event<V>(StorageChannel.EventType.send, attr, newValue, oldValue);
-      void (source.__event as Observation<[StorageChannelEventType, keyof DiffStruct<V, StorageChannelObject>], StorageChannel.Event<V>, any>).emit([event.type, event.attr], event);
+      void (source.__event as Observation<[StorageChannelEventType, keyof DiffStruct<V, StorageChannelObject>], StorageChannel.Event<V>, void>).emit([event.type, event.attr], event);
       void this.events.send.emit([event.attr], event);
     });
     void migrate(this.link_);
@@ -47,7 +47,7 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
             source[attr] = newVal;
             void migrate(this.link_);
             const event = new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, source[attr], oldVal);
-            void (source.__event as Observation<[StorageChannelEventType, keyof DiffStruct<V, StorageChannelObject>], StorageChannel.Event<V>, any>).emit([event.type, event.attr], event);
+            void (source.__event as Observation<[StorageChannelEventType, keyof DiffStruct<V, StorageChannelObject>], StorageChannel.Event<V>, void>).emit([event.type, event.attr], event);
             void this.events.recv.emit([event.attr], event);
           }, void 0);
       }));

@@ -92,7 +92,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
                   this.meta(key).date
               },
               __event: {
-                value: new Observation<[StorageChannel.EventType], StorageChannel.Event<V>, any>()
+                value: new Observation<[StorageChannel.EventType], StorageChannel.Event<V>, void>()
               },
             }),
           () => new this.Schema(),

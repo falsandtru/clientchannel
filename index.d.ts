@@ -27,7 +27,7 @@ export interface StoreChannelObject<K extends string> {
   readonly __id: number;
   readonly __key: K;
   readonly __date: number;
-  readonly __event: Observer<[StorageChannelEventType] | [StorageChannelEventType, keyof DiffStruct<this, StoreChannelObject<K>>], StorageChannelEvent<this>, any>;
+  readonly __event: Observer<[StorageChannelEventType] | [StorageChannelEventType, keyof DiffStruct<this, StoreChannelObject<K>>], StorageChannelEvent<this>, void>;
 }
 export interface StoreChannelObjectMetaData<K extends string> {
   readonly id: number;
@@ -65,7 +65,7 @@ export interface StorageChannelConfig<V extends StorageChannelObject> {
   migrate?(link: V): void;
 }
 export interface StorageChannelObject {
-  readonly __event: Observer<[StorageChannelEventType] | [StorageChannelEventType, keyof DiffStruct<this, StorageChannelObject>], StorageChannelEvent<this>, any>;
+  readonly __event: Observer<[StorageChannelEventType] | [StorageChannelEventType, keyof DiffStruct<this, StorageChannelObject>], StorageChannelEvent<this>, void>;
 }
 export interface StorageChannelEvent<V> {
   readonly type: StorageChannelEventType;
