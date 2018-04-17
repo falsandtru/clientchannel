@@ -43,12 +43,12 @@ class Value {
   get key() {
     return this.__key;
   }
-  // property names that has underscore prefix or postfix will be excluded in schema.
+  // Property names that has underscore prefix or postfix will be excluded in schema.
   private _separator = ' ';
-  // basic property names will be included in schema.
+  // Storable data with normal property name will be included in schema.
   firstName = '';
   lastName = '';
-  // invalid value types will be excluded in schema.
+  // Unstorable data will be ignored.
   name() {
     return this.firstName + this._separator + this.lastName;
   }
@@ -56,12 +56,12 @@ class Value {
 
 const chan = new StoreChannel('domain', {
   Schema: Value,
-  // delete linked records 3 days later since last access.
+  // Delete linked records 3 days later since last access.
   age: 3 * 24 * 60 * 60 * 1e3,
 });
-// load data from indexeddb a little later.
+// Load data from indexeddb a little later.
 const link = chan.link('path');
-// save data to indexeddb, and sync data between all tabs.
+// Save data to indexeddb, and sync data between all tabs.
 link.firstName = 'john';
 link.lastName = 'smith';
 ```
