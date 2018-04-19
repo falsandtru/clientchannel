@@ -53,12 +53,12 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
       const tx = db.transaction(this.name, 'readonly');
       const req = this.index
         ? tx
-          .objectStore(this.name)
-          .index(this.index)
-          .get(key)
+            .objectStore(this.name)
+            .index(this.index)
+            .get(key)
         : tx
-          .objectStore(this.name)
-          .get(key);
+            .objectStore(this.name)
+            .get(key);
       void req.addEventListener('success', () =>
         void cb(req.error));
       void tx.addEventListener('complete', () =>

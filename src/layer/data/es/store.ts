@@ -28,9 +28,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         const store = tx.db.objectStoreNames.contains(name)
           ? tx.objectStore(name)
           : tx.db.createObjectStore(name, {
-            keyPath: EventStoreSchema.id,
-            autoIncrement: true
-          });
+              keyPath: EventStoreSchema.id,
+              autoIncrement: true
+            });
         if (!store.indexNames.contains(EventStoreSchema.id)) {
           void store.createIndex(EventStoreSchema.id, EventStoreSchema.id, { unique: true });
         }
