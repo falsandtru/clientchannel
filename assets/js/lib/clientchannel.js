@@ -1,4 +1,4 @@
-/*! clientchannel v0.24.0 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.24.1 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -2578,7 +2578,7 @@ require = function () {
                                     newVal,
                                     oldVal
                                 };
-                            }).filter(({newVal, oldVal}) => newVal !== oldVal);
+                            }).filter(({newVal, oldVal}) => ![newVal].includes(oldVal));
                             if (changes.length === 0)
                                 return;
                             void migrate(link);
@@ -2786,7 +2786,7 @@ require = function () {
                         void Object.keys(item).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(item)).reduce((_, attr) => {
                             const oldVal = source[attr];
                             const newVal = item[attr];
-                            if (newVal === oldVal)
+                            if ([newVal].includes(oldVal))
                                 return;
                             source[attr] = newVal;
                             void migrate(this.link_);
