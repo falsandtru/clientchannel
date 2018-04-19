@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.24.1
+
+- Fix incorrect event emitting with NaN checks.
+
 ## 0.24.0
 
 - Extend Ownership.take method.
