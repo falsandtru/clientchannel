@@ -30,7 +30,7 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
     if (typeof this.value !== 'object' || !this.value) throw new TypeError(`ClientChannel: EventRecord: Invalid event value: ${JSON.stringify(this.value)}`);
     if (typeof this.date !== 'number' || !Number.isFinite(this.date) || this.date >= 0 === false) throw new TypeError(`ClientChannel: EventRecord: Invalid event date: ${this.date}`);
     this.attr = this.type === EventRecordType.put
-      ? Object.keys(value).filter(isValidPropertyName)[0] as keyof DiffStruct<V, StoreChannelObject<K>>
+      ? Object.keys(value).filter(isValidPropertyName)[0] as Extract<keyof DiffStruct<V, StoreChannelObject<K>>, string>
       : '';
     if (typeof this.attr !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event attr: ${this.key}`);
 
@@ -61,7 +61,7 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
         throw new TypeError(`ClientChannel: EventRecord: Invalid event type: ${type}`);
     }
   }
-  public readonly attr: keyof DiffStruct<V, StoreChannelObject<K>> | '';
+  public readonly attr: Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>;
 }
 export class UnstoredEventRecord<K extends string, V extends EventRecordValue> extends EventRecord<K, V> {
   private readonly EVENT_RECORD!: this;

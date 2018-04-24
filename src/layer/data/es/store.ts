@@ -101,13 +101,13 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   }
   private readonly memory = new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', string] | [K, keyof V | '', string, string], void, UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>>();
   public readonly events = Object.freeze({
-    load: new Observation<never[] | [K] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | ''] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
-    save: new Observation<never[] | [K] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | ''] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
-    loss: new Observation<never[] | [K] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | ''] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | '', EventStore.EventType], EventStore.Event<K, V>, void>(),
+    load: new Observation<never[] | [K] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>, EventStore.EventType], EventStore.Event<K, V>, void>(),
+    save: new Observation<never[] | [K] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>, EventStore.EventType], EventStore.Event<K, V>, void>(),
+    loss: new Observation<never[] | [K] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>, EventStore.EventType], EventStore.Event<K, V>, void>(),
     clean: new Observation<never[] | [K], boolean, void>(),
   });
   private readonly events_ = Object.freeze({
-    memory: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', string], UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>, void>(),
+    memory: new Observation<never[] | [K] | [K, keyof V | ''] | [K, keyof V | '', string], UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>, void>({ limit: Infinity }),
   });
   private tx_: {
     rw?: IDBTransaction;
@@ -251,9 +251,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           .filter(({ namespace: [, , id] }) => id === sqid(0))
           .forEach(({ namespace: [key, attr, id] }) => (
             void this.memory
-              .off([key as K, attr as keyof V, id]),
+              .off([key as K, attr as keyof V, id as string]),
             void this.events_.memory
-              .off([key as K, attr as keyof V, id])));
+              .off([key as K, attr as keyof V, id as string])));
         break;
       }
     }
@@ -429,7 +429,7 @@ export namespace EventStore {
       public readonly type: EventType,
       public readonly id: EventId,
       public readonly key: K,
-      public readonly attr: '' | keyof DiffStruct<V, StoreChannelObject<K>>,
+      public readonly attr: Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>,
       public readonly date: number
     ) {
       this.EVENT;

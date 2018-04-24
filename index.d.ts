@@ -4,9 +4,9 @@ import { DiffStruct } from 'spica/type';
 export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
   constructor(name: string, config: StoreChannelConfig<K, V>);
   readonly events: {
-    readonly load: Observer<never[] | [K] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | ''] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | '', StoreChannelEventType], StoreChannelEvent<K, V>, void>;
-    readonly save: Observer<never[] | [K] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | ''] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | '', StoreChannelEventType], StoreChannelEvent<K, V>, void>;
-    readonly loss: Observer<never[] | [K] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | ''] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | '', StoreChannelEventType], StoreChannelEvent<K, V>, void>;
+    readonly load: Observer<never[] | [K] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>, StoreChannelEventType], StoreChannelEvent<K, V>, void>;
+    readonly save: Observer<never[] | [K] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>, StoreChannelEventType], StoreChannelEvent<K, V>, void>;
+    readonly loss: Observer<never[] | [K] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>, StoreChannelEventType], StoreChannelEvent<K, V>, void>;
   };
   sync(keys: K[], cb?: (results: [K, DOMException | DOMError | Error | null][]) => void): void;
   link(key: K, age?: number): V;
@@ -27,7 +27,7 @@ export interface StoreChannelObject<K extends string> {
   readonly __id: number;
   readonly __key: K;
   readonly __date: number;
-  readonly __event: Observer<[StorageChannelEventType] | [StorageChannelEventType, keyof DiffStruct<this, StoreChannelObject<K>>], StorageChannelEvent<this>, void>;
+  readonly __event: Observer<[StorageChannelEventType] | [StorageChannelEventType, Extract<keyof DiffStruct<this, StoreChannelObject<K>>, string>], StorageChannelEvent<this>, void>;
 }
 export interface StoreChannelObjectMetaData<K extends string> {
   readonly id: number;
@@ -38,7 +38,7 @@ export interface StoreChannelEvent<K extends string, V> {
   readonly type: StoreChannelEventType;
   readonly id: number;
   readonly key: K;
-  readonly attr: keyof DiffStruct<V, StoreChannelObject<K>> | '';
+  readonly attr: Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>;
 }
 export type StoreChannelEventType
   = StoreChannelEventType.Put
@@ -53,8 +53,8 @@ export namespace StoreChannelEventType {
 export class StorageChannel<V extends StorageChannelObject> {
   constructor(name: string, config: StorageChannelConfig<V>);
   readonly events: {
-    readonly send: Observer<never[] | [keyof DiffStruct<V, StorageChannelObject>], StorageChannelEvent<V>, void>;
-    readonly recv: Observer<never[] | [keyof DiffStruct<V, StorageChannelObject>], StorageChannelEvent<V>, void>;
+    readonly send: Observer<never[] | [Extract<keyof DiffStruct<V, StorageChannelObject>, string>], StorageChannelEvent<V>, void>;
+    readonly recv: Observer<never[] | [Extract<keyof DiffStruct<V, StorageChannelObject>, string>], StorageChannelEvent<V>, void>;
   };
   link(): V;
   close(): void;
@@ -65,13 +65,13 @@ export interface StorageChannelConfig<V extends StorageChannelObject> {
   migrate?(link: V): void;
 }
 export interface StorageChannelObject {
-  readonly __event: Observer<[StorageChannelEventType] | [StorageChannelEventType, keyof DiffStruct<this, StorageChannelObject>], StorageChannelEvent<this>, void>;
+  readonly __event: Observer<[StorageChannelEventType] | [StorageChannelEventType, Extract<keyof DiffStruct<this, StorageChannelObject>, string>], StorageChannelEvent<this>, void>;
 }
 export interface StorageChannelEvent<V> {
   readonly type: StorageChannelEventType;
-  readonly attr: keyof DiffStruct<V, StorageChannelObject>;
-  readonly newValue: V[keyof DiffStruct<V, StorageChannelObject>];
-  readonly oldValue: V[keyof DiffStruct<V, StorageChannelObject>];
+  readonly attr: Extract<keyof DiffStruct<V, StorageChannelObject>, string>;
+  readonly newValue: V[Extract<keyof DiffStruct<V, StorageChannelObject>, string>];
+  readonly oldValue: V[Extract<keyof DiffStruct<V, StorageChannelObject>, string>];
 }
 export type StorageChannelEventType
   = StorageChannelEventType.Send

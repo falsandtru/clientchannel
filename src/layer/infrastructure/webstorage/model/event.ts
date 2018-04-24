@@ -3,7 +3,7 @@ import { localStorage, sessionStorage } from '../module/global';
 
 type Type = ['local' | 'session'] | ['local' | 'session', string];
 
-export const storageEventStream_ = new Observation<Type, StorageEvent, void>();
+export const storageEventStream_ = new Observation<Type, StorageEvent, void>({ limit: Infinity });
 export const storageEventStream: Observer<Type, StorageEvent, void> = storageEventStream_;
 
 void self.addEventListener('storage', event => {

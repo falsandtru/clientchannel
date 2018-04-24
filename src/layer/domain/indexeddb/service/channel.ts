@@ -92,11 +92,11 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
                   this.meta(key).date
               },
               __event: {
-                value: new Observation<[StorageChannel.EventType], StorageChannel.Event<V>, void>()
+                value: new Observation<[StorageChannel.EventType], StorageChannel.Event<V>, void>({ limit: Infinity })
               },
             }),
           () => new this.Schema(),
-          (attr: keyof DiffStruct<V, StoreChannelObject<K>>, newValue, oldValue) => (
+          (attr, newValue, oldValue) => (
             void this.add(new ChannelStore.Record<K, V>(key, { [attr]: newValue } as V)),
             void cast(this.sources.get(key)!.__event!)
               .emit([StorageChannel.EventType.send, attr], new StorageChannel.Event<V>(StorageChannel.EventType.send, attr as never, newValue, oldValue))),

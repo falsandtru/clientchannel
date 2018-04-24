@@ -141,9 +141,9 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     clean: new Observation<never[] | [K], boolean, void>(),
   });
   public readonly events = Object.freeze({
-    load: new Observation<never[] | [K] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | ''] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
-    save: new Observation<never[] | [K] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | ''] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
-    loss: new Observation<never[] | [K] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | ''] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
+    load: new Observation<never[] | [K] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
+    save: new Observation<never[] | [K] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
+    loss: new Observation<never[] | [K] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
   });
   public sync(keys: K[], cb: (results: [K, DOMException | DOMError | null][]) => void = noop, timeout = Infinity): void {
     const cancellation = new Cancellation();
