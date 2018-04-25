@@ -1,4 +1,4 @@
-/*! clientchannel v0.24.1 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.25.0 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -695,6 +695,7 @@ require = function () {
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            const assign_1 = require('./assign');
             const concat_1 = require('./concat');
             const equal_1 = require('./equal');
             const exception_1 = require('./exception');
@@ -704,7 +705,8 @@ require = function () {
                 RegisterItemType.subscriber = 'subscriber';
             }(RegisterItemType = exports.RegisterItemType || (exports.RegisterItemType = {})));
             class Observation {
-                constructor() {
+                constructor(opts = {}) {
+                    this.settings = { limit: 10 };
                     this.relaySources = new WeakSet();
                     this.node_ = {
                         parent: undefined,
@@ -712,39 +714,47 @@ require = function () {
                         childrenNames: [],
                         items: []
                     };
+                    void Object.freeze(assign_1.extend(this.settings, opts));
                 }
                 monitor(namespace, listener, {
                     once = false
                 } = {}) {
-                    void throwTypeErrorIfInvalidListener(listener, namespace);
+                    if (typeof listener !== 'function')
+                        throw new Error(`Spica: Observation: Invalid listener: ${ listener }`);
+                    const off = () => this.off(namespace, listener, RegisterItemType.monitor);
                     const {items} = this.seekNode_(namespace);
                     if (isRegistered(items, RegisterItemType.monitor, namespace, listener))
-                        return () => undefined;
+                        return off;
+                    if (items.length === this.settings.limit)
+                        throw new Error(`Spica: Observation: Exceeded max listener limit.`);
                     void items.push({
                         type: RegisterItemType.monitor,
                         namespace,
                         listener,
                         options: { once }
                     });
-                    return () => this.off(namespace, listener, RegisterItemType.monitor);
+                    return off;
                 }
                 on(namespace, listener, {
                     once = false
                 } = {}) {
-                    void throwTypeErrorIfInvalidListener(listener, namespace);
+                    if (typeof listener !== 'function')
+                        throw new Error(`Spica: Observation: Invalid listener: ${ listener }`);
+                    const off = () => this.off(namespace, listener);
                     const {items} = this.seekNode_(namespace);
                     if (isRegistered(items, RegisterItemType.subscriber, namespace, listener))
-                        return () => undefined;
+                        return off;
+                    if (items.length === this.settings.limit)
+                        throw new Error(`Spica: Observation: Exceeded max listener limit.`);
                     void items.push({
                         type: RegisterItemType.subscriber,
                         namespace,
                         listener,
                         options: { once }
                     });
-                    return () => this.off(namespace, listener);
+                    return off;
                 }
                 once(namespace, listener) {
-                    void throwTypeErrorIfInvalidListener(listener, namespace);
                     return this.on(namespace, listener, { once: true });
                 }
                 off(namespace, listener, type = RegisterItemType.subscriber) {
@@ -783,7 +793,7 @@ require = function () {
                             return;
                         }
                     default:
-                        throw throwTypeErrorIfInvalidListener(listener, namespace);
+                        throw new Error(`Spica: Observation: Unreachable.`);
                     }
                 }
                 emit(namespace, data, tracker) {
@@ -891,22 +901,11 @@ require = function () {
             }
             exports.Observation = Observation;
             function isRegistered(items, type, namespace, listener) {
-                return items.some(({
-                    type: t,
-                    namespace: n,
-                    listener: l
-                }) => t === type && n.length === namespace.length && n.every((_, i) => n[i] === namespace[i]) && l === listener);
-            }
-            function throwTypeErrorIfInvalidListener(listener, types) {
-                switch (typeof listener) {
-                case 'function':
-                    return;
-                default:
-                    throw new TypeError(`Spica: Observation: Invalid listener.\n\t${ types } ${ listener }`);
-                }
+                return items.some(item => item.type === type && item.namespace.length === namespace.length && item.namespace.every((ns, i) => ns === namespace[i]) && item.listener === listener);
             }
         },
         {
+            './assign': 4,
             './concat': 7,
             './equal': 9,
             './exception': 10
@@ -1308,7 +1307,7 @@ require = function () {
                         loss: new observation_1.Observation(),
                         clean: new observation_1.Observation()
                     });
-                    this.events_ = Object.freeze({ memory: new observation_1.Observation() });
+                    this.events_ = Object.freeze({ memory: new observation_1.Observation({ limit: Infinity }) });
                     this.tx_ = { rwc: 0 };
                     this.snapshotCycle = 9;
                     const states = new class {
@@ -2159,9 +2158,9 @@ require = function () {
                         clean: new observation_1.Observation()
                     });
                     this.events = Object.freeze({
-                        load: new observation_1.Observation(),
-                        save: new observation_1.Observation(),
-                        loss: new observation_1.Observation()
+                        load: new observation_1.Observation({ limit: Infinity }),
+                        save: new observation_1.Observation({ limit: Infinity }),
+                        loss: new observation_1.Observation({ limit: Infinity })
                     });
                     this.ages = new Map();
                     if (cache.has(name))
@@ -2219,7 +2218,7 @@ require = function () {
                     return void Promise.all(keys.map(key => new Promise(resolve => void this.fetch(key, error => void resolve([
                         key,
                         error
-                    ]), cancellation)))).then(cb);
+                    ]), cancellation)))).then(rs => rs.map(([key, error]) => error ? Promise.reject(error) : Promise.resolve(key))).then(cb);
                 }
                 fetch(key, cb = noop_1.noop, cancellation = new cancellation_1.Cancellation()) {
                     void this.schema.access.fetch(key);
@@ -2598,7 +2597,7 @@ require = function () {
                         __id: { get: () => this.meta(key).id },
                         __key: { get: () => this.meta(key).key },
                         __date: { get: () => this.meta(key).date },
-                        __event: { value: new observation_1.Observation() }
+                        __event: { value: new observation_1.Observation({ limit: Infinity }) }
                     }), () => new this.Schema(), (attr, newValue, oldValue) => (void this.add(new channel_1.ChannelStore.Record(key, { [attr]: newValue })), void cast(this.sources.get(key).__event).emit([
                         api_2.StorageChannel.EventType.send,
                         attr
@@ -2754,8 +2753,8 @@ require = function () {
                     this.cancellation = new cancellation_1.Cancellation();
                     this.mode = this.storage === api_2.localStorage ? 'local' : 'session';
                     this.events = Object.freeze({
-                        send: new observation_1.Observation(),
-                        recv: new observation_1.Observation()
+                        send: new observation_1.Observation({ limit: Infinity }),
+                        recv: new observation_1.Observation({ limit: Infinity })
                     });
                     if (cache.has(name))
                         throw new Error(`ClientChannel: Specified storage channel "${ name }" is already opened.`);
@@ -2763,7 +2762,7 @@ require = function () {
                     void this.cancellation.register(() => void cache.delete(name));
                     const source = Object.assign({
                         [api_1.SCHEMA.KEY.NAME]: this.name,
-                        [api_1.SCHEMA.EVENT.NAME]: new observation_1.Observation()
+                        [api_1.SCHEMA.EVENT.NAME]: new observation_1.Observation({ limit: Infinity })
                     }, parse(this.storage.getItem(this.name)));
                     this.link_ = api_1.build(source, () => new Schema(), (attr, newValue, oldValue) => {
                         void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(source)).reduce((acc, attr) => {
@@ -2946,7 +2945,7 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             const observation_1 = require('spica/observation');
-            exports.idbEventStream_ = new observation_1.Observation();
+            exports.idbEventStream_ = new observation_1.Observation({ limit: Infinity });
             exports.idbEventStream = exports.idbEventStream_;
             var IDBEventType;
             (function (IDBEventType) {
@@ -3367,7 +3366,7 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             const observation_1 = require('spica/observation');
             const global_1 = require('../module/global');
-            exports.storageEventStream_ = new observation_1.Observation();
+            exports.storageEventStream_ = new observation_1.Observation({ limit: Infinity });
             exports.storageEventStream = exports.storageEventStream_;
             void self.addEventListener('storage', event => {
                 switch (event.storageArea) {
