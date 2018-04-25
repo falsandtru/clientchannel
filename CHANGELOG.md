@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.25.0
+
+- Refine sync method interface.
+
 ## 0.24.1
 
 - Fix incorrect event emitting with NaN checks.

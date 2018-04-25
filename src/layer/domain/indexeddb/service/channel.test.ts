@@ -58,8 +58,8 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       listen_('test', db => {
         db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { n: 1 })));
         db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { s: '1' }))).onsuccess = () => {
-          chan.sync(['a', 'z'], results => {
-            assert.deepStrictEqual(results, [['a', null], ['z', null]]);
+          chan.sync(['a', 'z'], async results => {
+            assert.deepStrictEqual(await Promise.all(results), ['a', 'z']);
             const link = chan.link('a');
             assert(link.__id === 2);
             assert(link.__key === 'a');
