@@ -2,7 +2,7 @@ import { StoreChannelObject } from '../../../../';
 import { DiffStruct } from 'spica/type';
 import { Observation } from 'spica/observation';
 import { Cancellation } from 'spica/cancellation';
-import { tick } from 'spica/tick';
+import { tick } from 'spica/clock';
 import { sqid } from 'spica/sqid';
 import { concat } from 'spica/concat';
 import { Listen, Config, IDBKeyRange } from '../../infrastructure/indexeddb/api';
