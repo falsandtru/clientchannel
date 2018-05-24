@@ -1,4 +1,5 @@
 import { Channel, ChannelMessage } from '../broadcast/channel';
+import { AtomicPromise } from 'spica/promise';
 
 declare global {
   interface ChannelMessageTypeMap<K extends string> {
@@ -69,8 +70,8 @@ export class Ownership<K extends string> {
         || Ownership.genPriority(0) > Math.abs(this.getPriority(key));
   }
   public take(key: K, age: number): boolean
-  public take(key: K, age: number, wait: number): Promise<void>
-  public take(key: K, age: number, wait?: number): boolean | Promise<void> {
+  public take(key: K, age: number, wait: number): AtomicPromise<void>
+  public take(key: K, age: number, wait?: number): boolean | AtomicPromise<void> {
     assert(0 <= age && age < 60 * 1000);
     age = Math.min(Math.max(age, 1 * 1000), 60 * 1000) + 100;
     wait = wait === undefined ? wait : Math.max(wait, 0);
@@ -78,11 +79,11 @@ export class Ownership<K extends string> {
     void this.setPriority(key, Math.max(Ownership.genPriority(age + (wait || 0)), this.getPriority(key)));
     return wait === undefined
       ? true
-      : new Promise(resolve => setTimeout(resolve, wait))
+      : new AtomicPromise(resolve => setTimeout(resolve, wait))
           .then(() =>
             this.extend(key, age)
-              ? Promise.resolve()
-              : Promise.reject());
+              ? AtomicPromise.resolve()
+              : AtomicPromise.reject());
   }
   public extend(key: K, age: number): boolean {
     return this.has(key)

@@ -1,4 +1,5 @@
 ﻿import { Observer, Subscriber } from 'spica/observation';
+import { AtomicPromise } from 'spica/promise';
 import { DiffStruct } from 'spica/type';
 
 export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
@@ -8,7 +9,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
     readonly save: Observer<never[] | [K] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>, StoreChannelEventType], StoreChannelEvent<K, V>, void>;
     readonly loss: Observer<never[] | [K] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>, StoreChannelEventType], StoreChannelEvent<K, V>, void>;
   };
-  sync(keys: K[], cb?: (results: Promise<K>[]) => void): void;
+  sync(keys: K[], cb?: (results: AtomicPromise<K>[]) => void): void;
   link(key: K, age?: number): V;
   delete(key: K): void;
   recent(limit: number, cb: (keys: K[], err?: DOMException | DOMError | Error | null) => void): void;
@@ -84,7 +85,7 @@ export namespace StorageChannelEventType {
 export class Ownership<K extends string> {
   constructor(name: K);
   take(key: K, age: number): boolean;
-  take(key: K, age: number, wait: number): Promise<void>;
+  take(key: K, age: number, wait: number): AtomicPromise<void>;
   extend(key: K, age: number): boolean;
   close(): void;
 }

@@ -1,6 +1,7 @@
 import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../';
 import { Observation } from 'spica/observation';
 import { Cancellation } from 'spica/cancellation';
+import { AtomicPromise } from 'spica/promise';
 import { DiffStruct } from 'spica/type';
 import { Cache } from 'spica/cache';
 import { open, Listen, close, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
@@ -145,13 +146,13 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     save: new Observation<never[] | [K] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
     loss: new Observation<never[] | [K] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
   });
-  public sync(keys: K[], cb: (results: Promise<K>[]) => void = noop, timeout = Infinity): void {
+  public sync(keys: K[], cb: (results: AtomicPromise<K>[]) => void = noop, timeout = Infinity): void {
     const cancellation = new Cancellation();
     if (Number.isFinite(timeout)) {
       void setTimeout(cancellation.cancel, timeout);
     }
-    return void Promise.all(keys.map(key =>
-      new Promise<[K, Error | DOMError | null]>(resolve =>
+    return void AtomicPromise.all(keys.map(key =>
+      new AtomicPromise<[K, Error | DOMError | null]>(resolve =>
         void this.fetch(
           key,
           error =>
@@ -160,8 +161,8 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
       .then(rs =>
         rs.map(([key, error]) =>
           error
-            ? Promise.reject(error)
-            : Promise.resolve(key)))
+            ? AtomicPromise.reject(error)
+            : AtomicPromise.resolve(key)))
       .then(cb);
   }
   public fetch(key: K, cb: (error: DOMException | DOMError | Error | null) => void = noop, cancellation = new Cancellation()): void {
