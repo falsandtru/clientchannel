@@ -50,7 +50,7 @@
       Schema: function () {
         // define schema
         return {
-          event: function () {
+          get event() {
             return this.__event;
           },
           title: '',
@@ -65,10 +65,10 @@
     // create data binding object
     var canvas = chan.link('canvas');
     // component
-    canvas.event().on(['recv', 'title'], function (ev) {
+    canvas.event.on(['recv', 'title'], function (ev) {
       document.querySelector('.title').value = ev.newValue;
     });
-    canvas.event().on(['recv', 'content'], function (ev) {
+    canvas.event.on(['recv', 'content'], function (ev) {
       var c = document.createElement('canvas');
       c.setAttribute('width', width);
       c.setAttribute('height', height);
