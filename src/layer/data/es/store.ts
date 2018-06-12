@@ -5,6 +5,7 @@ import { Cancellation } from 'spica/cancellation';
 import { tick } from 'spica/clock';
 import { sqid } from 'spica/sqid';
 import { concat } from 'spica/concat';
+import { causeAsyncException } from 'spica/exception';
 import { Listen, Config, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { EventId, makeEventId } from './identifier';
 import { EventRecordType, UnstoredEventRecord, StoredEventRecord, LoadedEventRecord, SavedEventRecord, EventRecordValue, isValidPropertyName } from './event';
@@ -169,8 +170,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             void cb(req.error);
           }
           catch (reason) {
-            void new Promise((_, reject) =>
-              void reject(reason));
+            void causeAsyncException(reason);
           }
           if (events.length >= this.snapshotCycle) {
             void this.snapshot(key);
@@ -183,10 +183,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           try {
             void events.unshift(event);
           }
-          catch (error) {
+          catch (reason) {
             void tx.objectStore(this.name).delete(cursor.primaryKey);
-            void new Promise((_, reject) =>
-              void reject(error));
+            void causeAsyncException(reason);
           }
           if (event.type !== EventStore.EventType.put) return void proc(null, error);
           return void cursor.continue();
@@ -323,10 +322,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           try {
             void events.unshift(event);
           }
-          catch (error) {
+          catch (reason) {
             void cursor.delete();
-            void new Promise((_, reject) =>
-              void reject(error));
+            void causeAsyncException(reason);
           }
         }
         if (!cursor) {

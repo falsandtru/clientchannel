@@ -1,6 +1,7 @@
 import { indexedDB } from '../module/global';
 import { states, commands, Command, InitialState, BlockState, UpgradeState, SuccessState, ErrorState, AbortState, CrashState, DestroyState, EndState } from './state';
 import { idbEventStream_, IDBEvent, IDBEventType } from './event';
+import { causeAsyncException } from 'spica/exception';
 
 export function handle(database: string): void {
   const state = states.get(database);
@@ -113,8 +114,7 @@ function handleFromSuccessState(state: SuccessState): void {
       }
       catch (reason) {
         assert(!console.error(reason + ''));
-        void new Promise((_, reject) =>
-          void reject(reason));
+        void causeAsyncException(reason);
         const curr = new CrashState(state, reason);
         void connection.close();
         return void handleFromCrashState(curr);
