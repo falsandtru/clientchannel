@@ -156,6 +156,7 @@ export class ErrorState extends State {
   ) {
     super(state.database, state);
     this.STATE;
+    assert(error);
   }
 }
 

@@ -26,7 +26,7 @@ function handleFromInitialState(state: InitialState): void {
     openRequest.onsuccess = () =>
       void handleFromSuccessState(new SuccessState(state, openRequest.result as IDBDatabase));
     openRequest.onerror = event =>
-      void handleFromErrorState(new ErrorState(state, openRequest.error, event));
+      void handleFromErrorState(new ErrorState(state, openRequest.error!, event));
   }
   catch (reason) {
     void handleFromCrashState(new CrashState(state, reason));
@@ -43,22 +43,23 @@ function handleFromBlockedState(state: BlockState): void {
   session.onsuccess = () =>
     void handleFromSuccessState(new SuccessState(state, session.result as IDBDatabase));
   session.onerror = event =>
-    void handleFromErrorState(new ErrorState(state, session.error, event));
+    void handleFromErrorState(new ErrorState(state, session.error!, event));
   void idbEventStream_.emit([database, IDBEventType.block], new IDBEvent(database, IDBEventType.block));
 }
 
 function handleFromUpgradeState(state: UpgradeState): void {
   if (!state.alive) return;
   const { session } = state;
-  const db: IDBDatabase = session.transaction.db;
+  assert(session.transaction);
+  const db: IDBDatabase = session.transaction!.db;
   assert(db);
   const { make, destroy } = state.config;
   try {
-    if (make(session.transaction)) {
+    if (make(session.transaction!)) {
       session.onsuccess = () =>
         void handleFromSuccessState(new SuccessState(state, db));
       session.onerror = event =>
-        void handleFromErrorState(new ErrorState(state, session.error, event));
+        void handleFromErrorState(new ErrorState(state, session.error!, event));
     }
     else {
       session.onsuccess = session.onerror = event => (
@@ -176,7 +177,7 @@ function handleFromDestroyState(state: DestroyState): void {
     void idbEventStream_.emit([database, IDBEventType.destroy], new IDBEvent(database, IDBEventType.destroy)),
     void handleFromEndState(new EndState(state)));
   deleteRequest.onerror = event =>
-    void handleFromErrorState(new ErrorState(state, deleteRequest.error, event));
+    void handleFromErrorState(new ErrorState(state, deleteRequest.error!, event));
 }
 
 function handleFromEndState(state: EndState): void {

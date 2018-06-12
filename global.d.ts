@@ -1,7 +1,3 @@
-interface IDBDatabase {
-  onclose: (ev: Event) => void;
-}
-
 type IDBValidValue
   = boolean
   | IDBValidKey
