@@ -270,7 +270,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       if (!active()) return;
       const req = tx
         .objectStore(this.name)
-        .add(adjust(event));
+        .add(record(event));
       void tx.addEventListener('complete', () => {
         assert(req.result > 0);
         void clean();
@@ -453,10 +453,11 @@ interface MetaData<K extends string> {
   readonly date: number;
 }
 
-export function adjust(event: UnstoredEventRecord<any, any>): {} {
-  const ret = { ...event };
-  delete (<{ id: EventId; }>ret).id;
-  return ret;
+export function record(event: UnstoredEventRecord<any, any>): Readonly<Pick<typeof event, Exclude<keyof typeof event, 'id'>>> {
+  const record = { ...event };
+  assert(record.id === 0);
+  delete record.id;
+  return record;
 }
 
 // input order must be asc

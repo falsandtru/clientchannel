@@ -1,7 +1,7 @@
 import { StoreChannelObject } from '../../../../../';
 import { StoreChannel } from './channel';
 import { listen_, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
-import { adjust } from '../../../data/es/store';
+import { record } from '../../../data/es/store';
 
 describe('Unit: layers/domain/indexeddb/service/channel', function () {
   this.timeout(9 * 1e3);
@@ -56,8 +56,8 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       const chan = new StoreChannel('test', Value);
 
       listen_('test', db => {
-        db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { n: 1 })));
-        db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { s: '1' }))).onsuccess = () => {
+        db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { n: 1 })));
+        db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { s: '1' }))).onsuccess = () => {
           chan.sync(['a', 'z'], async results => {
             assert.deepStrictEqual(await Promise.all(results), ['a', 'z']);
             const link = chan.link('a');
@@ -79,8 +79,8 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       chan.fetch('z', err => {
         assert(!err);
         listen_('test', db => {
-          db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { n: 1 })));
-          db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { s: '1' }))).onsuccess = () => {
+          db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { n: 1 })));
+          db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { s: '1' }))).onsuccess = () => {
             chan.fetch('a', err => {
               assert(!err);
               const link = chan.link('a');
@@ -132,7 +132,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
 
       assert(link.n === 0);
       listen_('test', db => {
-        db.transaction('data', 'readwrite').objectStore('data').put(adjust(new StoreChannel.Record('a', { n: 1 }))).onsuccess = () => {
+        db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { n: 1 }))).onsuccess = () => {
           chan['schema'].data.fetch('a');
           link.__event.once(['recv', 'n'], () => {
             assert(link.__id === 1);
