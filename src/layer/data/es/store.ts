@@ -410,7 +410,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           .objectStore(this.name)
           .openCursor(query, direction);
       void req.addEventListener('success', () => {
-        const cursor: IDBCursorWithValue = req.result;
+        const cursor: IDBCursorWithValue | null = req.result;
         if (!cursor) return;
         void cb(cursor, req.error);
       });
