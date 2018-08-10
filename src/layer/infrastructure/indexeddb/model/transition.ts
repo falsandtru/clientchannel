@@ -114,7 +114,7 @@ function handleFromSuccessState(state: SuccessState): void {
         return;
       }
       catch (reason) {
-        assert(!console.error(reason + ''));
+        assert(!void console.error(reason + ''));
         void causeAsyncException(reason);
         const curr = new CrashState(state, reason);
         void connection.close();
