@@ -28,7 +28,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
       .monitor([], ({ key, attr, type }) => {
         if (!this.sources.has(key)) return;
         const source = this.sources.get(key)!;
-        const memory = this.get(key);
+        const memory = this.get(key)!;
         const link = this.link(key);
         switch (type) {
           case ChannelStore.EventType.put:
