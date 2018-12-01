@@ -56,8 +56,8 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
   private cancellation = new Cancellation();
   private readonly mode = this.storage === localStorage ? 'local' : 'session';
   public readonly events = Object.freeze({
-    send: new Observation<[] | [Extract<keyof DiffStruct<V, StorageChannelObject>, string>], StorageChannel.Event<V>, void>({ limit: Infinity }),
-    recv: new Observation<[] | [Extract<keyof DiffStruct<V, StorageChannelObject>, string>], StorageChannel.Event<V>, void>({ limit: Infinity }),
+    send: new Observation<[Extract<keyof DiffStruct<V, StorageChannelObject>, string>], StorageChannel.Event<V>, void>({ limit: Infinity }),
+    recv: new Observation<[Extract<keyof DiffStruct<V, StorageChannelObject>, string>], StorageChannel.Event<V>, void>({ limit: Infinity }),
   });
   private readonly link_: V;
   public link(): V {
