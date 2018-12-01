@@ -1,4 +1,4 @@
-/*! clientchannel v0.25.0 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.25.1 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -54,7 +54,7 @@ require = function () {
                 case 'Array':
                     return target[key] = exports.clone([], source[key]);
                 case 'Object':
-                    return target[key] = source[key] instanceof Object ? exports.clone({}, source[key]) : source[key];
+                    return target[key] = type_1.isObject(source[key]) ? exports.clone(source[key] instanceof Object ? {} : Object.create(null), source[key]) : source[key];
                 default:
                     return target[key] = source[key];
                 }
@@ -66,9 +66,9 @@ require = function () {
                 case 'Object':
                     switch (type_1.type(target[key])) {
                     case 'Object':
-                        return target[key] = source[key] instanceof Object ? exports.extend(target[key], source[key]) : source[key];
+                        return target[key] = type_1.isObject(source[key]) ? exports.extend(target[key], source[key]) : source[key];
                     default:
-                        return target[key] = source[key] instanceof Object ? exports.extend({}, source[key]) : source[key];
+                        return target[key] = type_1.isObject(source[key]) ? exports.extend(source[key] instanceof Object ? {} : Object.create(null), source[key]) : source[key];
                     }
                 default:
                     return target[key] = source[key];
@@ -95,7 +95,7 @@ require = function () {
                 }
             }
         },
-        { './type': 24 }
+        { './type': 27 }
     ],
     5: [
         function (require, module, exports) {
@@ -256,27 +256,32 @@ require = function () {
         },
         {
             './assign': 4,
-            './equal': 9
+            './equal': 11
         }
     ],
     6: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            const promise_1 = require('./promise');
+            const future_1 = require('./future');
             const exception_1 = require('./exception');
             const maybe_1 = require('./monad/maybe');
             const either_1 = require('./monad/either');
-            class Cancellation {
+            class Cancellation extends promise_1.AtomicPromise {
                 constructor(cancelees = []) {
-                    this.done = false;
+                    super(res => resolve = res);
+                    this.alive = true;
+                    this.canceled_ = false;
+                    this.state = new future_1.AtomicFuture();
                     this.listeners = new Set();
                     this.register = listener => {
-                        if (this.canceled)
+                        if (this.canceled_)
                             return void handler(this.reason), () => undefined;
-                        if (this.done)
+                        if (!this.alive)
                             return () => undefined;
                         void this.listeners.add(handler);
-                        return () => this.done ? undefined : void this.listeners.delete(handler);
+                        return () => this.alive ? void this.listeners.delete(handler) : undefined;
                         function handler(reason) {
                             try {
                                 void listener(reason);
@@ -286,38 +291,113 @@ require = function () {
                         }
                     };
                     this.cancel = reason => {
-                        if (this.done)
+                        if (!this.alive)
                             return;
-                        this.done = true;
-                        this.canceled = true;
+                        this.alive = false;
+                        this.canceled_ = true;
                         this.reason = reason;
+                        this.state.bind(this.reason);
                         void Object.freeze(this.listeners);
                         void Object.freeze(this);
                         void this.listeners.forEach(cb => void cb(reason));
                     };
-                    this.close = () => {
-                        if (this.done)
+                    this.close = reason => {
+                        if (!this.alive)
                             return;
-                        this.done = true;
+                        this.alive = false;
+                        void this.state.bind(promise_1.AtomicPromise.reject(reason));
                         void Object.freeze(this.listeners);
                         void Object.freeze(this);
                     };
-                    this.canceled = false;
-                    this.promise = val => this.canceled ? new Promise((_, reject) => void reject(this.reason)) : Promise.resolve(val);
-                    this.maybe = val => this.canceled ? maybe_1.Nothing : maybe_1.Just(val);
-                    this.either = val => this.canceled ? either_1.Left(this.reason) : either_1.Right(val);
+                    this.promise = val => this.canceled_ ? promise_1.AtomicPromise.reject(this.reason) : promise_1.AtomicPromise.resolve(val);
+                    this.maybe = val => this.canceled_ ? maybe_1.Nothing : maybe_1.Just(val);
+                    this.either = val => this.canceled_ ? either_1.Left(this.reason) : either_1.Right(val);
+                    var resolve;
+                    void resolve(this.state);
                     void [...cancelees].forEach(cancellee => void cancellee.register(this.cancel));
+                }
+                static get [Symbol.species]() {
+                    return promise_1.AtomicPromise;
+                }
+                get canceled() {
+                    return this.canceled_;
                 }
             }
             exports.Cancellation = Cancellation;
         },
         {
-            './exception': 10,
-            './monad/either': 13,
-            './monad/maybe': 17
+            './exception': 12,
+            './future': 13,
+            './monad/either': 16,
+            './monad/maybe': 20,
+            './promise': 24
         }
     ],
     7: [
+        function (require, module, exports) {
+            'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
+            const exception_1 = require('./exception');
+            let queue = [];
+            let register = new WeakSet();
+            function tick(cb, dedup = false) {
+                if (dedup) {
+                    if (register.has(cb))
+                        return;
+                    void register.add(cb);
+                }
+                void queue.push(cb);
+                void schedule();
+            }
+            exports.tick = tick;
+            const scheduler = Promise.resolve();
+            function schedule() {
+                if (queue.length !== 1)
+                    return;
+                void scheduler.then(run);
+            }
+            function run() {
+                const cbs = flush();
+                while (true) {
+                    try {
+                        while (cbs.length > 0) {
+                            void cbs.shift()();
+                        }
+                    } catch (reason) {
+                        void exception_1.causeAsyncException(reason);
+                        continue;
+                    }
+                    return;
+                }
+            }
+            function flush() {
+                const cbs = queue;
+                queue = [];
+                register = new WeakSet();
+                return cbs;
+            }
+        },
+        { './exception': 12 }
+    ],
+    8: [
+        function (require, module, exports) {
+            'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
+            const promise_1 = require('./promise');
+            var clock_tick_1 = require('./clock.tick');
+            exports.tick = clock_tick_1.tick;
+            exports.clock = Promise.resolve();
+            function wait(ms) {
+                return new promise_1.AtomicPromise(resolve => void setTimeout(resolve, ms));
+            }
+            exports.wait = wait;
+        },
+        {
+            './clock.tick': 7,
+            './promise': 24
+        }
+    ],
+    9: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -331,7 +411,7 @@ require = function () {
         },
         {}
     ],
-    8: [
+    10: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -342,7 +422,7 @@ require = function () {
         },
         {}
     ],
-    9: [
+    11: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -359,7 +439,7 @@ require = function () {
         },
         {}
     ],
-    10: [
+    12: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -377,7 +457,51 @@ require = function () {
         },
         {}
     ],
-    11: [
+    13: [
+        function (require, module, exports) {
+            'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
+            const promise_1 = require('./promise');
+            class Future extends Promise {
+                constructor() {
+                    let state = true;
+                    let bind;
+                    super(resolve => bind = value => {
+                        if (!state)
+                            throw new Error(`Spica: Future: Cannot rebind a value.`);
+                        state = false;
+                        void resolve(value);
+                        return this;
+                    });
+                    this.bind = bind;
+                }
+                static get [Symbol.species]() {
+                    return Promise;
+                }
+            }
+            exports.Future = Future;
+            class AtomicFuture extends promise_1.AtomicPromise {
+                constructor() {
+                    let state = true;
+                    let bind;
+                    super(resolve => bind = value => {
+                        if (!state)
+                            throw new Error(`Spica: AtomicFuture: Cannot rebind a value.`);
+                        state = false;
+                        void resolve(value);
+                        return this;
+                    });
+                    this.bind = bind;
+                }
+                static get [Symbol.species]() {
+                    return promise_1.AtomicPromise;
+                }
+            }
+            exports.AtomicFuture = AtomicFuture;
+        },
+        { './promise': 24 }
+    ],
+    14: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -394,15 +518,16 @@ require = function () {
             }(Applicative = exports.Applicative || (exports.Applicative = {})));
         },
         {
-            '../curry': 8,
-            './functor': 14
+            '../curry': 10,
+            './functor': 17
         }
     ],
-    12: [
+    15: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             const monad_1 = require('./monad');
+            const promise_1 = require('../promise');
             class Either extends monad_1.Monad {
                 constructor(thunk) {
                     super(thunk);
@@ -435,6 +560,22 @@ require = function () {
                 extract(left, right) {
                     return !right ? this.evaluate().extract(left) : this.fmap(right).extract(left);
                 }
+                static do(block) {
+                    const iter = block();
+                    let val;
+                    while (true) {
+                        const {
+                            value: m,
+                            done
+                        } = iter.next(val);
+                        if (done)
+                            return m;
+                        const r = m.extract(() => undefined, a => [a]);
+                        if (!r)
+                            return m;
+                        val = r[0];
+                    }
+                }
             }
             exports.Either = Either;
             (function (Either) {
@@ -443,8 +584,8 @@ require = function () {
                 }
                 Either.pure = pure;
                 Either.Return = pure;
-                function sequence(ms) {
-                    return ms.reduce((acc, m) => acc.bind(bs => m.fmap(b => bs.concat([b]))), Either.Return([]));
+                function sequence(fm) {
+                    return fm instanceof Either ? fm.extract(b => promise_1.AtomicPromise.resolve(new Left(b)), a => promise_1.AtomicPromise.resolve(a).then(Either.Return)) : fm.reduce((acc, m) => acc.bind(as => m.fmap(a => as.concat([a]))), Either.Return([]));
                 }
                 Either.sequence = sequence;
             }(Either = exports.Either || (exports.Either = {})));
@@ -482,22 +623,22 @@ require = function () {
                 throw new Error(`Spica: Either: Invalid thunk call.`);
             }
         },
-        { './monad': 18 }
+        {
+            '../promise': 24,
+            './monad': 21
+        }
     ],
-    13: [
+    16: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             const Monad = require('./either.impl');
-            var Either;
-            (function (Either) {
-                Either.fmap = Monad.Either.fmap;
-                Either.pure = Monad.Either.pure;
-                Either.ap = Monad.Either.ap;
-                Either.Return = Monad.Either.Return;
-                Either.bind = Monad.Either.bind;
-                Either.sequence = Monad.Either.sequence;
-            }(Either = exports.Either || (exports.Either = {})));
+            class Either extends Monad.Either {
+                constructor() {
+                    super(() => undefined);
+                }
+            }
+            exports.Either = Either;
             function Left(a) {
                 return new Monad.Left(a);
             }
@@ -507,9 +648,9 @@ require = function () {
             }
             exports.Right = Right;
         },
-        { './either.impl': 12 }
+        { './either.impl': 15 }
     ],
-    14: [
+    17: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -524,9 +665,9 @@ require = function () {
                 Functor.fmap = fmap;
             }(Functor = exports.Functor || (exports.Functor = {})));
         },
-        { './lazy': 15 }
+        { './lazy': 18 }
     ],
-    15: [
+    18: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -542,11 +683,12 @@ require = function () {
         },
         {}
     ],
-    16: [
+    19: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             const monadplus_1 = require('./monadplus');
+            const promise_1 = require('../promise');
             class Maybe extends monadplus_1.MonadPlus {
                 constructor(thunk) {
                     super(thunk);
@@ -582,6 +724,22 @@ require = function () {
                 extract(nothing, just) {
                     return !just ? this.evaluate().extract(nothing) : this.fmap(just).extract(nothing);
                 }
+                static do(block) {
+                    const iter = block();
+                    let val;
+                    while (true) {
+                        const {
+                            value: m,
+                            done
+                        } = iter.next(val);
+                        if (done)
+                            return m;
+                        const r = m.extract(() => undefined, a => [a]);
+                        if (!r)
+                            return m;
+                        val = r[0];
+                    }
+                }
             }
             exports.Maybe = Maybe;
             (function (Maybe) {
@@ -590,8 +748,8 @@ require = function () {
                 }
                 Maybe.pure = pure;
                 Maybe.Return = pure;
-                function sequence(ms) {
-                    return ms.reduce((acc, m) => acc.bind(as => m.fmap(a => as.concat([a]))), Maybe.Return([]));
+                function sequence(fm) {
+                    return fm instanceof Maybe ? fm.extract(() => promise_1.AtomicPromise.resolve(Maybe.mzero), a => promise_1.AtomicPromise.resolve(a).then(Maybe.Return)) : fm.reduce((acc, m) => acc.bind(as => m.fmap(a => as.concat([a]))), Maybe.Return([]));
                 }
                 Maybe.sequence = sequence;
             }(Maybe = exports.Maybe || (exports.Maybe = {})));
@@ -635,33 +793,31 @@ require = function () {
                 throw new Error(`Spica: Maybe: Invalid thunk call.`);
             }
         },
-        { './monadplus': 19 }
+        {
+            '../promise': 24,
+            './monadplus': 22
+        }
     ],
-    17: [
+    20: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             const Monad = require('./maybe.impl');
-            var Maybe;
-            (function (Maybe) {
-                Maybe.fmap = Monad.Maybe.fmap;
-                Maybe.pure = Monad.Maybe.pure;
-                Maybe.ap = Monad.Maybe.ap;
-                Maybe.Return = Monad.Maybe.Return;
-                Maybe.bind = Monad.Maybe.bind;
-                Maybe.sequence = Monad.Maybe.sequence;
-                Maybe.mzero = Monad.Maybe.mzero;
-                Maybe.mplus = Monad.Maybe.mplus;
-            }(Maybe = exports.Maybe || (exports.Maybe = {})));
+            class Maybe extends Monad.Maybe {
+                constructor() {
+                    super(() => undefined);
+                }
+            }
+            exports.Maybe = Maybe;
             function Just(a) {
                 return new Monad.Just(a);
             }
             exports.Just = Just;
             exports.Nothing = Monad.Maybe.mzero;
         },
-        { './maybe.impl': 16 }
+        { './maybe.impl': 19 }
     ],
-    18: [
+    21: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -676,9 +832,9 @@ require = function () {
                 Monad.bind = bind;
             }(Monad = exports.Monad || (exports.Monad = {})));
         },
-        { './applicative': 11 }
+        { './applicative': 14 }
     ],
-    19: [
+    22: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -689,9 +845,9 @@ require = function () {
             (function (MonadPlus) {
             }(MonadPlus = exports.MonadPlus || (exports.MonadPlus = {})));
         },
-        { './monad': 18 }
+        { './monad': 21 }
     ],
-    20: [
+    23: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -906,12 +1062,125 @@ require = function () {
         },
         {
             './assign': 4,
-            './concat': 7,
-            './equal': 9,
-            './exception': 10
+            './concat': 9,
+            './equal': 11,
+            './exception': 12
         }
     ],
-    21: [
+    24: [
+        function (require, module, exports) {
+            'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
+            var _a, _b;
+            'use strict';
+            const concat_1 = require('./concat');
+            var State;
+            (function (State) {
+                State[State['resolved'] = 0] = 'resolved';
+                State[State['rejected'] = 1] = 'rejected';
+            }(State || (State = {})));
+            const status = Symbol();
+            const queue = Symbol();
+            const resume = Symbol();
+            class AtomicPromise {
+                constructor(executor) {
+                    this[Symbol.toStringTag] = 'Promise';
+                    this[_a] = [];
+                    this[_b] = [];
+                    try {
+                        void executor(value => {
+                            this[status][0] = this[status][0] || [
+                                0,
+                                value
+                            ];
+                            void this[resume]();
+                        }, reason => {
+                            this[status][0] = this[status][0] || [
+                                1,
+                                reason
+                            ];
+                            void this[resume]();
+                        });
+                    } catch (reason) {
+                        this[status][0] = [
+                            1,
+                            reason
+                        ];
+                        void this[resume]();
+                    }
+                }
+                static get [Symbol.species]() {
+                    return AtomicPromise;
+                }
+                static all(values) {
+                    return values.reduce((acc, value) => acc.then(vs => AtomicPromise.resolve(value).then(value => concat_1.concat(vs, [value]))), AtomicPromise.resolve([]));
+                }
+                static race(values) {
+                    return new AtomicPromise((resolve, reject) => void values.forEach(value => void AtomicPromise.resolve(value).then(resolve, reject)));
+                }
+                static resolve(value) {
+                    return new AtomicPromise(resolve => void resolve(value));
+                }
+                static reject(reason) {
+                    return new AtomicPromise((_, reject) => void reject(reason));
+                }
+                [resume]() {
+                    if (!this[status][0])
+                        return;
+                    const [state, value] = this[status][0];
+                    while (this[queue].length > 0) {
+                        const [resolve, reject] = this[queue].shift();
+                        switch (state) {
+                        case 0:
+                            isPromiseLike(value) ? void value.then(resolve, reject) : void resolve(value);
+                            continue;
+                        case 1:
+                            void reject(value);
+                            continue;
+                        }
+                    }
+                }
+                then(onfulfilled, onrejected) {
+                    return new AtomicPromise((resolve, reject) => {
+                        void this[queue].push([
+                            value => {
+                                if (!onfulfilled)
+                                    return void resolve(value);
+                                try {
+                                    void resolve(onfulfilled(value));
+                                } catch (reason) {
+                                    void reject(reason);
+                                }
+                            },
+                            reason => {
+                                if (!onrejected)
+                                    return void resolve(this);
+                                try {
+                                    void resolve(onrejected(reason));
+                                } catch (reason) {
+                                    void reject(reason);
+                                }
+                            }
+                        ]);
+                        void this[resume]();
+                    });
+                }
+                catch(onrejected) {
+                    return this.then(undefined, onrejected);
+                }
+                finally(onfinally) {
+                    return this.then(onfinally, onfinally).then(() => this);
+                }
+            }
+            _a = status, _b = queue;
+            exports.AtomicPromise = AtomicPromise;
+            function isPromiseLike(value) {
+                return !!value && typeof value === 'object' && 'then' in value && typeof value.then === 'function';
+            }
+        },
+        { './concat': 9 }
+    ],
+    25: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -932,7 +1201,7 @@ require = function () {
         },
         {}
     ],
-    22: [
+    26: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -981,67 +1250,25 @@ require = function () {
         },
         {}
     ],
-    23: [
-        function (require, module, exports) {
-            'use strict';
-            Object.defineProperty(exports, '__esModule', { value: true });
-            const exception_1 = require('./exception');
-            let queue = [];
-            let register = new WeakSet();
-            function tick(cb, dedup = false) {
-                if (dedup) {
-                    if (register.has(cb))
-                        return;
-                    void register.add(cb);
-                }
-                void queue.push(cb);
-                void schedule();
-            }
-            exports.tick = tick;
-            const scheduler = Promise.resolve();
-            function schedule() {
-                if (queue.length !== 1)
-                    return;
-                void scheduler.then(run);
-            }
-            function run() {
-                const cbs = flush();
-                while (true) {
-                    try {
-                        while (cbs.length > 0) {
-                            void cbs.shift()();
-                        }
-                    } catch (reason) {
-                        void exception_1.causeAsyncException(reason);
-                        continue;
-                    }
-                    return;
-                }
-            }
-            function flush() {
-                const cbs = queue;
-                queue = [];
-                register = new WeakSet();
-                return cbs;
-            }
-        },
-        { './exception': 10 }
-    ],
-    24: [
+    27: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             function type(target) {
                 const type = Object.prototype.toString.call(target).split(' ').pop().slice(0, -1);
-                if (typeof target !== 'object' && target instanceof Object === false || target === null)
+                if (target === null || typeof target !== 'object' && target instanceof Object === false)
                     return type.toLowerCase();
                 return type;
             }
             exports.type = type;
+            function isObject(target) {
+                return target !== null && typeof target === 'object';
+            }
+            exports.isObject = isObject;
         },
         {}
     ],
-    25: [
+    28: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1063,7 +1290,7 @@ require = function () {
         },
         {}
     ],
-    26: [
+    29: [
         function (require, module, exports) {
             'use strict';
             function __export(m) {
@@ -1074,9 +1301,9 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             __export(require('./layer/interface/api'));
         },
-        { './layer/interface/api': 55 }
+        { './layer/interface/api': 58 }
     ],
-    27: [
+    30: [
         function (require, module, exports) {
             'use strict';
             function __export(m) {
@@ -1111,16 +1338,17 @@ require = function () {
             exports.Ownership = Ownership;
         },
         {
-            '../domain/broadcast/channel': 33,
-            '../domain/indexeddb/api': 36,
-            '../domain/ownership/channel': 42,
-            '../domain/webstorage/api': 43
+            '../domain/broadcast/channel': 36,
+            '../domain/indexeddb/api': 39,
+            '../domain/ownership/channel': 45,
+            '../domain/webstorage/api': 46
         }
     ],
-    28: [
+    31: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            const type_1 = require('spica/type');
             function isStorable(value) {
                 switch (typeof value) {
                 case 'undefined':
@@ -1140,16 +1368,16 @@ require = function () {
             }
             exports.isStorable = isStorable;
             function hasBinary(value) {
-                return value instanceof Object ? isBinary(value) || Object.keys(value).some(key => hasBinary(value[key])) : false;
+                return type_1.isObject(value) ? isBinary(value) || Object.keys(value).some(key => hasBinary(value[key])) : false;
             }
             exports.hasBinary = hasBinary;
             function isBinary(value) {
                 return value instanceof Int8Array || value instanceof Int16Array || value instanceof Int32Array || value instanceof Uint8Array || value instanceof Uint8ClampedArray || value instanceof Uint16Array || value instanceof Uint32Array || value instanceof ArrayBuffer || value instanceof Blob;
             }
         },
-        {}
+        { 'spica/type': 27 }
     ],
-    29: [
+    32: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1257,12 +1485,12 @@ require = function () {
             exports.isValidPropertyValue = isValidPropertyValue;
         },
         {
-            '../database/value': 28,
-            './identifier': 30,
+            '../database/value': 31,
+            './identifier': 33,
             'spica/assign': 4
         }
     ],
-    30: [
+    33: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1276,15 +1504,16 @@ require = function () {
         },
         {}
     ],
-    31: [
+    34: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             const observation_1 = require('spica/observation');
             const cancellation_1 = require('spica/cancellation');
-            const tick_1 = require('spica/tick');
+            const clock_1 = require('spica/clock');
             const sqid_1 = require('spica/sqid');
             const concat_1 = require('spica/concat');
+            const exception_1 = require('spica/exception');
             const api_1 = require('../../infrastructure/indexeddb/api');
             const identifier_1 = require('./identifier');
             const event_1 = require('./event');
@@ -1388,7 +1617,7 @@ require = function () {
                         return;
                     this.tx_.rwc = 0;
                     this.tx_.rw = tx;
-                    void tick_1.tick(() => this.tx_.rw = void 0);
+                    void clock_1.tick(() => this.tx_.rw = void 0);
                 }
                 fetch(key, cb = noop_1.noop, cancellation = new cancellation_1.Cancellation()) {
                     const events = [];
@@ -1417,7 +1646,7 @@ require = function () {
                                 try {
                                     void cb(req.error);
                                 } catch (reason) {
-                                    void new Promise((_, reject) => void reject(reason));
+                                    void exception_1.causeAsyncException(reason);
                                 }
                                 if (events.length >= this.snapshotCycle) {
                                     void this.snapshot(key);
@@ -1433,9 +1662,9 @@ require = function () {
                                     return void proc(null, error);
                                 try {
                                     void events.unshift(event);
-                                } catch (error) {
+                                } catch (reason) {
                                     void tx.objectStore(this.name).delete(cursor.primaryKey);
-                                    void new Promise((_, reject) => void reject(error));
+                                    void exception_1.causeAsyncException(reason);
                                 }
                                 if (event.type !== EventStore.EventType.put)
                                     return void proc(null, error);
@@ -1528,7 +1757,7 @@ require = function () {
                         ]) === event);
                         if (!active())
                             return;
-                        const req = tx.objectStore(this.name).add(adjust(event));
+                        const req = tx.objectStore(this.name).add(record(event));
                         void tx.addEventListener('complete', () => {
                             void clean();
                             const savedEvent = new event_1.SavedEventRecord(identifier_1.makeEventId(req.result), event.key, event.value, event.type, event.date);
@@ -1574,9 +1803,9 @@ require = function () {
                                 const event = new event_1.LoadedEventRecord(cursor.value);
                                 try {
                                     void events.unshift(event);
-                                } catch (error) {
+                                } catch (reason) {
                                     void cursor.delete();
-                                    void new Promise((_, reject) => void reject(error));
+                                    void exception_1.causeAsyncException(reason);
                                 }
                             }
                             if (!cursor) {
@@ -1685,12 +1914,12 @@ require = function () {
                 }
                 EventStore.Value = Value;
             }(EventStore = exports.EventStore || (exports.EventStore = {})));
-            function adjust(event) {
-                const ret = Object.assign({}, event);
-                delete ret.id;
-                return ret;
+            function record(event) {
+                const record = Object.assign({}, event);
+                delete record.id;
+                return record;
             }
-            exports.adjust = adjust;
+            exports.record = record;
             function compose(key, attrs, events) {
                 return group(events).map(events => events.reduceRight(compose, new event_1.UnstoredEventRecord(key, new EventStore.Value(), EventStore.EventType.delete, 0))).reduce(e => e);
                 function group(events) {
@@ -1719,25 +1948,26 @@ require = function () {
             exports.compose = compose;
         },
         {
-            '../../../lib/noop': 56,
-            '../../infrastructure/indexeddb/api': 46,
-            '../database/value': 28,
-            './event': 29,
-            './identifier': 30,
+            '../../../lib/noop': 59,
+            '../../infrastructure/indexeddb/api': 49,
+            '../database/value': 31,
+            './event': 32,
+            './identifier': 33,
             'spica/cancellation': 6,
-            'spica/concat': 7,
-            'spica/observation': 20,
-            'spica/sqid': 21,
-            'spica/tick': 23
+            'spica/clock': 8,
+            'spica/concat': 9,
+            'spica/exception': 12,
+            'spica/observation': 23,
+            'spica/sqid': 25
         }
     ],
-    32: [
+    35: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             const noop_1 = require('../../../lib/noop');
             const cancellation_1 = require('spica/cancellation');
-            const tick_1 = require('spica/tick');
+            const clock_1 = require('spica/clock');
             class KeyValueStore {
                 constructor(name, index, listen) {
                     this.name = name;
@@ -1776,7 +2006,7 @@ require = function () {
                         return;
                     this.tx_.rwc = 0;
                     this.tx_.rw = tx;
-                    void tick_1.tick(() => this.tx_.rw = void 0);
+                    void clock_1.tick(() => this.tx_.rw = void 0);
                 }
                 fetch(key, cb = noop_1.noop, cancellation = new cancellation_1.Cancellation()) {
                     return void this.listen(db => {
@@ -1843,12 +2073,12 @@ require = function () {
             exports.KeyValueStore = KeyValueStore;
         },
         {
-            '../../../lib/noop': 56,
+            '../../../lib/noop': 59,
             'spica/cancellation': 6,
-            'spica/tick': 23
+            'spica/clock': 8
         }
     ],
-    33: [
+    36: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1978,9 +2208,9 @@ require = function () {
                 }
             }
         },
-        { '../../infrastructure/webstorage/api': 52 }
+        { '../../infrastructure/webstorage/api': 55 }
     ],
-    34: [
+    37: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1990,9 +2220,9 @@ require = function () {
             exports.isValidPropertyName = builder_1.isValidPropertyName;
             exports.isValidPropertyValue = builder_1.isValidPropertyValue;
         },
-        { './module/builder': 35 }
+        { './module/builder': 38 }
     ],
-    35: [
+    38: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2074,25 +2304,26 @@ require = function () {
             exports.build = build;
         },
         {
-            '../../../../lib/noop': 56,
-            '../../../data/es/event': 29
+            '../../../../lib/noop': 59,
+            '../../../data/es/event': 32
         }
     ],
-    36: [
+    39: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var channel_1 = require('./service/channel');
             exports.StoreChannel = channel_1.StoreChannel;
         },
-        { './service/channel': 41 }
+        { './service/channel': 44 }
     ],
-    37: [
+    40: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             const observation_1 = require('spica/observation');
             const cancellation_1 = require('spica/cancellation');
+            const promise_1 = require('spica/promise');
             const cache_1 = require('spica/cache');
             const api_1 = require('../../../infrastructure/indexeddb/api');
             const data_1 = require('./channel/data');
@@ -2215,10 +2446,10 @@ require = function () {
                     if (Number.isFinite(timeout)) {
                         void setTimeout(cancellation.cancel, timeout);
                     }
-                    return void Promise.all(keys.map(key => new Promise(resolve => void this.fetch(key, error => void resolve([
+                    return void promise_1.AtomicPromise.all(keys.map(key => new promise_1.AtomicPromise(resolve => void this.fetch(key, error => void resolve([
                         key,
                         error
-                    ]), cancellation)))).then(rs => rs.map(([key, error]) => error ? Promise.reject(error) : Promise.resolve(key))).then(cb);
+                    ]), cancellation)))).then(rs => rs.map(([key, error]) => error ? promise_1.AtomicPromise.reject(error) : promise_1.AtomicPromise.resolve(key))).then(cb);
                 }
                 fetch(key, cb = noop_1.noop, cancellation = new cancellation_1.Cancellation()) {
                     void this.schema.access.fetch(key);
@@ -2312,19 +2543,20 @@ require = function () {
             }
         },
         {
-            '../../../../lib/noop': 56,
-            '../../../infrastructure/indexeddb/api': 46,
-            '../../broadcast/channel': 33,
-            '../../ownership/channel': 42,
-            './channel/access': 38,
-            './channel/data': 39,
-            './channel/expiry': 40,
+            '../../../../lib/noop': 59,
+            '../../../infrastructure/indexeddb/api': 49,
+            '../../broadcast/channel': 36,
+            '../../ownership/channel': 45,
+            './channel/access': 41,
+            './channel/data': 42,
+            './channel/expiry': 43,
             'spica/cache': 5,
             'spica/cancellation': 6,
-            'spica/observation': 20
+            'spica/observation': 23,
+            'spica/promise': 24
         }
     ],
-    38: [
+    41: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2400,9 +2632,9 @@ require = function () {
                 }
             }
         },
-        { '../../../../data/kvs/store': 32 }
+        { '../../../../data/kvs/store': 35 }
     ],
-    39: [
+    42: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2424,9 +2656,9 @@ require = function () {
                 DataStore.Value = store_1.EventStore.Value;
             }(DataStore = exports.DataStore || (exports.DataStore = {})));
         },
-        { '../../../../data/es/store': 31 }
+        { '../../../../data/es/store': 34 }
     ],
-    40: [
+    43: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2535,9 +2767,9 @@ require = function () {
                 }
             }
         },
-        { '../../../../data/kvs/store': 32 }
+        { '../../../../data/kvs/store': 35 }
     ],
-    41: [
+    44: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2613,18 +2845,19 @@ require = function () {
             }
         },
         {
-            '../../dao/api': 34,
-            '../../webstorage/api': 43,
-            '../model/channel': 37,
-            'spica/observation': 20,
-            'spica/throttle': 22
+            '../../dao/api': 37,
+            '../../webstorage/api': 46,
+            '../model/channel': 40,
+            'spica/observation': 23,
+            'spica/throttle': 26
         }
     ],
-    42: [
+    45: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             const channel_1 = require('../broadcast/channel');
+            const promise_1 = require('spica/promise');
             class OwnershipMessage extends channel_1.ChannelMessage {
                 constructor(key, priority) {
                     super(key, 'ownership');
@@ -2679,7 +2912,7 @@ require = function () {
                     if (!this.isTakable(key))
                         return false;
                     void this.setPriority(key, Math.max(Ownership.genPriority(age + (wait || 0)), this.getPriority(key)));
-                    return wait === undefined ? true : new Promise(resolve => setTimeout(resolve, wait)).then(() => this.extend(key, age) ? Promise.resolve() : Promise.reject());
+                    return wait === undefined ? true : new promise_1.AtomicPromise(resolve => setTimeout(resolve, wait)).then(() => this.extend(key, age) ? promise_1.AtomicPromise.resolve() : promise_1.AtomicPromise.reject());
                 }
                 extend(key, age) {
                     return this.has(key) ? this.take(key, age) : false;
@@ -2691,9 +2924,12 @@ require = function () {
             Ownership.mergin = 5 * 1000;
             exports.Ownership = Ownership;
         },
-        { '../broadcast/channel': 33 }
+        {
+            '../broadcast/channel': 36,
+            'spica/promise': 24
+        }
     ],
-    43: [
+    46: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2704,11 +2940,11 @@ require = function () {
             exports.sessionStorage = api_1.sessionStorage;
         },
         {
-            '../../infrastructure/webstorage/api': 52,
-            './service/channel': 45
+            '../../infrastructure/webstorage/api': 55,
+            './service/channel': 48
         }
     ],
-    44: [
+    47: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2736,7 +2972,7 @@ require = function () {
         },
         {}
     ],
-    45: [
+    48: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2837,14 +3073,14 @@ require = function () {
             }
         },
         {
-            '../../../infrastructure/webstorage/api': 52,
-            '../../dao/api': 34,
-            '../model/storage': 44,
+            '../../../infrastructure/webstorage/api': 55,
+            '../../dao/api': 37,
+            '../model/storage': 47,
             'spica/cancellation': 6,
-            'spica/observation': 20
+            'spica/observation': 23
         }
     ],
-    46: [
+    49: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2862,12 +3098,12 @@ require = function () {
             exports.IDBEventType = event_1.IDBEventType;
         },
         {
-            './model/access': 47,
-            './model/event': 48,
-            './module/global': 51
+            './model/access': 50,
+            './model/event': 51,
+            './module/global': 54
         }
     ],
-    47: [
+    50: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2935,12 +3171,12 @@ require = function () {
             }
         },
         {
-            './event': 48,
-            './state': 49,
-            './transition': 50
+            './event': 51,
+            './state': 52,
+            './transition': 53
         }
     ],
-    48: [
+    51: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2966,9 +3202,9 @@ require = function () {
             }
             exports.IDBEvent = IDBEvent;
         },
-        { 'spica/observation': 20 }
+        { 'spica/observation': 23 }
     ],
-    49: [
+    52: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3144,13 +3380,14 @@ require = function () {
         },
         {}
     ],
-    50: [
+    53: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             const global_1 = require('../module/global');
             const state_1 = require('./state');
             const event_1 = require('./event');
+            const exception_1 = require('spica/exception');
             function handle(database) {
                 const state = state_1.states.get(database);
                 return state instanceof state_1.SuccessState ? void handleFromSuccessState(state) : void handleFromInitialState(new state_1.InitialState(database));
@@ -3240,7 +3477,7 @@ require = function () {
                             }
                             return;
                         } catch (reason) {
-                            void new Promise((_, reject) => void reject(reason));
+                            void exception_1.causeAsyncException(reason);
                             const curr = new state_1.CrashState(state, reason);
                             void connection.close();
                             return void handleFromCrashState(curr);
@@ -3330,12 +3567,13 @@ require = function () {
             }
         },
         {
-            '../module/global': 51,
-            './event': 48,
-            './state': 49
+            '../module/global': 54,
+            './event': 51,
+            './state': 52,
+            'spica/exception': 12
         }
     ],
-    51: [
+    54: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3344,7 +3582,7 @@ require = function () {
         },
         {}
     ],
-    52: [
+    55: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3356,11 +3594,11 @@ require = function () {
             exports.storageEventStream_ = event_1.storageEventStream_;
         },
         {
-            './model/event': 53,
-            './module/global': 54
+            './model/event': 56,
+            './module/global': 57
         }
     ],
-    53: [
+    56: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3386,11 +3624,11 @@ require = function () {
             });
         },
         {
-            '../module/global': 54,
-            'spica/observation': 20
+            '../module/global': 57,
+            'spica/observation': 23
         }
     ],
-    54: [
+    57: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3412,9 +3650,9 @@ require = function () {
             exports.localStorage = supportsWebStorage ? self.localStorage : void 0;
             exports.sessionStorage = supportsWebStorage ? self.sessionStorage : void 0;
         },
-        { 'spica/uuid': 25 }
+        { 'spica/uuid': 28 }
     ],
-    55: [
+    58: [
         function (require, module, exports) {
             'use strict';
             function __export(m) {
@@ -3425,9 +3663,9 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             __export(require('../application/api'));
         },
-        { '../application/api': 27 }
+        { '../application/api': 30 }
     ],
-    56: [
+    59: [
         function (require, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3451,7 +3689,7 @@ require = function () {
             var export_1 = require('./src/export');
             exports.default = export_1.default;
         },
-        { './src/export': 26 }
+        { './src/export': 29 }
     ]
 }, {}, [
     1,
@@ -3459,3 +3697,13 @@ require = function () {
     3,
     'clientchannel'
 ]);
+(function (root, factory) {
+    if (typeof define === 'function' && define.amd) {
+        define([], factory);
+    } else if (typeof module === 'object' && module.exports) {
+        module.exports = factory();
+    } else {
+    }
+}(typeof self !== 'undefined' ? self : this, function () {
+    return require('clientchannel');
+}));
