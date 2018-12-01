@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.25.1
+
+- Fix binary data checks.
+
 ## 0.25.0
 
 - Refine sync method interface.

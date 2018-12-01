@@ -1,3 +1,5 @@
+import { isObject } from 'spica/type';
+
 export function isStorable(value: IDBValidValue): boolean {
   switch (typeof value) {
     case 'undefined':
@@ -21,7 +23,7 @@ export function isStorable(value: IDBValidValue): boolean {
 }
 
 export function hasBinary(value: IDBValidValue): boolean {
-  return value instanceof Object
+  return isObject(value)
     ? isBinary(value) ||
       Object.keys(value)
         .some(key => hasBinary(value[key]))
