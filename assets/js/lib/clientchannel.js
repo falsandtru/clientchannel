@@ -1,4 +1,4 @@
-/*! clientchannel v0.25.1 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.25.2 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -1262,7 +1262,7 @@ require = function () {
             }
             exports.type = type;
             function isObject(target) {
-                return target !== null && typeof target === 'object';
+                return target !== null && (typeof target === 'object' || target instanceof Object);
             }
             exports.isObject = isObject;
         },
