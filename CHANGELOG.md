@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.25.2
+
+- Add license notice.
+
 ## 0.25.1
 
 - Fix binary data checks.
