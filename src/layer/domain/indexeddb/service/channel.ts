@@ -56,10 +56,10 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
               ![newVal].includes(oldVal));
           if (changes.length === 0) return;
           void migrate(link);
-          void changes
-            .forEach(({ attr, oldVal }) =>
-              void cast(source.__event!)
-                .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr as never, memory[attr as never], oldVal as never)));
+          for (const { attr, oldVal } of changes) {
+            void cast(source.__event!)
+              .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr as never, memory[attr as never], oldVal as never));
+          }
         }
       });
     void Object.freeze(this);

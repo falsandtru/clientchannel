@@ -31,9 +31,9 @@ export function build<V extends object>(
   get: (prop: string, val: any) => void = noop,
 ): V {
   const dao: V = factory();
-  void Object.keys(SCHEMA)
-    .map(prop => SCHEMA[prop].NAME)
-    .reduce((_, prop) => { delete dao[prop] }, void 0);
+  for (const prop of Object.keys(SCHEMA).map(prop => SCHEMA[prop].NAME)) {
+    delete dao[prop];
+  }
   if (typeof source[SCHEMA.KEY.NAME] !== 'string') throw new TypeError(`ClientChannel: DAO: Invalid key: ${source[SCHEMA.KEY.NAME]}`);
   const descmap: PropertyDescriptorMap = {
     ...Object.keys(dao)

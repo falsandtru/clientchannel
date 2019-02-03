@@ -364,13 +364,12 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       (cursor, error) => {
         if (error) return;
         if (!cursor) {
-          void events
-            .reduce<void>((_, event) => (
-              void this.memory
-                .off([event.key, event.attr, sqid(event.id)]),
-              void this.events_.memory
-                .off([event.key, event.attr, sqid(event.id)]))
-            , void 0);
+          for (const event of events) {
+            void this.memory
+              .off([event.key, event.attr, sqid(event.id)]);
+            void this.events_.memory
+              .off([event.key, event.attr, sqid(event.id)]);
+          }
           return void this.events.clean.emit([key], !cleared.canceled);
         }
         else {

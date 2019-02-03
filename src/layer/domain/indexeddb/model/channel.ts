@@ -97,10 +97,9 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
       if (this.cancellation.canceled) return;
       void this.recent(Infinity, (ks, error) => {
         if (error) return void setTimeout(limit, 10 * 1000);
-        return void ks
-          .reverse()
-          .forEach(key =>
-            void this.keys.put(key));
+        for (const key of ks.reverse()) {
+          void this.keys.put(key);
+        }
       });
     };
     void limit();

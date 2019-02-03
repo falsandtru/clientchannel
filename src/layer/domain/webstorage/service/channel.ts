@@ -40,7 +40,7 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
         void Object.keys(item)
           .filter(isValidPropertyName)
           .filter(isValidPropertyValue(item))
-          .reduce<void>((_, attr) => {
+          .forEach(attr => {
             const oldVal = source[attr];
             const newVal = item[attr];
             if ([newVal].includes(oldVal)) return;
@@ -49,7 +49,7 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
             const event = new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr as Extract<keyof DiffStruct<V, StorageChannelObject>, string>, source[attr], oldVal);
             void (source.__event as Observation<[StorageChannelEventType, Extract<keyof DiffStruct<V, StorageChannelObject>, string>], StorageChannel.Event<V>, void>).emit([event.type, event.attr], event);
             void this.events.recv.emit([event.attr], event);
-          }, void 0);
+          });
       }));
     void Object.freeze(this);
   }

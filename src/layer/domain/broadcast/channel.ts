@@ -91,9 +91,9 @@ class Broadcast<K extends string> extends AbstractChannel<K> implements Channel<
   public close(): void {
     this.alive = false;
     super.close();
-    void this.listeners
-      .forEach(listener =>
-        void this.channel.removeEventListener('message', listener));
+    for (const listener of this.listeners) {
+      void this.channel.removeEventListener('message', listener);
+    }
     void this.listeners.clear();
   }
 }
@@ -132,9 +132,9 @@ class Storage<K extends string> extends AbstractChannel<K> implements Channel<K>
   public close(): void {
     this.alive = false;
     super.close();
-    void this.listeners
-      .forEach(listener =>
-        void storageEventStream.off(['local', this.name], listener));
+    for (const listener of this.listeners) {
+      void storageEventStream.off(['local', this.name], listener);
+    }
     void this.listeners.clear();
     void this.storage.removeItem(this.name);
   }
