@@ -2,7 +2,6 @@
 
 [![Build Status](https://travis-ci.org/falsandtru/clientchannel.svg?branch=master)](https://travis-ci.org/falsandtru/clientchannel)
 [![Coverage Status](https://coveralls.io/repos/falsandtru/clientchannel/badge.svg?branch=master&service=github)](https://coveralls.io/github/falsandtru/clientchannel?branch=master)
-[![Dependency Status](https://gemnasium.com/falsandtru/clientchannel.svg)](https://gemnasium.com/falsandtru/clientchannel)
 
 Store and sync values by communication between tabs via IndexedDB and LocalStorage.
 
