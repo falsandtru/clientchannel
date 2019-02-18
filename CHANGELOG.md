@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.25.3
+
+- Fix bundle processing.
+
 ## 0.25.2
 
 - Add license notice.
