@@ -1,4 +1,4 @@
-/*! clientchannel v0.25.2 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.25.3 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -27,27 +27,27 @@ require = function () {
     return r;
 }()({
     1: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
         },
         {}
     ],
     2: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             arguments[4][1][0].apply(exports, arguments);
         },
         { 'dup': 1 }
     ],
     3: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             arguments[4][1][0].apply(exports, arguments);
         },
         { 'dup': 1 }
     ],
     4: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const type_1 = require('./type');
+            const type_1 = _dereq_('./type');
             exports.assign = template((key, target, source) => target[key] = source[key]);
             exports.clone = template((key, target, source) => {
                 switch (type_1.type(source[key])) {
@@ -98,31 +98,32 @@ require = function () {
         { './type': 27 }
     ],
     5: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const assign_1 = require('./assign');
-            const equal_1 = require('./equal');
+            const assign_1 = _dereq_('./assign');
+            const equal_1 = _dereq_('./equal');
             class Cache {
                 constructor(size, callback = () => undefined, opts = {}) {
                     this.size = size;
                     this.callback = callback;
-                    this.opts = {
+                    this.settings = {
                         ignore: {
                             delete: false,
                             clear: false
+                        },
+                        data: {
+                            stats: [
+                                [],
+                                []
+                            ],
+                            entries: []
                         }
                     };
                     if (size > 0 === false)
                         throw new Error(`Spica: Cache: Cache size must be greater than 0.`);
-                    void Object.freeze(assign_1.extend(this.opts, opts));
-                    const {stats, entries} = opts.data || {
-                        stats: [
-                            [],
-                            []
-                        ],
-                        entries: []
-                    };
+                    void assign_1.extend(this.settings, opts);
+                    const {stats, entries} = this.settings.data;
                     const LFU = stats[1].slice(0, size);
                     const LRU = stats[0].slice(0, size - LFU.length);
                     this.stats = {
@@ -130,10 +131,12 @@ require = function () {
                         LFU
                     };
                     this.store = new Map(entries);
-                    void [
-                        ...stats[1],
-                        ...stats[0]
-                    ].slice(LFU.length + LRU.length).forEach(k => void this.store.delete(k));
+                    for (const k of [
+                            ...stats[1],
+                            ...stats[0]
+                        ].slice(LFU.length + LRU.length)) {
+                        void this.store.delete(k);
+                    }
                     if (this.store.size !== LFU.length + LRU.length)
                         throw new Error(`Spica: Cache: Size of stats and entries is not matched.`);
                     if (![
@@ -190,7 +193,7 @@ require = function () {
                             continue;
                         const val = this.store.get(key);
                         void this.store.delete(stat.splice(index, 1)[0]);
-                        if (this.opts.ignore.delete)
+                        if (this.settings.ignore.delete)
                             return true;
                         void this.callback(key, val);
                         return true;
@@ -204,9 +207,11 @@ require = function () {
                         LRU: [],
                         LFU: []
                     };
-                    if (this.opts.ignore.clear)
+                    if (this.settings.ignore.clear)
                         return;
-                    return void [...store].forEach(([key, val]) => void this.callback(key, val));
+                    for (const [key, val] of store) {
+                        void this.callback(key, val);
+                    }
                 }
                 [Symbol.iterator]() {
                     return this.store[Symbol.iterator]();
@@ -260,14 +265,14 @@ require = function () {
         }
     ],
     6: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const promise_1 = require('./promise');
-            const future_1 = require('./future');
-            const exception_1 = require('./exception');
-            const maybe_1 = require('./monad/maybe');
-            const either_1 = require('./monad/either');
+            const promise_1 = _dereq_('./promise');
+            const future_1 = _dereq_('./future');
+            const exception_1 = _dereq_('./exception');
+            const maybe_1 = _dereq_('./monad/maybe');
+            const either_1 = _dereq_('./monad/either');
             class Cancellation extends promise_1.AtomicPromise {
                 constructor(cancelees = []) {
                     super(res => resolve = res);
@@ -299,7 +304,9 @@ require = function () {
                         this.state.bind(this.reason);
                         void Object.freeze(this.listeners);
                         void Object.freeze(this);
-                        void this.listeners.forEach(cb => void cb(reason));
+                        for (const listener of this.listeners) {
+                            void listener(reason);
+                        }
                     };
                     this.close = reason => {
                         if (!this.alive)
@@ -310,11 +317,13 @@ require = function () {
                         void Object.freeze(this);
                     };
                     this.promise = val => this.canceled_ ? promise_1.AtomicPromise.reject(this.reason) : promise_1.AtomicPromise.resolve(val);
-                    this.maybe = val => this.canceled_ ? maybe_1.Nothing : maybe_1.Just(val);
-                    this.either = val => this.canceled_ ? either_1.Left(this.reason) : either_1.Right(val);
+                    this.maybe = val => maybe_1.Just(val).bind(val => this.canceled_ ? maybe_1.Nothing : maybe_1.Just(val));
+                    this.either = val => either_1.Right(val).bind(val => this.canceled_ ? either_1.Left(this.reason) : either_1.Right(val));
                     var resolve;
                     void resolve(this.state);
-                    void [...cancelees].forEach(cancellee => void cancellee.register(this.cancel));
+                    for (const cancellee of cancelees) {
+                        void cancellee.register(this.cancel);
+                    }
                 }
                 static get [Symbol.species]() {
                     return promise_1.AtomicPromise;
@@ -334,10 +343,10 @@ require = function () {
         }
     ],
     7: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const exception_1 = require('./exception');
+            const exception_1 = _dereq_('./exception');
             let queue = [];
             let register = new WeakSet();
             function tick(cb, dedup = false) {
@@ -380,15 +389,15 @@ require = function () {
         { './exception': 12 }
     ],
     8: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const promise_1 = require('./promise');
-            var clock_tick_1 = require('./clock.tick');
+            const promise_1 = _dereq_('./promise');
+            var clock_tick_1 = _dereq_('./clock.tick');
             exports.tick = clock_tick_1.tick;
             exports.clock = Promise.resolve();
             function wait(ms) {
-                return new promise_1.AtomicPromise(resolve => void setTimeout(resolve, ms));
+                return ms === 0 ? promise_1.AtomicPromise.resolve(exports.clock) : new promise_1.AtomicPromise(resolve => void setTimeout(resolve, ms));
             }
             exports.wait = wait;
         },
@@ -398,13 +407,11 @@ require = function () {
         }
     ],
     9: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             function concat(target, source) {
-                for (let i = 0, offset = target.length, len = source.length; i < len; ++i) {
-                    target[offset + i] = source[i];
-                }
+                target.push(...source);
                 return target;
             }
             exports.concat = concat;
@@ -412,18 +419,21 @@ require = function () {
         {}
     ],
     10: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.curry = (f, ctx) => f.length === 0 ? () => f.call(ctx) : curry_(f, [], ctx);
-            function curry_(f, xs, ctx) {
-                return f.length <= xs.length ? f.apply(ctx, xs.slice(0, f.length)) : (...ys) => curry_(f, xs.concat(ys), ctx);
+            exports.curry = f => f.length === 0 ? f : apply(f, []);
+            function apply(f, xs) {
+                return xs.length >= f.length ? f(...xs) : (...ys) => apply(f, [
+                    ...xs,
+                    ...ys
+                ]);
             }
         },
         {}
     ],
     11: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             function findIndex(a1, as) {
@@ -440,7 +450,7 @@ require = function () {
         {}
     ],
     12: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             function causeAsyncException(reason) {
@@ -458,10 +468,10 @@ require = function () {
         {}
     ],
     13: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const promise_1 = require('./promise');
+            const promise_1 = _dereq_('./promise');
             class Future extends Promise {
                 constructor() {
                     let state = true;
@@ -502,17 +512,17 @@ require = function () {
         { './promise': 24 }
     ],
     14: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const functor_1 = require('./functor');
-            const curry_1 = require('../curry');
+            const functor_1 = _dereq_('./functor');
+            const curry_1 = _dereq_('../curry');
             class Applicative extends functor_1.Functor {
             }
             exports.Applicative = Applicative;
             (function (Applicative) {
                 function ap(af, aa) {
-                    return aa ? af.bind(f => aa.fmap(a => f.length === 0 ? f(a) : curry_1.curry(f)(a))) : aa => ap(af, aa);
+                    return aa ? af.bind(f => aa.fmap(curry_1.curry(f))) : aa => ap(af, aa);
                 }
                 Applicative.ap = ap;
             }(Applicative = exports.Applicative || (exports.Applicative = {})));
@@ -523,11 +533,11 @@ require = function () {
         }
     ],
     15: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const monad_1 = require('./monad');
-            const promise_1 = require('../promise');
+            const monad_1 = _dereq_('./monad');
+            const promise_1 = _dereq_('../promise');
             class Either extends monad_1.Monad {
                 constructor(thunk) {
                     super(thunk);
@@ -585,7 +595,10 @@ require = function () {
                 Either.pure = pure;
                 Either.Return = pure;
                 function sequence(fm) {
-                    return fm instanceof Either ? fm.extract(b => promise_1.AtomicPromise.resolve(new Left(b)), a => promise_1.AtomicPromise.resolve(a).then(Either.Return)) : fm.reduce((acc, m) => acc.bind(as => m.fmap(a => as.concat([a]))), Either.Return([]));
+                    return fm instanceof Either ? fm.extract(b => promise_1.AtomicPromise.resolve(new Left(b)), a => promise_1.AtomicPromise.resolve(a).then(Either.Return)) : fm.reduce((acc, m) => acc.bind(as => m.fmap(a => [
+                        ...as,
+                        a
+                    ])), Either.Return([]));
                 }
                 Either.sequence = sequence;
             }(Either = exports.Either || (exports.Either = {})));
@@ -629,10 +642,10 @@ require = function () {
         }
     ],
     16: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const Monad = require('./either.impl');
+            const Monad = _dereq_('./either.impl');
             class Either extends Monad.Either {
                 constructor() {
                     super(() => undefined);
@@ -651,10 +664,10 @@ require = function () {
         { './either.impl': 15 }
     ],
     17: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const lazy_1 = require('./lazy');
+            const lazy_1 = _dereq_('./lazy');
             class Functor extends lazy_1.Lazy {
             }
             exports.Functor = Functor;
@@ -668,7 +681,7 @@ require = function () {
         { './lazy': 18 }
     ],
     18: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             class Lazy {
@@ -684,11 +697,11 @@ require = function () {
         {}
     ],
     19: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const monadplus_1 = require('./monadplus');
-            const promise_1 = require('../promise');
+            const monadplus_1 = _dereq_('./monadplus');
+            const promise_1 = _dereq_('../promise');
             class Maybe extends monadplus_1.MonadPlus {
                 constructor(thunk) {
                     super(thunk);
@@ -749,7 +762,10 @@ require = function () {
                 Maybe.pure = pure;
                 Maybe.Return = pure;
                 function sequence(fm) {
-                    return fm instanceof Maybe ? fm.extract(() => promise_1.AtomicPromise.resolve(Maybe.mzero), a => promise_1.AtomicPromise.resolve(a).then(Maybe.Return)) : fm.reduce((acc, m) => acc.bind(as => m.fmap(a => as.concat([a]))), Maybe.Return([]));
+                    return fm instanceof Maybe ? fm.extract(() => promise_1.AtomicPromise.resolve(Maybe.mzero), a => promise_1.AtomicPromise.resolve(a).then(Maybe.Return)) : fm.reduce((acc, m) => acc.bind(as => m.fmap(a => [
+                        ...as,
+                        a
+                    ])), Maybe.Return([]));
                 }
                 Maybe.sequence = sequence;
             }(Maybe = exports.Maybe || (exports.Maybe = {})));
@@ -799,10 +815,10 @@ require = function () {
         }
     ],
     20: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const Monad = require('./maybe.impl');
+            const Monad = _dereq_('./maybe.impl');
             class Maybe extends Monad.Maybe {
                 constructor() {
                     super(() => undefined);
@@ -818,10 +834,10 @@ require = function () {
         { './maybe.impl': 19 }
     ],
     21: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const applicative_1 = require('./applicative');
+            const applicative_1 = _dereq_('./applicative');
             class Monad extends applicative_1.Applicative {
             }
             exports.Monad = Monad;
@@ -835,10 +851,10 @@ require = function () {
         { './applicative': 14 }
     ],
     22: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const monad_1 = require('./monad');
+            const monad_1 = _dereq_('./monad');
             class MonadPlus extends monad_1.Monad {
             }
             exports.MonadPlus = MonadPlus;
@@ -848,13 +864,13 @@ require = function () {
         { './monad': 21 }
     ],
     23: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const assign_1 = require('./assign');
-            const concat_1 = require('./concat');
-            const equal_1 = require('./equal');
-            const exception_1 = require('./exception');
+            const assign_1 = _dereq_('./assign');
+            const concat_1 = _dereq_('./concat');
+            const equal_1 = _dereq_('./equal');
+            const exception_1 = _dereq_('./exception');
             var RegisterItemType;
             (function (RegisterItemType) {
                 RegisterItemType.monitor = 'monitor';
@@ -870,7 +886,7 @@ require = function () {
                         childrenNames: [],
                         items: []
                     };
-                    void Object.freeze(assign_1.extend(this.settings, opts));
+                    void assign_1.extend(this.settings, opts);
                 }
                 monitor(namespace, listener, {
                     once = false
@@ -935,16 +951,19 @@ require = function () {
                         });
                     case 'undefined': {
                             const node = this.seekNode_(namespace);
-                            void node.childrenNames.slice().forEach(name => {
-                                void this.off(namespace.concat([name]));
+                            for (const name of node.childrenNames.slice()) {
+                                void this.off([
+                                    ...namespace,
+                                    name
+                                ]);
                                 const child = node.children.get(name);
                                 if (!child)
-                                    return;
+                                    continue;
                                 if (child.items.length + child.childrenNames.length > 0)
-                                    return;
+                                    continue;
                                 void node.children.delete(name);
                                 void node.childrenNames.splice(equal_1.findIndex(name, node.childrenNames), 1);
-                            });
+                            }
                             node.items = node.items.filter(({type}) => type === RegisterItemType.monitor);
                             return;
                         }
@@ -969,13 +988,13 @@ require = function () {
                 }
                 drain_(namespace, data, tracker) {
                     const results = [];
-                    void this.refsBelow_(this.seekNode_(namespace)).reduce((_, {
-                        type,
-                        listener,
-                        options: {once}
-                    }) => {
+                    for (const {
+                                type,
+                                listener,
+                                options: {once}
+                            } of this.refsBelow_(this.seekNode_(namespace))) {
                         if (type !== RegisterItemType.subscriber)
-                            return;
+                            continue;
                         if (once) {
                             void this.off(namespace, listener);
                         }
@@ -987,14 +1006,14 @@ require = function () {
                         } catch (reason) {
                             void exception_1.causeAsyncException(reason);
                         }
-                    }, undefined);
-                    void this.refsAbove_(this.seekNode_(namespace)).reduce((_, {
-                        type,
-                        listener,
-                        options: {once}
-                    }) => {
+                    }
+                    for (const {
+                                type,
+                                listener,
+                                options: {once}
+                            } of this.refsAbove_(this.seekNode_(namespace))) {
                         if (type !== RegisterItemType.monitor)
-                            return;
+                            continue;
                         if (once) {
                             void this.off(namespace, listener, RegisterItemType.monitor);
                         }
@@ -1003,7 +1022,7 @@ require = function () {
                         } catch (reason) {
                             void exception_1.causeAsyncException(reason);
                         }
-                    }, undefined);
+                    }
                     if (tracker) {
                         try {
                             void tracker(data, results);
@@ -1068,12 +1087,12 @@ require = function () {
         }
     ],
     24: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var _a, _b;
             'use strict';
-            const concat_1 = require('./concat');
+            const concat_1 = _dereq_('./concat');
             var State;
             (function (State) {
                 State[State['resolved'] = 0] = 'resolved';
@@ -1116,7 +1135,11 @@ require = function () {
                     return values.reduce((acc, value) => acc.then(vs => AtomicPromise.resolve(value).then(value => concat_1.concat(vs, [value]))), AtomicPromise.resolve([]));
                 }
                 static race(values) {
-                    return new AtomicPromise((resolve, reject) => void values.forEach(value => void AtomicPromise.resolve(value).then(resolve, reject)));
+                    return new AtomicPromise((resolve, reject) => {
+                        for (const value of values) {
+                            void AtomicPromise.resolve(value).then(resolve, reject);
+                        }
+                    });
                 }
                 static resolve(value) {
                     return new AtomicPromise(resolve => void resolve(value));
@@ -1154,7 +1177,7 @@ require = function () {
                             },
                             reason => {
                                 if (!onrejected)
-                                    return void resolve(this);
+                                    return void reject(reason);
                                 try {
                                     void resolve(onrejected(reason));
                                 } catch (reason) {
@@ -1181,7 +1204,7 @@ require = function () {
         { './concat': 9 }
     ],
     25: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             const zeros = '0'.repeat(15);
@@ -1202,7 +1225,7 @@ require = function () {
         {}
     ],
     26: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             function throttle(interval, callback) {
@@ -1251,7 +1274,7 @@ require = function () {
         {}
     ],
     27: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             function type(target) {
@@ -1269,13 +1292,14 @@ require = function () {
         {}
     ],
     28: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const FORMAT_V4 = Object.freeze('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.split(''));
+            const FORMAT_V4 = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx';
             function uuid() {
                 let acc = '';
-                for (const c of FORMAT_V4) {
+                for (let i = 0; i < FORMAT_V4.length; ++i) {
+                    const c = FORMAT_V4[i];
                     if (c === 'x' || c === 'y') {
                         const r = Math.random() * 16 | 0;
                         const v = c == 'x' ? r : r & 3 | 8;
@@ -1284,14 +1308,14 @@ require = function () {
                         acc += c;
                     }
                 }
-                return acc.toLowerCase();
+                return acc;
             }
             exports.uuid = uuid;
         },
         {}
     ],
     29: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             function __export(m) {
                 for (var p in m)
@@ -1299,12 +1323,12 @@ require = function () {
                         exports[p] = m[p];
             }
             Object.defineProperty(exports, '__esModule', { value: true });
-            __export(require('./layer/interface/api'));
+            __export(_dereq_('./layer/interface/api'));
         },
         { './layer/interface/api': 58 }
     ],
     30: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             function __export(m) {
                 for (var p in m)
@@ -1312,12 +1336,12 @@ require = function () {
                         exports[p] = m[p];
             }
             Object.defineProperty(exports, '__esModule', { value: true });
-            const api_1 = require('../domain/indexeddb/api');
-            const api_2 = require('../domain/webstorage/api');
-            const channel_1 = require('../domain/broadcast/channel');
-            const channel_2 = require('../domain/ownership/channel');
-            __export(require('../domain/indexeddb/api'));
-            __export(require('../domain/webstorage/api'));
+            const api_1 = _dereq_('../domain/indexeddb/api');
+            const api_2 = _dereq_('../domain/webstorage/api');
+            const channel_1 = _dereq_('../domain/broadcast/channel');
+            const channel_2 = _dereq_('../domain/ownership/channel');
+            __export(_dereq_('../domain/indexeddb/api'));
+            __export(_dereq_('../domain/webstorage/api'));
             class StoreChannel extends api_1.StoreChannel {
                 constructor(name, config) {
                     super(name, config.Schema, config);
@@ -1345,10 +1369,10 @@ require = function () {
         }
     ],
     31: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const type_1 = require('spica/type');
+            const type_1 = _dereq_('spica/type');
             function isStorable(value) {
                 switch (typeof value) {
                 case 'undefined':
@@ -1378,12 +1402,12 @@ require = function () {
         { 'spica/type': 27 }
     ],
     32: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const assign_1 = require('spica/assign');
-            const identifier_1 = require('./identifier');
-            const value_1 = require('../database/value');
+            const assign_1 = _dereq_('spica/assign');
+            const identifier_1 = _dereq_('./identifier');
+            const value_1 = _dereq_('../database/value');
             exports.EventRecordType = {
                 put: 'put',
                 delete: 'delete',
@@ -1491,7 +1515,7 @@ require = function () {
         }
     ],
     33: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var Identifier;
@@ -1505,20 +1529,20 @@ require = function () {
         {}
     ],
     34: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const observation_1 = require('spica/observation');
-            const cancellation_1 = require('spica/cancellation');
-            const clock_1 = require('spica/clock');
-            const sqid_1 = require('spica/sqid');
-            const concat_1 = require('spica/concat');
-            const exception_1 = require('spica/exception');
-            const api_1 = require('../../infrastructure/indexeddb/api');
-            const identifier_1 = require('./identifier');
-            const event_1 = require('./event');
-            const value_1 = require('../database/value');
-            const noop_1 = require('../../../lib/noop');
+            const observation_1 = _dereq_('spica/observation');
+            const cancellation_1 = _dereq_('spica/cancellation');
+            const clock_1 = _dereq_('spica/clock');
+            const sqid_1 = _dereq_('spica/sqid');
+            const concat_1 = _dereq_('spica/concat');
+            const exception_1 = _dereq_('spica/exception');
+            const api_1 = _dereq_('../../infrastructure/indexeddb/api');
+            const identifier_1 = _dereq_('./identifier');
+            const event_1 = _dereq_('./event');
+            const value_1 = _dereq_('../database/value');
+            const noop_1 = _dereq_('../../../lib/noop');
             var EventStoreSchema;
             (function (EventStoreSchema) {
                 EventStoreSchema.id = 'id';
@@ -1835,15 +1859,18 @@ require = function () {
                         if (error)
                             return;
                         if (!cursor) {
-                            void events.reduce((_, event) => (void this.memory.off([
-                                event.key,
-                                event.attr,
-                                sqid_1.sqid(event.id)
-                            ]), void this.events_.memory.off([
-                                event.key,
-                                event.attr,
-                                sqid_1.sqid(event.id)
-                            ])), void 0);
+                            for (const event of events) {
+                                void this.memory.off([
+                                    event.key,
+                                    event.attr,
+                                    sqid_1.sqid(event.id)
+                                ]);
+                                void this.events_.memory.off([
+                                    event.key,
+                                    event.attr,
+                                    sqid_1.sqid(event.id)
+                                ]);
+                            }
                             return void this.events.clean.emit([key], !cleared.canceled);
                         } else {
                             const event = new event_1.LoadedEventRecord(cursor.value);
@@ -1962,12 +1989,12 @@ require = function () {
         }
     ],
     35: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const noop_1 = require('../../../lib/noop');
-            const cancellation_1 = require('spica/cancellation');
-            const clock_1 = require('spica/clock');
+            const noop_1 = _dereq_('../../../lib/noop');
+            const cancellation_1 = _dereq_('spica/cancellation');
+            const clock_1 = _dereq_('spica/clock');
             class KeyValueStore {
                 constructor(name, index, listen) {
                     this.name = name;
@@ -2079,10 +2106,10 @@ require = function () {
         }
     ],
     36: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const api_1 = require('../../infrastructure/webstorage/api');
+            const api_1 = _dereq_('../../infrastructure/webstorage/api');
             const version = 1;
             class ChannelMessage {
                 constructor(key, type) {
@@ -2158,7 +2185,9 @@ require = function () {
                 close() {
                     this.alive = false;
                     super.close();
-                    void this.listeners.forEach(listener => void this.channel.removeEventListener('message', listener));
+                    for (const listener of this.listeners) {
+                        void this.channel.removeEventListener('message', listener);
+                    }
                     void this.listeners.clear();
                 }
             }
@@ -2199,10 +2228,12 @@ require = function () {
                 close() {
                     this.alive = false;
                     super.close();
-                    void this.listeners.forEach(listener => void api_1.storageEventStream.off([
-                        'local',
-                        this.name
-                    ], listener));
+                    for (const listener of this.listeners) {
+                        void api_1.storageEventStream.off([
+                            'local',
+                            this.name
+                        ], listener);
+                    }
                     void this.listeners.clear();
                     void this.storage.removeItem(this.name);
                 }
@@ -2211,10 +2242,10 @@ require = function () {
         { '../../infrastructure/webstorage/api': 55 }
     ],
     37: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            var builder_1 = require('./module/builder');
+            var builder_1 = _dereq_('./module/builder');
             exports.SCHEMA = builder_1.SCHEMA;
             exports.build = builder_1.build;
             exports.isValidPropertyName = builder_1.isValidPropertyName;
@@ -2223,13 +2254,13 @@ require = function () {
         { './module/builder': 38 }
     ],
     38: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const event_1 = require('../../../data/es/event');
+            const event_1 = _dereq_('../../../data/es/event');
             exports.isValidPropertyName = event_1.isValidPropertyName;
             exports.isValidPropertyValue = event_1.isValidPropertyValue;
-            const noop_1 = require('../../../../lib/noop');
+            const noop_1 = _dereq_('../../../../lib/noop');
             exports.SCHEMA = {
                 META: { NAME: '__meta' },
                 ID: { NAME: '__id' },
@@ -2239,9 +2270,9 @@ require = function () {
             };
             function build(source, factory, set = noop_1.noop, get = noop_1.noop) {
                 const dao = factory();
-                void Object.keys(exports.SCHEMA).map(prop => exports.SCHEMA[prop].NAME).reduce((_, prop) => {
+                for (const prop of Object.keys(exports.SCHEMA).map(prop => exports.SCHEMA[prop].NAME)) {
                     delete dao[prop];
-                }, void 0);
+                }
                 if (typeof source[exports.SCHEMA.KEY.NAME] !== 'string')
                     throw new TypeError(`ClientChannel: DAO: Invalid key: ${ source[exports.SCHEMA.KEY.NAME] }`);
                 const descmap = Object.assign({}, Object.keys(dao).filter(event_1.isValidPropertyName).filter(event_1.isValidPropertyValue(dao)).reduce((map, prop) => {
@@ -2309,29 +2340,29 @@ require = function () {
         }
     ],
     39: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            var channel_1 = require('./service/channel');
+            var channel_1 = _dereq_('./service/channel');
             exports.StoreChannel = channel_1.StoreChannel;
         },
         { './service/channel': 44 }
     ],
     40: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const observation_1 = require('spica/observation');
-            const cancellation_1 = require('spica/cancellation');
-            const promise_1 = require('spica/promise');
-            const cache_1 = require('spica/cache');
-            const api_1 = require('../../../infrastructure/indexeddb/api');
-            const data_1 = require('./channel/data');
-            const access_1 = require('./channel/access');
-            const expiry_1 = require('./channel/expiry');
-            const channel_1 = require('../../broadcast/channel');
-            const channel_2 = require('../../ownership/channel');
-            const noop_1 = require('../../../../lib/noop');
+            const observation_1 = _dereq_('spica/observation');
+            const cancellation_1 = _dereq_('spica/cancellation');
+            const promise_1 = _dereq_('spica/promise');
+            const cache_1 = _dereq_('spica/cache');
+            const api_1 = _dereq_('../../../infrastructure/indexeddb/api');
+            const data_1 = _dereq_('./channel/data');
+            const access_1 = _dereq_('./channel/access');
+            const expiry_1 = _dereq_('./channel/expiry');
+            const channel_1 = _dereq_('../../broadcast/channel');
+            const channel_2 = _dereq_('../../ownership/channel');
+            const noop_1 = _dereq_('../../../../lib/noop');
             class SaveMessage extends channel_1.ChannelMessage {
                 constructor(key) {
                     super(key, 'save');
@@ -2436,7 +2467,9 @@ require = function () {
                         void this.recent(Infinity, (ks, error) => {
                             if (error)
                                 return void setTimeout(limit, 10 * 1000);
-                            return void ks.reverse().forEach(key => void this.keys.put(key));
+                            for (const key of ks.reverse()) {
+                                void this.keys.put(key);
+                            }
                         });
                     };
                     void limit();
@@ -2557,10 +2590,10 @@ require = function () {
         }
     ],
     41: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const store_1 = require('../../../../data/kvs/store');
+            const store_1 = _dereq_('../../../../data/kvs/store');
             exports.name = 'access';
             var AccessStoreSchema;
             (function (AccessStoreSchema) {
@@ -2635,10 +2668,10 @@ require = function () {
         { '../../../../data/kvs/store': 35 }
     ],
     42: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const store_1 = require('../../../../data/es/store');
+            const store_1 = _dereq_('../../../../data/es/store');
             exports.name = 'data';
             class DataStore extends store_1.EventStore {
                 constructor(attrs, listen) {
@@ -2659,10 +2692,10 @@ require = function () {
         { '../../../../data/es/store': 34 }
     ],
     43: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const store_1 = require('../../../../data/kvs/store');
+            const store_1 = _dereq_('../../../../data/kvs/store');
             const name = 'expiry';
             var ExpiryStoreSchema;
             (function (ExpiryStoreSchema) {
@@ -2770,14 +2803,14 @@ require = function () {
         { '../../../../data/kvs/store': 35 }
     ],
     44: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const observation_1 = require('spica/observation');
-            const throttle_1 = require('spica/throttle');
-            const api_1 = require('../../dao/api');
-            const channel_1 = require('../model/channel');
-            const api_2 = require('../../webstorage/api');
+            const observation_1 = _dereq_('spica/observation');
+            const throttle_1 = _dereq_('spica/throttle');
+            const api_1 = _dereq_('../../dao/api');
+            const channel_1 = _dereq_('../model/channel');
+            const api_2 = _dereq_('../../webstorage/api');
             class StoreChannel extends channel_1.ChannelStore {
                 constructor(name, Schema, {migrate = () => void 0, destroy = () => true, age = Infinity, size = Infinity, debug = false} = { Schema }) {
                     super(name, Object.keys(new Schema()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(new Schema())), destroy, age, size, debug);
@@ -2813,10 +2846,12 @@ require = function () {
                             if (changes.length === 0)
                                 return;
                             void migrate(link);
-                            void changes.forEach(({attr, oldVal}) => void cast(source.__event).emit([
-                                api_2.StorageChannel.EventType.recv,
-                                attr
-                            ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.recv, attr, memory[attr], oldVal)));
+                            for (const {attr, oldVal} of changes) {
+                                void cast(source.__event).emit([
+                                    api_2.StorageChannel.EventType.recv,
+                                    attr
+                                ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.recv, attr, memory[attr], oldVal));
+                            }
                         }
                     });
                     void Object.freeze(this);
@@ -2853,11 +2888,11 @@ require = function () {
         }
     ],
     45: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const channel_1 = require('../broadcast/channel');
-            const promise_1 = require('spica/promise');
+            const channel_1 = _dereq_('../broadcast/channel');
+            const promise_1 = _dereq_('spica/promise');
             class OwnershipMessage extends channel_1.ChannelMessage {
                 constructor(key, priority) {
                     super(key, 'ownership');
@@ -2930,12 +2965,12 @@ require = function () {
         }
     ],
     46: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            var channel_1 = require('./service/channel');
+            var channel_1 = _dereq_('./service/channel');
             exports.StorageChannel = channel_1.StorageChannel;
-            var api_1 = require('../../infrastructure/webstorage/api');
+            var api_1 = _dereq_('../../infrastructure/webstorage/api');
             exports.localStorage = api_1.localStorage;
             exports.sessionStorage = api_1.sessionStorage;
         },
@@ -2945,7 +2980,7 @@ require = function () {
         }
     ],
     47: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             class Storage {
@@ -2973,14 +3008,14 @@ require = function () {
         {}
     ],
     48: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const observation_1 = require('spica/observation');
-            const cancellation_1 = require('spica/cancellation');
-            const api_1 = require('../../dao/api');
-            const api_2 = require('../../../infrastructure/webstorage/api');
-            const storage_1 = require('../model/storage');
+            const observation_1 = _dereq_('spica/observation');
+            const cancellation_1 = _dereq_('spica/cancellation');
+            const api_1 = _dereq_('../../dao/api');
+            const api_2 = _dereq_('../../../infrastructure/webstorage/api');
+            const storage_1 = _dereq_('../model/storage');
             const cache = new Set();
             class StorageChannel {
                 constructor(name, storage = api_2.sessionStorage || storage_1.fakeStorage, Schema, migrate = () => void 0) {
@@ -3018,7 +3053,7 @@ require = function () {
                         this.name
                     ], ({newValue}) => {
                         const item = parse(newValue);
-                        void Object.keys(item).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(item)).reduce((_, attr) => {
+                        void Object.keys(item).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(item)).forEach(attr => {
                             const oldVal = source[attr];
                             const newVal = item[attr];
                             if ([newVal].includes(oldVal))
@@ -3031,7 +3066,7 @@ require = function () {
                                 event.attr
                             ], event);
                             void this.events.recv.emit([event.attr], event);
-                        }, void 0);
+                        });
                     }));
                     void Object.freeze(this);
                 }
@@ -3081,18 +3116,18 @@ require = function () {
         }
     ],
     49: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            var global_1 = require('./module/global');
+            var global_1 = _dereq_('./module/global');
             exports.indexedDB = global_1.indexedDB;
             exports.IDBKeyRange = global_1.IDBKeyRange;
-            var access_1 = require('./model/access');
+            var access_1 = _dereq_('./model/access');
             exports.open = access_1.open;
             exports.listen_ = access_1.listen_;
             exports.close = access_1.close;
             exports.destroy = access_1.destroy;
-            var event_1 = require('./model/event');
+            var event_1 = _dereq_('./model/event');
             exports.idbEventStream = event_1.idbEventStream;
             exports.IDBEvent = event_1.IDBEvent;
             exports.IDBEventType = event_1.IDBEventType;
@@ -3104,12 +3139,12 @@ require = function () {
         }
     ],
     50: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const state_1 = require('./state');
-            const transition_1 = require('./transition');
-            const event_1 = require('./event');
+            const state_1 = _dereq_('./state');
+            const transition_1 = _dereq_('./transition');
+            const event_1 = _dereq_('./event');
             function open(database, config) {
                 void operate(database, 'open', config);
                 return (success, failure) => void request(database, success, failure);
@@ -3177,10 +3212,10 @@ require = function () {
         }
     ],
     51: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const observation_1 = require('spica/observation');
+            const observation_1 = _dereq_('spica/observation');
             exports.idbEventStream_ = new observation_1.Observation({ limit: Infinity });
             exports.idbEventStream = exports.idbEventStream_;
             var IDBEventType;
@@ -3205,7 +3240,7 @@ require = function () {
         { 'spica/observation': 23 }
     ],
     52: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.commands = new Map();
@@ -3381,13 +3416,13 @@ require = function () {
         {}
     ],
     53: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const global_1 = require('../module/global');
-            const state_1 = require('./state');
-            const event_1 = require('./event');
-            const exception_1 = require('spica/exception');
+            const global_1 = _dereq_('../module/global');
+            const state_1 = _dereq_('./state');
+            const event_1 = _dereq_('./event');
+            const exception_1 = _dereq_('spica/exception');
             function handle(database) {
                 const state = state_1.states.get(database);
                 return state instanceof state_1.SuccessState ? void handleFromSuccessState(state) : void handleFromInitialState(new state_1.InitialState(database));
@@ -3574,7 +3609,7 @@ require = function () {
         }
     ],
     54: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.indexedDB = self.indexedDB;
@@ -3583,13 +3618,13 @@ require = function () {
         {}
     ],
     55: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            var global_1 = require('./module/global');
+            var global_1 = _dereq_('./module/global');
             exports.localStorage = global_1.localStorage;
             exports.sessionStorage = global_1.sessionStorage;
-            var event_1 = require('./model/event');
+            var event_1 = _dereq_('./model/event');
             exports.storageEventStream = event_1.storageEventStream;
             exports.storageEventStream_ = event_1.storageEventStream_;
         },
@@ -3599,11 +3634,11 @@ require = function () {
         }
     ],
     56: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const observation_1 = require('spica/observation');
-            const global_1 = require('../module/global');
+            const observation_1 = _dereq_('spica/observation');
+            const global_1 = _dereq_('../module/global');
             exports.storageEventStream_ = new observation_1.Observation({ limit: Infinity });
             exports.storageEventStream = exports.storageEventStream_;
             void self.addEventListener('storage', event => {
@@ -3629,10 +3664,10 @@ require = function () {
         }
     ],
     57: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const uuid_1 = require('spica/uuid');
+            const uuid_1 = _dereq_('spica/uuid');
             const supportsWebStorage = (() => {
                 try {
                     if (!self.navigator.cookieEnabled)
@@ -3653,7 +3688,7 @@ require = function () {
         { 'spica/uuid': 28 }
     ],
     58: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             function __export(m) {
                 for (var p in m)
@@ -3661,12 +3696,12 @@ require = function () {
                         exports[p] = m[p];
             }
             Object.defineProperty(exports, '__esModule', { value: true });
-            __export(require('../application/api'));
+            __export(_dereq_('../application/api'));
         },
         { '../application/api': 30 }
     ],
     59: [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             function noop() {
@@ -3677,7 +3712,7 @@ require = function () {
         {}
     ],
     'clientchannel': [
-        function (require, module, exports) {
+        function (_dereq_, module, exports) {
             'use strict';
             function __export(m) {
                 for (var p in m)
@@ -3685,8 +3720,8 @@ require = function () {
                         exports[p] = m[p];
             }
             Object.defineProperty(exports, '__esModule', { value: true });
-            __export(require('./src/export'));
-            var export_1 = require('./src/export');
+            __export(_dereq_('./src/export'));
+            var export_1 = _dereq_('./src/export');
             exports.default = export_1.default;
         },
         { './src/export': 29 }
