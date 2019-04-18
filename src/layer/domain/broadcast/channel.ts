@@ -79,7 +79,7 @@ class Broadcast<K extends string> extends AbstractChannel<K> implements Channel<
       const msg = parse<K>(ev.data);
       if (!msg || msg.type !== type) return;
       debug && console.log('recv', msg);
-      return void listener(msg);
+      return void listener(msg as ChannelMessageTypeMap<K>[C]);
     }
   }
   public post(msg: ChannelMessage<K>): void {
@@ -121,7 +121,7 @@ class Storage<K extends string> extends AbstractChannel<K> implements Channel<K>
       if (typeof ev.newValue !== 'string') return;
       const msg = parse<K>(JSON.parse(ev.newValue));
       if (!msg || msg.type !== type) return;
-      return void listener(msg);
+      return void listener(msg as ChannelMessageTypeMap<K>[C]);
     }
   }
   public post(msg: ChannelMessage<K>): void {
