@@ -132,6 +132,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     return (key: K): void => {
       void keys.add(key);
       if (timer > 0) return;
+      // @ts-ignore
       timer = setTimeout(resolve, 3 * 1000);
     };
   })(), { ignore: { delete: true } });
