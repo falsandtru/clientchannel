@@ -62,7 +62,6 @@ export class ExpiryStore<K extends string> {
       if (Date.now() + timeout >= scheduled) return;
       scheduled = Date.now() + timeout;
       void clearTimeout(timer);
-      // @ts-ignore
       timer = setTimeout(() => {
         if (running) return;
         scheduled = Infinity;
