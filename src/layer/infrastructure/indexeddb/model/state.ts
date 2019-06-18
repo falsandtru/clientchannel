@@ -151,7 +151,7 @@ export class ErrorState extends State {
   private readonly STATE!: this;
   constructor(
     state: InitialState | BlockState | UpgradeState | SuccessState | DestroyState,
-    public readonly error: DOMException | DOMError,
+    public readonly error: DOMException,
     public readonly event: Event
   ) {
     super(state.database, state);

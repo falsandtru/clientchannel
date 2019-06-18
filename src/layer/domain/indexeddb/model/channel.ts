@@ -151,7 +151,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
       void setTimeout(cancellation.cancel, timeout);
     }
     return void AtomicPromise.all(keys.map(key =>
-      new AtomicPromise<[K, Error | DOMError | null]>(resolve =>
+      new AtomicPromise<[K, Error | null]>(resolve =>
         void this.fetch(
           key,
           error =>
@@ -164,7 +164,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
             : AtomicPromise.resolve(key)))
       .then(cb);
   }
-  public fetch(key: K, cb: (error: DOMException | DOMError | Error | null) => void = noop, cancellation = new Cancellation()): void {
+  public fetch(key: K, cb: (error: DOMException | Error | null) => void = noop, cancellation = new Cancellation()): void {
     void this.schema.access.fetch(key);
     return this.schema.data.fetch(key, cb, cancellation);
   }
@@ -203,7 +203,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     void this.ages.set(key, age);
     return void this.schema.expire.set(key, age);
   }
-  public recent(limit: number, cb: (keys: K[], error: DOMException | DOMError | null) => void): void {
+  public recent(limit: number, cb: (keys: K[], error: DOMException | null) => void): void {
     return this.schema.access.recent(limit, cb);
   }
   public close(): void {

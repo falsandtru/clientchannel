@@ -132,7 +132,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     this.tx_.rw = tx;
     void tick(() => this.tx_.rw = void 0);
   }
-  public fetch(key: K, cb: (error: DOMException | DOMError | Error | null) => void = noop, cancellation = new Cancellation()): void {
+  public fetch(key: K, cb: (error: DOMException | Error | null) => void = noop, cancellation = new Cancellation()): void {
     const events: LoadedEventRecord<K, V>[] = [];
     return void this.listen(db => {
       if (cancellation.canceled) return void cb(new Error('Cancelled.'));
@@ -141,7 +141,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         .objectStore(this.name)
         .index(EventStoreSchema.key)
         .openCursor(key, 'prev');
-      const proc = (cursor: IDBCursorWithValue | null, error: DOMException | DOMError | Error | null): void => {
+      const proc = (cursor: IDBCursorWithValue | null, error: DOMException | Error | null): void => {
         if (error) return;
         if (!cursor || new LoadedEventRecord<K, V>(cursor.value).date < this.meta(key).date) {
           // register latest events
@@ -397,7 +397,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         }
       });
   }
-  public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMException | DOMError | Error | null) => void): void {
+  public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMException | Error | null) => void): void {
     return void this.listen(db => {
       const tx = db.transaction(this.name, mode);
       const req = index
