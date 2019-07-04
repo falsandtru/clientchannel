@@ -97,7 +97,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
             }),
           () => new this.Schema(),
           (attr, newValue, oldValue) => (
-            void this.add(new ChannelStore.Record<K, V>(key, { [attr]: newValue } as V)),
+            void this.add(new ChannelStore.Record<K, V>(key, { [attr]: newValue } as Partial<V>)),
             void cast(this.sources.get(key)!.__event!)
               .emit([StorageChannel.EventType.send, attr], new StorageChannel.Event<V>(StorageChannel.EventType.send, attr as never, newValue, oldValue))),
           throttle(100, () => this.has(key) && void this.log(key))))
