@@ -1,4 +1,4 @@
-/*! clientchannel v0.25.3 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.25.4 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -348,13 +348,7 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             const exception_1 = _dereq_('./exception');
             let queue = [];
-            let register = new WeakSet();
-            function tick(cb, dedup = false) {
-                if (dedup) {
-                    if (register.has(cb))
-                        return;
-                    void register.add(cb);
-                }
+            function tick(cb) {
                 void queue.push(cb);
                 void schedule();
             }
@@ -382,7 +376,6 @@ require = function () {
             function flush() {
                 const cbs = queue;
                 queue = [];
-                register = new WeakSet();
                 return cbs;
             }
         },
@@ -411,8 +404,7 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             function concat(target, source) {
-                target.push(...source);
-                return target;
+                return void target.push(...source), target;
             }
             exports.concat = concat;
         },
@@ -1089,8 +1081,8 @@ require = function () {
     24: [
         function (_dereq_, module, exports) {
             'use strict';
-            Object.defineProperty(exports, '__esModule', { value: true });
             var _a, _b;
+            Object.defineProperty(exports, '__esModule', { value: true });
             'use strict';
             const concat_1 = _dereq_('./concat');
             var State;
@@ -1195,8 +1187,8 @@ require = function () {
                     return this.then(onfinally, onfinally).then(() => this);
                 }
             }
-            _a = status, _b = queue;
             exports.AtomicPromise = AtomicPromise;
+            _a = status, _b = queue;
             function isPromiseLike(value) {
                 return !!value && typeof value === 'object' && 'then' in value && typeof value.then === 'function';
             }
@@ -2275,7 +2267,7 @@ require = function () {
                 }
                 if (typeof source[exports.SCHEMA.KEY.NAME] !== 'string')
                     throw new TypeError(`ClientChannel: DAO: Invalid key: ${ source[exports.SCHEMA.KEY.NAME] }`);
-                const descmap = Object.assign({}, Object.keys(dao).filter(event_1.isValidPropertyName).filter(event_1.isValidPropertyValue(dao)).reduce((map, prop) => {
+                const descmap = Object.assign(Object.assign({}, Object.keys(dao).filter(event_1.isValidPropertyName).filter(event_1.isValidPropertyValue(dao)).reduce((map, prop) => {
                     {
                         const desc = Object.getOwnPropertyDescriptor(dao, prop);
                         if (desc && (desc.get || desc.set))
@@ -2301,7 +2293,7 @@ require = function () {
                         }
                     };
                     return map;
-                }, {}), {
+                }, {})), {
                     [exports.SCHEMA.META.NAME]: {
                         configurable: false,
                         enumerable: false,
@@ -2674,11 +2666,11 @@ require = function () {
             const store_1 = _dereq_('../../../../data/es/store');
             exports.name = 'data';
             class DataStore extends store_1.EventStore {
-                constructor(attrs, listen) {
-                    super(exports.name, attrs, listen);
-                }
                 static configure() {
                     return store_1.EventStore.configure(exports.name);
+                }
+                constructor(attrs, listen) {
+                    super(exports.name, attrs, listen);
                 }
             }
             exports.DataStore = DataStore;
@@ -2956,8 +2948,8 @@ require = function () {
                     void this.channel.close();
                 }
             }
-            Ownership.mergin = 5 * 1000;
             exports.Ownership = Ownership;
+            Ownership.mergin = 5 * 1000;
         },
         {
             '../broadcast/channel': 36,
@@ -3145,6 +3137,7 @@ require = function () {
             const state_1 = _dereq_('./state');
             const transition_1 = _dereq_('./transition');
             const event_1 = _dereq_('./event');
+            const api_1 = _dereq_('../../webstorage/api');
             function open(database, config) {
                 void operate(database, 'open', config);
                 return (success, failure) => void request(database, success, failure);
@@ -3192,6 +3185,8 @@ require = function () {
                 }
                 void state_1.commands.set(database, command);
                 void state_1.configs.set(database, config);
+                if (!api_1.localStorage)
+                    return;
                 if (state_1.states.has(database)) {
                     return void request(database, () => void 0);
                 } else {
@@ -3199,6 +3194,8 @@ require = function () {
                 }
             }
             function request(database, success, failure = () => void 0) {
+                if (!api_1.localStorage)
+                    return void failure();
                 if (!state_1.requests.has(database))
                     return void failure();
                 void state_1.requests.get(database).enqueue(success, failure);
@@ -3206,6 +3203,7 @@ require = function () {
             }
         },
         {
+            '../../webstorage/api': 55,
             './event': 51,
             './state': 52,
             './transition': 53
