@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.25.5
+
+- Fix handling of database access failure not to hang when storages are inaccessible.
+
 ## 0.25.4
 
 - Fix handling of database access failure not to hang when storages are inaccessible.
