@@ -50,7 +50,7 @@ export const states = new Map<string, State>();
 abstract class State {
   constructor(
     public readonly database: string,
-    curr?: State,
+    curr: State | undefined,
   ) {
     assert(!curr || curr.alive);
     assert(commands.has(database));
@@ -201,6 +201,10 @@ export class EndState extends State {
     super(state.database, state);
     this.STATE;
   }
+  public get command(): Command {
+    return commands.get(this.database)!
+        || Command.close;
+  }
   public complete(): void {
     if (!this.alive) return;
     switch (this.command) {
@@ -213,7 +217,7 @@ export class EndState extends State {
         void configs.delete(this.database);
         void requests.delete(this.database);
     }
-    this.alive = false;
     void states.delete(this.database);
+    this.alive = false;
   }
 }
