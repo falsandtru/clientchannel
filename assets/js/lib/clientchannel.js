@@ -1,4 +1,4 @@
-/*! clientchannel v0.25.4 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.25.5 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -1317,7 +1317,7 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             __export(_dereq_('./layer/interface/api'));
         },
-        { './layer/interface/api': 58 }
+        { './layer/interface/api': 60 }
     ],
     30: [
         function (_dereq_, module, exports) {
@@ -1341,7 +1341,7 @@ require = function () {
             }
             exports.StoreChannel = StoreChannel;
             class StorageChannel extends api_2.StorageChannel {
-                constructor(name, {Schema, migrate = () => void 0}) {
+                constructor(name, {Schema, migrate = () => undefined}) {
                     super(name, api_2.localStorage, Schema, migrate);
                 }
             }
@@ -1621,7 +1621,7 @@ require = function () {
                 get txrw() {
                     if (++this.tx_.rwc > 25) {
                         this.tx_.rwc = 0;
-                        this.tx_.rw = void 0;
+                        this.tx_.rw = undefined;
                         return;
                     }
                     return this.tx_.rw;
@@ -1633,7 +1633,7 @@ require = function () {
                         return;
                     this.tx_.rwc = 0;
                     this.tx_.rw = tx;
-                    void clock_1.tick(() => this.tx_.rw = void 0);
+                    void clock_1.tick(() => this.tx_.rw = undefined);
                 }
                 fetch(key, cb = noop_1.noop, cancellation = new cancellation_1.Cancellation()) {
                     const events = [];
@@ -1766,7 +1766,7 @@ require = function () {
                             event.key,
                             event.attr,
                             sqid_1.sqid(0)
-                        ]).some(({listener}) => listener(void 0, [
+                        ]).some(({listener}) => listener(undefined, [
                             event.key,
                             event.attr,
                             sqid_1.sqid(0)
@@ -1792,12 +1792,12 @@ require = function () {
                                 savedEvent.attr,
                                 sqid_1.sqid(savedEvent.id)
                             ], savedEvent);
-                            const events = this.memory.refs([savedEvent.key]).map(({listener}) => listener(void 0, [savedEvent.key])).reduce((es, e) => e instanceof event_1.StoredEventRecord ? concat_1.concat(es, [e]) : es, []);
+                            const events = this.memory.refs([savedEvent.key]).map(({listener}) => listener(undefined, [savedEvent.key])).reduce((es, e) => e instanceof event_1.StoredEventRecord ? concat_1.concat(es, [e]) : es, []);
                             if (events.length >= this.snapshotCycle || value_1.hasBinary(event.value)) {
                                 void this.snapshot(savedEvent.key);
                             }
                         });
-                        const fail = () => (void clean(), active() ? void loss() : void 0);
+                        const fail = () => (void clean(), active() ? void loss() : undefined);
                         void tx.addEventListener('error', fail);
                         void tx.addEventListener('abort', fail);
                     }, () => void clean() || void loss());
@@ -1945,7 +1945,7 @@ require = function () {
                     return events.map((e, i) => [
                         e,
                         i
-                    ]).sort(([a, ai], [b, bi]) => void 0 || indexedDB.cmp(a.key, b.key) || b.date - a.date || b.id * a.id > 0 && b.id - a.id || bi - ai).reduceRight(([head, ...tail], [event]) => {
+                    ]).sort(([a, ai], [b, bi]) => undefined || indexedDB.cmp(a.key, b.key) || b.date - a.date || b.id * a.id > 0 && b.id - a.id || bi - ai).reduceRight(([head, ...tail], [event]) => {
                         const prev = head[0];
                         if (!prev)
                             return [[event]];
@@ -1967,8 +1967,8 @@ require = function () {
             exports.compose = compose;
         },
         {
-            '../../../lib/noop': 59,
-            '../../infrastructure/indexeddb/api': 49,
+            '../../../lib/noop': 61,
+            '../../infrastructure/indexeddb/api': 51,
             '../database/value': 31,
             './event': 32,
             './identifier': 33,
@@ -2013,7 +2013,7 @@ require = function () {
                 get txrw() {
                     if (++this.tx_.rwc > 25) {
                         this.tx_.rwc = 0;
-                        this.tx_.rw = void 0;
+                        this.tx_.rw = undefined;
                         return;
                     }
                     return this.tx_.rw;
@@ -2025,7 +2025,7 @@ require = function () {
                         return;
                     this.tx_.rwc = 0;
                     this.tx_.rw = tx;
-                    void clock_1.tick(() => this.tx_.rw = void 0);
+                    void clock_1.tick(() => this.tx_.rw = undefined);
                 }
                 fetch(key, cb = noop_1.noop, cancellation = new cancellation_1.Cancellation()) {
                     return void this.listen(db => {
@@ -2092,7 +2092,7 @@ require = function () {
             exports.KeyValueStore = KeyValueStore;
         },
         {
-            '../../../lib/noop': 59,
+            '../../../lib/noop': 61,
             'spica/cancellation': 6,
             'spica/clock': 8
         }
@@ -2102,6 +2102,7 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             const api_1 = _dereq_('../../infrastructure/webstorage/api');
+            const storage_1 = _dereq_('../webstorage/model/storage');
             const version = 1;
             class ChannelMessage {
                 constructor(key, type) {
@@ -2137,7 +2138,7 @@ require = function () {
                 listen(type, listener) {
                     type;
                     listener;
-                    return () => void 0;
+                    return () => undefined;
                 }
                 post(msg) {
                     msg;
@@ -2188,7 +2189,7 @@ require = function () {
                     super(name);
                     this.name = name;
                     this.debug = debug;
-                    this.storage = api_1.localStorage;
+                    this.storage = api_1.localStorage || storage_1.fakeStorage;
                     this.listeners = new Set();
                     this.alive = true;
                     void self.addEventListener('unload', () => void this.storage.removeItem(this.name), true);
@@ -2231,7 +2232,10 @@ require = function () {
                 }
             }
         },
-        { '../../infrastructure/webstorage/api': 55 }
+        {
+            '../../infrastructure/webstorage/api': 57,
+            '../webstorage/model/storage': 47
+        }
     ],
     37: [
         function (_dereq_, module, exports) {
@@ -2274,13 +2278,13 @@ require = function () {
                             return map;
                     }
                     const iniVal = dao[prop];
-                    if (source[prop] === void 0) {
+                    if (source[prop] === undefined) {
                         source[prop] = iniVal;
                     }
                     map[prop] = {
                         enumerable: true,
                         get: () => {
-                            const val = source[prop] === void 0 ? iniVal : source[prop];
+                            const val = source[prop] === undefined ? iniVal : source[prop];
                             void get(prop, val);
                             return val;
                         },
@@ -2288,7 +2292,7 @@ require = function () {
                             if (!event_1.isValidPropertyValue({ [prop]: newVal })(prop))
                                 throw new TypeError(`ClientChannel: DAO: Invalid value: ${ JSON.stringify(newVal) }`);
                             const oldVal = source[prop];
-                            source[prop] = newVal === void 0 ? iniVal : newVal;
+                            source[prop] = newVal === undefined ? iniVal : newVal;
                             void set(prop, newVal, oldVal);
                         }
                     };
@@ -2327,7 +2331,7 @@ require = function () {
             exports.build = build;
         },
         {
-            '../../../../lib/noop': 59,
+            '../../../../lib/noop': 61,
             '../../../data/es/event': 32
         }
     ],
@@ -2568,8 +2572,8 @@ require = function () {
             }
         },
         {
-            '../../../../lib/noop': 59,
-            '../../../infrastructure/indexeddb/api': 49,
+            '../../../../lib/noop': 61,
+            '../../../infrastructure/indexeddb/api': 51,
             '../../broadcast/channel': 36,
             '../../ownership/channel': 45,
             './channel/access': 41,
@@ -2804,7 +2808,7 @@ require = function () {
             const channel_1 = _dereq_('../model/channel');
             const api_2 = _dereq_('../../webstorage/api');
             class StoreChannel extends channel_1.ChannelStore {
-                constructor(name, Schema, {migrate = () => void 0, destroy = () => true, age = Infinity, size = Infinity, debug = false} = { Schema }) {
+                constructor(name, Schema, {migrate = () => undefined, destroy = () => true, age = Infinity, size = Infinity, debug = false} = { Schema }) {
                     super(name, Object.keys(new Schema()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(new Schema())), destroy, age, size, debug);
                     this.Schema = Schema;
                     this.links = new Map();
@@ -2967,7 +2971,7 @@ require = function () {
             exports.sessionStorage = api_1.sessionStorage;
         },
         {
-            '../../infrastructure/webstorage/api': 55,
+            '../../infrastructure/webstorage/api': 57,
             './service/channel': 48
         }
     ],
@@ -3010,7 +3014,7 @@ require = function () {
             const storage_1 = _dereq_('../model/storage');
             const cache = new Set();
             class StorageChannel {
-                constructor(name, storage = api_2.sessionStorage || storage_1.fakeStorage, Schema, migrate = () => void 0) {
+                constructor(name, storage = api_2.sessionStorage || storage_1.fakeStorage, Schema, migrate = () => undefined) {
                     this.name = name;
                     this.storage = storage;
                     this.cancellation = new cancellation_1.Cancellation();
@@ -3100,7 +3104,7 @@ require = function () {
             }
         },
         {
-            '../../../infrastructure/webstorage/api': 55,
+            '../../../infrastructure/webstorage/api': 57,
             '../../dao/api': 37,
             '../model/storage': 47,
             'spica/cancellation': 6,
@@ -3108,6 +3112,38 @@ require = function () {
         }
     ],
     49: [
+        function (_dereq_, module, exports) {
+            'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
+            var storage_1 = _dereq_('./module/storage');
+            exports.verifyStorageAccess = storage_1.verifyStorageAccess;
+        },
+        { './module/storage': 50 }
+    ],
+    50: [
+        function (_dereq_, module, exports) {
+            'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
+            const uuid_1 = _dereq_('spica/uuid');
+            function verifyStorageAccess() {
+                try {
+                    if (!self.navigator.cookieEnabled)
+                        throw undefined;
+                    const key = 'clientchannel#' + uuid_1.uuid();
+                    void self.sessionStorage.setItem(key, key);
+                    if (key !== self.sessionStorage.getItem(key))
+                        throw undefined;
+                    void self.sessionStorage.removeItem(key);
+                    return true;
+                } catch (_a) {
+                    return false;
+                }
+            }
+            exports.verifyStorageAccess = verifyStorageAccess;
+        },
+        { 'spica/uuid': 28 }
+    ],
+    51: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3125,12 +3161,12 @@ require = function () {
             exports.IDBEventType = event_1.IDBEventType;
         },
         {
-            './model/access': 50,
-            './model/event': 51,
-            './module/global': 54
+            './model/access': 52,
+            './model/event': 53,
+            './module/global': 56
         }
     ],
-    50: [
+    52: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3188,12 +3224,12 @@ require = function () {
                 if (!api_1.localStorage)
                     return;
                 if (state_1.states.has(database)) {
-                    return void request(database, () => void 0);
+                    return void request(database, () => undefined);
                 } else {
                     return void transition_1.handle(database);
                 }
             }
-            function request(database, success, failure = () => void 0) {
+            function request(database, success, failure = () => undefined) {
                 if (!api_1.localStorage)
                     return void failure();
                 if (!state_1.requests.has(database))
@@ -3203,13 +3239,13 @@ require = function () {
             }
         },
         {
-            '../../webstorage/api': 55,
-            './event': 51,
-            './state': 52,
-            './transition': 53
+            '../../webstorage/api': 57,
+            './event': 53,
+            './state': 54,
+            './transition': 55
         }
     ],
-    51: [
+    53: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3237,7 +3273,7 @@ require = function () {
         },
         { 'spica/observation': 23 }
     ],
-    52: [
+    54: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3392,6 +3428,9 @@ require = function () {
                     this.version = version;
                     this.STATE;
                 }
+                get command() {
+                    return exports.commands.get(this.database) || 'close';
+                }
                 complete() {
                     if (!this.alive)
                         return;
@@ -3405,21 +3444,22 @@ require = function () {
                         void exports.configs.delete(this.database);
                         void exports.requests.delete(this.database);
                     }
-                    this.alive = false;
                     void exports.states.delete(this.database);
+                    this.alive = false;
                 }
             }
             exports.EndState = EndState;
         },
         {}
     ],
-    53: [
+    55: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             const global_1 = _dereq_('../module/global');
             const state_1 = _dereq_('./state');
             const event_1 = _dereq_('./event');
+            const api_1 = _dereq_('../../environment/api');
             const exception_1 = _dereq_('spica/exception');
             function handle(database) {
                 const state = state_1.states.get(database);
@@ -3573,6 +3613,8 @@ require = function () {
             function handleFromDestroyState(state) {
                 if (!state.alive)
                     return;
+                if (!api_1.verifyStorageAccess())
+                    return void handleFromEndState(new state_1.EndState(state));
                 const {database} = state;
                 const deleteRequest = global_1.indexedDB.deleteDatabase(database);
                 deleteRequest.onsuccess = () => (void event_1.idbEventStream_.emit([
@@ -3584,13 +3626,15 @@ require = function () {
             function handleFromEndState(state) {
                 if (!state.alive)
                     return;
-                const {database, version, command} = state;
+                const {database, version} = state;
                 void state.complete();
                 void event_1.idbEventStream_.emit([
                     database,
                     'disconnect'
                 ], new event_1.IDBEvent(database, 'disconnect'));
-                switch (state_1.commands.get(database) || command) {
+                if (!api_1.verifyStorageAccess())
+                    return;
+                switch (state.command) {
                 case 'open':
                     return void handleFromInitialState(new state_1.InitialState(database, version));
                 case 'close':
@@ -3600,13 +3644,14 @@ require = function () {
             }
         },
         {
-            '../module/global': 54,
-            './event': 51,
-            './state': 52,
+            '../../environment/api': 49,
+            '../module/global': 56,
+            './event': 53,
+            './state': 54,
             'spica/exception': 12
         }
     ],
-    54: [
+    56: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3615,7 +3660,7 @@ require = function () {
         },
         {}
     ],
-    55: [
+    57: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3627,11 +3672,11 @@ require = function () {
             exports.storageEventStream_ = event_1.storageEventStream_;
         },
         {
-            './model/event': 56,
-            './module/global': 57
+            './model/event': 58,
+            './module/global': 59
         }
     ],
-    56: [
+    58: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3657,35 +3702,22 @@ require = function () {
             });
         },
         {
-            '../module/global': 57,
+            '../module/global': 59,
             'spica/observation': 23
         }
     ],
-    57: [
+    59: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const uuid_1 = _dereq_('spica/uuid');
-            const supportsWebStorage = (() => {
-                try {
-                    if (!self.navigator.cookieEnabled)
-                        throw void 0;
-                    const key = 'clientchannel#' + uuid_1.uuid();
-                    void self.sessionStorage.setItem(key, key);
-                    if (key !== self.sessionStorage.getItem(key))
-                        throw void 0;
-                    void self.sessionStorage.removeItem(key);
-                    return true;
-                } catch (_a) {
-                    return false;
-                }
-            })();
-            exports.localStorage = supportsWebStorage ? self.localStorage : void 0;
-            exports.sessionStorage = supportsWebStorage ? self.sessionStorage : void 0;
+            const api_1 = _dereq_('../../environment/api');
+            const storable = api_1.verifyStorageAccess();
+            exports.localStorage = storable ? self.localStorage : undefined;
+            exports.sessionStorage = storable ? self.sessionStorage : undefined;
         },
-        { 'spica/uuid': 28 }
+        { '../../environment/api': 49 }
     ],
-    58: [
+    60: [
         function (_dereq_, module, exports) {
             'use strict';
             function __export(m) {
@@ -3698,7 +3730,7 @@ require = function () {
         },
         { '../application/api': 30 }
     ],
-    59: [
+    61: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
