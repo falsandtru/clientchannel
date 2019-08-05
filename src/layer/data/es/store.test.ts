@@ -292,7 +292,7 @@ describe('Unit: layers/data/es/store', function () {
       assert(es.meta('a').id === 0);
       assert(es.meta('a').key === 'a');
       assert(es.meta('a').date === 0);
-      assert(es.get('a').value === void 0);
+      assert(es.get('a').value === undefined);
       es.add(new UnstoredEventRecord('a', new Value(0)));
       assert(es.has('a') === true);
       assert(es.meta('a').id === 0);
@@ -311,14 +311,14 @@ describe('Unit: layers/data/es/store', function () {
           assert(es.meta('a').id === 1);
           assert(es.meta('a').key === 'a');
           assert(es.meta('a').date > 0);
-          assert(es.get('a').value === void 0);
+          assert(es.get('a').value === undefined);
           es.events.save
             .once(['a', '', 'delete'], () => {
               assert(es.has('a') === false);
               assert(es.meta('a').id === 2);
               assert(es.meta('a').key === 'a');
               assert(es.meta('a').date > 0);
-              assert(es.get('a').value === void 0);
+              assert(es.get('a').value === undefined);
               done();
             });
         });
@@ -336,7 +336,7 @@ describe('Unit: layers/data/es/store', function () {
             .once(['a', '', 'delete'], () => {
               assert(es.has('a') === false);
               assert(es.meta('a').id === 3);
-              assert(es.get('a').value === void 0);
+              assert(es.get('a').value === undefined);
               assert(es.has('b') === true);
               assert(es.meta('b').id === 2);
               assert(es.get('b').value === 0);

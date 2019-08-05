@@ -57,7 +57,7 @@ function operate(database: string, command: Command, config: Config): void {
   if (!localStorage) return;
   if (states.has(database)) {
     assert(requests.has(database));
-    return void request(database, () => void 0);
+    return void request(database, () => undefined);
   }
   else {
     assert(commands.get(database) === command);
@@ -66,7 +66,7 @@ function operate(database: string, command: Command, config: Config): void {
   }
 }
 
-function request(database: string, success: (db: IDBDatabase) => void, failure: () => void = () => void 0): void {
+function request(database: string, success: (db: IDBDatabase) => void, failure: () => void = () => undefined): void {
   if (!localStorage) return void failure();
   if (!requests.has(database)) return void failure();
   void requests.get(database)!.enqueue(success, failure);

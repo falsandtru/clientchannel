@@ -63,7 +63,7 @@ describe('Unit: layers/data/kvs/store', function () {
               kvs.delete('a', (err) => {
                 assert(err === null);
                 kvs.fetch('a', (err) => {
-                  assert(kvs.get('a') === void 0);
+                  assert(kvs.get('a') === undefined);
                   assert(err === null);
                   done();
                 });

@@ -53,7 +53,7 @@ describe('Unit: layers/domain/dao/module/build', () => {
       const source = {__key: 'test', m: 1} as any as DAO;
       const dao = build(source, factory);
 
-      assert(dao['__id'] === void 0);
+      assert(dao['__id'] === undefined);
 
       try {
         dao['__id'] = 0;
@@ -105,20 +105,20 @@ describe('Unit: layers/domain/dao/module/build', () => {
       dao.p_ = 6;
       assert(dao.p_ === 6);
       assert(dao.p === 6);
-      assert(source.p_ === void 0);
-      assert(source.p === void 0);
+      assert(source.p_ === undefined);
+      assert(source.p === undefined);
 
       source.p_ = 7;
       assert(dao.p_ === 6);
       assert(dao.p === 6);
       assert(source.p_ === 7);
-      assert(source.p === void 0);
+      assert(source.p === undefined);
 
       dao.p = 8;
       assert(dao.p === 8);
       assert(dao.p_ === 8);
       assert(source.p_ === 7);
-      assert(source.p === void 0);
+      assert(source.p === undefined);
 
       source.p = 9;
       assert(dao.p === 8);

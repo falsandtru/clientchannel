@@ -11,7 +11,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
     name: string,
     private readonly Schema: new () => V,
     {
-      migrate = () => void 0,
+      migrate = () => undefined,
       destroy = () => true,
       age = Infinity,
       size = Infinity,

@@ -4,7 +4,7 @@ import { extend } from 'spica/assign';
 describe('Unit: layers/data/database/value', () => {
   describe('isStorableValue', () => {
     it('undefined', () => {
-      assert(isStorable(void 0 as any) === true);
+      assert(isStorable(undefined as any) === true);
     });
 
     it('boolean', () => {
@@ -43,7 +43,7 @@ describe('Unit: layers/data/database/value', () => {
     });
 
     it('false', () => {
-      assert(hasBinary(void 0 as any) === false);
+      assert(hasBinary(undefined as any) === false);
       assert(hasBinary(false) === false);
       assert(hasBinary(0) === false);
       assert(hasBinary('') === false);
