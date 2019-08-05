@@ -1,4 +1,5 @@
 import { localStorage, storageEventStream } from '../../infrastructure/webstorage/api';
+import { fakeStorage } from '../webstorage/model/storage';
 
 declare global {
   interface ChannelMessageTypeMap<K extends string> {
@@ -108,7 +109,7 @@ class Storage<K extends string> extends AbstractChannel<K> implements Channel<K>
       void this.storage.removeItem(this.name)
     , true);
   }
-  private readonly storage = localStorage!;
+  private readonly storage = localStorage || fakeStorage;
   private readonly listeners = new Set<(ev: StorageEvent) => void>();
   public listen<C extends keyof ChannelMessageTypeMap<K>>(type: C, listener: (msg: ChannelMessageTypeMap<K>[C]) => void): () => void {
     void this.listeners.add(handler);
