@@ -31,13 +31,16 @@ class RequestQueue {
     return this.queue.length;
   }
   public clear(): void {
-    try {
-      while (this.queue.length > 0) {
-        void this.queue.shift()!.failure();
+    while (true) {
+      try {
+        while (this.queue.length > 0) {
+          void this.queue.shift()!.failure();
+        }
+        return;
       }
-    }
-    catch {
-      return this.clear();
+      catch {
+        continue;
+      }
     }
   }
 }
