@@ -47,7 +47,7 @@
     // connect to database
     var StoreChannel = require('clientchannel').StoreChannel;
     var chan = new StoreChannel('demo', {
-      Schema: function () {
+      schema: function () {
         // define schema
         return {
           get event() {
@@ -94,7 +94,7 @@
 <script>
   var StoreChannel = require('clientchannel').StoreChannel;
   var chan = new StoreChannel('random', {
-    Schema: function () {
+    schema: function () {
       return {
         data: 0
       };

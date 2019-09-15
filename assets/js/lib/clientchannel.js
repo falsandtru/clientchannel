@@ -1,4 +1,4 @@
-/*! clientchannel v0.25.5 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.26.0 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -366,11 +366,11 @@ require = function () {
                         while (cbs.length > 0) {
                             void cbs.shift()();
                         }
+                        return;
                     } catch (reason) {
                         void exception_1.causeAsyncException(reason);
                         continue;
                     }
-                    return;
                 }
             }
             function flush() {
@@ -414,7 +414,7 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.curry = f => f.length === 0 ? f : apply(f, []);
+            exports.curry = f => apply(f, []);
             function apply(f, xs) {
                 return xs.length >= f.length ? f(...xs) : (...ys) => apply(f, [
                     ...xs,
@@ -446,16 +446,9 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             function causeAsyncException(reason) {
-                void new Promise((_, reject) => void reject(reason));
+                void Promise.reject(reason);
             }
             exports.causeAsyncException = causeAsyncException;
-            function stringify(target) {
-                try {
-                    return target instanceof Error && typeof target.stack === 'string' ? target.stack : target !== undefined && target !== null && typeof target.toString === 'function' ? target + '' : Object.prototype.toString.call(target);
-                } catch (reason) {
-                    return stringify(reason);
-                }
-            }
         },
         {}
     ],
@@ -1083,7 +1076,6 @@ require = function () {
             'use strict';
             var _a, _b;
             Object.defineProperty(exports, '__esModule', { value: true });
-            'use strict';
             const concat_1 = _dereq_('./concat');
             var State;
             (function (State) {
@@ -1336,13 +1328,16 @@ require = function () {
             __export(_dereq_('../domain/webstorage/api'));
             class StoreChannel extends api_1.StoreChannel {
                 constructor(name, config) {
-                    super(name, config.Schema, config);
+                    super(name, config.schema, config);
                 }
             }
             exports.StoreChannel = StoreChannel;
             class StorageChannel extends api_2.StorageChannel {
-                constructor(name, {Schema, migrate = () => undefined}) {
-                    super(name, api_2.localStorage, Schema, migrate);
+                constructor(name, {
+                    schema: schema,
+                    migrate = () => undefined
+                }) {
+                    super(name, api_2.localStorage, schema, migrate);
                 }
             }
             exports.StorageChannel = StorageChannel;
@@ -2808,12 +2803,12 @@ require = function () {
             const channel_1 = _dereq_('../model/channel');
             const api_2 = _dereq_('../../webstorage/api');
             class StoreChannel extends channel_1.ChannelStore {
-                constructor(name, Schema, {migrate = () => undefined, destroy = () => true, age = Infinity, size = Infinity, debug = false} = { Schema }) {
-                    super(name, Object.keys(new Schema()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(new Schema())), destroy, age, size, debug);
-                    this.Schema = Schema;
+                constructor(name, factory, {migrate = () => undefined, destroy = () => true, age = Infinity, size = Infinity, debug = false} = {}) {
+                    super(name, Object.keys(factory()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(factory())), destroy, age, size, debug);
+                    this.factory = factory;
                     this.links = new Map();
                     this.sources = new Map();
-                    const attrs = Object.keys(new Schema()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(new Schema()));
+                    const attrs = Object.keys(factory()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(factory()));
                     void this.events_.load.monitor([], ({key, attr, type}) => {
                         if (!this.sources.has(key))
                             return;
@@ -2861,7 +2856,7 @@ require = function () {
                         __key: { get: () => this.meta(key).key },
                         __date: { get: () => this.meta(key).date },
                         __event: { value: new observation_1.Observation({ limit: Infinity }) }
-                    }), () => new this.Schema(), (attr, newValue, oldValue) => (void this.add(new channel_1.ChannelStore.Record(key, { [attr]: newValue })), void cast(this.sources.get(key).__event).emit([
+                    }), () => this.factory(), (attr, newValue, oldValue) => (void this.add(new channel_1.ChannelStore.Record(key, { [attr]: newValue })), void cast(this.sources.get(key).__event).emit([
                         api_2.StorageChannel.EventType.send,
                         attr
                     ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.send, attr, newValue, oldValue))), throttle_1.throttle(100, () => this.has(key) && void this.log(key)))).get(key);
@@ -3014,7 +3009,7 @@ require = function () {
             const storage_1 = _dereq_('../model/storage');
             const cache = new Set();
             class StorageChannel {
-                constructor(name, storage = api_2.sessionStorage || storage_1.fakeStorage, Schema, migrate = () => undefined) {
+                constructor(name, storage = api_2.sessionStorage || storage_1.fakeStorage, factory, migrate = () => undefined) {
                     this.name = name;
                     this.storage = storage;
                     this.cancellation = new cancellation_1.Cancellation();
@@ -3031,7 +3026,7 @@ require = function () {
                         [api_1.SCHEMA.KEY.NAME]: this.name,
                         [api_1.SCHEMA.EVENT.NAME]: new observation_1.Observation({ limit: Infinity })
                     }, parse(this.storage.getItem(this.name)));
-                    this.link_ = api_1.build(source, () => new Schema(), (attr, newValue, oldValue) => {
+                    this.link_ = api_1.build(source, factory, (attr, newValue, oldValue) => {
                         void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(source)).reduce((acc, attr) => {
                             acc[attr] = source[attr];
                             return acc;
@@ -3307,12 +3302,15 @@ require = function () {
                     return this.queue.length;
                 }
                 clear() {
-                    try {
-                        while (this.queue.length > 0) {
-                            void this.queue.shift().failure();
+                    while (true) {
+                        try {
+                            while (this.queue.length > 0) {
+                                void this.queue.shift().failure();
+                            }
+                            return;
+                        } catch (_a) {
+                            continue;
                         }
-                    } catch (_a) {
-                        return this.clear();
                     }
                 }
             }
