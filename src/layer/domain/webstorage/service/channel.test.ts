@@ -19,14 +19,14 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
     });
 
     it('resource', () => {
-      const chan = new StorageChannel('test', sessionStorage, DAO);
-      assert.throws(() => new StorageChannel('test', sessionStorage, DAO));
+      const chan = new StorageChannel('test', sessionStorage, () => new DAO());
+      assert.throws(() => new StorageChannel('test', sessionStorage, () => new DAO()));
       chan.destroy();
     });
 
     it('make/destroy', () => {
       assert(sessionStorage.getItem('test') === null);
-      const chan = new StorageChannel('test', sessionStorage, DAO);
+      const chan = new StorageChannel('test', sessionStorage, () => new DAO());
       const link = chan.link();
       assert(link.n === 0);
       assert(sessionStorage.getItem('test') === null);
@@ -40,16 +40,16 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
 
     it('remake', () => {
       assert(sessionStorage.getItem('test') === null);
-      const chan = new StorageChannel('test', sessionStorage, DAO);
+      const chan = new StorageChannel('test', sessionStorage, () => new DAO());
       assert(chan.link() === chan.link());
       chan.destroy();
-      new StorageChannel('test', sessionStorage, DAO)
+      new StorageChannel('test', sessionStorage, () => new DAO())
         .destroy();
       assert(sessionStorage.getItem('test') === null);
     });
 
     it('update', () => {
-      const chan = new StorageChannel('test', sessionStorage, DAO);
+      const chan = new StorageChannel('test', sessionStorage, () => new DAO());
       const link = chan.link();
       assert(link.n === 0);
       link.n = 1;
@@ -63,7 +63,7 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
 
     it('migrate', () => {
       sessionStorage.setItem('test', JSON.stringify({ n: 0 }));
-      const chan = new StorageChannel('test', sessionStorage, DAO, v => {
+      const chan = new StorageChannel('test', sessionStorage, () => new DAO(), v => {
         if (v.n % 2) return;
         v.n += 1;
       });

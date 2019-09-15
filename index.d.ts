@@ -17,7 +17,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
   destroy(): void;
 }
 export interface StoreChannelConfig<K extends string, V extends StoreChannelObject<K>> {
-  Schema: new () => V;
+  schema: () => V;
   age?: number;
   migrate?(link: V): void;
   destroy?(reason: any, event?: Event): boolean;
@@ -62,7 +62,7 @@ export class StorageChannel<V extends StorageChannelObject> {
   destroy(): void;
 }
 export interface StorageChannelConfig<V extends StorageChannelObject> {
-  Schema: new () => V;
+  schema: () => V;
   migrate?(link: V): void;
 }
 export interface StorageChannelObject {

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.26.0
+
+- Change config interfaces.
+
 ## 0.25.5
 
 - Fix handling of database access failure not to hang when storages are inaccessible.

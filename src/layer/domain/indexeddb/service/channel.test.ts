@@ -33,13 +33,13 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     }
 
     it('resource', () => {
-      const chan = new StoreChannel('test', Value);
-      assert.throws(() => new StoreChannel('test', Value));
+      const chan = new StoreChannel('test', () => new Value());
+      assert.throws(() => new StoreChannel('test', () => new Value()));
       chan.destroy();
     });
 
     it('link', () => {
-      const chan = new StoreChannel('test', Value);
+      const chan = new StoreChannel('test', () => new Value());
       const link = chan.link('a');
 
       assert(link === chan.link('a'));
@@ -53,7 +53,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     });
 
     it('sync', done => {
-      const chan = new StoreChannel('test', Value);
+      const chan = new StoreChannel('test', () => new Value());
 
       listen_('test', db => {
         db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { n: 1 })));
@@ -74,7 +74,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     });
 
     it('fetch', done => {
-      const chan = new StoreChannel('test', Value);
+      const chan = new StoreChannel('test', () => new Value());
 
       chan.fetch('z', err => {
         assert(!err);
@@ -98,7 +98,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     });
 
     it('send', done => {
-      const chan = new StoreChannel('test', Value);
+      const chan = new StoreChannel('test', () => new Value());
       const link = chan.link('a');
 
       link.__event.once(['send', 'n'], ev => {
@@ -127,7 +127,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     });
 
     it('recv', done => {
-      const chan = new StoreChannel('test', Value);
+      const chan = new StoreChannel('test', () => new Value());
       const link = chan.link('a');
 
       assert(link.n === 0);
@@ -147,13 +147,12 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     });
 
     it('migrate', (done) => {
-      let chan = new StoreChannel('test', Value);
+      let chan = new StoreChannel('test', () => new Value());
       const link = chan.link('a');
       link.n = 1;
       chan.events.save.once(['a', 'n', 'put'], () => {
         chan.close();
-        chan = new StoreChannel('test', Value, {
-          Schema: Value,
+        chan = new StoreChannel('test', () => new Value(), {
           migrate: link => {
             assert(link.__id === 1);
             assert(link.n === 1);

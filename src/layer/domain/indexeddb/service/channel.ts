@@ -9,20 +9,20 @@ import { StorageChannel } from '../../webstorage/api';
 export class StoreChannel<K extends string, V extends StoreChannelObject<K>> extends ChannelStore<K, V> implements IStoreChannel<K, V> {
   constructor(
     name: string,
-    private readonly Schema: new () => V,
+    private readonly factory: () => V,
     {
       migrate = () => undefined,
       destroy = () => true,
       age = Infinity,
       size = Infinity,
       debug = false,
-    }: StoreChannelConfig<K, V> & { size?: number; } = { Schema }
+    }: Partial<StoreChannelConfig<K, V>> & { size?: number; } = {},
   ) {
-    super(name, Object.keys(new Schema()).filter(isValidPropertyName).filter(isValidPropertyValue(new Schema())), destroy, age, size, debug);
+    super(name, Object.keys(factory()).filter(isValidPropertyName).filter(isValidPropertyValue(factory())), destroy, age, size, debug);
 
-    const attrs = <(keyof V)[]>Object.keys(new Schema())
+    const attrs = <(keyof V)[]>Object.keys(factory())
       .filter(isValidPropertyName)
-      .filter(isValidPropertyValue(new Schema()));
+      .filter(isValidPropertyValue(factory()));
 
     void this.events_.load
       .monitor([], ({ key, attr, type }) => {
@@ -95,7 +95,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
                 value: new Observation<[StorageChannel.EventType], StorageChannel.Event<V>, void>({ limit: Infinity })
               },
             }),
-          () => new this.Schema(),
+          () => this.factory(),
           (attr, newValue, oldValue) => (
             void this.add(new ChannelStore.Record<K, V>(key, { [attr]: newValue } as Partial<V>)),
             void cast(this.sources.get(key)!.__event!)

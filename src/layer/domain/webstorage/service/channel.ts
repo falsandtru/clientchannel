@@ -12,7 +12,7 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
   constructor(
     public readonly name: string,
     private readonly storage: StorageLike = sessionStorage || fakeStorage,
-    Schema: new () => V,
+    factory: () => V,
     migrate: (link: V) => void = () => undefined,
   ) {
     if (cache.has(name)) throw new Error(`ClientChannel: Specified storage channel "${name}" is already opened.`);
@@ -24,7 +24,7 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
       [SCHEMA.EVENT.NAME]: new Observation<[StorageChannelEventType] | [StorageChannelEventType, keyof V], StorageChannel.Event<V>, void>({ limit: Infinity }),
       ...parse<V>(this.storage.getItem(this.name)) as object
     } as any;
-    this.link_ = build(source, () => new Schema(), (attr, newValue, oldValue) => {
+    this.link_ = build(source, factory, (attr, newValue, oldValue) => {
       void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, attr) => {
         acc[attr] = source[attr];
         return acc;

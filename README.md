@@ -54,7 +54,7 @@ class Value {
 }
 
 const chan = new StoreChannel('domain', {
-  Schema: Value,
+  schema: () => new Value(),
   // Delete linked records 3 days later since last access.
   age: 3 * 24 * 60 * 60 * 1e3,
 });
@@ -84,7 +84,7 @@ class Value {
 }
 
 const chan = new StorageChannel('version', {
-  Schema: Value,
+  schema: () => new Value(),
 });
 const link = chan.link();
 const VERSION = 1;
