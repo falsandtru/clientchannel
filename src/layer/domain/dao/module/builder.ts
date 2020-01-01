@@ -24,19 +24,19 @@ export const SCHEMA = {
   }
 };
 
-export function build<V extends object>(
+export function build<V extends object, E extends keyof V>(
   source: V,
   factory: () => V,
-  set: (prop: string, newVal: any, oldVal: any) => void = noop,
-  get: (prop: string, val: any) => void = noop,
+  set: <K extends Extract<Exclude<keyof V, E>, string>>(prop: K, newVal: V[K], oldVal: V[K]) => void = noop,
+  get: <K extends Extract<Exclude<keyof V, E>, string>>(prop: K, val: V[K]) => void = noop,
 ): V {
-  const dao: V = factory();
+  const dao = factory();
   for (const prop of Object.keys(SCHEMA).map(prop => SCHEMA[prop].NAME)) {
     delete dao[prop];
   }
   if (typeof source[SCHEMA.KEY.NAME] !== 'string') throw new TypeError(`ClientChannel: DAO: Invalid key: ${source[SCHEMA.KEY.NAME]}`);
   const descmap: PropertyDescriptorMap = {
-    ...Object.keys(dao)
+    ...(Object.keys(dao) as Extract<Exclude<keyof typeof dao, E>, string>[])
       .filter(isValidPropertyName)
       .filter(isValidPropertyValue(dao))
       .reduce<PropertyDescriptorMap>((map, prop) => {

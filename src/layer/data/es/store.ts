@@ -452,7 +452,7 @@ interface MetaData<K extends string> {
   readonly date: number;
 }
 
-export function record(event: UnstoredEventRecord<any, any>): Readonly<Pick<typeof event, Exclude<keyof typeof event, 'id'>>> {
+export function record<K extends string, V extends EventRecordValue>(event: UnstoredEventRecord<K, V>): Omit<typeof event, 'id'> {
   const record = { ...event };
   assert(record.id === 0);
   delete record.id;

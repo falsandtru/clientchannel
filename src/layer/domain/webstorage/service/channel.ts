@@ -22,22 +22,22 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
     const source: V = {
       [SCHEMA.KEY.NAME]: this.name,
       [SCHEMA.EVENT.NAME]: new Observation<[StorageChannelEventType] | [StorageChannelEventType, keyof V], StorageChannel.Event<V>, void>({ limit: Infinity }),
-      ...parse<V>(this.storage.getItem(this.name)) as object
-    } as any;
-    this.link_ = build(source, factory, (attr, newValue, oldValue) => {
+      ...parse<V>(this.storage.getItem(this.name))
+    };
+    this.link_ = build<V, keyof StorageChannelObject>(source, factory, (attr, newValue, oldValue) => {
       void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, attr) => {
         acc[attr] = source[attr];
         return acc;
       }, {})));
-      const event = new StorageChannel.Event<V>(StorageChannel.EventType.send, attr as Extract<keyof DiffStruct<V, StorageChannelObject>, string>, newValue, oldValue);
+      const event = new StorageChannel.Event<V>(StorageChannel.EventType.send, attr, newValue, oldValue);
       void (source.__event as Observation<[StorageChannelEventType, Extract<keyof DiffStruct<V, StorageChannelObject>, string>], StorageChannel.Event<V>, void>).emit([event.type, event.attr], event);
       void this.events.send.emit([event.attr], event);
     });
     void migrate(this.link_);
     void this.cancellation.register(
       storageEventStream.on([this.mode, this.name], ({ newValue }: StorageEvent): void => {
-        const item: V = parse<V>(newValue);
-        void Object.keys(item)
+        const item = parse<V>(newValue);
+        void (Object.keys(item) as Extract<keyof DiffStruct<V, StorageChannelObject>, string>[])
           .filter(isValidPropertyName)
           .filter(isValidPropertyValue(item))
           .forEach(attr => {
@@ -46,7 +46,7 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
             if ([newVal].includes(oldVal)) return;
             source[attr] = newVal;
             void migrate(this.link_);
-            const event = new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr as Extract<keyof DiffStruct<V, StorageChannelObject>, string>, source[attr], oldVal);
+            const event = new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, source[attr], oldVal);
             void (source.__event as Observation<[StorageChannelEventType, Extract<keyof DiffStruct<V, StorageChannelObject>, string>], StorageChannel.Event<V>, void>).emit([event.type, event.attr], event);
             void this.events.recv.emit([event.attr], event);
           });
