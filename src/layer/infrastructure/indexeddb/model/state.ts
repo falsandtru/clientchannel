@@ -9,7 +9,7 @@ export const configs = new Map<string, Config>();
 export interface Config {
   make: (tx: IDBTransaction) => boolean;
   verify: (db: IDBDatabase) => boolean;
-  destroy: (reason: any, event?: Event) => boolean;
+  destroy: (reason: unknown, event?: Event) => boolean;
 }
 
 export const requests = new Map<string, RequestQueue>();
@@ -178,7 +178,7 @@ export class CrashState extends State {
   private readonly STATE!: this;
   constructor(
     state: InitialState | UpgradeState | SuccessState,
-    public readonly reason: any
+    public readonly reason: unknown
   ) {
     super(state.database, state);
     this.STATE;

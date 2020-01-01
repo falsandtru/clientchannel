@@ -32,7 +32,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   constructor(
     public readonly name: string,
     attrs: string[],
-    destroy: (reason: any, event?: Event) => boolean,
+    destroy: (reason: unknown, event?: Event) => boolean,
     private readonly age: number,
     private readonly size: number,
     private readonly debug: boolean = false,

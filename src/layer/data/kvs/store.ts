@@ -118,7 +118,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
         void cb(tx.error));
     }, () => void cb(new Error('Access has failed.')));
   }
-  public cursor(query: any, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMException | Error | null) => void): void {
+  public cursor(query: IDBValidKey | IDBKeyRange | null, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMException | Error | null) => void): void {
     void this.listen(db => {
       const tx = db.transaction(this.name, mode);
       const req = index

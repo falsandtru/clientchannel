@@ -108,6 +108,6 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
   }
 }
 
-function cast<V extends Observer<K, D, R>, K extends any[], D, R>(o: V): Observation<K, D, R> {
+function cast<V extends Observer<K, D, R>, K extends unknown[], D, R>(o: V): Observation<K, D, R> {
   return o as any;
 }

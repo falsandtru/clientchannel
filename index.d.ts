@@ -20,7 +20,7 @@ export interface StoreChannelConfig<K extends string, V extends StoreChannelObje
   schema: () => V;
   age?: number;
   migrate?(link: V): void;
-  destroy?(reason: any, event?: Event): boolean;
+  destroy?(reason: unknown, event?: Event): boolean;
   debug?: boolean;
 }
 export interface StoreChannelObject<K extends string> {
