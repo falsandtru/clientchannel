@@ -2,7 +2,7 @@ import { StoreChannel as IStoreChannel, StoreChannelConfig, StoreChannelObject }
 import { Observation, Observer } from 'spica/observation';
 import { DiffStruct } from 'spica/type';
 import { throttle } from 'spica/throttle';
-import { build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
+import { SCHEMA, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { ChannelStore } from '../model/channel';
 import { StorageChannel } from '../../webstorage/api';
 
@@ -75,23 +75,23 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
           Object.defineProperties(
             this.sources.set(key, this.get(key)).get(key)!,
             {
-              __meta: {
+              [SCHEMA.META.NAME]: {
                 get: () =>
                   this.meta(key)
               },
-              __id: {
+              [SCHEMA.ID.NAME]: {
                 get: () =>
                   this.meta(key).id
               },
-              __key: {
+              [SCHEMA.KEY.NAME]: {
                 get: () =>
                   this.meta(key).key
               },
-              __date: {
+              [SCHEMA.DATE.NAME]: {
                 get: () =>
                   this.meta(key).date
               },
-              __event: {
+              [SCHEMA.EVENT.NAME]: {
                 value: new Observation<[StorageChannel.EventType], StorageChannel.Event<V>, void>({ limit: Infinity })
               },
             }),

@@ -1,4 +1,4 @@
-import { Observer, Subscriber } from 'spica/observation';
+import { Observer } from 'spica/observation';
 import { AtomicPromise } from 'spica/promise';
 import { DiffStruct } from 'spica/type';
 

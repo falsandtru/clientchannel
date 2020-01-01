@@ -138,7 +138,6 @@ export function isValidPropertyName(prop: string): boolean {
       && RegValidValueNameFormat.test(prop);
 }
 
-export function isValidPropertyValue(dao: object) {
-  return (prop: string): boolean =>
-    isStorable(dao[prop]);
+export function isValidPropertyValue(dao: object): (prop: string) => boolean {
+  return (prop: string) => isStorable(dao[prop]);
 }

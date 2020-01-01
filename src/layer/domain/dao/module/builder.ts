@@ -64,7 +64,7 @@ export function build<V extends object, E extends keyof V>(
         };
         return map;
       }, {}),
-    ... {
+    ...{
       [SCHEMA.META.NAME]: {
         configurable: false,
         enumerable: false,
