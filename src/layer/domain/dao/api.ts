@@ -1,1 +1,1 @@
-export { SCHEMA, build, isValidPropertyName, isValidPropertyValue } from './module/builder';
+export { Schema, build, isValidPropertyName, isValidPropertyValue } from './module/builder';

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.27.0
+
+- Change meta data access keys from string to symbol.
+
 ## 0.26.0
 
 - Change config interfaces.

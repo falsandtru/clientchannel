@@ -31,14 +31,14 @@ Property values of linked objects will be stored by update.
 Linked objects will be updated automatically when a linked object is updated on another thread(tab).
 
 ```ts
-import { StoreChannel, StoreChannelObject } from 'clientchannel';
+import { StoreChannel, StoreChannelObject, ChannelObject } from 'clientchannel';
 
 interface Value extends StoreChannelObject<string> {
 }
 class Value {
   // Getter and setter names will be excluded from schema.
   get key() {
-    return this.__key;
+    return this[ChannelObject.key];
   }
   // Properties having an invalid name will be excluded from schema.
   private _separator = ' ';
@@ -76,7 +76,7 @@ interface Value extends StorageChannelObject {
 }
 class Value {
   get event() {
-    return this.__event;
+    return this[ChannelObject.event];
   }
   version = 0;
 }

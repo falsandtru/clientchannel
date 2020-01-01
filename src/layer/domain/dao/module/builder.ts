@@ -6,37 +6,27 @@ export {
   isValidPropertyValue
 };
 
-export const SCHEMA = {
-  META: {
-    NAME: '__meta'
-  },
-  ID: {
-    NAME: '__id'
-  },
-  KEY: {
-    NAME: '__key'
-  },
-  DATE: {
-    NAME: '__date'
-  },
-  EVENT: {
-    NAME: '__event'
-  }
-};
+export namespace Schema {
+  export const meta = Symbol.for('meta');
+  export const id = Symbol.for('id');
+  export const key = Symbol.for('key');
+  export const date = Symbol.for('data');
+  export const event = Symbol.for('event');
+}
 
-export function build<V extends object, E extends keyof V>(
+export function build<V extends object>(
   source: V,
   factory: () => V,
-  set: <K extends Extract<Exclude<keyof V, E>, string>>(prop: K, newVal: V[K], oldVal: V[K]) => void = noop,
-  get: <K extends Extract<Exclude<keyof V, E>, string>>(prop: K, val: V[K]) => void = noop,
+  set: <K extends Extract<keyof V, string>>(prop: K, newVal: V[K], oldVal: V[K]) => void = noop,
+  get: <K extends Extract<keyof V, string>>(prop: K, val: V[K]) => void = noop,
 ): V {
   const dao = factory();
-  for (const prop of Object.keys(SCHEMA).map(prop => SCHEMA[prop].NAME)) {
+  for (const prop of Object.values(Schema)) {
     delete dao[prop];
   }
-  if (typeof source[SCHEMA.KEY.NAME] !== 'string') throw new TypeError(`ClientChannel: DAO: Invalid key: ${source[SCHEMA.KEY.NAME]}`);
+  if (typeof source[Schema.key] !== 'string') throw new TypeError(`ClientChannel: DAO: Invalid key: ${source[Schema.key]}`);
   const descmap: PropertyDescriptorMap = {
-    ...(Object.keys(dao) as Extract<Exclude<keyof typeof dao, E>, string>[])
+    ...(Object.keys(dao) as Extract<keyof typeof dao, string>[])
       .filter(isValidPropertyName)
       .filter(isValidPropertyValue(dao))
       .reduce<PropertyDescriptorMap>((map, prop) => {
@@ -65,30 +55,30 @@ export function build<V extends object, E extends keyof V>(
         return map;
       }, {}),
     ...{
-      [SCHEMA.META.NAME]: {
+      [Schema.meta]: {
         configurable: false,
         enumerable: false,
-        get: () => source[SCHEMA.META.NAME]
+        get: () => source[Schema.meta]
       },
-      [SCHEMA.ID.NAME]: {
+      [Schema.id]: {
         configurable: false,
         enumerable: false,
-        get: () => source[SCHEMA.ID.NAME]
+        get: () => source[Schema.id]
       },
-      [SCHEMA.KEY.NAME]: {
+      [Schema.key]: {
         configurable: false,
         enumerable: false,
-        get: () => source[SCHEMA.KEY.NAME]
+        get: () => source[Schema.key]
       },
-      [SCHEMA.DATE.NAME]: {
+      [Schema.date]: {
         configurable: false,
         enumerable: false,
-        get: () => source[SCHEMA.DATE.NAME]
+        get: () => source[Schema.date]
       },
-      [SCHEMA.EVENT.NAME]: {
+      [Schema.event]: {
         configurable: false,
         enumerable: false,
-        get: () => source[SCHEMA.EVENT.NAME]
+        get: () => source[Schema.event]
       },
     }
   };

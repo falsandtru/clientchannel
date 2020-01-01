@@ -7,6 +7,7 @@ import { Ownership as BaseOwnership } from '../domain/ownership/channel';
 
 export * from '../domain/indexeddb/api';
 export * from '../domain/webstorage/api';
+export { Schema as ChannelObject } from '../domain/dao/api';
 
 export class StoreChannel<K extends string, V extends StoreChannelObject<K>> extends BaseStoreChannel<K, V> {
   constructor(

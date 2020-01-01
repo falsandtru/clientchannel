@@ -1,8 +1,7 @@
 import { StoreChannel as IStoreChannel, StoreChannelConfig, StoreChannelObject } from '../../../../../';
 import { Observation, Observer } from 'spica/observation';
-import { DiffStruct } from 'spica/type';
 import { throttle } from 'spica/throttle';
-import { SCHEMA, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
+import { Schema, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { ChannelStore } from '../model/channel';
 import { StorageChannel } from '../../webstorage/api';
 
@@ -42,7 +41,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
         function update(attrs: (keyof V)[]): void {
           const changes = attrs
             .filter(attr => attr in memory)
-            .map((attr: keyof DiffStruct<V, StoreChannelObject<K>>) => {
+            .map(attr => {
               const newVal = memory[attr];
               const oldVal = source[attr];
               source[attr] = newVal;
@@ -57,7 +56,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
           if (changes.length === 0) return;
           void migrate(link);
           for (const { attr, oldVal } of changes) {
-            void cast(source.__event!)
+            void cast(source[Schema.event]!)
               .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr as never, memory[attr as never], oldVal as never));
           }
         }
@@ -75,30 +74,30 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
           Object.defineProperties(
             this.sources.set(key, this.get(key)).get(key)!,
             {
-              [SCHEMA.META.NAME]: {
+              [Schema.meta]: {
                 get: () =>
                   this.meta(key)
               },
-              [SCHEMA.ID.NAME]: {
+              [Schema.id]: {
                 get: () =>
                   this.meta(key).id
               },
-              [SCHEMA.KEY.NAME]: {
+              [Schema.key]: {
                 get: () =>
                   this.meta(key).key
               },
-              [SCHEMA.DATE.NAME]: {
+              [Schema.date]: {
                 get: () =>
                   this.meta(key).date
               },
-              [SCHEMA.EVENT.NAME]: {
+              [Schema.event]: {
                 value: new Observation<[StorageChannel.EventType], StorageChannel.Event<V>, void>({ limit: Infinity })
               },
             }),
           () => this.factory(),
           (attr, newValue, oldValue) => (
             void this.add(new ChannelStore.Record<K, V>(key, { [attr]: newValue } as Partial<V>)),
-            void cast(this.sources.get(key)!.__event!)
+            void cast(this.sources.get(key)![Schema.event]!)
               .emit([StorageChannel.EventType.send, attr], new StorageChannel.Event<V>(StorageChannel.EventType.send, attr as never, newValue, oldValue))),
           throttle(100, () => this.has(key) && void this.log(key))))
           .get(key)!;

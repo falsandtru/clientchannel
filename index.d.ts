@@ -1,13 +1,15 @@
 import { Observer } from 'spica/observation';
 import { AtomicPromise } from 'spica/promise';
-import { DiffStruct } from 'spica/type';
+import { ChannelObject } from './index';
+
+export { ChannelObject } from './index';
 
 export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
   constructor(name: string, config: StoreChannelConfig<K, V>);
   readonly events: {
-    readonly load: Observer<[K] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>, StoreChannelEventType], StoreChannelEvent<K, V>, void>;
-    readonly save: Observer<[K] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>, StoreChannelEventType], StoreChannelEvent<K, V>, void>;
-    readonly loss: Observer<[K] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>, StoreChannelEventType], StoreChannelEvent<K, V>, void>;
+    readonly load: Observer<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, StoreChannelEventType], StoreChannelEvent<K, V>, void>;
+    readonly save: Observer<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, StoreChannelEventType], StoreChannelEvent<K, V>, void>;
+    readonly loss: Observer<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, StoreChannelEventType], StoreChannelEvent<K, V>, void>;
   };
   sync(keys: K[], cb?: (results: AtomicPromise<K>[]) => void): void;
   link(key: K, age?: number): V;
@@ -24,11 +26,11 @@ export interface StoreChannelConfig<K extends string, V extends StoreChannelObje
   debug?: boolean;
 }
 export interface StoreChannelObject<K extends string> {
-  readonly __meta: StoreChannelObjectMetaData<K>;
-  readonly __id: number;
-  readonly __key: K;
-  readonly __date: number;
-  readonly __event: Observer<[StorageChannelEventType] | [StorageChannelEventType, Extract<keyof DiffStruct<this, StoreChannelObject<K>>, string>], StorageChannelEvent<this>, void>;
+  readonly [ChannelObject.meta]: StoreChannelObjectMetaData<K>;
+  readonly [ChannelObject.id]: number;
+  readonly [ChannelObject.key]: K;
+  readonly [ChannelObject.date]: number;
+  readonly [ChannelObject.event]: Observer<[StorageChannelEventType] | [StorageChannelEventType, Extract<keyof this, string>], StorageChannelEvent<this>, void>;
 }
 export interface StoreChannelObjectMetaData<K extends string> {
   readonly id: number;
@@ -39,7 +41,7 @@ export interface StoreChannelEvent<K extends string, V> {
   readonly type: StoreChannelEventType;
   readonly id: number;
   readonly key: K;
-  readonly attr: Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>;
+  readonly attr: Extract<keyof V | '', string>;
 }
 export type StoreChannelEventType
   = StoreChannelEventType.Put
@@ -54,8 +56,8 @@ export namespace StoreChannelEventType {
 export class StorageChannel<V extends StorageChannelObject> {
   constructor(name: string, config: StorageChannelConfig<V>);
   readonly events: {
-    readonly send: Observer<[Extract<keyof DiffStruct<V, StorageChannelObject>, string>], StorageChannelEvent<V>, void>;
-    readonly recv: Observer<[Extract<keyof DiffStruct<V, StorageChannelObject>, string>], StorageChannelEvent<V>, void>;
+    readonly send: Observer<[Extract<keyof V, string>], StorageChannelEvent<V>, void>;
+    readonly recv: Observer<[Extract<keyof V, string>], StorageChannelEvent<V>, void>;
   };
   link(): V;
   close(): void;
@@ -66,13 +68,13 @@ export interface StorageChannelConfig<V extends StorageChannelObject> {
   migrate?(link: V): void;
 }
 export interface StorageChannelObject {
-  readonly __event: Observer<[StorageChannelEventType] | [StorageChannelEventType, Extract<keyof DiffStruct<this, StorageChannelObject>, string>], StorageChannelEvent<this>, void>;
+  readonly [ChannelObject.event]: Observer<[StorageChannelEventType] | [StorageChannelEventType, Extract<keyof this, string>], StorageChannelEvent<this>, void>;
 }
 export interface StorageChannelEvent<V> {
   readonly type: StorageChannelEventType;
-  readonly attr: Extract<keyof DiffStruct<V, StorageChannelObject>, string>;
-  readonly newValue: V[Extract<keyof DiffStruct<V, StorageChannelObject>, string>];
-  readonly oldValue: V[Extract<keyof DiffStruct<V, StorageChannelObject>, string>];
+  readonly attr: Extract<keyof V, string>;
+  readonly newValue: V[Extract<keyof V, string>];
+  readonly oldValue: V[Extract<keyof V, string>];
 }
 export type StorageChannelEventType
   = StorageChannelEventType.Send

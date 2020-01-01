@@ -1,5 +1,4 @@
-import { StoreChannel, StoreChannelObject } from '../../index';
-import { StorageChannel, StorageChannelObject } from '../../index';
+import { StoreChannel, StoreChannelObject, StorageChannel, StorageChannelObject, ChannelObject } from '../../index';
 
 describe('Integration: Package', function () {
   describe('usage', function () {
@@ -9,7 +8,7 @@ describe('Integration: Package', function () {
       class Value {
         // getter/setter will be excluded in schema.
         get key() {
-          return this.__key;
+          return this[ChannelObject.key];
         }
         // property names that has underscore prefix or postfix will be excluded in schema.
         private _separator = ' ';
@@ -40,7 +39,7 @@ describe('Integration: Package', function () {
       }
       class Value {
         get event() {
-          return this.__event;
+          return this[ChannelObject.event];
         }
         version = 0;
       }

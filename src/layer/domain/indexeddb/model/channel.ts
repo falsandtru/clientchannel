@@ -2,7 +2,6 @@ import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../'
 import { Observation } from 'spica/observation';
 import { Cancellation } from 'spica/cancellation';
 import { AtomicPromise } from 'spica/promise';
-import { DiffStruct } from 'spica/type';
 import { Cache } from 'spica/cache';
 import { open, Listen, close, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { DataStore } from './channel/data';
@@ -136,14 +135,14 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     };
   })(), { ignore: { delete: true } });
   public readonly events_ = Object.freeze({
-    load: new Observation<[K] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | ''] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
-    save: new Observation<[K] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | ''] | [K, keyof DiffStruct<V, StoreChannelObject<K>> | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
+    load: new Observation<[K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
+    save: new Observation<[K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
     clean: new Observation<[K], boolean, void>(),
   });
   public readonly events = Object.freeze({
-    load: new Observation<[K] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
-    save: new Observation<[K] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
-    loss: new Observation<[K] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>] | [K, Extract<keyof DiffStruct<V, StoreChannelObject<K>> | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
+    load: new Observation<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
+    save: new Observation<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
+    loss: new Observation<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
   });
   public sync(keys: K[], cb: (results: AtomicPromise<K>[]) => void = noop, timeout = Infinity): void {
     const cancellation = new Cancellation();
