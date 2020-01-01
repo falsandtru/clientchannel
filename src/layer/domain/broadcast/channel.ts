@@ -28,7 +28,7 @@ abstract class AbstractChannel<K extends string> {
   constructor(
     public readonly name: string,
   ) {
-    if (cache.has(name)) throw new Error(`ClientChannel: Specified broadcast channel "${name}" is already opened.`);
+    if (cache.has(name)) throw new Error(`ClientChannel: Specified broadcast channel "${name}" is already open.`);
     void cache.add(this.name);
   }
   public abstract listen<C extends keyof ChannelMessageTypeMap<K>>(type: C, listener: (msg: ChannelMessageTypeMap<K>[C]) => void): () => void;
