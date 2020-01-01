@@ -7,11 +7,11 @@ export {
 };
 
 export namespace Schema {
-  export const meta = Symbol.for('meta');
-  export const id = Symbol.for('id');
-  export const key = Symbol.for('key');
-  export const date = Symbol.for('data');
-  export const event = Symbol.for('event');
+  export const meta = Symbol.for('clientchannel/ChannelObject.meta');
+  export const id = Symbol.for('clientchannel/ChannelObject.id');
+  export const key = Symbol.for('clientchannel/ChannelObject.key');
+  export const date = Symbol.for('clientchannel/ChannelObject.data');
+  export const event = Symbol.for('clientchannel/ChannelObject.event');
 }
 
 export function build<V extends object>(
