@@ -1,4 +1,4 @@
-/*! clientchannel v0.26.0 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.27.0 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -47,62 +47,111 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            const global_1 = _dereq_('./global');
             const type_1 = _dereq_('./type');
-            exports.assign = template((key, target, source) => target[key] = source[key]);
-            exports.clone = template((key, target, source) => {
-                switch (type_1.type(source[key])) {
+            const concat_1 = _dereq_('./concat');
+            const {Object: Obj} = global_1.global;
+            exports.assign = template((prop, target, source) => target[prop] = source[prop]);
+            exports.clone = template((prop, target, source) => {
+                switch (type_1.type(source[prop])) {
                 case 'Array':
-                    return target[key] = exports.clone([], source[key]);
+                    return target[prop] = exports.clone([], source[prop]);
                 case 'Object':
-                    return target[key] = type_1.isObject(source[key]) ? exports.clone(source[key] instanceof Object ? {} : Object.create(null), source[key]) : source[key];
-                default:
-                    return target[key] = source[key];
-                }
-            });
-            exports.extend = template((key, target, source) => {
-                switch (type_1.type(source[key])) {
-                case 'Array':
-                    return target[key] = exports.extend([], source[key]);
-                case 'Object':
-                    switch (type_1.type(target[key])) {
+                    switch (type_1.type(target[prop])) {
                     case 'Object':
-                        return target[key] = type_1.isObject(source[key]) ? exports.extend(target[key], source[key]) : source[key];
+                        return target[prop] = exports.clone(source[prop] instanceof Obj ? {} : Obj.create(null), source[prop]);
                     default:
-                        return target[key] = type_1.isObject(source[key]) ? exports.extend(source[key] instanceof Object ? {} : Object.create(null), source[key]) : source[key];
+                        return target[prop] = source[prop];
                     }
                 default:
-                    return target[key] = source[key];
+                    return target[prop] = source[prop];
                 }
             });
-            function template(strategy) {
+            exports.extend = template((prop, target, source) => {
+                switch (type_1.type(source[prop])) {
+                case 'Array':
+                    return target[prop] = exports.extend([], source[prop]);
+                case 'Object':
+                    switch (type_1.type(target[prop])) {
+                    case 'Object':
+                        return target[prop] = exports.extend(target[prop], source[prop]);
+                    default:
+                        return target[prop] = exports.extend(source[prop] instanceof Obj ? {} : Obj.create(null), source[prop]);
+                    }
+                default:
+                    return target[prop] = source[prop];
+                }
+            });
+            exports.merge = template((prop, target, source) => {
+                switch (type_1.type(source[prop])) {
+                case 'Array':
+                    switch (type_1.type(target[prop])) {
+                    case 'Array':
+                        return target[prop] = concat_1.concat(target[prop], source[prop]);
+                    default:
+                        return target[prop] = exports.merge([], source[prop]);
+                    }
+                case 'Object':
+                    switch (type_1.type(target[prop])) {
+                    case 'Object':
+                        return target[prop] = exports.merge(target[prop], source[prop]);
+                    default:
+                        return target[prop] = exports.merge(source[prop] instanceof Obj ? {} : Obj.create(null), source[prop]);
+                    }
+                default:
+                    return target[prop] = source[prop];
+                }
+            });
+            function template(strategy, empty = empty_) {
                 return walk;
                 function walk(target, ...sources) {
-                    if (target === undefined || target === null) {
-                        throw new TypeError(`Spica: assign: Cannot walk on ${ target }.`);
-                    }
+                    let isPrimitiveTarget = type_1.isPrimitive(target);
                     for (const source of sources) {
-                        if (source === undefined || source === null) {
-                            continue;
-                        }
-                        for (const key of Object.keys(Object(source))) {
-                            const desc = Object.getOwnPropertyDescriptor(Object(source), key);
-                            if (desc !== undefined && desc.enumerable) {
-                                void strategy(key, Object(target), Object(source));
+                        const isPrimitiveSource = type_1.isPrimitive(source);
+                        if (isPrimitiveSource) {
+                            target = source;
+                            isPrimitiveTarget = isPrimitiveSource;
+                        } else {
+                            if (isPrimitiveTarget) {
+                                target = empty(source);
+                                isPrimitiveTarget = isPrimitiveSource;
+                            }
+                            for (const prop in source) {
+                                if (source.hasOwnProperty && !source.hasOwnProperty(prop))
+                                    continue;
+                                void strategy(prop, target, source);
                             }
                         }
                     }
-                    return Object(target);
+                    return target;
+                }
+            }
+            exports.template = template;
+            function empty_(source) {
+                switch (type_1.type(source)) {
+                case 'Array':
+                    return [];
+                case 'Object':
+                    return source instanceof Obj ? {} : Obj.create(null);
+                default:
+                    return source;
                 }
             }
         },
-        { './type': 27 }
+        {
+            './concat': 9,
+            './global': 13,
+            './type': 27
+        }
     ],
     5: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            const global_1 = _dereq_('./global');
             const assign_1 = _dereq_('./assign');
             const equal_1 = _dereq_('./equal');
+            const {Map} = global_1.global;
             class Cache {
                 constructor(size, callback = () => undefined, opts = {}) {
                     this.size = size;
@@ -209,8 +258,8 @@ require = function () {
                     };
                     if (this.settings.ignore.clear)
                         return;
-                    for (const [key, val] of store) {
-                        void this.callback(key, val);
+                    for (const key of store.keys()) {
+                        void this.callback(key, store.get(key));
                     }
                 }
                 [Symbol.iterator]() {
@@ -261,24 +310,28 @@ require = function () {
         },
         {
             './assign': 4,
-            './equal': 11
+            './equal': 11,
+            './global': 13
         }
     ],
     6: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            const global_1 = _dereq_('./global');
             const promise_1 = _dereq_('./promise');
-            const future_1 = _dereq_('./future');
             const exception_1 = _dereq_('./exception');
             const maybe_1 = _dereq_('./monad/maybe');
             const either_1 = _dereq_('./monad/either');
+            const {
+                Object: Obj,
+                Set
+            } = global_1.global;
             class Cancellation extends promise_1.AtomicPromise {
                 constructor(cancelees = []) {
                     super(res => resolve = res);
                     this.alive = true;
                     this.canceled_ = false;
-                    this.state = new future_1.AtomicFuture();
                     this.listeners = new Set();
                     this.register = listener => {
                         if (this.canceled_)
@@ -301,9 +354,9 @@ require = function () {
                         this.alive = false;
                         this.canceled_ = true;
                         this.reason = reason;
-                        this.state.bind(this.reason);
-                        void Object.freeze(this.listeners);
-                        void Object.freeze(this);
+                        this.resolve(this.reason);
+                        void Obj.freeze(this.listeners);
+                        void Obj.freeze(this);
                         for (const listener of this.listeners) {
                             void listener(reason);
                         }
@@ -312,15 +365,15 @@ require = function () {
                         if (!this.alive)
                             return;
                         this.alive = false;
-                        void this.state.bind(promise_1.AtomicPromise.reject(reason));
-                        void Object.freeze(this.listeners);
-                        void Object.freeze(this);
+                        void this.resolve(promise_1.AtomicPromise.reject(reason));
+                        void Obj.freeze(this.listeners);
+                        void Obj.freeze(this);
                     };
                     this.promise = val => this.canceled_ ? promise_1.AtomicPromise.reject(this.reason) : promise_1.AtomicPromise.resolve(val);
                     this.maybe = val => maybe_1.Just(val).bind(val => this.canceled_ ? maybe_1.Nothing : maybe_1.Just(val));
                     this.either = val => either_1.Right(val).bind(val => this.canceled_ ? either_1.Left(this.reason) : either_1.Right(val));
                     var resolve;
-                    void resolve(this.state);
+                    this.resolve = resolve;
                     for (const cancellee of cancelees) {
                         void cancellee.register(this.cancel);
                     }
@@ -336,7 +389,7 @@ require = function () {
         },
         {
             './exception': 12,
-            './future': 13,
+            './global': 13,
             './monad/either': 16,
             './monad/maybe': 20,
             './promise': 24
@@ -385,9 +438,11 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            const global_1 = _dereq_('./global');
             const promise_1 = _dereq_('./promise');
             var clock_tick_1 = _dereq_('./clock.tick');
             exports.tick = clock_tick_1.tick;
+            const {setTimeout} = global_1.global;
             exports.clock = Promise.resolve();
             function wait(ms) {
                 return ms === 0 ? promise_1.AtomicPromise.resolve(exports.clock) : new promise_1.AtomicPromise(resolve => void setTimeout(resolve, ms));
@@ -396,6 +451,7 @@ require = function () {
         },
         {
             './clock.tick': 7,
+            './global': 13,
             './promise': 24
         }
     ],
@@ -456,45 +512,11 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const promise_1 = _dereq_('./promise');
-            class Future extends Promise {
-                constructor() {
-                    let state = true;
-                    let bind;
-                    super(resolve => bind = value => {
-                        if (!state)
-                            throw new Error(`Spica: Future: Cannot rebind a value.`);
-                        state = false;
-                        void resolve(value);
-                        return this;
-                    });
-                    this.bind = bind;
-                }
-                static get [Symbol.species]() {
-                    return Promise;
-                }
-            }
-            exports.Future = Future;
-            class AtomicFuture extends promise_1.AtomicPromise {
-                constructor() {
-                    let state = true;
-                    let bind;
-                    super(resolve => bind = value => {
-                        if (!state)
-                            throw new Error(`Spica: AtomicFuture: Cannot rebind a value.`);
-                        state = false;
-                        void resolve(value);
-                        return this;
-                    });
-                    this.bind = bind;
-                }
-                static get [Symbol.species]() {
-                    return promise_1.AtomicPromise;
-                }
-            }
-            exports.AtomicFuture = AtomicFuture;
+            exports.global = typeof globalThis !== 'undefined' && globalThis || typeof self !== 'undefined' && self || this;
+            exports.default = exports.global;
+            exports.global.global = exports.global;
         },
-        { './promise': 24 }
+        {}
     ],
     14: [
         function (_dereq_, module, exports) {
@@ -852,10 +874,11 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            const global_1 = _dereq_('./global');
             const assign_1 = _dereq_('./assign');
-            const concat_1 = _dereq_('./concat');
             const equal_1 = _dereq_('./equal');
             const exception_1 = _dereq_('./exception');
+            const {Map, WeakSet, Error} = global_1.global;
             var RegisterItemType;
             (function (RegisterItemType) {
                 RegisterItemType.monitor = 'monitor';
@@ -927,27 +950,27 @@ require = function () {
                                 return false;
                             switch (i) {
                             case 0:
-                                return !void items.shift();
+                                return items.shift(), true;
                             case items.length - 1:
-                                return !void items.pop();
+                                return items.pop(), true;
                             default:
-                                return !void items.splice(i, 1);
+                                return items.splice(i, 1), true;
                             }
                         });
                     case 'undefined': {
                             const node = this.seekNode_(namespace);
-                            for (const name of node.childrenNames.slice()) {
+                            for (let i = 0; i < node.childrenNames.length; ++i) {
+                                const name = node.childrenNames[i];
                                 void this.off([
                                     ...namespace,
                                     name
                                 ]);
                                 const child = node.children.get(name);
-                                if (!child)
-                                    continue;
                                 if (child.items.length + child.childrenNames.length > 0)
                                     continue;
                                 void node.children.delete(name);
                                 void node.childrenNames.splice(equal_1.findIndex(name, node.childrenNames), 1);
+                                void --i;
                             }
                             node.items = node.items.filter(({type}) => type === RegisterItemType.monitor);
                             return;
@@ -1020,19 +1043,19 @@ require = function () {
                     return this.refsBelow_(this.seekNode_(namespace));
                 }
                 refsAbove_({parent, items}) {
-                    items = concat_1.concat([], items);
+                    items = items.slice();
                     while (parent) {
-                        items = concat_1.concat(items, parent.items);
+                        void items.push(...parent.items);
                         parent = parent.parent;
                     }
                     return items;
                 }
                 refsBelow_({childrenNames, children, items}) {
-                    items = concat_1.concat([], items);
+                    items = items.slice();
                     for (let i = 0; i < childrenNames.length; ++i) {
                         const name = childrenNames[i];
                         const below = this.refsBelow_(children.get(name));
-                        items = concat_1.concat(items, below);
+                        void items.push(...below);
                         if (below.length === 0) {
                             void children.delete(name);
                             void childrenNames.splice(equal_1.findIndex(name, childrenNames), 1);
@@ -1066,9 +1089,9 @@ require = function () {
         },
         {
             './assign': 4,
-            './concat': 9,
             './equal': 11,
-            './exception': 12
+            './exception': 12,
+            './global': 13
         }
     ],
     24: [
@@ -1082,9 +1105,9 @@ require = function () {
                 State[State['resolved'] = 0] = 'resolved';
                 State[State['rejected'] = 1] = 'rejected';
             }(State || (State = {})));
-            const status = Symbol();
-            const queue = Symbol();
-            const resume = Symbol();
+            const status = Symbol.for('spica/promise::status');
+            const queue = Symbol.for('spica/promise::queue');
+            const resume = Symbol.for('spica/promise::resume');
             class AtomicPromise {
                 constructor(executor) {
                     this[Symbol.toStringTag] = 'Promise';
@@ -1212,6 +1235,8 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            const global_1 = _dereq_('./global');
+            const {setTimeout} = global_1.global;
             function throttle(interval, callback) {
                 let timer = 0;
                 let buffer = [];
@@ -1244,7 +1269,7 @@ require = function () {
                             if (timer > 0)
                                 return;
                             void callback(buffer[buffer.length - 1], flush());
-                        }, delay);
+                        }, buffer.length > 1 ? delay : 0);
                     }, delay);
                 };
                 function flush() {
@@ -1255,23 +1280,45 @@ require = function () {
             }
             exports.debounce = debounce;
         },
-        {}
+        { './global': 13 }
     ],
     27: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            function type(target) {
-                const type = Object.prototype.toString.call(target).split(' ').pop().slice(0, -1);
-                if (target === null || typeof target !== 'object' && target instanceof Object === false)
-                    return type.toLowerCase();
-                return type;
+            const toString = Object.prototype.toString;
+            function type(value) {
+                const t = value == null ? value : typeof value;
+                switch (t) {
+                case undefined:
+                case null:
+                    return `${ value }`;
+                case 'boolean':
+                case 'number':
+                case 'bigint':
+                case 'string':
+                case 'symbol':
+                    return t;
+                default:
+                    return toString.call(value).slice(8, -1);
+                }
             }
             exports.type = type;
-            function isObject(target) {
-                return target !== null && (typeof target === 'object' || target instanceof Object);
+            function isPrimitive(value) {
+                switch (type(value)) {
+                case 'undefined':
+                case 'null':
+                case 'boolean':
+                case 'number':
+                case 'bigint':
+                case 'string':
+                case 'symbol':
+                    return true;
+                default:
+                    return false;
+                }
             }
-            exports.isObject = isObject;
+            exports.isPrimitive = isPrimitive;
         },
         {}
     ],
@@ -1280,12 +1327,13 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             const FORMAT_V4 = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx';
+            const {random} = Math;
             function uuid() {
                 let acc = '';
                 for (let i = 0; i < FORMAT_V4.length; ++i) {
                     const c = FORMAT_V4[i];
                     if (c === 'x' || c === 'y') {
-                        const r = Math.random() * 16 | 0;
+                        const r = random() * 16 | 0;
                         const v = c == 'x' ? r : r & 3 | 8;
                         acc += v.toString(16);
                     } else {
@@ -1326,6 +1374,8 @@ require = function () {
             const channel_2 = _dereq_('../domain/ownership/channel');
             __export(_dereq_('../domain/indexeddb/api'));
             __export(_dereq_('../domain/webstorage/api'));
+            var api_3 = _dereq_('../domain/dao/api');
+            exports.ChannelObject = api_3.Schema;
             class StoreChannel extends api_1.StoreChannel {
                 constructor(name, config) {
                     super(name, config.schema, config);
@@ -1350,6 +1400,7 @@ require = function () {
         },
         {
             '../domain/broadcast/channel': 36,
+            '../domain/dao/api': 37,
             '../domain/indexeddb/api': 39,
             '../domain/ownership/channel': 45,
             '../domain/webstorage/api': 46
@@ -1379,7 +1430,7 @@ require = function () {
             }
             exports.isStorable = isStorable;
             function hasBinary(value) {
-                return type_1.isObject(value) ? isBinary(value) || Object.keys(value).some(key => hasBinary(value[key])) : false;
+                return !type_1.isPrimitive(value) ? isBinary(value) || Object.keys(value).some(key => hasBinary(value[key])) : false;
             }
             exports.hasBinary = hasBinary;
             function isBinary(value) {
@@ -2117,7 +2168,7 @@ require = function () {
                 constructor(name) {
                     this.name = name;
                     if (cache.has(name))
-                        throw new Error(`ClientChannel: Specified broadcast channel "${ name }" is already opened.`);
+                        throw new Error(`ClientChannel: Specified broadcast channel "${ name }" is already open.`);
                     void cache.add(this.name);
                 }
                 close() {
@@ -2237,7 +2288,7 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var builder_1 = _dereq_('./module/builder');
-            exports.SCHEMA = builder_1.SCHEMA;
+            exports.Schema = builder_1.Schema;
             exports.build = builder_1.build;
             exports.isValidPropertyName = builder_1.isValidPropertyName;
             exports.isValidPropertyValue = builder_1.isValidPropertyValue;
@@ -2252,20 +2303,21 @@ require = function () {
             exports.isValidPropertyName = event_1.isValidPropertyName;
             exports.isValidPropertyValue = event_1.isValidPropertyValue;
             const noop_1 = _dereq_('../../../../lib/noop');
-            exports.SCHEMA = {
-                META: { NAME: '__meta' },
-                ID: { NAME: '__id' },
-                KEY: { NAME: '__key' },
-                DATE: { NAME: '__date' },
-                EVENT: { NAME: '__event' }
-            };
+            var Schema;
+            (function (Schema) {
+                Schema.meta = Symbol.for('clientchannel/ChannelObject.meta');
+                Schema.id = Symbol.for('clientchannel/ChannelObject.id');
+                Schema.key = Symbol.for('clientchannel/ChannelObject.key');
+                Schema.date = Symbol.for('clientchannel/ChannelObject.data');
+                Schema.event = Symbol.for('clientchannel/ChannelObject.event');
+            }(Schema = exports.Schema || (exports.Schema = {})));
             function build(source, factory, set = noop_1.noop, get = noop_1.noop) {
                 const dao = factory();
-                for (const prop of Object.keys(exports.SCHEMA).map(prop => exports.SCHEMA[prop].NAME)) {
+                for (const prop of Object.values(Schema)) {
                     delete dao[prop];
                 }
-                if (typeof source[exports.SCHEMA.KEY.NAME] !== 'string')
-                    throw new TypeError(`ClientChannel: DAO: Invalid key: ${ source[exports.SCHEMA.KEY.NAME] }`);
+                if (typeof source[Schema.key] !== 'string')
+                    throw new TypeError(`ClientChannel: DAO: Invalid key: ${ source[Schema.key] }`);
                 const descmap = Object.assign(Object.assign({}, Object.keys(dao).filter(event_1.isValidPropertyName).filter(event_1.isValidPropertyValue(dao)).reduce((map, prop) => {
                     {
                         const desc = Object.getOwnPropertyDescriptor(dao, prop);
@@ -2293,30 +2345,30 @@ require = function () {
                     };
                     return map;
                 }, {})), {
-                    [exports.SCHEMA.META.NAME]: {
+                    [Schema.meta]: {
                         configurable: false,
                         enumerable: false,
-                        get: () => source[exports.SCHEMA.META.NAME]
+                        get: () => source[Schema.meta]
                     },
-                    [exports.SCHEMA.ID.NAME]: {
+                    [Schema.id]: {
                         configurable: false,
                         enumerable: false,
-                        get: () => source[exports.SCHEMA.ID.NAME]
+                        get: () => source[Schema.id]
                     },
-                    [exports.SCHEMA.KEY.NAME]: {
+                    [Schema.key]: {
                         configurable: false,
                         enumerable: false,
-                        get: () => source[exports.SCHEMA.KEY.NAME]
+                        get: () => source[Schema.key]
                     },
-                    [exports.SCHEMA.DATE.NAME]: {
+                    [Schema.date]: {
                         configurable: false,
                         enumerable: false,
-                        get: () => source[exports.SCHEMA.DATE.NAME]
+                        get: () => source[Schema.date]
                     },
-                    [exports.SCHEMA.EVENT.NAME]: {
+                    [Schema.event]: {
                         configurable: false,
                         enumerable: false,
-                        get: () => source[exports.SCHEMA.EVENT.NAME]
+                        get: () => source[Schema.event]
                     }
                 });
                 void Object.defineProperties(dao, descmap);
@@ -2417,7 +2469,7 @@ require = function () {
                     });
                     this.ages = new Map();
                     if (cache.has(name))
-                        throw new Error(`ClientChannel: Specified database channel "${ name }" is already opened.`);
+                        throw new Error(`ClientChannel: Specified database channel "${ name }" is already open.`);
                     void cache.add(name);
                     void this.cancellation.register(() => void cache.delete(name));
                     this.schema = new Schema(this, this.ownership, attrs, api_1.open(name, {
@@ -2838,7 +2890,7 @@ require = function () {
                                 return;
                             void migrate(link);
                             for (const {attr, oldVal} of changes) {
-                                void cast(source.__event).emit([
+                                void cast(source[api_1.Schema.event]).emit([
                                     api_2.StorageChannel.EventType.recv,
                                     attr
                                 ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.recv, attr, memory[attr], oldVal));
@@ -2851,12 +2903,12 @@ require = function () {
                     void this.fetch(key);
                     void this.expire(key, age);
                     return this.links.has(key) ? this.links.get(key) : this.links.set(key, api_1.build(Object.defineProperties(this.sources.set(key, this.get(key)).get(key), {
-                        __meta: { get: () => this.meta(key) },
-                        __id: { get: () => this.meta(key).id },
-                        __key: { get: () => this.meta(key).key },
-                        __date: { get: () => this.meta(key).date },
-                        __event: { value: new observation_1.Observation({ limit: Infinity }) }
-                    }), () => this.factory(), (attr, newValue, oldValue) => (void this.add(new channel_1.ChannelStore.Record(key, { [attr]: newValue })), void cast(this.sources.get(key).__event).emit([
+                        [api_1.Schema.meta]: { get: () => this.meta(key) },
+                        [api_1.Schema.id]: { get: () => this.meta(key).id },
+                        [api_1.Schema.key]: { get: () => this.meta(key).key },
+                        [api_1.Schema.date]: { get: () => this.meta(key).date },
+                        [api_1.Schema.event]: { value: new observation_1.Observation({ limit: Infinity }) }
+                    }), () => this.factory(), (attr, newValue, oldValue) => (void this.add(new channel_1.ChannelStore.Record(key, { [attr]: newValue })), void cast(this.sources.get(key)[api_1.Schema.event]).emit([
                         api_2.StorageChannel.EventType.send,
                         attr
                     ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.send, attr, newValue, oldValue))), throttle_1.throttle(100, () => this.has(key) && void this.log(key)))).get(key);
@@ -3019,12 +3071,12 @@ require = function () {
                         recv: new observation_1.Observation({ limit: Infinity })
                     });
                     if (cache.has(name))
-                        throw new Error(`ClientChannel: Specified storage channel "${ name }" is already opened.`);
+                        throw new Error(`ClientChannel: Specified storage channel "${ name }" is already open.`);
                     void cache.add(name);
                     void this.cancellation.register(() => void cache.delete(name));
                     const source = Object.assign({
-                        [api_1.SCHEMA.KEY.NAME]: this.name,
-                        [api_1.SCHEMA.EVENT.NAME]: new observation_1.Observation({ limit: Infinity })
+                        [api_1.Schema.key]: this.name,
+                        [api_1.Schema.event]: new observation_1.Observation({ limit: Infinity })
                     }, parse(this.storage.getItem(this.name)));
                     this.link_ = api_1.build(source, factory, (attr, newValue, oldValue) => {
                         void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(source)).reduce((acc, attr) => {
@@ -3032,7 +3084,7 @@ require = function () {
                             return acc;
                         }, {})));
                         const event = new StorageChannel.Event(StorageChannel.EventType.send, attr, newValue, oldValue);
-                        void source.__event.emit([
+                        void source[api_1.Schema.event].emit([
                             event.type,
                             event.attr
                         ], event);
@@ -3052,7 +3104,7 @@ require = function () {
                             source[attr] = newVal;
                             void migrate(this.link_);
                             const event = new StorageChannel.Event(StorageChannel.EventType.recv, attr, source[attr], oldVal);
-                            void source.__event.emit([
+                            void source[api_1.Schema.event].emit([
                                 event.type,
                                 event.attr
                             ], event);

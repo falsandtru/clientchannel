@@ -42,16 +42,16 @@
 <script src="/clientchannel/assets/js/lib/clientchannel.js"></script>
 
 <script>
-  var width = 400, height = 500;
   $(function () {
+    const width = 400, height = 500;
     // connect to database
-    var StoreChannel = require('clientchannel').StoreChannel;
-    var chan = new StoreChannel('demo', {
+    const { StoreChannel, ChannelObject } = require('clientchannel');
+    const chan = new StoreChannel('demo', {
       schema: function () {
         // define schema
         return {
           get event() {
-            return this.__event;
+            return this[ChannelObject.event];
           },
           title: '',
           content: null
@@ -63,13 +63,13 @@
       }
     });
     // create data binding object
-    var canvas = chan.link('canvas');
+    const canvas = chan.link('canvas');
     // component
     canvas.event.on(['recv', 'title'], function (ev) {
       document.querySelector('.title').value = ev.newValue;
     });
     canvas.event.on(['recv', 'content'], function (ev) {
-      var c = document.createElement('canvas');
+      const c = document.createElement('canvas');
       c.setAttribute('width', width);
       c.setAttribute('height', height);
       c.getContext('2d').putImageData(ev.newValue, 0, 0);
@@ -83,7 +83,7 @@
       $canvas.clear();
       canvas.content = document.querySelector('.canvas').getContext('2d').getImageData(0, 0, width, height);
     });
-    var $canvas = new fabric.Canvas(document.querySelector('.canvas'));
+    const $canvas = new fabric.Canvas(document.querySelector('.canvas'));
     $canvas.isDrawingMode = true;
     $canvas.freeDrawingBrush.width = 10;
     $canvas.on('path:created', function () {
@@ -92,8 +92,8 @@
   });
 </script>
 <script>
-  var StoreChannel = require('clientchannel').StoreChannel;
-  var chan = new StoreChannel('random', {
+  const { StoreChannel } = require('clientchannel');
+  const chan = new StoreChannel('random', {
     schema: function () {
       return {
         data: 0
@@ -106,8 +106,7 @@
     },
     debug: true
   });
-  var time = Date.now();
-  for (var i = 0; i < 25; ++i) {
+  for (let i = 0; i < 25; ++i) {
     var link = chan.link('v1/' + ('0'.repeat(4) + (Math.random() * 10000 | 0)).slice(-3));
     link.data = 0;
   }
