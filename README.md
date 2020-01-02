@@ -3,17 +3,17 @@
 [![Build Status](https://travis-ci.org/falsandtru/clientchannel.svg?branch=master)](https://travis-ci.org/falsandtru/clientchannel)
 [![Coverage Status](https://coveralls.io/repos/falsandtru/clientchannel/badge.svg?branch=master&service=github)](https://coveralls.io/github/falsandtru/clientchannel?branch=master)
 
-Store and sync values between tabs via IndexedDB or LocalStorage.
+Store and sync data between tabs via IndexedDB or LocalStorage.
 
 ## Features
 
-- Tab communication.
-- Persistent cross data binding.
+- Store and restore data using IndexedDB or LocalStorage.
+- Cross data binding between tabs.
 - Individual expiration per data.
 
 ## Demos
 
-Text and Canvas.
+Store and sync text and canvas.
 
 https://falsandtru.github.io/clientchannel/
 
