@@ -4,10 +4,10 @@ import { EventId, makeEventId } from './identifier';
 import { isStorable } from '../database/value';
 
 export const EventRecordType = {
-  put: <EventRecordType.Put>'put',
-  delete: <EventRecordType.Delete>'delete',
-  snapshot: <EventRecordType.Snapshot>'snapshot',
-};
+  put: 'put',
+  delete: 'delete',
+  snapshot: 'snapshot',
+} as const;
 export type EventRecordType = StoreChannelEventType
 export namespace EventRecordType {
   export type Put = StoreChannelEventType.Put;
