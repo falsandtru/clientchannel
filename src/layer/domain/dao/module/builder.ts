@@ -1,5 +1,5 @@
 import { isValidPropertyName, isValidPropertyValue } from '../../../data/es/event';
-import { noop } from '../../../../lib/noop';
+import { noop } from 'spica/noop';
 
 export {
   isValidPropertyName,

@@ -1,7 +1,7 @@
 import { Listen, Config } from '../../infrastructure/indexeddb/api';
-import { noop } from '../../../lib/noop';
 import { Cancellation } from 'spica/cancellation';
 import { tick } from 'spica/clock';
+import { noop } from 'spica/noop';
 
 export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
   public static configure(): Config {

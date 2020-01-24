@@ -3,13 +3,13 @@ import { Observation } from 'spica/observation';
 import { Cancellation } from 'spica/cancellation';
 import { AtomicPromise } from 'spica/promise';
 import { Cache } from 'spica/cache';
+import { noop } from 'spica/noop';
 import { open, Listen, close, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { DataStore } from './channel/data';
 import { AccessStore } from './channel/access';
 import { ExpiryStore } from './channel/expiry';
 import { Channel, ChannelMessage } from '../../broadcast/channel';
 import { Ownership } from '../../ownership/channel';
-import { noop } from '../../../../lib/noop';
 
 declare global {
   interface ChannelMessageTypeMap<K extends string> {

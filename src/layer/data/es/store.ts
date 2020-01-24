@@ -4,11 +4,11 @@ import { tick } from 'spica/clock';
 import { sqid } from 'spica/sqid';
 import { concat } from 'spica/concat';
 import { causeAsyncException } from 'spica/exception';
+import { noop } from 'spica/noop';
 import { Listen, Config, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { EventId, makeEventId } from './identifier';
 import { EventRecordType, UnstoredEventRecord, StoredEventRecord, LoadedEventRecord, SavedEventRecord, EventRecordValue, isValidPropertyName } from './event';
 import { hasBinary } from '../database/value';
-import { noop } from '../../../lib/noop';
 
 namespace EventStoreSchema {
   export const id = 'id';
