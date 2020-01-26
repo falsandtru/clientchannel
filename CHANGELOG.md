@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.27.1
+
+- Update dependencies.
+
 ## 0.27.0
 
 - Change meta data access keys from string to symbol.
