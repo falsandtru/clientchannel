@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.27.2
+
+- Revert type declaration changes.
+
 ## 0.27.1
 
 - Update dependencies.

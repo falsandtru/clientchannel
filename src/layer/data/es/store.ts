@@ -1,4 +1,3 @@
-import type { PartialTuple } from 'spica/type';
 import { Observation } from 'spica/observation';
 import { Cancellation } from 'spica/cancellation';
 import { tick } from 'spica/clock';
@@ -99,15 +98,15 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         }
       });
   }
-  private readonly memory = new Observation<PartialTuple<[K, keyof V | '', string, string]>, void, UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>>();
+  private readonly memory = new Observation<[] | [K] | [K, keyof V | ''] | [K, keyof V | '', string] | [K, keyof V | '', string, string], void, UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>>();
   public readonly events = Object.freeze({
-    load: new Observation<PartialTuple<[K, Extract<keyof V | '', string>, EventStore.EventType]>, EventStore.Event<K, V>, void>(),
-    save: new Observation<PartialTuple<[K, Extract<keyof V | '', string>, EventStore.EventType]>, EventStore.Event<K, V>, void>(),
-    loss: new Observation<PartialTuple<[K, Extract<keyof V | '', string>, EventStore.EventType]>, EventStore.Event<K, V>, void>(),
+    load: new Observation<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, EventStore.EventType], EventStore.Event<K, V>, void>(),
+    save: new Observation<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, EventStore.EventType], EventStore.Event<K, V>, void>(),
+    loss: new Observation<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, EventStore.EventType], EventStore.Event<K, V>, void>(),
     clean: new Observation<[K], boolean, void>(),
   });
   private readonly events_ = Object.freeze({
-    memory: new Observation<PartialTuple<[K, keyof V | '', string]>, UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>, void>({ limit: Infinity }),
+    memory: new Observation<[K] | [K, keyof V | ''] | [K, keyof V | '', string], UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>, void>({ limit: Infinity }),
   });
   private tx_: {
     rw?: IDBTransaction;
