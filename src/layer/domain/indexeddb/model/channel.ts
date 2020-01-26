@@ -1,4 +1,5 @@
 import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../';
+import type { PartialTuple } from 'spica/type';
 import { Observation } from 'spica/observation';
 import { Cancellation } from 'spica/cancellation';
 import { AtomicPromise } from 'spica/promise';
@@ -135,14 +136,14 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     };
   })(), { ignore: { delete: true } });
   public readonly events_ = Object.freeze({
-    load: new Observation<[K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
-    save: new Observation<[K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
+    load: new Observation<PartialTuple<[K, keyof V | '', ChannelStore.EventType]>, ChannelStore.Event<K, V>, void>(),
+    save: new Observation<PartialTuple<[K, keyof V | '', ChannelStore.EventType]>, ChannelStore.Event<K, V>, void>(),
     clean: new Observation<[K], boolean, void>(),
   });
   public readonly events = Object.freeze({
-    load: new Observation<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
-    save: new Observation<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
-    loss: new Observation<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
+    load: new Observation<PartialTuple<[K, Extract<keyof V | '', string>, ChannelStore.EventType]>, ChannelStore.Event<K, V>, void>({ limit: Infinity }),
+    save: new Observation<PartialTuple<[K, Extract<keyof V | '', string>, ChannelStore.EventType]>, ChannelStore.Event<K, V>, void>({ limit: Infinity }),
+    loss: new Observation<PartialTuple<[K, Extract<keyof V | '', string>, ChannelStore.EventType]>, ChannelStore.Event<K, V>, void>({ limit: Infinity }),
   });
   public sync(keys: K[], cb: (results: AtomicPromise<K>[]) => void = noop, timeout = Infinity): void {
     const cancellation = new Cancellation();

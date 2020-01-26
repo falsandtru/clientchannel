@@ -1,3 +1,4 @@
+import type { PartialTuple } from 'spica/type';
 import { Observer } from 'spica/observation';
 import { AtomicPromise } from 'spica/promise';
 import { ChannelObject } from './index';
@@ -7,9 +8,9 @@ export { ChannelObject } from './index';
 export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
   constructor(name: string, config: StoreChannelConfig<K, V>);
   readonly events: {
-    readonly load: Observer<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, StoreChannelEventType], StoreChannelEvent<K, V>, void>;
-    readonly save: Observer<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, StoreChannelEventType], StoreChannelEvent<K, V>, void>;
-    readonly loss: Observer<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, StoreChannelEventType], StoreChannelEvent<K, V>, void>;
+    readonly load: Observer<PartialTuple<[K, Extract<keyof V | '', string>, StoreChannelEventType]>, StoreChannelEvent<K, V>, void>;
+    readonly save: Observer<PartialTuple<[K, Extract<keyof V | '', string>, StoreChannelEventType]>, StoreChannelEvent<K, V>, void>;
+    readonly loss: Observer<PartialTuple<[K, Extract<keyof V | '', string>, StoreChannelEventType]>, StoreChannelEvent<K, V>, void>;
   };
   sync(keys: K[], cb?: (results: AtomicPromise<K>[]) => void): void;
   link(key: K, age?: number): V;
@@ -30,7 +31,7 @@ export interface StoreChannelObject<K extends string> {
   readonly [ChannelObject.id]: number;
   readonly [ChannelObject.key]: K;
   readonly [ChannelObject.date]: number;
-  readonly [ChannelObject.event]: Observer<[StorageChannelEventType] | [StorageChannelEventType, Extract<keyof this, string>], StorageChannelEvent<this>, void>;
+  readonly [ChannelObject.event]: Observer<PartialTuple<[StorageChannelEventType, Extract<keyof this, string>]>, StorageChannelEvent<this>, void>;
 }
 export interface StoreChannelObjectMetaData<K extends string> {
   readonly id: number;
@@ -68,7 +69,7 @@ export interface StorageChannelConfig<V extends StorageChannelObject> {
   migrate?(link: V): void;
 }
 export interface StorageChannelObject {
-  readonly [ChannelObject.event]: Observer<[StorageChannelEventType] | [StorageChannelEventType, Extract<keyof this, string>], StorageChannelEvent<this>, void>;
+  readonly [ChannelObject.event]: Observer<PartialTuple<[StorageChannelEventType, Extract<keyof this, string>]>, StorageChannelEvent<this>, void>;
 }
 export interface StorageChannelEvent<V> {
   readonly type: StorageChannelEventType;
