@@ -23,7 +23,7 @@ export class StorageChannel<V extends StorageChannelObject> extends BaseStorageC
     name: string,
     {
       schema: schema,
-      migrate = () => undefined,
+      migrate = () => void 0,
     }: StorageChannelConfig<V>
   ) {
     super(name, localStorage, schema, migrate);

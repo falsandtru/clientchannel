@@ -10,7 +10,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
     name: string,
     private readonly factory: () => V,
     {
-      migrate = () => undefined,
+      migrate = () => void 0,
       destroy = () => true,
       age = Infinity,
       size = Infinity,

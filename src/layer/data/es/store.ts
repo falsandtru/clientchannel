@@ -117,7 +117,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   private get txrw(): IDBTransaction | undefined {
     if (++this.tx_.rwc > 25) {
       this.tx_.rwc = 0;
-      this.tx_.rw = undefined;
+      this.tx_.rw = void 0;
       return;
     }
     return this.tx_.rw;
@@ -128,7 +128,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     if (this.tx_.rw && this.tx_.rw === tx) return;
     this.tx_.rwc = 0;
     this.tx_.rw = tx;
-    void tick(() => this.tx_.rw = undefined);
+    void tick(() => this.tx_.rw = void 0);
   }
   public fetch(key: K, cb: (error: DOMException | Error | null) => void = noop, cancellation = new Cancellation()): void {
     const events: LoadedEventRecord<K, V>[] = [];
@@ -264,7 +264,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       tx = this.txrw = tx || this.txrw || db.transaction(this.name, 'readwrite');
       const active = (): boolean =>
         this.memory.refs([event.key, event.attr, sqid(0)])
-          .some(({ listener }) => listener(undefined, [event.key, event.attr, sqid(0)]) === event);
+          .some(({ listener }) => listener(void 0, [event.key, event.attr, sqid(0)]) === event);
       if (!active()) return;
       const req = tx
         .objectStore(this.name)
@@ -281,7 +281,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           .emit([savedEvent.key, savedEvent.attr, sqid(savedEvent.id)], savedEvent);
         const events: StoredEventRecord<K, V>[] = this.memory.refs([savedEvent.key])
           .map(({ listener }) =>
-            listener(undefined, [savedEvent.key]) as UnstoredEventRecord<K, V> | StoredEventRecord<K, V>)
+            listener(void 0, [savedEvent.key]) as UnstoredEventRecord<K, V> | StoredEventRecord<K, V>)
           .reduce<StoredEventRecord<K, V>[]>((es, e) =>
             e instanceof StoredEventRecord
               ? concat(es, [e])
@@ -295,7 +295,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         void clean(),
         active()
           ? void loss()
-          : undefined);
+          : void 0);
       void tx.addEventListener('error', fail);
       void tx.addEventListener('abort', fail);
     }, () => void clean() || void loss());
@@ -476,7 +476,7 @@ export function compose<K extends string, V extends EventStore.Value>(
   function group(events: E[]): E[][] {
     return events
       .map<[E, number]>((e, i) => [e, i])
-      .sort(([a, ai], [b, bi]) => undefined
+      .sort(([a, ai], [b, bi]) => void 0
         || indexedDB.cmp(a.key, b.key)
         || b.date - a.date
         || b.id * a.id > 0 && b.id - a.id

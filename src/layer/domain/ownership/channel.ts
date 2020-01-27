@@ -74,10 +74,10 @@ export class Ownership<K extends string> {
   public take(key: K, age: number, wait?: number): boolean | AtomicPromise<void> {
     assert(0 <= age && age < 60 * 1000);
     age = Math.min(Math.max(age, 1 * 1000), 60 * 1000) + 100;
-    wait = wait === undefined ? wait : Math.max(wait, 0);
+    wait = wait === void 0 ? wait : Math.max(wait, 0);
     if (!this.isTakable(key)) return false;
     void this.setPriority(key, Math.max(Ownership.genPriority(age + (wait || 0)), this.getPriority(key)));
-    return wait === undefined
+    return wait === void 0
       ? true
       : new AtomicPromise(resolve => setTimeout(resolve, wait))
           .then(() =>

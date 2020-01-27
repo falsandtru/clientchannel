@@ -34,7 +34,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
   private get txrw(): IDBTransaction | undefined {
     if (++this.tx_.rwc > 25) {
       this.tx_.rwc = 0;
-      this.tx_.rw = undefined;
+      this.tx_.rw = void 0;
       return;
     }
     return this.tx_.rw;
@@ -45,7 +45,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     if (this.tx_.rw && this.tx_.rw === tx) return;
     this.tx_.rwc = 0;
     this.tx_.rw = tx;
-    void tick(() => this.tx_.rw = undefined);
+    void tick(() => this.tx_.rw = void 0);
   }
   public fetch(key: K, cb: (error: DOMException | Error | null) => void = noop, cancellation = new Cancellation()): undefined {
     return void this.listen(db => {

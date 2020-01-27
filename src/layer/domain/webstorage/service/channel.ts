@@ -12,7 +12,7 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
     public readonly name: string,
     private readonly storage: StorageLike = sessionStorage || fakeStorage,
     factory: () => V,
-    migrate: (link: V) => void = () => undefined,
+    migrate: (link: V) => void = () => void 0,
   ) {
     if (cache.has(name)) throw new Error(`ClientChannel: Specified storage channel "${name}" is already open.`);
     void cache.add(name);
