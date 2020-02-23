@@ -38,12 +38,12 @@ notifications:
     on_success: change
     on_failure: always
 after_script:
-- |
+- |-
   if
-    [ $TRAVIS_BRANCH == "master" ]
-    [ $TRAVIS_EVENT_TYPE == "push" ]
-    [ $TRAVIS_OS_NAME == "linux" ]
-    [ $ENCRYPTION_LABEL ]
+    [ "$TRAVIS_BRANCH" == "master" ] &&
+    [ "$TRAVIS_EVENT_TYPE" == "push" ] &&
+    [ "$TRAVIS_OS_NAME" == "linux" ] &&
+    [ "$ENCRYPTION_LABEL" ]
   then :; else exit 0; fi
 - eval `ssh-agent -s`
 - openssl aes-256-cbc -K `eval echo $\{${ENCRYPTION_LABEL}_key\}` -iv `eval echo $\{${ENCRYPTION_LABEL}_iv\}` -in .travis/deploy_key.enc -d | ssh-add -
