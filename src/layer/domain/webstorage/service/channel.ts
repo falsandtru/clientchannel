@@ -19,9 +19,9 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
     void this.cancellation.register(() =>
       void cache.delete(name));
     const source: V = {
+      ...parse<V>(this.storage.getItem(this.name)),
       [Schema.key]: this.name,
       [Schema.event]: new Observation<[StorageChannelEventType] | [StorageChannelEventType, keyof V], StorageChannel.Event<V>, void>({ limit: Infinity }),
-      ...parse<V>(this.storage.getItem(this.name))
     };
     this.link_ = build<V>(source, factory, (attr, newValue, oldValue) => {
       void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, attr) => {
