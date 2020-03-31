@@ -1,4 +1,4 @@
-/*! clientchannel v0.27.2 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.27.3 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -47,16 +47,35 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            function indexOf(as, a) {
-                const isNaN = a !== a;
-                for (let i = 0; i < as.length; ++i) {
-                    const ai = as[i];
-                    if (isNaN ? ai !== ai : ai === a)
-                        return i;
-                }
-                return -1;
-            }
-            exports.indexOf = indexOf;
+            exports.isArray = exports.ObjectValues = exports.ObjectSetPrototypeOf = exports.ObjectSeal = exports.ObjectPreventExtensions = exports.ObjectKeys = exports.isSealed = exports.isFrozen = exports.isExtensible = exports.ObjectIs = exports.ObjectGetPrototypeOf = exports.ObjectGetOwnPropertySymbols = exports.ObjectGetOwnPropertyNames = exports.ObjectGetOwnPropertyDescriptors = exports.ObjectGetOwnPropertyDescriptor = exports.ObjectFreeze = exports.ObjectEntries = exports.ObjectDefineProperty = exports.ObjectDefineProperties = exports.ObjectCreate = exports.ObjectAssign = exports.toString = exports.isEnumerable = exports.isPrototypeOf = exports.hasOwnProperty = exports.SymbolKeyFor = exports.SymbolFor = exports.parseInt = exports.parseFloat = exports.isSafeInteger = exports.isNaN = exports.isInteger = exports.isFinite = exports.NaN = void 0;
+            exports.NaN = Number.NaN, exports.isFinite = Number.isFinite, exports.isInteger = Number.isInteger, exports.isNaN = Number.isNaN, exports.isSafeInteger = Number.isSafeInteger, exports.parseFloat = Number.parseFloat, exports.parseInt = Number.parseInt;
+            exports.SymbolFor = Symbol.for;
+            exports.SymbolKeyFor = Symbol.keyFor;
+            exports.hasOwnProperty = Object.prototype.hasOwnProperty.call.bind(Object.prototype.hasOwnProperty);
+            exports.isPrototypeOf = Object.prototype.isPrototypeOf.call.bind(Object.prototype.isPrototypeOf);
+            exports.isEnumerable = Object.prototype.propertyIsEnumerable.call.bind(Object.prototype.propertyIsEnumerable);
+            exports.toString = Object.prototype.toString.call.bind(Object.prototype.toString);
+            exports.ObjectAssign = Object.assign;
+            exports.ObjectCreate = Object.create;
+            exports.ObjectDefineProperties = Object.defineProperties;
+            exports.ObjectDefineProperty = Object.defineProperty;
+            exports.ObjectEntries = Object.entries;
+            exports.ObjectFreeze = Object.freeze;
+            exports.ObjectGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+            exports.ObjectGetOwnPropertyDescriptors = Object.getOwnPropertyDescriptors;
+            exports.ObjectGetOwnPropertyNames = Object.getOwnPropertyNames;
+            exports.ObjectGetOwnPropertySymbols = Object.getOwnPropertySymbols;
+            exports.ObjectGetPrototypeOf = Object.getPrototypeOf;
+            exports.ObjectIs = Object.is;
+            exports.isExtensible = Object.isExtensible;
+            exports.isFrozen = Object.isFrozen;
+            exports.isSealed = Object.isSealed;
+            exports.ObjectKeys = Object.keys;
+            exports.ObjectPreventExtensions = Object.preventExtensions;
+            exports.ObjectSeal = Object.seal;
+            exports.ObjectSetPrototypeOf = Object.setPrototypeOf;
+            exports.ObjectValues = Object.values;
+            exports.isArray = Array.isArray;
         },
         {}
     ],
@@ -64,19 +83,144 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.join = exports.splice = exports.push = exports.pop = exports.unshift = exports.shift = exports.indexOf = void 0;
             const global_1 = _dereq_('./global');
+            const alias_1 = _dereq_('./alias');
+            function indexOf(as, a) {
+                return a === a ? as.indexOf(a) : as.findIndex(a => a !== a);
+            }
+            exports.indexOf = indexOf;
+            function shift(as, count) {
+                if (count < 0)
+                    throw new Error('Unexpected negative number');
+                return count === global_1.undefined ? [
+                    as.shift(),
+                    as
+                ] : [
+                    splice(as, 0, count),
+                    as
+                ];
+            }
+            exports.shift = shift;
+            function unshift(as, bs) {
+                if (alias_1.isArray(as)) {
+                    for (let i = as.length - 1; i >= 0; --i) {
+                        bs.unshift(as[i]);
+                    }
+                } else {
+                    bs.unshift(...as);
+                }
+                return bs;
+            }
+            exports.unshift = unshift;
+            function pop(as, count) {
+                if (count < 0)
+                    throw new Error('Unexpected negative number');
+                return count === global_1.undefined ? [
+                    as,
+                    as.pop()
+                ] : [
+                    as,
+                    splice(as, as.length - count, count)
+                ];
+            }
+            exports.pop = pop;
+            function push(as, bs) {
+                if (alias_1.isArray(bs)) {
+                    for (let i = 0; i < bs.length; ++i) {
+                        as.push(bs[i]);
+                    }
+                } else {
+                    as.push(...bs);
+                }
+                return as;
+            }
+            exports.push = push;
+            function splice(as, index, count, ...inserts) {
+                if (count === 0 && inserts.length === 0)
+                    return [];
+                count = count > as.length ? as.length : count;
+                switch (index) {
+                case 0:
+                    switch (count) {
+                    case 0:
+                        return [
+                            [],
+                            unshift(inserts, as)
+                        ][0];
+                    case 1:
+                        return as.length === 0 ? [
+                            [],
+                            unshift(inserts, as)
+                        ][0] : [
+                            [as.shift()],
+                            unshift(inserts, as)
+                        ][0];
+                    case global_1.undefined:
+                        if (as.length > 1 || arguments.length > 2)
+                            break;
+                        return as.length === 0 ? [] : splice(as, index, 1);
+                    }
+                    break;
+                case -1:
+                case as.length - 1:
+                case global_1.Infinity:
+                    switch (count) {
+                    case 0:
+                        return [
+                            [],
+                            push(as, inserts)
+                        ][0];
+                    case 1:
+                        return as.length === 0 ? [
+                            [],
+                            push(as, inserts)
+                        ][0] : [
+                            [as.pop()],
+                            push(as, inserts)
+                        ][0];
+                    case global_1.undefined:
+                        if (as.length > 1 || arguments.length > 2)
+                            break;
+                        return as.length === 0 ? [] : splice(as, index, 1);
+                    }
+                    break;
+                }
+                return arguments.length > 2 ? as.splice(index, count, ...inserts) : as.splice(index);
+            }
+            exports.splice = splice;
+            function join(as, sep = '') {
+                let acc = '';
+                for (let i = 0; i < as.length; ++i) {
+                    acc += i === 0 ? as[i] : sep + as[i];
+                }
+                return acc;
+            }
+            exports.join = join;
+        },
+        {
+            './alias': 4,
+            './global': 14
+        }
+    ],
+    6: [
+        function (_dereq_, module, exports) {
+            'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
+            exports.template = exports.inherit = exports.merge = exports.extend = exports.clone = exports.assign = void 0;
+            const global_1 = _dereq_('./global');
+            const alias_1 = _dereq_('./alias');
             const type_1 = _dereq_('./type');
-            const concat_1 = _dereq_('./concat');
-            const {Object: Obj} = global_1.global;
+            const array_1 = _dereq_('./array');
             exports.assign = template((prop, target, source) => target[prop] = source[prop]);
             exports.clone = template((prop, target, source) => {
                 switch (type_1.type(source[prop])) {
                 case 'Array':
-                    return target[prop] = exports.clone([], source[prop]);
+                    return target[prop] = source[prop].slice();
                 case 'Object':
                     switch (type_1.type(target[prop])) {
                     case 'Object':
-                        return target[prop] = exports.clone(source[prop] instanceof Obj ? {} : Obj.create(null), source[prop]);
+                        return target[prop] = exports.clone(empty_(source[prop]), source[prop]);
                     default:
                         return target[prop] = source[prop];
                     }
@@ -87,13 +231,13 @@ require = function () {
             exports.extend = template((prop, target, source) => {
                 switch (type_1.type(source[prop])) {
                 case 'Array':
-                    return target[prop] = exports.extend([], source[prop]);
+                    return target[prop] = source[prop].slice();
                 case 'Object':
                     switch (type_1.type(target[prop])) {
                     case 'Object':
                         return target[prop] = exports.extend(target[prop], source[prop]);
                     default:
-                        return target[prop] = exports.extend(source[prop] instanceof Obj ? {} : Obj.create(null), source[prop]);
+                        return target[prop] = exports.extend(empty_(source[prop]), source[prop]);
                     }
                 default:
                     return target[prop] = source[prop];
@@ -104,21 +248,37 @@ require = function () {
                 case 'Array':
                     switch (type_1.type(target[prop])) {
                     case 'Array':
-                        return target[prop] = concat_1.concat(target[prop], source[prop]);
+                        return target[prop] = array_1.push(target[prop], source[prop]);
                     default:
-                        return target[prop] = exports.merge([], source[prop]);
+                        return target[prop] = source[prop].slice();
                     }
                 case 'Object':
                     switch (type_1.type(target[prop])) {
                     case 'Object':
                         return target[prop] = exports.merge(target[prop], source[prop]);
                     default:
-                        return target[prop] = exports.merge(source[prop] instanceof Obj ? {} : Obj.create(null), source[prop]);
+                        return target[prop] = exports.merge(empty_(source[prop]), source[prop]);
                     }
                 default:
                     return target[prop] = source[prop];
                 }
             });
+            exports.inherit = template((prop, target, source) => {
+                switch (type_1.type(source[prop])) {
+                case 'Array':
+                    return target[prop] = source[prop].slice();
+                case 'Object':
+                    switch (type_1.type(target[prop])) {
+                    case 'Object':
+                        return target[prop] = isOwnProperty(target, prop) ? exports.inherit(target[prop], source[prop]) : exports.inherit(alias_1.ObjectCreate(target[prop]), source[prop]);
+                    default:
+                        return target[prop] = alias_1.ObjectCreate(source[prop]);
+                    }
+                default:
+                    return target[prop] = source[prop];
+                }
+            });
+            const isOwnProperty = '__proto__' in {} ? (o, p) => !('__proto__' in o) || o[p] !== o['__proto__'][p] : alias_1.hasOwnProperty;
             function template(strategy, empty = empty_) {
                 return walk;
                 function walk(target, ...sources) {
@@ -133,10 +293,11 @@ require = function () {
                                 target = empty(source);
                                 isPrimitiveTarget = isPrimitiveSource;
                             }
-                            for (const prop in source) {
-                                if (source.hasOwnProperty && !source.hasOwnProperty(prop))
+                            const keys = alias_1.ObjectKeys(source);
+                            for (let i = 0; i < keys.length; ++i) {
+                                if (keys[i] in {})
                                     continue;
-                                void strategy(prop, target, source);
+                                void strategy(keys[i], target, source);
                             }
                         }
                     }
@@ -149,30 +310,30 @@ require = function () {
                 case 'Array':
                     return [];
                 case 'Object':
-                    return source instanceof Obj ? {} : Obj.create(null);
+                    return source instanceof global_1.Object ? {} : alias_1.ObjectCreate(null);
                 default:
                     return source;
                 }
             }
         },
         {
-            './concat': 10,
-            './global': 13,
-            './type': 28
+            './alias': 4,
+            './array': 5,
+            './global': 14,
+            './type': 30
         }
     ],
-    6: [
+    7: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.Cache = void 0;
             const global_1 = _dereq_('./global');
             const assign_1 = _dereq_('./assign');
-            const concat_1 = _dereq_('./concat');
             const array_1 = _dereq_('./array');
-            const {Map} = global_1.global;
             class Cache {
-                constructor(size, callback = () => undefined, opts = {}) {
-                    this.size = size;
+                constructor(capacity, callback = () => global_1.undefined, opts = {}) {
+                    this.capacity = capacity;
                     this.callback = callback;
                     this.settings = {
                         ignore: {
@@ -187,21 +348,22 @@ require = function () {
                             entries: []
                         }
                     };
-                    if (size > 0 === false)
-                        throw new Error(`Spica: Cache: Cache size must be greater than 0.`);
-                    void assign_1.extend(this.settings, opts);
+                    this.nullish = false;
+                    if (capacity > 0 === false)
+                        throw new Error(`Spica: Cache: Cache capacity must be greater than 0.`);
+                    assign_1.extend(this.settings, opts);
                     const {stats, entries} = this.settings.data;
-                    const LFU = stats[1].slice(0, size);
-                    const LRU = stats[0].slice(0, size - LFU.length);
+                    const LFU = stats[1].slice(0, capacity);
+                    const LRU = stats[0].slice(0, capacity - LFU.length);
                     this.stats = {
                         LRU,
                         LFU
                     };
-                    this.store = new Map(entries);
+                    this.store = new global_1.Map(entries);
                     if (!opts.data)
                         return;
-                    for (const k of concat_1.concat(stats[1].slice(LFU.length), stats[0].slice(LRU.length))) {
-                        void this.store.delete(k);
+                    for (const k of array_1.push(stats[1].slice(LFU.length), stats[0].slice(LRU.length))) {
+                        this.store.delete(k);
                     }
                     if (this.store.size !== LFU.length + LRU.length)
                         throw new Error(`Spica: Cache: Size of stats and entries is not matched.`);
@@ -212,36 +374,39 @@ require = function () {
                         throw new Error(`Spica: Cache: Keys of stats and entries is not matched.`);
                 }
                 put(key, value, log = true) {
-                    if (!log && this.store.has(key))
-                        return void this.store.set(key, value), true;
-                    if (this.access(key))
-                        return void this.store.set(key, value), true;
+                    !this.nullish && value === global_1.undefined ? this.nullish = true : global_1.undefined;
+                    const hit = this.store.has(key);
+                    if (!log && hit)
+                        return this.store.set(key, value), true;
+                    if (hit && this.access(key))
+                        return this.store.set(key, value), true;
                     const {LRU, LFU} = this.stats;
-                    if (LRU.length + LFU.length === this.size && LRU.length < LFU.length) {
+                    if (LRU.length + LFU.length === this.capacity && LRU.length < LFU.length) {
                         const key = LFU.pop();
                         const val = this.store.get(key);
-                        void this.store.delete(key);
-                        void this.callback(key, val);
+                        this.store.delete(key);
+                        this.callback(key, val);
                     }
-                    void LRU.unshift(key);
-                    void this.store.set(key, value);
-                    if (LRU.length + LFU.length > this.size) {
+                    LRU.unshift(key);
+                    this.store.set(key, value);
+                    if (LRU.length + LFU.length > this.capacity) {
                         const key = LRU.pop();
                         const val = this.store.get(key);
-                        void this.store.delete(key);
-                        void this.callback(key, val);
+                        this.store.delete(key);
+                        this.callback(key, val);
                     }
                     return false;
                 }
                 set(key, value, log) {
-                    void this.put(key, value, log);
+                    this.put(key, value, log);
                     return value;
                 }
                 get(key, log = true) {
+                    const val = this.store.get(key);
                     if (!log)
-                        return this.store.get(key);
-                    void this.access(key);
-                    return this.store.get(key);
+                        return val;
+                    const hit = val !== global_1.undefined || this.nullish && this.store.has(key);
+                    return hit && this.access(key) ? val : global_1.undefined;
                 }
                 has(key) {
                     return this.store.has(key);
@@ -258,26 +423,29 @@ require = function () {
                         if (index === -1)
                             continue;
                         const val = this.store.get(key);
-                        void this.store.delete(stat.splice(index, 1)[0]);
+                        this.store.delete(array_1.splice(stat, index, 1)[0]);
                         if (this.settings.ignore.delete)
                             return true;
-                        void this.callback(key, val);
+                        this.callback(key, val);
                         return true;
                     }
                     return false;
                 }
                 clear() {
                     const store = this.store;
-                    this.store = new Map();
+                    this.store = new global_1.Map();
                     this.stats = {
                         LRU: [],
                         LFU: []
                     };
                     if (this.settings.ignore.clear)
                         return;
-                    for (const key of store.keys()) {
-                        void this.callback(key, store.get(key));
+                    for (const kv of store) {
+                        this.callback(kv[0], kv[1]);
                     }
+                }
+                get size() {
+                    return this.store.size;
                 }
                 [Symbol.iterator]() {
                     return this.store[Symbol.iterator]();
@@ -302,174 +470,199 @@ require = function () {
                     return this.accessLFU(key) || this.accessLRU(key);
                 }
                 accessLRU(key) {
-                    if (!this.store.has(key))
-                        return false;
                     const {LRU} = this.stats;
                     const index = array_1.indexOf(LRU, key);
                     if (index === -1)
                         return false;
                     const {LFU} = this.stats;
-                    void LFU.unshift(...LRU.splice(index, 1));
+                    LFU.unshift(array_1.splice(LRU, index, 1)[0]);
                     return true;
                 }
                 accessLFU(key) {
-                    if (!this.store.has(key))
-                        return false;
                     const {LFU} = this.stats;
                     const index = array_1.indexOf(LFU, key);
                     if (index === -1)
                         return false;
-                    void LFU.unshift(...LFU.splice(index, 1));
+                    if (index === 0)
+                        return true;
+                    LFU.unshift(array_1.splice(LFU, index, 1)[0]);
                     return true;
                 }
             }
             exports.Cache = Cache;
         },
         {
-            './array': 4,
-            './assign': 5,
-            './concat': 10,
-            './global': 13
-        }
-    ],
-    7: [
-        function (_dereq_, module, exports) {
-            'use strict';
-            Object.defineProperty(exports, '__esModule', { value: true });
-            const global_1 = _dereq_('./global');
-            const promise_1 = _dereq_('./promise');
-            const exception_1 = _dereq_('./exception');
-            const maybe_1 = _dereq_('./monad/maybe');
-            const either_1 = _dereq_('./monad/either');
-            const {
-                Object: Obj,
-                Set
-            } = global_1.global;
-            class Internal {
-                constructor(resolve) {
-                    this.resolve = resolve;
-                    this.alive = true;
-                    this.canceled = false;
-                    this.listeners = new Set();
-                }
-            }
-            const internal = Symbol.for('spica/cancellation::internal');
-            class Cancellation extends promise_1.AtomicPromise {
-                constructor(cancelees = []) {
-                    super(res => resolve = res);
-                    this.register = listener => {
-                        if (this[internal].canceled)
-                            return void handler(this[internal].reason), () => undefined;
-                        if (!this[internal].alive)
-                            return () => undefined;
-                        void this[internal].listeners.add(handler);
-                        return () => this[internal].alive ? void this[internal].listeners.delete(handler) : undefined;
-                        function handler(reason) {
-                            try {
-                                void listener(reason);
-                            } catch (reason) {
-                                void exception_1.causeAsyncException(reason);
-                            }
-                        }
-                    };
-                    this.cancel = reason => {
-                        if (!this[internal].alive)
-                            return;
-                        this[internal].alive = false;
-                        this[internal].canceled = true;
-                        this[internal].reason = reason;
-                        this[internal].resolve(this[internal].reason);
-                        void Obj.freeze(this[internal].listeners);
-                        void Obj.freeze(this);
-                        for (const listener of this[internal].listeners) {
-                            void listener(reason);
-                        }
-                    };
-                    this.close = reason => {
-                        if (!this[internal].alive)
-                            return;
-                        this[internal].alive = false;
-                        void this[internal].resolve(promise_1.AtomicPromise.reject(reason));
-                        void Obj.freeze(this[internal].listeners);
-                        void Obj.freeze(this);
-                    };
-                    this.promise = val => this[internal].canceled ? promise_1.AtomicPromise.reject(this[internal].reason) : promise_1.AtomicPromise.resolve(val);
-                    this.maybe = val => maybe_1.Just(val).bind(val => this[internal].canceled ? maybe_1.Nothing : maybe_1.Just(val));
-                    this.either = val => either_1.Right(val).bind(val => this[internal].canceled ? either_1.Left(this[internal].reason) : either_1.Right(val));
-                    var resolve;
-                    this[internal] = new Internal(resolve);
-                    for (const cancellee of cancelees) {
-                        void cancellee.register(this.cancel);
-                    }
-                }
-                static get [Symbol.species]() {
-                    return promise_1.AtomicPromise;
-                }
-                get canceled() {
-                    return this[internal].canceled;
-                }
-            }
-            exports.Cancellation = Cancellation;
-        },
-        {
-            './exception': 12,
-            './global': 13,
-            './monad/either': 16,
-            './monad/maybe': 20,
-            './promise': 25
+            './array': 5,
+            './assign': 6,
+            './global': 14
         }
     ],
     8: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.Cancellation = void 0;
+            const global_1 = _dereq_('./global');
+            const promise_1 = _dereq_('./promise');
             const exception_1 = _dereq_('./exception');
-            let queue = [];
-            function tick(cb) {
-                void queue.push(cb);
-                void schedule();
-            }
-            exports.tick = tick;
-            const scheduler = Promise.resolve();
-            function schedule() {
-                if (queue.length !== 1)
-                    return;
-                void scheduler.then(run);
-            }
-            function run() {
-                const cbs = flush();
-                while (true) {
-                    try {
-                        while (cbs.length > 0) {
-                            void cbs.shift()();
-                        }
-                        return;
-                    } catch (reason) {
-                        void exception_1.causeAsyncException(reason);
-                        continue;
+            const maybe_1 = _dereq_('./monad/maybe');
+            const either_1 = _dereq_('./monad/either');
+            const noop_1 = _dereq_('./noop');
+            const internal = Symbol.for('spica/cancellation::internal');
+            class Cancellation extends promise_1.AtomicPromise {
+                constructor(cancelees = []) {
+                    super(res => resolve = res);
+                    var resolve;
+                    this[internal] = new Internal(resolve);
+                    for (const cancellee of cancelees) {
+                        cancellee.register(this.cancel);
                     }
                 }
+                get alive() {
+                    return this[internal].alive;
+                }
+                get canceled() {
+                    return this[internal].canceled;
+                }
+                register(listener) {
+                    return this[internal].register(listener);
+                }
+                get cancel() {
+                    return reason => this[internal].cancel(reason);
+                }
+                get close() {
+                    return reason => this[internal].close(reason);
+                }
+                get promise() {
+                    return val => this[internal].promise(val);
+                }
+                get maybe() {
+                    return val => this[internal].maybe(val);
+                }
+                get either() {
+                    return val => this[internal].either(val);
+                }
             }
-            function flush() {
-                const cbs = queue;
-                queue = [];
-                return cbs;
+            exports.Cancellation = Cancellation;
+            class Internal {
+                constructor(resolve) {
+                    this.resolve = resolve;
+                    this.alive = true;
+                    this.available = true;
+                    this.listeners = new global_1.Set();
+                }
+                get canceled() {
+                    return 'reason' in this;
+                }
+                register(listener) {
+                    if (!this.alive) {
+                        this.canceled && handler(this.reason);
+                        return noop_1.noop;
+                    }
+                    this.listeners.add(handler);
+                    return () => void this.listeners.delete(handler);
+                    function handler(reason) {
+                        try {
+                            listener(reason);
+                        } catch (reason) {
+                            exception_1.causeAsyncException(reason);
+                        }
+                    }
+                }
+                cancel(reason) {
+                    if (!this.available)
+                        return;
+                    this.available = false;
+                    this.reason = reason;
+                    for (const listener of this.listeners) {
+                        listener(reason);
+                    }
+                    this.resolve(this.reason);
+                    this.alive = false;
+                }
+                close(reason) {
+                    if (!this.available)
+                        return;
+                    this.available = false;
+                    this.resolve(promise_1.AtomicPromise.reject(reason));
+                    this.alive = false;
+                }
+                promise(val) {
+                    return this.canceled ? promise_1.AtomicPromise.reject(this.reason) : promise_1.AtomicPromise.resolve(val);
+                }
+                maybe(val) {
+                    return maybe_1.Just(val).bind(val => this.canceled ? maybe_1.Nothing : maybe_1.Just(val));
+                }
+                either(val) {
+                    return either_1.Right(val).bind(val => this.canceled ? either_1.Left(this.reason) : either_1.Right(val));
+                }
             }
         },
-        { './exception': 12 }
+        {
+            './exception': 13,
+            './global': 14,
+            './monad/either': 18,
+            './monad/maybe': 22,
+            './noop': 25,
+            './promise': 27
+        }
     ],
     9: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.tick = void 0;
+            const global_1 = _dereq_('./global');
+            const exception_1 = _dereq_('./exception');
+            let queue = [];
+            let jobs = [];
+            let index = 0;
+            const scheduler = Promise.resolve();
+            function tick(cb) {
+                index === 0 && scheduler.then(run);
+                index++ === queue.length ? queue.push(cb) : queue[index - 1] = cb;
+            }
+            exports.tick = tick;
+            function run() {
+                const count = index;
+                [index, queue, jobs] = [
+                    0,
+                    jobs,
+                    queue
+                ];
+                for (let i = 0; i < count; ++i) {
+                    try {
+                        jobs[i]();
+                        jobs[i] = global_1.undefined;
+                    } catch (reason) {
+                        exception_1.causeAsyncException(reason);
+                    }
+                }
+                jobs.length > 1000 && count < jobs.length * 0.5 && jobs.splice(jobs.length * 0.9 | 0, jobs.length);
+            }
+        },
+        {
+            './exception': 13,
+            './global': 14
+        }
+    ],
+    10: [
+        function (_dereq_, module, exports) {
+            'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
+            exports.never = exports.wait = exports.clock = void 0;
             const global_1 = _dereq_('./global');
             const promise_1 = _dereq_('./promise');
             var clock_tick_1 = _dereq_('./clock.tick');
-            exports.tick = clock_tick_1.tick;
-            const {setTimeout} = global_1.global;
+            Object.defineProperty(exports, 'tick', {
+                enumerable: true,
+                get: function () {
+                    return clock_tick_1.tick;
+                }
+            });
             exports.clock = Promise.resolve(undefined);
             function wait(ms) {
-                return ms === 0 ? promise_1.AtomicPromise.resolve(exports.clock) : new promise_1.AtomicPromise(resolve => void setTimeout(resolve, ms));
+                return ms === 0 ? promise_1.AtomicPromise.resolve(exports.clock) : new promise_1.AtomicPromise(resolve => void global_1.setTimeout(resolve, ms));
             }
             exports.wait = wait;
             exports.never = new class Never extends promise_1.AtomicPromise {
@@ -477,7 +670,7 @@ require = function () {
                     return Never;
                 }
                 constructor() {
-                    super(() => undefined);
+                    super(() => void 0);
                 }
                 then() {
                     return this;
@@ -491,40 +684,59 @@ require = function () {
             }();
         },
         {
-            './clock.tick': 8,
-            './global': 13,
-            './promise': 25
+            './clock.tick': 9,
+            './global': 14,
+            './promise': 27
         }
-    ],
-    10: [
-        function (_dereq_, module, exports) {
-            'use strict';
-            Object.defineProperty(exports, '__esModule', { value: true });
-            function concat(target, source) {
-                return void target.push(...source), target;
-            }
-            exports.concat = concat;
-        },
-        {}
     ],
     11: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.curry = f => apply(f, []);
-            function apply(f, xs) {
-                return xs.length >= f.length ? f(...xs) : (...ys) => apply(f, [
-                    ...xs,
-                    ...ys
-                ]);
+            exports.concat = void 0;
+            const alias_1 = _dereq_('./alias');
+            function concat(target, source) {
+                if (alias_1.isArray(source)) {
+                    for (let i = 0; i < source.length; ++i) {
+                        void target.push(source[i]);
+                    }
+                } else {
+                    void target.push(...source);
+                }
+                return target;
             }
+            exports.concat = concat;
         },
-        {}
+        { './alias': 4 }
     ],
     12: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.uncurry = exports.curry = void 0;
+            const global_1 = _dereq_('./global');
+            const array_1 = _dereq_('./array');
+            exports.curry = f => curry_(f, f.length);
+            function curry_(f, arity, ...xs) {
+                let g;
+                return xs.length < arity ? (...ys) => curry_(g = g || xs.length && f.bind(global_1.undefined, ...xs) || f, arity - xs.length, ...ys) : f(...xs);
+            }
+            exports.uncurry = f => uncurry_(f);
+            function uncurry_(f) {
+                const arity = f.length;
+                return (...xs) => arity === 0 || xs.length < 2 || xs.length <= arity ? f(...xs) : uncurry_(f(...array_1.shift(xs, arity)[0]))(...xs);
+            }
+        },
+        {
+            './array': 5,
+            './global': 14
+        }
+    ],
+    13: [
+        function (_dereq_, module, exports) {
+            'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
+            exports.causeAsyncException = void 0;
             function causeAsyncException(reason) {
                 void Promise.reject(reason);
             }
@@ -532,20 +744,206 @@ require = function () {
         },
         {}
     ],
-    13: [
-        function (_dereq_, module, exports) {
-            'use strict';
-            Object.defineProperty(exports, '__esModule', { value: true });
-            exports.global = typeof globalThis !== 'undefined' && globalThis || typeof self !== 'undefined' && self || this;
-            exports.default = exports.global;
-            exports.global.global = exports.global;
-        },
-        {}
-    ],
     14: [
         function (_dereq_, module, exports) {
             'use strict';
+            const global = void 0 || typeof globalThis !== 'undefined' && globalThis || typeof self !== 'undefined' && self || Function('return this')();
+            global.global = global;
+            module.exports = global;
+        },
+        {}
+    ],
+    15: [
+        function (_dereq_, module, exports) {
+            'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.MList = exports.List = void 0;
+            const global_1 = _dereq_('./global');
+            function List(...values) {
+                let node = Nil();
+                for (let i = values.length - 1; i >= 0; --i) {
+                    node = node.add(values[i]);
+                }
+                return node;
+            }
+            exports.List = List;
+            function Nil() {
+                return new Cons(global_1.undefined, global_1.undefined);
+            }
+            class Cons {
+                constructor(head, tail) {
+                    this.head = head;
+                    this.tail = tail;
+                }
+                append(value) {
+                    return this.replaceWith(value, List()).tail;
+                }
+                add(value) {
+                    return new Cons(value, this);
+                }
+                foldl(f, acc) {
+                    for (let node = this; node.tail; node = node.tail) {
+                        acc = f(acc, node.head);
+                    }
+                    return acc;
+                }
+                foldr(f, acc) {
+                    for (let node = this.reverse(); node.tail; node = node.tail) {
+                        acc = f(node.head, acc);
+                    }
+                    return acc;
+                }
+                map(f) {
+                    const node = List();
+                    this.foldl((acc, value) => acc.append(f(value)), node);
+                    return node;
+                }
+                replaceWith(head, tail) {
+                    this.head = head;
+                    this.tail = tail;
+                    return this;
+                }
+                reverse() {
+                    return this.foldl((acc, value) => acc.add(value), List());
+                }
+                get length() {
+                    return this.foldl(acc => acc + 1, 0);
+                }
+                *[Symbol.iterator]() {
+                    for (let node = this; node.tail; node = node.tail) {
+                        yield node.head;
+                    }
+                }
+            }
+            function MList(...values) {
+                let node = MNil();
+                for (let i = values.length - 1; i >= 0; --i) {
+                    node = node.add(values[i]);
+                }
+                return node;
+            }
+            exports.MList = MList;
+            function MNil() {
+                return new MCons(global_1.undefined, global_1.undefined);
+            }
+            class MCons {
+                constructor(head, tail) {
+                    this.head = head;
+                    this.tail = tail;
+                }
+                take(count) {
+                    if (count === 0)
+                        return MList();
+                    let node = this;
+                    for (let i = 0; i + 1 < count && node.tail; ++i, node = node.tail);
+                    const tail = node.tail;
+                    node.tail && node.replaceWith(node.head, MList());
+                    const dels = new MCons(this.head, this.tail);
+                    this.tail && this.replaceWith(tail === null || tail === void 0 ? void 0 : tail.head, tail === null || tail === void 0 ? void 0 : tail.tail);
+                    return dels;
+                }
+                prepend(value) {
+                    return this.replaceWith(value, new MCons(this.head, this.tail));
+                }
+                append(value) {
+                    return this.replaceWith(value, MList()).tail;
+                }
+                replace(node, count, adds) {
+                    const dels = node.take(count);
+                    const {head, tail} = node;
+                    if (adds === null || adds === void 0 ? void 0 : adds.tail) {
+                        node.replaceWith(adds.head, adds.tail);
+                        for (; node.tail; node = node.tail);
+                    }
+                    node.replaceWith(head, tail);
+                    return dels;
+                }
+                splice(index, count = 0, adds) {
+                    let node = this;
+                    for (let i = 0; i < index && node.tail; ++i, node = node.tail);
+                    return this.replace(node, count, adds);
+                }
+                interleave(find, count, adds) {
+                    let node = this;
+                    let index = 0;
+                    for (;; ++index, node = node.tail) {
+                        if (find(node.head, node.tail ? index : -1))
+                            break;
+                        if (!node.tail)
+                            return;
+                    }
+                    return this.replace(node, count, adds);
+                }
+                convert(f) {
+                    for (let node = this; node.tail; node = node.tail) {
+                        node.replaceWith(f(node.head), node.tail);
+                    }
+                    return this;
+                }
+                clear() {
+                    return this.replaceWith(global_1.undefined, global_1.undefined);
+                }
+                freeze() {
+                    const first = List();
+                    for (let last = first, tail = this; tail.tail; tail = tail.tail) {
+                        last = last['append'](tail.head);
+                    }
+                    return first;
+                }
+                add(value) {
+                    return new MCons(value, this);
+                }
+                foldl(f, acc) {
+                    for (let node = this; node.tail; node = node.tail) {
+                        acc = f(acc, node.head);
+                    }
+                    return acc;
+                }
+                foldr(f, acc) {
+                    for (let node = this.reverse(); node.tail; node = node.tail) {
+                        acc = f(node.head, acc);
+                    }
+                    return acc;
+                }
+                map(f) {
+                    const node = MList();
+                    this.foldl((acc, value) => acc.append(f(value)), node);
+                    return node;
+                }
+                replaceWith(head, tail) {
+                    this.head = head;
+                    this.tail = tail;
+                    return this;
+                }
+                reverse() {
+                    if (!this.tail)
+                        return this;
+                    for (let prev = MList(), node = this, next;;) {
+                        next = node.tail;
+                        node.replaceWith(node.head, prev);
+                        if (!next.tail)
+                            return node;
+                        prev = node;
+                        node = next;
+                    }
+                }
+                get length() {
+                    return this.foldl(acc => acc + 1, 0);
+                }
+                *[Symbol.iterator]() {
+                    for (let node = this; node.tail; node = node.tail) {
+                        yield node.head;
+                    }
+                }
+            }
+        },
+        { './global': 14 }
+    ],
+    16: [
+        function (_dereq_, module, exports) {
+            'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
+            exports.Applicative = void 0;
             const functor_1 = _dereq_('./functor');
             const curry_1 = _dereq_('../curry');
             class Applicative extends functor_1.Functor {
@@ -559,14 +957,15 @@ require = function () {
             }(Applicative = exports.Applicative || (exports.Applicative = {})));
         },
         {
-            '../curry': 11,
-            './functor': 17
+            '../curry': 12,
+            './functor': 19
         }
     ],
-    15: [
+    17: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.Right = exports.Left = exports.Either = void 0;
             const monad_1 = _dereq_('./monad');
             const promise_1 = _dereq_('../promise');
             class Either extends monad_1.Monad {
@@ -611,7 +1010,7 @@ require = function () {
                         } = iter.next(val);
                         if (done)
                             return m;
-                        const r = m.extract(() => undefined, a => [a]);
+                        const r = m.extract(() => void 0, a => [a]);
                         if (!r)
                             return m;
                         val = r[0];
@@ -668,18 +1067,19 @@ require = function () {
             }
         },
         {
-            '../promise': 25,
-            './monad': 21
+            '../promise': 27,
+            './monad': 23
         }
     ],
-    16: [
+    18: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.Right = exports.Left = exports.Either = void 0;
             const Monad = _dereq_('./either.impl');
             class Either extends Monad.Either {
                 constructor() {
-                    super(() => undefined);
+                    super(() => void 0);
                 }
             }
             exports.Either = Either;
@@ -692,12 +1092,13 @@ require = function () {
             }
             exports.Right = Right;
         },
-        { './either.impl': 15 }
+        { './either.impl': 17 }
     ],
-    17: [
+    19: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.Functor = void 0;
             const lazy_1 = _dereq_('./lazy');
             class Functor extends lazy_1.Lazy {
             }
@@ -709,12 +1110,13 @@ require = function () {
                 Functor.fmap = fmap;
             }(Functor = exports.Functor || (exports.Functor = {})));
         },
-        { './lazy': 18 }
+        { './lazy': 20 }
     ],
-    18: [
+    20: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.Lazy = void 0;
             class Lazy {
                 constructor(thunk) {
                     this.thunk = thunk;
@@ -727,10 +1129,11 @@ require = function () {
         },
         {}
     ],
-    19: [
+    21: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.Nothing = exports.Just = exports.Maybe = void 0;
             const monadplus_1 = _dereq_('./monadplus');
             const promise_1 = _dereq_('../promise');
             class Maybe extends monadplus_1.MonadPlus {
@@ -778,7 +1181,7 @@ require = function () {
                         } = iter.next(val);
                         if (done)
                             return m;
-                        const r = m.extract(() => undefined, a => [a]);
+                        const r = m.extract(() => void 0, a => [a]);
                         if (!r)
                             return m;
                         val = r[0];
@@ -824,7 +1227,7 @@ require = function () {
                 }
                 extract(nothing) {
                     if (!nothing)
-                        throw undefined;
+                        throw void 0;
                     return nothing();
                 }
             }
@@ -841,18 +1244,19 @@ require = function () {
             }
         },
         {
-            '../promise': 25,
-            './monadplus': 22
+            '../promise': 27,
+            './monadplus': 24
         }
     ],
-    20: [
+    22: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.Nothing = exports.Just = exports.Maybe = void 0;
             const Monad = _dereq_('./maybe.impl');
             class Maybe extends Monad.Maybe {
                 constructor() {
-                    super(() => undefined);
+                    super(() => void 0);
                 }
             }
             exports.Maybe = Maybe;
@@ -862,12 +1266,13 @@ require = function () {
             exports.Just = Just;
             exports.Nothing = Monad.Maybe.mzero;
         },
-        { './maybe.impl': 19 }
+        { './maybe.impl': 21 }
     ],
-    21: [
+    23: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.Monad = void 0;
             const applicative_1 = _dereq_('./applicative');
             class Monad extends applicative_1.Applicative {
             }
@@ -879,12 +1284,13 @@ require = function () {
                 Monad.bind = bind;
             }(Monad = exports.Monad || (exports.Monad = {})));
         },
-        { './applicative': 14 }
+        { './applicative': 16 }
     ],
-    22: [
+    24: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.MonadPlus = void 0;
             const monad_1 = _dereq_('./monad');
             class MonadPlus extends monad_1.Monad {
             }
@@ -892,12 +1298,13 @@ require = function () {
             (function (MonadPlus) {
             }(MonadPlus = exports.MonadPlus || (exports.MonadPlus = {})));
         },
-        { './monad': 21 }
+        { './monad': 23 }
     ],
-    23: [
+    25: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.noop = void 0;
             function noop() {
                 return;
             }
@@ -905,111 +1312,104 @@ require = function () {
         },
         {}
     ],
-    24: [
+    26: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.Observation = void 0;
             const global_1 = _dereq_('./global');
             const assign_1 = _dereq_('./assign');
-            const concat_1 = _dereq_('./concat');
+            const array_1 = _dereq_('./array');
             const exception_1 = _dereq_('./exception');
-            const {Map, WeakMap, Error} = global_1.global;
-            class RegisterNode {
+            class ListenerNode {
                 constructor(parent, index) {
                     this.parent = parent;
                     this.index = index;
-                    this.children = new Map();
+                    this.children = new global_1.Map();
                     this.childrenIndexes = [];
                     this.monitors = [];
                     this.subscribers = [];
                 }
             }
-            var RegisterItemType;
-            (function (RegisterItemType) {
-                RegisterItemType[RegisterItemType['Monitor'] = 0] = 'Monitor';
-                RegisterItemType[RegisterItemType['Subscriber'] = 1] = 'Subscriber';
-            }(RegisterItemType || (RegisterItemType = {})));
-            var SeekMode;
-            (function (SeekMode) {
-                SeekMode[SeekMode['Extensible'] = 0] = 'Extensible';
-                SeekMode[SeekMode['Breakable'] = 1] = 'Breakable';
-                SeekMode[SeekMode['Closest'] = 2] = 'Closest';
-            }(SeekMode || (SeekMode = {})));
             let id = 0;
             class Observation {
                 constructor(opts = {}) {
-                    this.node = new RegisterNode(undefined, undefined);
+                    this.node = new ListenerNode(global_1.undefined, global_1.undefined);
                     this.settings = {
                         limit: 10,
                         cleanup: false
                     };
-                    this.unrelaies = new WeakMap();
-                    void assign_1.extend(this.settings, opts);
+                    this.unrelaies = new global_1.WeakMap();
+                    assign_1.extend(this.settings, opts);
                 }
-                monitor(namespace, listener, {
+                monitor(namespace, monitor, {
                     once = false
                 } = {}) {
-                    if (typeof listener !== 'function')
-                        throw new Error(`Spica: Observation: Invalid listener: ${ listener }`);
+                    if (typeof monitor !== 'function')
+                        throw new global_1.Error(`Spica: Observation: Invalid listener: ${ monitor }`);
                     const {monitors} = this.seekNode(namespace, 0);
                     if (monitors.length === this.settings.limit)
-                        throw new Error(`Spica: Observation: Exceeded max listener limit.`);
+                        throw new global_1.Error(`Spica: Observation: Exceeded max listener limit.`);
+                    if (id === global_1.Number.MAX_SAFE_INTEGER)
+                        throw new global_1.Error(`Spica: Observation: Max listener ID reached max safe integer.`);
                     const item = {
                         id: ++id,
                         type: 0,
                         namespace,
-                        listener,
+                        listener: monitor,
                         options: { once }
                     };
-                    void monitors.push(item);
+                    monitors.push(item);
                     return () => void this.off(namespace, item);
                 }
-                on(namespace, listener, {
+                on(namespace, subscriber, {
                     once = false
                 } = {}) {
-                    if (typeof listener !== 'function')
-                        throw new Error(`Spica: Observation: Invalid listener: ${ listener }`);
+                    if (typeof subscriber !== 'function')
+                        throw new global_1.Error(`Spica: Observation: Invalid listener: ${ subscriber }`);
                     const {subscribers} = this.seekNode(namespace, 0);
                     if (subscribers.length === this.settings.limit)
-                        throw new Error(`Spica: Observation: Exceeded max listener limit.`);
+                        throw new global_1.Error(`Spica: Observation: Exceeded max listener limit.`);
+                    if (id === global_1.Number.MAX_SAFE_INTEGER)
+                        throw new global_1.Error(`Spica: Observation: Max listener ID reached max safe integer.`);
                     const item = {
                         id: ++id,
                         type: 1,
                         namespace,
-                        listener,
+                        listener: subscriber,
                         options: { once }
                     };
-                    void subscribers.push(item);
+                    subscribers.push(item);
                     return () => void this.off(namespace, item);
                 }
-                once(namespace, listener) {
-                    return this.on(namespace, listener, { once: true });
+                once(namespace, subscriber) {
+                    return this.on(namespace, subscriber, { once: true });
                 }
-                off(namespace, listener, type = 1) {
+                off(namespace, subscriber) {
                     const node = this.seekNode(namespace, 1);
                     if (!node)
                         return;
-                    switch (typeof listener) {
+                    switch (typeof subscriber) {
                     case 'object': {
-                            const items = listener.type === 0 ? node.monitors : node.subscribers;
-                            if (items.length === 0 || items[0].id > listener.id)
+                            const items = subscriber.type === 0 ? node.monitors : node.subscribers;
+                            if (items.length === 0 || subscriber.id < items[0].id || subscriber.id > items[items.length - 1].id)
                                 return;
-                            return void remove(items, items.indexOf(listener));
+                            return void array_1.splice(items, items.indexOf(subscriber), 1);
                         }
                     case 'function': {
-                            const items = type === 0 ? node.monitors : node.subscribers;
-                            return void remove(items, items.findIndex(item => item.listener === listener));
+                            const items = node.subscribers;
+                            return void array_1.splice(items, items.findIndex(item => item.listener === subscriber), 1);
                         }
                     case 'undefined':
                         return void clear(node);
                     }
                 }
                 emit(namespace, data, tracker) {
-                    void this.drain(namespace, data, tracker);
+                    this.drain(namespace, data, tracker);
                 }
                 reflect(namespace, data) {
                     let results;
-                    void this.emit(namespace, data, (_, r) => results = r);
+                    this.emit(namespace, data, (_, r) => results = r);
                     return results;
                 }
                 relay(source) {
@@ -1017,14 +1417,14 @@ require = function () {
                         return this.unrelaies.get(source);
                     const unbind = source.monitor([], (data, namespace) => void this.emit(namespace, data));
                     const unrelay = () => (void this.unrelaies.delete(source), void unbind());
-                    void this.unrelaies.set(source, unrelay);
+                    this.unrelaies.set(source, unrelay);
                     return unrelay;
                 }
                 refs(namespace) {
                     const node = this.seekNode(namespace, 1);
                     if (!node)
                         return [];
-                    return concat_1.concat(this.refsBelow(node, 0), this.refsBelow(node, 1)).reduce((acc, rs) => concat_1.concat(acc, rs), []);
+                    return array_1.push(this.refsBelow(node, 0), this.refsBelow(node, 1)).reduce((acc, rs) => array_1.push(acc, rs), []);
                 }
                 drain(namespace, data, tracker) {
                     const node = this.seekNode(namespace, 1);
@@ -1037,19 +1437,16 @@ require = function () {
                         for (let i = 0, max = items[items.length - 1].id; i < items.length && items[i].id <= max; ++i) {
                             const item = items[i];
                             if (item.options.once) {
-                                void this.off(item.namespace, item);
+                                this.off(item.namespace, item);
                             }
                             try {
                                 const result = item.listener(data, namespace);
-                                tracker && void results.push(result);
+                                tracker && results.push(result);
                             } catch (reason) {
-                                void exception_1.causeAsyncException(reason);
+                                exception_1.causeAsyncException(reason);
                             }
                             i = i < items.length ? i : items.length - 1;
-                            for (; i >= 0; --i) {
-                                if (items[i].id <= item.id)
-                                    break;
-                            }
+                            for (; i >= 0 && items[i].id > item.id; --i);
                         }
                     }
                     const mss = this.refsAbove(node || this.seekNode(namespace, 2), 0);
@@ -1060,32 +1457,29 @@ require = function () {
                         for (let i = 0, max = items[items.length - 1].id; i < items.length && items[i].id <= max; ++i) {
                             const item = items[i];
                             if (item.options.once) {
-                                void this.off(item.namespace, item);
+                                this.off(item.namespace, item);
                             }
                             try {
-                                void item.listener(data, namespace);
+                                item.listener(data, namespace);
                             } catch (reason) {
-                                void exception_1.causeAsyncException(reason);
+                                exception_1.causeAsyncException(reason);
                             }
                             i = i < items.length ? i : items.length - 1;
-                            for (; i >= 0; --i) {
-                                if (items[i].id <= item.id)
-                                    break;
-                            }
+                            for (; i >= 0 && items[i].id > item.id; --i);
                         }
                     }
                     if (tracker) {
                         try {
-                            void tracker(data, results);
+                            tracker(data, results);
                         } catch (reason) {
-                            void exception_1.causeAsyncException(reason);
+                            exception_1.causeAsyncException(reason);
                         }
                     }
                 }
                 refsAbove({parent, monitors, subscribers}, type) {
                     const acc = type === 0 ? [monitors] : [subscribers];
                     while (parent) {
-                        type === 0 ? void acc.push(parent.monitors) : void acc.push(parent.subscribers);
+                        type === 0 ? acc.push(parent.monitors) : acc.push(parent.subscribers);
                         parent = parent.parent;
                     }
                     return acc;
@@ -1094,16 +1488,16 @@ require = function () {
                     return this.refsBelow_(node, type, [])[0];
                 }
                 refsBelow_({monitors, subscribers, childrenIndexes, children}, type, acc) {
-                    type === 0 ? void acc.push(monitors) : void acc.push(subscribers);
+                    type === 0 ? acc.push(monitors) : acc.push(subscribers);
                     let count = 0;
                     for (let i = 0; i < childrenIndexes.length; ++i) {
                         const index = childrenIndexes[i];
                         const cnt = this.refsBelow_(children.get(index), type, acc)[1];
                         count += cnt;
                         if (cnt === 0 && this.settings.cleanup) {
-                            void children.delete(index);
-                            void remove(childrenIndexes, i);
-                            void --i;
+                            children.delete(index);
+                            array_1.splice(childrenIndexes, i, 1);
+                            --i;
                         }
                     }
                     return [
@@ -1124,9 +1518,9 @@ require = function () {
                             case 2:
                                 return node;
                             }
-                            child = new RegisterNode(node, index);
-                            void childrenIndexes.push(index);
-                            void children.set(index, child);
+                            child = new ListenerNode(node, index);
+                            childrenIndexes.push(index);
+                            children.set(index, child);
                         }
                         node = child;
                     }
@@ -1134,326 +1528,327 @@ require = function () {
                 }
             }
             exports.Observation = Observation;
-            function remove(target, index) {
-                if (index === -1)
-                    return;
-                switch (index) {
-                case 0:
-                    return void target.shift();
-                case target.length - 1:
-                    return void target.pop();
-                default:
-                    return void target.splice(index, 1);
-                }
-            }
             function clear({monitors, subscribers, childrenIndexes, children}) {
                 for (let i = 0; i < childrenIndexes.length; ++i) {
                     if (!clear(children.get(childrenIndexes[i])))
                         continue;
-                    void children.delete(childrenIndexes[i]);
-                    void remove(childrenIndexes, i);
-                    void --i;
+                    children.delete(childrenIndexes[i]);
+                    array_1.splice(childrenIndexes, i, 1);
+                    --i;
                 }
-                if (subscribers.length > 0) {
-                    subscribers.length = 0;
-                }
+                array_1.splice(subscribers, 0);
                 return monitors.length === 0;
             }
         },
         {
-            './assign': 5,
-            './concat': 10,
-            './exception': 12,
-            './global': 13
+            './array': 5,
+            './assign': 6,
+            './exception': 13,
+            './global': 14
         }
     ],
-    25: [
+    27: [
         function (_dereq_, module, exports) {
-            (function (global) {
-                'use strict';
-                var _a;
-                Object.defineProperty(exports, '__esModule', { value: true });
-                _dereq_('./global');
-                const {Array} = global;
-                var State;
-                (function (State) {
-                    State[State['pending'] = 0] = 'pending';
-                    State[State['resolved'] = 1] = 'resolved';
-                    State[State['fulfilled'] = 2] = 'fulfilled';
-                    State[State['rejected'] = 3] = 'rejected';
-                }(State || (State = {})));
-                class Internal {
-                    constructor() {
-                        this.status = { state: 0 };
-                        this.fulfillReactions = [];
-                        this.rejectReactions = [];
-                        this.isHandled = false;
-                    }
+            'use strict';
+            var _a;
+            Object.defineProperty(exports, '__esModule', { value: true });
+            exports.isPromiseLike = exports.AtomicPromise = void 0;
+            const global_1 = _dereq_('./global');
+            const alias_1 = _dereq_('./alias');
+            const array_1 = _dereq_('./array');
+            class Internal {
+                constructor() {
+                    this.status = { state: 0 };
+                    this.reactable = true;
+                    this.fulfillReactions = [];
+                    this.rejectReactions = [];
+                    this.isHandled = false;
                 }
-                const internal = Symbol.for('spica/promise::internal');
-                class AtomicPromise {
-                    constructor(executor) {
-                        this[Symbol.toStringTag] = 'Promise';
-                        this[_a] = new Internal();
-                        const intl = internal;
-                        try {
-                            const internal = this[intl];
-                            void executor(value => {
-                                if (internal.status.state !== 0)
-                                    return;
-                                if (isPromiseLike(value)) {
-                                    internal.status = {
-                                        state: 1,
-                                        result: value
-                                    };
-                                    void value.then(value => {
-                                        internal.status = {
-                                            state: 2,
-                                            result: value
-                                        };
-                                        void resume(internal);
-                                    }, reason => {
-                                        internal.status = {
-                                            state: 3,
-                                            result: reason
-                                        };
-                                        void resume(internal);
-                                    });
-                                } else {
+            }
+            const internal = Symbol.for('spica/promise::internal');
+            class AtomicPromise {
+                constructor(executor) {
+                    this[Symbol.toStringTag] = 'Promise';
+                    this[_a] = new Internal();
+                    const intl = internal;
+                    try {
+                        const internal = this[intl];
+                        executor(value => {
+                            if (internal.status.state !== 0)
+                                return;
+                            if (!isPromiseLike(value)) {
+                                internal.status = {
+                                    state: 2,
+                                    result: value
+                                };
+                                resume(internal);
+                            } else {
+                                internal.status = {
+                                    state: 1,
+                                    result: value
+                                };
+                                value.then(value => {
                                     internal.status = {
                                         state: 2,
                                         result: value
                                     };
-                                    void resume(internal);
-                                }
-                            }, reason => {
-                                if (internal.status.state !== 0)
-                                    return;
-                                internal.status = {
-                                    state: 3,
-                                    result: reason
-                                };
-                                void resume(internal);
-                            });
-                        } catch (reason) {
-                            const internal = this[intl];
+                                    resume(internal);
+                                }, reason => {
+                                    internal.status = {
+                                        state: 3,
+                                        result: reason
+                                    };
+                                    resume(internal);
+                                });
+                            }
+                        }, reason => {
                             if (internal.status.state !== 0)
                                 return;
                             internal.status = {
                                 state: 3,
                                 result: reason
                             };
-                            void resume(internal);
-                        }
-                    }
-                    static get [Symbol.species]() {
-                        return AtomicPromise;
-                    }
-                    static all(vs) {
-                        return new AtomicPromise((resolve, reject) => {
-                            const values = [...vs];
-                            const length = values.length;
-                            const acc = Array(length);
-                            let cnt = 0;
-                            for (let i = 0; i < length; ++i) {
-                                const value = values[i];
-                                if (isPromiseLike(value)) {
-                                    void value.then(value => {
-                                        acc[i] = value;
-                                        void ++cnt;
-                                        cnt === length && void resolve(acc);
-                                    }, reason => {
-                                        i = length;
-                                        void reject(reason);
-                                    });
-                                } else {
-                                    acc[i] = value;
-                                    void ++cnt;
-                                }
-                            }
-                            cnt === length && void resolve(acc);
+                            resume(internal);
                         });
+                    } catch (reason) {
+                        const internal = this[intl];
+                        if (internal.status.state !== 0)
+                            return;
+                        internal.status = {
+                            state: 3,
+                            result: reason
+                        };
+                        resume(internal);
                     }
-                    static race(values) {
-                        return new AtomicPromise((resolve, reject) => {
-                            let done = false;
-                            for (const value of values) {
-                                if (done)
-                                    break;
-                                if (isPromiseLike(value)) {
-                                    void value.then(value => {
-                                        done = true;
-                                        void resolve(value);
-                                    }, reason => {
-                                        done = true;
-                                        void reject(reason);
-                                    });
-                                } else {
+                }
+                static get [Symbol.species]() {
+                    return AtomicPromise;
+                }
+                static all(vs) {
+                    return new AtomicPromise((resolve, reject) => {
+                        const values = alias_1.isArray(vs) ? vs.slice() : [...vs];
+                        const results = global_1.Array(values.length);
+                        let count = 0;
+                        for (let i = 0; i < values.length; ++i) {
+                            const value = values[i];
+                            if (!isPromiseLike(value)) {
+                                results[i] = value;
+                                ++count;
+                            } else {
+                                value.then(value => {
+                                    results[i] = value;
+                                    ++count;
+                                    count === values.length && resolve(results);
+                                }, reason => {
+                                    i = values.length;
+                                    reject(reason);
+                                });
+                            }
+                        }
+                        count === values.length && resolve(results);
+                    });
+                }
+                static race(values) {
+                    return new AtomicPromise((resolve, reject) => {
+                        let done = false;
+                        for (const value of values) {
+                            if (!isPromiseLike(value)) {
+                                done = true;
+                                resolve(value);
+                            } else {
+                                value.then(value => {
                                     done = true;
-                                    void resolve(value);
+                                    resolve(value);
+                                }, reason => {
+                                    done = true;
+                                    reject(reason);
+                                });
+                            }
+                            if (done)
+                                break;
+                        }
+                    });
+                }
+                static resolve(value) {
+                    return new AtomicPromise(resolve => resolve(value));
+                }
+                static reject(reason) {
+                    return new AtomicPromise((_, reject) => reject(reason));
+                }
+                then(onfulfilled, onrejected) {
+                    return new AtomicPromise((resolve, reject) => {
+                        const {status, fulfillReactions, rejectReactions} = this[internal];
+                        if (status.state !== 3) {
+                            fulfillReactions.push(value => {
+                                if (!onfulfilled)
+                                    return resolve(value);
+                                try {
+                                    resolve(onfulfilled(value));
+                                } catch (reason) {
+                                    reject(reason);
                                 }
-                            }
-                        });
-                    }
-                    static resolve(value) {
-                        return new AtomicPromise(resolve => void resolve(value));
-                    }
-                    static reject(reason) {
-                        return new AtomicPromise((_, reject) => void reject(reason));
-                    }
-                    then(onfulfilled, onrejected) {
-                        return new AtomicPromise((resolve, reject) => {
-                            const {fulfillReactions, rejectReactions, status} = this[internal];
-                            if (status.state !== 3) {
-                                void fulfillReactions.push(value => {
-                                    if (!onfulfilled)
-                                        return void resolve(value);
-                                    try {
-                                        void resolve(onfulfilled(value));
-                                    } catch (reason) {
-                                        void reject(reason);
-                                    }
-                                });
-                            }
-                            if (status.state !== 2) {
-                                void rejectReactions.push(reason => {
-                                    if (!onrejected)
-                                        return void reject(reason);
-                                    try {
-                                        void resolve(onrejected(reason));
-                                    } catch (reason) {
-                                        void reject(reason);
-                                    }
-                                });
-                            }
-                            void resume(this[internal]);
-                        });
-                    }
-                    catch(onrejected) {
-                        return this.then(undefined, onrejected);
-                    }
-                    finally(onfinally) {
-                        return this.then(onfinally, onfinally).then(() => this);
-                    }
-                }
-                exports.AtomicPromise = AtomicPromise;
-                _a = internal;
-                function isPromiseLike(value) {
-                    return value !== null && typeof value === 'object' && 'then' in value && typeof value.then === 'function';
-                }
-                exports.isPromiseLike = isPromiseLike;
-                function resume(internal) {
-                    const {status, fulfillReactions, rejectReactions} = internal;
-                    switch (status.state) {
-                    case 0:
-                    case 1:
-                        return;
-                    case 2:
-                        if (!internal.isHandled && rejectReactions.length > 0) {
-                            rejectReactions.length = 0;
+                            });
                         }
-                        if (fulfillReactions.length === 0)
-                            return;
-                        internal.isHandled = true;
-                        void consume(fulfillReactions, status.result);
-                        return;
-                    case 3:
-                        if (!internal.isHandled && fulfillReactions.length > 0) {
-                            fulfillReactions.length = 0;
+                        if (status.state !== 2) {
+                            rejectReactions.push(reason => {
+                                if (!onrejected)
+                                    return reject(reason);
+                                try {
+                                    resolve(onrejected(reason));
+                                } catch (reason) {
+                                    reject(reason);
+                                }
+                            });
                         }
-                        if (rejectReactions.length === 0)
-                            return;
-                        internal.isHandled = true;
-                        void consume(rejectReactions, status.result);
+                        resume(this[internal]);
+                    });
+                }
+                catch(onrejected) {
+                    return this.then(global_1.undefined, onrejected);
+                }
+                finally(onfinally) {
+                    return this.then(onfinally, onfinally).then(() => this);
+                }
+            }
+            exports.AtomicPromise = AtomicPromise;
+            _a = internal;
+            function isPromiseLike(value) {
+                return value !== null && typeof value === 'object' && 'then' in value && typeof value.then === 'function';
+            }
+            exports.isPromiseLike = isPromiseLike;
+            function resume(internal) {
+                if (!internal.reactable)
+                    return;
+                const {status, fulfillReactions, rejectReactions} = internal;
+                switch (status.state) {
+                case 0:
+                case 1:
+                    return;
+                case 2:
+                    if (!internal.isHandled && rejectReactions.length > 0) {
+                        array_1.splice(rejectReactions, 0);
+                    }
+                    if (fulfillReactions.length === 0)
                         return;
+                    internal.isHandled = true;
+                    internal.reactable = false;
+                    react(fulfillReactions, status.result);
+                    internal.reactable = true;
+                    return;
+                case 3:
+                    if (!internal.isHandled && fulfillReactions.length > 0) {
+                        array_1.splice(fulfillReactions, 0);
                     }
+                    if (rejectReactions.length === 0)
+                        return;
+                    internal.isHandled = true;
+                    internal.reactable = false;
+                    react(rejectReactions, status.result);
+                    internal.reactable = true;
+                    return;
                 }
-                function consume(fs, a) {
-                    while (fs.length > 0) {
-                        void fs.shift()(a);
+            }
+            function react(reactions, result) {
+                if (reactions.length < 5) {
+                    while (reactions.length > 0) {
+                        reactions.shift()(result);
                     }
+                } else {
+                    for (let i = 0; i < reactions.length; ++i) {
+                        reactions[i](result);
+                    }
+                    array_1.splice(reactions, 0);
                 }
-            }.call(this, typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : typeof window !== 'undefined' ? window : {}));
+            }
         },
-        { './global': 13 }
+        {
+            './alias': 4,
+            './array': 5,
+            './global': 14
+        }
     ],
-    26: [
+    28: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.sqid = void 0;
+            const global_1 = _dereq_('./global');
             const zeros = '0'.repeat(15);
             let cnt = 0;
             function sqid(id) {
-                if (arguments.length > 0) {
+                if (arguments.length === 0) {
+                    if (cnt === global_1.Number.MAX_SAFE_INTEGER)
+                        throw new TypeError(`Spica: sqid: sqid reached max safe integer.`);
+                    return sqid(++cnt);
+                } else {
                     if (typeof id !== 'number')
                         throw new TypeError(`Spica: sqid: A parameter value must be a number: ${ id }`);
                     if (id >= 0 === false)
                         throw new TypeError(`Spica: sqid: A parameter value must be a positive number: ${ id }`);
                     if (id % 1 !== 0)
                         throw new TypeError(`Spica: sqid: A parameter value must be an integer: ${ id }`);
+                    return (zeros + id).slice(-16);
                 }
-                return id === undefined ? (zeros + ++cnt).slice(-15) : (zeros + id).slice(-15);
             }
             exports.sqid = sqid;
         },
-        {}
+        { './global': 14 }
     ],
-    27: [
+    29: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.debounce = exports.throttle = void 0;
+            const list_1 = _dereq_('./list');
             const global_1 = _dereq_('./global');
-            const {setTimeout} = global_1.global;
             function throttle(interval, callback) {
                 let timer = 0;
-                let buffer = [];
+                let buffer = list_1.MList();
                 return arg => {
-                    void buffer.push(arg);
+                    buffer.prepend(arg);
                     if (timer > 0)
                         return;
-                    timer = setTimeout(() => {
+                    timer = global_1.setTimeout(() => {
                         timer = 0;
-                        void callback(buffer[buffer.length - 1], flush());
+                        const buf = buffer;
+                        buffer = list_1.MList();
+                        void callback(buf.head, buf);
                     }, interval);
                 };
-                function flush() {
-                    const buf = buffer;
-                    buffer = [];
-                    return buf;
-                }
             }
             exports.throttle = throttle;
             function debounce(delay, callback) {
                 let timer = 0;
-                let buffer = [];
+                let buffer = list_1.MList();
                 return arg => {
-                    void buffer.push(arg);
+                    buffer.prepend(arg);
                     if (timer > 0)
                         return;
-                    timer = setTimeout(() => {
+                    timer = global_1.setTimeout(() => {
                         timer = 0;
-                        void setTimeout(() => {
+                        void global_1.setTimeout(() => {
                             if (timer > 0)
                                 return;
-                            void callback(buffer[buffer.length - 1], flush());
+                            const buf = buffer;
+                            buffer = list_1.MList();
+                            void callback(buf.head, buf);
                         }, buffer.length > 1 ? delay : 0);
                     }, delay);
                 };
-                function flush() {
-                    const buf = buffer;
-                    buffer = [];
-                    return buf;
-                }
             }
             exports.debounce = debounce;
         },
-        { './global': 13 }
+        {
+            './global': 14,
+            './list': 15
+        }
     ],
-    28: [
+    30: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            const toString = Object.prototype.toString;
+            exports.isPrimitive = exports.isType = exports.type = void 0;
+            const toString = Object.prototype.toString.call.bind(Object.prototype.toString);
             function type(value) {
                 const t = value == null ? value : typeof value;
                 switch (t) {
@@ -1467,7 +1862,7 @@ require = function () {
                 case 'symbol':
                     return t;
                 default:
-                    return toString.call(value).slice(8, -1);
+                    return toString(value).slice(8, -1);
                 }
             }
             exports.type = type;
@@ -1499,10 +1894,11 @@ require = function () {
         },
         {}
     ],
-    29: [
+    31: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.uuid = void 0;
             const FORMAT_V4 = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx';
             const {random} = Math;
             function uuid() {
@@ -1523,36 +1919,70 @@ require = function () {
         },
         {}
     ],
-    30: [
+    32: [
         function (_dereq_, module, exports) {
             'use strict';
-            function __export(m) {
+            var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
+                if (k2 === undefined)
+                    k2 = k;
+                Object.defineProperty(o, k2, {
+                    enumerable: true,
+                    get: function () {
+                        return m[k];
+                    }
+                });
+            } : function (o, m, k, k2) {
+                if (k2 === undefined)
+                    k2 = k;
+                o[k2] = m[k];
+            });
+            var __exportStar = this && this.__exportStar || function (m, exports) {
                 for (var p in m)
                     if (!exports.hasOwnProperty(p))
-                        exports[p] = m[p];
-            }
+                        __createBinding(exports, m, p);
+            };
             Object.defineProperty(exports, '__esModule', { value: true });
-            __export(_dereq_('./layer/interface/api'));
+            __exportStar(_dereq_('./layer/interface/api'), exports);
         },
-        { './layer/interface/api': 61 }
+        { './layer/interface/api': 63 }
     ],
-    31: [
+    33: [
         function (_dereq_, module, exports) {
             'use strict';
-            function __export(m) {
+            var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
+                if (k2 === undefined)
+                    k2 = k;
+                Object.defineProperty(o, k2, {
+                    enumerable: true,
+                    get: function () {
+                        return m[k];
+                    }
+                });
+            } : function (o, m, k, k2) {
+                if (k2 === undefined)
+                    k2 = k;
+                o[k2] = m[k];
+            });
+            var __exportStar = this && this.__exportStar || function (m, exports) {
                 for (var p in m)
                     if (!exports.hasOwnProperty(p))
-                        exports[p] = m[p];
-            }
+                        __createBinding(exports, m, p);
+            };
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.Ownership = exports.StorageChannel = exports.StoreChannel = void 0;
             const api_1 = _dereq_('../domain/indexeddb/api');
             const api_2 = _dereq_('../domain/webstorage/api');
             const channel_1 = _dereq_('../domain/broadcast/channel');
             const channel_2 = _dereq_('../domain/ownership/channel');
-            __export(_dereq_('../domain/indexeddb/api'));
-            __export(_dereq_('../domain/webstorage/api'));
+            __exportStar(_dereq_('../domain/indexeddb/api'), exports);
+            __exportStar(_dereq_('../domain/webstorage/api'), exports);
             var api_3 = _dereq_('../domain/dao/api');
-            exports.ChannelObject = api_3.Schema;
+            Object.defineProperty(exports, 'ChannelObject', {
+                enumerable: true,
+                get: function () {
+                    return api_3.Schema;
+                }
+            });
             class StoreChannel extends api_1.StoreChannel {
                 constructor(name, config) {
                     super(name, config.schema, config);
@@ -1562,7 +1992,7 @@ require = function () {
             class StorageChannel extends api_2.StorageChannel {
                 constructor(name, {
                     schema: schema,
-                    migrate = () => undefined
+                    migrate = () => void 0
                 }) {
                     super(name, api_2.localStorage, schema, migrate);
                 }
@@ -1576,17 +2006,18 @@ require = function () {
             exports.Ownership = Ownership;
         },
         {
-            '../domain/broadcast/channel': 37,
-            '../domain/dao/api': 38,
-            '../domain/indexeddb/api': 40,
-            '../domain/ownership/channel': 46,
-            '../domain/webstorage/api': 47
+            '../domain/broadcast/channel': 39,
+            '../domain/dao/api': 40,
+            '../domain/indexeddb/api': 42,
+            '../domain/ownership/channel': 48,
+            '../domain/webstorage/api': 49
         }
     ],
-    32: [
+    34: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.hasBinary = exports.isStorable = void 0;
             const type_1 = _dereq_('spica/type');
             function isStorable(value) {
                 switch (typeof value) {
@@ -1614,12 +2045,13 @@ require = function () {
                 return value instanceof Int8Array || value instanceof Int16Array || value instanceof Int32Array || value instanceof Uint8Array || value instanceof Uint8ClampedArray || value instanceof Uint16Array || value instanceof Uint32Array || value instanceof ArrayBuffer || value instanceof Blob;
             }
         },
-        { 'spica/type': 28 }
+        { 'spica/type': 30 }
     ],
-    33: [
+    35: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.isValidPropertyValue = exports.isValidPropertyName = exports.EventRecordValue = exports.SavedEventRecord = exports.LoadedEventRecord = exports.StoredEventRecord = exports.UnstoredEventRecord = exports.EventRecordType = void 0;
             const assign_1 = _dereq_('spica/assign');
             const identifier_1 = _dereq_('./identifier');
             const value_1 = _dereq_('../database/value');
@@ -1724,15 +2156,16 @@ require = function () {
             exports.isValidPropertyValue = isValidPropertyValue;
         },
         {
-            '../database/value': 32,
-            './identifier': 34,
-            'spica/assign': 5
+            '../database/value': 34,
+            './identifier': 36,
+            'spica/assign': 6
         }
     ],
-    34: [
+    36: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.makeEventId = void 0;
             var Identifier;
             (function (Identifier) {
             }(Identifier || (Identifier = {})));
@@ -1743,10 +2176,11 @@ require = function () {
         },
         {}
     ],
-    35: [
+    37: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.compose = exports.record = exports.EventStore = void 0;
             const observation_1 = _dereq_('spica/observation');
             const cancellation_1 = _dereq_('spica/cancellation');
             const clock_1 = _dereq_('spica/clock');
@@ -1844,7 +2278,7 @@ require = function () {
                 get txrw() {
                     if (++this.tx_.rwc > 25) {
                         this.tx_.rwc = 0;
-                        this.tx_.rw = undefined;
+                        this.tx_.rw = void 0;
                         return;
                     }
                     return this.tx_.rw;
@@ -1856,7 +2290,7 @@ require = function () {
                         return;
                     this.tx_.rwc = 0;
                     this.tx_.rw = tx;
-                    void clock_1.tick(() => this.tx_.rw = undefined);
+                    void clock_1.tick(() => this.tx_.rw = void 0);
                 }
                 fetch(key, cb = noop_1.noop, cancellation = new cancellation_1.Cancellation()) {
                     const events = [];
@@ -1989,7 +2423,7 @@ require = function () {
                             event.key,
                             event.attr,
                             sqid_1.sqid(0)
-                        ]).some(({listener}) => listener(undefined, [
+                        ]).some(({listener}) => listener(void 0, [
                             event.key,
                             event.attr,
                             sqid_1.sqid(0)
@@ -2015,12 +2449,12 @@ require = function () {
                                 savedEvent.attr,
                                 sqid_1.sqid(savedEvent.id)
                             ], savedEvent);
-                            const events = this.memory.refs([savedEvent.key]).map(({listener}) => listener(undefined, [savedEvent.key])).reduce((es, e) => e instanceof event_1.StoredEventRecord ? concat_1.concat(es, [e]) : es, []);
+                            const events = this.memory.refs([savedEvent.key]).map(({listener}) => listener(void 0, [savedEvent.key])).reduce((es, e) => e instanceof event_1.StoredEventRecord ? concat_1.concat(es, [e]) : es, []);
                             if (events.length >= this.snapshotCycle || value_1.hasBinary(event.value)) {
                                 void this.snapshot(savedEvent.key);
                             }
                         });
-                        const fail = () => (void clean(), active() ? void loss() : undefined);
+                        const fail = () => (void clean(), active() ? void loss() : void 0);
                         void tx.addEventListener('error', fail);
                         void tx.addEventListener('abort', fail);
                     }, () => void clean() || void loss());
@@ -2168,7 +2602,7 @@ require = function () {
                     return events.map((e, i) => [
                         e,
                         i
-                    ]).sort(([a, ai], [b, bi]) => undefined || indexedDB.cmp(a.key, b.key) || b.date - a.date || b.id * a.id > 0 && b.id - a.id || bi - ai).reduceRight(([head, ...tail], [event]) => {
+                    ]).sort(([a, ai], [b, bi]) => void 0 || indexedDB.cmp(a.key, b.key) || b.date - a.date || b.id * a.id > 0 && b.id - a.id || bi - ai).reduceRight(([head, ...tail], [event]) => {
                         const prev = head[0];
                         if (!prev)
                             return [[event]];
@@ -2190,23 +2624,24 @@ require = function () {
             exports.compose = compose;
         },
         {
-            '../../infrastructure/indexeddb/api': 52,
-            '../database/value': 32,
-            './event': 33,
-            './identifier': 34,
-            'spica/cancellation': 7,
-            'spica/clock': 9,
-            'spica/concat': 10,
-            'spica/exception': 12,
-            'spica/noop': 23,
-            'spica/observation': 24,
-            'spica/sqid': 26
+            '../../infrastructure/indexeddb/api': 54,
+            '../database/value': 34,
+            './event': 35,
+            './identifier': 36,
+            'spica/cancellation': 8,
+            'spica/clock': 10,
+            'spica/concat': 11,
+            'spica/exception': 13,
+            'spica/noop': 25,
+            'spica/observation': 26,
+            'spica/sqid': 28
         }
     ],
-    36: [
+    38: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.KeyValueStore = void 0;
             const cancellation_1 = _dereq_('spica/cancellation');
             const clock_1 = _dereq_('spica/clock');
             const noop_1 = _dereq_('spica/noop');
@@ -2236,7 +2671,7 @@ require = function () {
                 get txrw() {
                     if (++this.tx_.rwc > 25) {
                         this.tx_.rwc = 0;
-                        this.tx_.rw = undefined;
+                        this.tx_.rw = void 0;
                         return;
                     }
                     return this.tx_.rw;
@@ -2248,7 +2683,7 @@ require = function () {
                         return;
                     this.tx_.rwc = 0;
                     this.tx_.rw = tx;
-                    void clock_1.tick(() => this.tx_.rw = undefined);
+                    void clock_1.tick(() => this.tx_.rw = void 0);
                 }
                 fetch(key, cb = noop_1.noop, cancellation = new cancellation_1.Cancellation()) {
                     return void this.listen(db => {
@@ -2315,15 +2750,16 @@ require = function () {
             exports.KeyValueStore = KeyValueStore;
         },
         {
-            'spica/cancellation': 7,
-            'spica/clock': 9,
-            'spica/noop': 23
+            'spica/cancellation': 8,
+            'spica/clock': 10,
+            'spica/noop': 25
         }
     ],
-    37: [
+    39: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.Channel = exports.ChannelMessage = void 0;
             const api_1 = _dereq_('../../infrastructure/webstorage/api');
             const storage_1 = _dereq_('../webstorage/model/storage');
             const version = 1;
@@ -2361,7 +2797,7 @@ require = function () {
                 listen(type, listener) {
                     type;
                     listener;
-                    return () => undefined;
+                    return () => void 0;
                 }
                 post(msg) {
                     msg;
@@ -2456,29 +2892,60 @@ require = function () {
             }
         },
         {
-            '../../infrastructure/webstorage/api': 58,
-            '../webstorage/model/storage': 48
+            '../../infrastructure/webstorage/api': 60,
+            '../webstorage/model/storage': 50
         }
     ],
-    38: [
+    40: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var builder_1 = _dereq_('./module/builder');
-            exports.Schema = builder_1.Schema;
-            exports.build = builder_1.build;
-            exports.isValidPropertyName = builder_1.isValidPropertyName;
-            exports.isValidPropertyValue = builder_1.isValidPropertyValue;
+            Object.defineProperty(exports, 'Schema', {
+                enumerable: true,
+                get: function () {
+                    return builder_1.Schema;
+                }
+            });
+            Object.defineProperty(exports, 'build', {
+                enumerable: true,
+                get: function () {
+                    return builder_1.build;
+                }
+            });
+            Object.defineProperty(exports, 'isValidPropertyName', {
+                enumerable: true,
+                get: function () {
+                    return builder_1.isValidPropertyName;
+                }
+            });
+            Object.defineProperty(exports, 'isValidPropertyValue', {
+                enumerable: true,
+                get: function () {
+                    return builder_1.isValidPropertyValue;
+                }
+            });
         },
-        { './module/builder': 39 }
+        { './module/builder': 41 }
     ],
-    39: [
+    41: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.build = exports.Schema = exports.isValidPropertyValue = exports.isValidPropertyName = void 0;
             const event_1 = _dereq_('../../../data/es/event');
-            exports.isValidPropertyName = event_1.isValidPropertyName;
-            exports.isValidPropertyValue = event_1.isValidPropertyValue;
+            Object.defineProperty(exports, 'isValidPropertyName', {
+                enumerable: true,
+                get: function () {
+                    return event_1.isValidPropertyName;
+                }
+            });
+            Object.defineProperty(exports, 'isValidPropertyValue', {
+                enumerable: true,
+                get: function () {
+                    return event_1.isValidPropertyValue;
+                }
+            });
             const noop_1 = _dereq_('spica/noop');
             var Schema;
             (function (Schema) {
@@ -2502,13 +2969,13 @@ require = function () {
                             return map;
                     }
                     const iniVal = dao[prop];
-                    if (source[prop] === undefined) {
+                    if (source[prop] === void 0) {
                         source[prop] = iniVal;
                     }
                     map[prop] = {
                         enumerable: true,
                         get: () => {
-                            const val = source[prop] === undefined ? iniVal : source[prop];
+                            const val = source[prop] === void 0 ? iniVal : source[prop];
                             void get(prop, val);
                             return val;
                         },
@@ -2516,7 +2983,7 @@ require = function () {
                             if (!event_1.isValidPropertyValue({ [prop]: newVal })(prop))
                                 throw new TypeError(`ClientChannel: DAO: Invalid value: ${ JSON.stringify(newVal) }`);
                             const oldVal = source[prop];
-                            source[prop] = newVal === undefined ? iniVal : newVal;
+                            source[prop] = newVal === void 0 ? iniVal : newVal;
                             void set(prop, newVal, oldVal);
                         }
                     };
@@ -2555,23 +3022,29 @@ require = function () {
             exports.build = build;
         },
         {
-            '../../../data/es/event': 33,
-            'spica/noop': 23
+            '../../../data/es/event': 35,
+            'spica/noop': 25
         }
     ],
-    40: [
+    42: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var channel_1 = _dereq_('./service/channel');
-            exports.StoreChannel = channel_1.StoreChannel;
+            Object.defineProperty(exports, 'StoreChannel', {
+                enumerable: true,
+                get: function () {
+                    return channel_1.StoreChannel;
+                }
+            });
         },
-        { './service/channel': 45 }
+        { './service/channel': 47 }
     ],
-    41: [
+    43: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.ChannelStore = void 0;
             const observation_1 = _dereq_('spica/observation');
             const cancellation_1 = _dereq_('spica/cancellation');
             const promise_1 = _dereq_('spica/promise');
@@ -2796,30 +3269,26 @@ require = function () {
             }
         },
         {
-            '../../../infrastructure/indexeddb/api': 52,
-            '../../broadcast/channel': 37,
-            '../../ownership/channel': 46,
-            './channel/access': 42,
-            './channel/data': 43,
-            './channel/expiry': 44,
-            'spica/cache': 6,
-            'spica/cancellation': 7,
-            'spica/noop': 23,
-            'spica/observation': 24,
-            'spica/promise': 25
+            '../../../infrastructure/indexeddb/api': 54,
+            '../../broadcast/channel': 39,
+            '../../ownership/channel': 48,
+            './channel/access': 44,
+            './channel/data': 45,
+            './channel/expiry': 46,
+            'spica/cache': 7,
+            'spica/cancellation': 8,
+            'spica/noop': 25,
+            'spica/observation': 26,
+            'spica/promise': 27
         }
     ],
-    42: [
+    44: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.AccessStore = exports.name = void 0;
             const store_1 = _dereq_('../../../../data/kvs/store');
             exports.name = 'access';
-            var AccessStoreSchema;
-            (function (AccessStoreSchema) {
-                AccessStoreSchema['key'] = 'key';
-                AccessStoreSchema['date'] = 'date';
-            }(AccessStoreSchema || (AccessStoreSchema = {})));
             class AccessStore {
                 constructor(listen) {
                     this.listen = listen;
@@ -2885,12 +3354,13 @@ require = function () {
                 }
             }
         },
-        { '../../../../data/kvs/store': 36 }
+        { '../../../../data/kvs/store': 38 }
     ],
-    43: [
+    45: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.DataStore = exports.name = void 0;
             const store_1 = _dereq_('../../../../data/es/store');
             exports.name = 'data';
             class DataStore extends store_1.EventStore {
@@ -2909,19 +3379,15 @@ require = function () {
                 DataStore.Value = store_1.EventStore.Value;
             }(DataStore = exports.DataStore || (exports.DataStore = {})));
         },
-        { '../../../../data/es/store': 35 }
+        { '../../../../data/es/store': 37 }
     ],
-    44: [
+    46: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.ExpiryStore = void 0;
             const store_1 = _dereq_('../../../../data/kvs/store');
             const name = 'expiry';
-            var ExpiryStoreSchema;
-            (function (ExpiryStoreSchema) {
-                ExpiryStoreSchema['key'] = 'key';
-                ExpiryStoreSchema['expiry'] = 'expiry';
-            }(ExpiryStoreSchema || (ExpiryStoreSchema = {})));
             class ExpiryStore {
                 constructor(chan, cancellation, ownership, listen) {
                     this.chan = chan;
@@ -3020,19 +3486,20 @@ require = function () {
                 }
             }
         },
-        { '../../../../data/kvs/store': 36 }
+        { '../../../../data/kvs/store': 38 }
     ],
-    45: [
+    47: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.StoreChannel = void 0;
             const observation_1 = _dereq_('spica/observation');
             const throttle_1 = _dereq_('spica/throttle');
             const api_1 = _dereq_('../../dao/api');
             const channel_1 = _dereq_('../model/channel');
             const api_2 = _dereq_('../../webstorage/api');
             class StoreChannel extends channel_1.ChannelStore {
-                constructor(name, factory, {migrate = () => undefined, destroy = () => true, age = Infinity, size = Infinity, debug = false} = {}) {
+                constructor(name, factory, {migrate = () => void 0, destroy = () => true, age = Infinity, size = Infinity, debug = false} = {}) {
                     super(name, Object.keys(factory()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(factory())), destroy, age, size, debug);
                     this.factory = factory;
                     this.links = new Map();
@@ -3100,17 +3567,18 @@ require = function () {
             }
         },
         {
-            '../../dao/api': 38,
-            '../../webstorage/api': 47,
-            '../model/channel': 41,
-            'spica/observation': 24,
-            'spica/throttle': 27
+            '../../dao/api': 40,
+            '../../webstorage/api': 49,
+            '../model/channel': 43,
+            'spica/observation': 26,
+            'spica/throttle': 29
         }
     ],
-    46: [
+    48: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.Ownership = void 0;
             const channel_1 = _dereq_('../broadcast/channel');
             const promise_1 = _dereq_('spica/promise');
             class OwnershipMessage extends channel_1.ChannelMessage {
@@ -3120,89 +3588,108 @@ require = function () {
                     this.priority = priority;
                 }
             }
-            class Ownership {
-                constructor(channel) {
-                    this.channel = channel;
-                    this.store = new Map();
-                    void this.channel.listen('ownership', ({key, priority}) => {
-                        if (this.has(key) && this.getPriority(key) < priority - Ownership.mergin) {
-                            void this.castPriority(key);
-                        } else {
-                            void this.setPriority(key, Math.min(-priority, this.getPriority(key)));
-                        }
-                    });
-                }
-                static genPriority(age) {
-                    return Date.now() + age;
-                }
-                getPriority(key) {
-                    if (!this.store.has(key)) {
-                        void this.setPriority(key, Math.max(Ownership.genPriority(0) - Ownership.mergin, 0));
-                        void this.setPriority(key, -Ownership.genPriority(Ownership.mergin));
+            let Ownership = (() => {
+                class Ownership {
+                    constructor(channel) {
+                        this.channel = channel;
+                        this.store = new Map();
+                        void this.channel.listen('ownership', ({key, priority}) => {
+                            if (this.has(key) && this.getPriority(key) < priority - Ownership.mergin) {
+                                void this.castPriority(key);
+                            } else {
+                                void this.setPriority(key, Math.min(-priority, this.getPriority(key)));
+                            }
+                        });
                     }
-                    return this.store.get(key);
+                    static genPriority(age) {
+                        return Date.now() + age;
+                    }
+                    getPriority(key) {
+                        if (!this.store.has(key)) {
+                            void this.setPriority(key, Math.max(Ownership.genPriority(0) - Ownership.mergin, 0));
+                            void this.setPriority(key, -Ownership.genPriority(Ownership.mergin));
+                        }
+                        return this.store.get(key);
+                    }
+                    setPriority(key, priority) {
+                        if (this.store.has(key) && priority === this.getPriority(key))
+                            return;
+                        void this.store.set(key, priority + Math.floor(Math.random() * 1 * 1000));
+                        void this.castPriority(key);
+                    }
+                    castPriority(key) {
+                        if (this.getPriority(key) < 0)
+                            return;
+                        if (!this.isTakable(key))
+                            return;
+                        void this.channel.post(new OwnershipMessage(key, this.getPriority(key) + Ownership.mergin));
+                    }
+                    has(key) {
+                        return this.getPriority(key) >= Ownership.genPriority(0);
+                    }
+                    isTakable(key) {
+                        return this.getPriority(key) > 0 || Ownership.genPriority(0) > Math.abs(this.getPriority(key));
+                    }
+                    take(key, age, wait) {
+                        age = Math.min(Math.max(age, 1 * 1000), 60 * 1000) + 100;
+                        wait = wait === void 0 ? wait : Math.max(wait, 0);
+                        if (!this.isTakable(key))
+                            return false;
+                        void this.setPriority(key, Math.max(Ownership.genPriority(age + (wait || 0)), this.getPriority(key)));
+                        return wait === void 0 ? true : new promise_1.AtomicPromise(resolve => setTimeout(resolve, wait)).then(() => this.extend(key, age) ? promise_1.AtomicPromise.resolve() : promise_1.AtomicPromise.reject());
+                    }
+                    extend(key, age) {
+                        return this.has(key) ? this.take(key, age) : false;
+                    }
+                    close() {
+                        void this.channel.close();
+                    }
                 }
-                setPriority(key, priority) {
-                    if (this.store.has(key) && priority === this.getPriority(key))
-                        return;
-                    void this.store.set(key, priority + Math.floor(Math.random() * 1 * 1000));
-                    void this.castPriority(key);
-                }
-                castPriority(key) {
-                    if (this.getPriority(key) < 0)
-                        return;
-                    if (!this.isTakable(key))
-                        return;
-                    void this.channel.post(new OwnershipMessage(key, this.getPriority(key) + Ownership.mergin));
-                }
-                has(key) {
-                    return this.getPriority(key) >= Ownership.genPriority(0);
-                }
-                isTakable(key) {
-                    return this.getPriority(key) > 0 || Ownership.genPriority(0) > Math.abs(this.getPriority(key));
-                }
-                take(key, age, wait) {
-                    age = Math.min(Math.max(age, 1 * 1000), 60 * 1000) + 100;
-                    wait = wait === undefined ? wait : Math.max(wait, 0);
-                    if (!this.isTakable(key))
-                        return false;
-                    void this.setPriority(key, Math.max(Ownership.genPriority(age + (wait || 0)), this.getPriority(key)));
-                    return wait === undefined ? true : new promise_1.AtomicPromise(resolve => setTimeout(resolve, wait)).then(() => this.extend(key, age) ? promise_1.AtomicPromise.resolve() : promise_1.AtomicPromise.reject());
-                }
-                extend(key, age) {
-                    return this.has(key) ? this.take(key, age) : false;
-                }
-                close() {
-                    void this.channel.close();
-                }
-            }
+                Ownership.mergin = 5 * 1000;
+                return Ownership;
+            })();
             exports.Ownership = Ownership;
-            Ownership.mergin = 5 * 1000;
         },
         {
-            '../broadcast/channel': 37,
-            'spica/promise': 25
+            '../broadcast/channel': 39,
+            'spica/promise': 27
         }
     ],
-    47: [
+    49: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var channel_1 = _dereq_('./service/channel');
-            exports.StorageChannel = channel_1.StorageChannel;
+            Object.defineProperty(exports, 'StorageChannel', {
+                enumerable: true,
+                get: function () {
+                    return channel_1.StorageChannel;
+                }
+            });
             var api_1 = _dereq_('../../infrastructure/webstorage/api');
-            exports.localStorage = api_1.localStorage;
-            exports.sessionStorage = api_1.sessionStorage;
+            Object.defineProperty(exports, 'localStorage', {
+                enumerable: true,
+                get: function () {
+                    return api_1.localStorage;
+                }
+            });
+            Object.defineProperty(exports, 'sessionStorage', {
+                enumerable: true,
+                get: function () {
+                    return api_1.sessionStorage;
+                }
+            });
         },
         {
-            '../../infrastructure/webstorage/api': 58,
-            './service/channel': 49
+            '../../infrastructure/webstorage/api': 60,
+            './service/channel': 51
         }
     ],
-    48: [
+    50: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.fakeStorage = void 0;
             class Storage {
                 constructor() {
                     this.store = new Map();
@@ -3227,10 +3714,11 @@ require = function () {
         },
         {}
     ],
-    49: [
+    51: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.StorageChannel = void 0;
             const observation_1 = _dereq_('spica/observation');
             const cancellation_1 = _dereq_('spica/cancellation');
             const api_1 = _dereq_('../../dao/api');
@@ -3238,7 +3726,7 @@ require = function () {
             const storage_1 = _dereq_('../model/storage');
             const cache = new Set();
             class StorageChannel {
-                constructor(name, storage = api_2.sessionStorage || storage_1.fakeStorage, factory, migrate = () => undefined) {
+                constructor(name, storage = api_2.sessionStorage || storage_1.fakeStorage, factory, migrate = () => void 0) {
                     this.name = name;
                     this.storage = storage;
                     this.cancellation = new cancellation_1.Cancellation();
@@ -3251,10 +3739,10 @@ require = function () {
                         throw new Error(`ClientChannel: Specified storage channel "${ name }" is already open.`);
                     void cache.add(name);
                     void this.cancellation.register(() => void cache.delete(name));
-                    const source = Object.assign({
+                    const source = Object.assign(Object.assign({}, parse(this.storage.getItem(this.name))), {
                         [api_1.Schema.key]: this.name,
                         [api_1.Schema.event]: new observation_1.Observation({ limit: Infinity })
-                    }, parse(this.storage.getItem(this.name)));
+                    });
                     this.link_ = api_1.build(source, factory, (attr, newValue, oldValue) => {
                         void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(source)).reduce((acc, attr) => {
                             acc[attr] = source[attr];
@@ -3328,35 +3816,41 @@ require = function () {
             }
         },
         {
-            '../../../infrastructure/webstorage/api': 58,
-            '../../dao/api': 38,
-            '../model/storage': 48,
-            'spica/cancellation': 7,
-            'spica/observation': 24
+            '../../../infrastructure/webstorage/api': 60,
+            '../../dao/api': 40,
+            '../model/storage': 50,
+            'spica/cancellation': 8,
+            'spica/observation': 26
         }
     ],
-    50: [
+    52: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var storage_1 = _dereq_('./module/storage');
-            exports.verifyStorageAccess = storage_1.verifyStorageAccess;
+            Object.defineProperty(exports, 'verifyStorageAccess', {
+                enumerable: true,
+                get: function () {
+                    return storage_1.verifyStorageAccess;
+                }
+            });
         },
-        { './module/storage': 51 }
+        { './module/storage': 53 }
     ],
-    51: [
+    53: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.verifyStorageAccess = void 0;
             const uuid_1 = _dereq_('spica/uuid');
             function verifyStorageAccess() {
                 try {
                     if (!self.navigator.cookieEnabled)
-                        throw undefined;
+                        throw void 0;
                     const key = 'clientchannel#' + uuid_1.uuid();
                     void self.sessionStorage.setItem(key, key);
                     if (key !== self.sessionStorage.getItem(key))
-                        throw undefined;
+                        throw void 0;
                     void self.sessionStorage.removeItem(key);
                     return true;
                 } catch (_a) {
@@ -3365,35 +3859,75 @@ require = function () {
             }
             exports.verifyStorageAccess = verifyStorageAccess;
         },
-        { 'spica/uuid': 29 }
+        { 'spica/uuid': 31 }
     ],
-    52: [
+    54: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var global_1 = _dereq_('./module/global');
-            exports.indexedDB = global_1.indexedDB;
-            exports.IDBKeyRange = global_1.IDBKeyRange;
+            Object.defineProperty(exports, 'indexedDB', {
+                enumerable: true,
+                get: function () {
+                    return global_1.indexedDB;
+                }
+            });
+            Object.defineProperty(exports, 'IDBKeyRange', {
+                enumerable: true,
+                get: function () {
+                    return global_1.IDBKeyRange;
+                }
+            });
             var access_1 = _dereq_('./model/access');
-            exports.open = access_1.open;
-            exports.listen_ = access_1.listen_;
-            exports.close = access_1.close;
-            exports.destroy = access_1.destroy;
+            Object.defineProperty(exports, 'open', {
+                enumerable: true,
+                get: function () {
+                    return access_1.open;
+                }
+            });
+            Object.defineProperty(exports, 'listen_', {
+                enumerable: true,
+                get: function () {
+                    return access_1.listen_;
+                }
+            });
+            Object.defineProperty(exports, 'close', {
+                enumerable: true,
+                get: function () {
+                    return access_1.close;
+                }
+            });
+            Object.defineProperty(exports, 'destroy', {
+                enumerable: true,
+                get: function () {
+                    return access_1.destroy;
+                }
+            });
             var event_1 = _dereq_('./model/event');
-            exports.idbEventStream = event_1.idbEventStream;
-            exports.IDBEvent = event_1.IDBEvent;
-            exports.IDBEventType = event_1.IDBEventType;
+            Object.defineProperty(exports, 'idbEventStream', {
+                enumerable: true,
+                get: function () {
+                    return event_1.idbEventStream;
+                }
+            });
+            Object.defineProperty(exports, 'IDBEvent', {
+                enumerable: true,
+                get: function () {
+                    return event_1.IDBEvent;
+                }
+            });
         },
         {
-            './model/access': 53,
-            './model/event': 54,
-            './module/global': 57
+            './model/access': 55,
+            './model/event': 56,
+            './module/global': 59
         }
     ],
-    53: [
+    55: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.destroy = exports.close = exports.listen_ = exports.open = void 0;
             const state_1 = _dereq_('./state');
             const transition_1 = _dereq_('./transition');
             const event_1 = _dereq_('./event');
@@ -3448,12 +3982,12 @@ require = function () {
                 if (!api_1.localStorage)
                     return;
                 if (state_1.states.has(database)) {
-                    return void request(database, () => undefined);
+                    return void request(database, () => void 0);
                 } else {
                     return void transition_1.handle(database);
                 }
             }
-            function request(database, success, failure = () => undefined) {
+            function request(database, success, failure = () => void 0) {
                 if (!api_1.localStorage)
                     return void failure();
                 if (!state_1.requests.has(database))
@@ -3463,29 +3997,20 @@ require = function () {
             }
         },
         {
-            '../../webstorage/api': 58,
-            './event': 54,
-            './state': 55,
-            './transition': 56
+            '../../webstorage/api': 60,
+            './event': 56,
+            './state': 57,
+            './transition': 58
         }
     ],
-    54: [
+    56: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.IDBEvent = exports.idbEventStream = exports.idbEventStream_ = void 0;
             const observation_1 = _dereq_('spica/observation');
             exports.idbEventStream_ = new observation_1.Observation({ limit: Infinity });
             exports.idbEventStream = exports.idbEventStream_;
-            var IDBEventType;
-            (function (IDBEventType) {
-                IDBEventType['connect'] = 'connect';
-                IDBEventType['disconnect'] = 'disconnect';
-                IDBEventType['block'] = 'block';
-                IDBEventType['error'] = 'error';
-                IDBEventType['abort'] = 'abort';
-                IDBEventType['crash'] = 'crash';
-                IDBEventType['destroy'] = 'destroy';
-            }(IDBEventType = exports.IDBEventType || (exports.IDBEventType = {})));
             class IDBEvent {
                 constructor(name, type) {
                     this.name = name;
@@ -3495,19 +4020,14 @@ require = function () {
             }
             exports.IDBEvent = IDBEvent;
         },
-        { 'spica/observation': 24 }
+        { 'spica/observation': 26 }
     ],
-    55: [
+    57: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.EndState = exports.DestroyState = exports.CrashState = exports.AbortState = exports.ErrorState = exports.SuccessState = exports.UpgradeState = exports.BlockState = exports.InitialState = exports.states = exports.requests = exports.configs = exports.commands = void 0;
             exports.commands = new Map();
-            var Command;
-            (function (Command) {
-                Command['open'] = 'open';
-                Command['close'] = 'close';
-                Command['destroy'] = 'destroy';
-            }(Command = exports.Command || (exports.Command = {})));
             exports.configs = new Map();
             exports.requests = new Map();
             class RequestQueue {
@@ -3679,10 +4199,11 @@ require = function () {
         },
         {}
     ],
-    56: [
+    58: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.handle = void 0;
             const global_1 = _dereq_('../module/global');
             const state_1 = _dereq_('./state');
             const event_1 = _dereq_('./event');
@@ -3871,42 +4392,64 @@ require = function () {
             }
         },
         {
-            '../../environment/api': 50,
-            '../module/global': 57,
-            './event': 54,
-            './state': 55,
-            'spica/exception': 12
-        }
-    ],
-    57: [
-        function (_dereq_, module, exports) {
-            'use strict';
-            Object.defineProperty(exports, '__esModule', { value: true });
-            exports.indexedDB = self.indexedDB;
-            exports.IDBKeyRange = self.IDBKeyRange;
-        },
-        {}
-    ],
-    58: [
-        function (_dereq_, module, exports) {
-            'use strict';
-            Object.defineProperty(exports, '__esModule', { value: true });
-            var global_1 = _dereq_('./module/global');
-            exports.localStorage = global_1.localStorage;
-            exports.sessionStorage = global_1.sessionStorage;
-            var event_1 = _dereq_('./model/event');
-            exports.storageEventStream = event_1.storageEventStream;
-            exports.storageEventStream_ = event_1.storageEventStream_;
-        },
-        {
-            './model/event': 59,
-            './module/global': 60
+            '../../environment/api': 52,
+            '../module/global': 59,
+            './event': 56,
+            './state': 57,
+            'spica/exception': 13
         }
     ],
     59: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.IDBKeyRange = exports.indexedDB = void 0;
+            exports.indexedDB = self.indexedDB;
+            exports.IDBKeyRange = self.IDBKeyRange;
+        },
+        {}
+    ],
+    60: [
+        function (_dereq_, module, exports) {
+            'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
+            var global_1 = _dereq_('./module/global');
+            Object.defineProperty(exports, 'localStorage', {
+                enumerable: true,
+                get: function () {
+                    return global_1.localStorage;
+                }
+            });
+            Object.defineProperty(exports, 'sessionStorage', {
+                enumerable: true,
+                get: function () {
+                    return global_1.sessionStorage;
+                }
+            });
+            var event_1 = _dereq_('./model/event');
+            Object.defineProperty(exports, 'storageEventStream', {
+                enumerable: true,
+                get: function () {
+                    return event_1.storageEventStream;
+                }
+            });
+            Object.defineProperty(exports, 'storageEventStream_', {
+                enumerable: true,
+                get: function () {
+                    return event_1.storageEventStream_;
+                }
+            });
+        },
+        {
+            './model/event': 61,
+            './module/global': 62
+        }
+    ],
+    61: [
+        function (_dereq_, module, exports) {
+            'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
+            exports.storageEventStream = exports.storageEventStream_ = void 0;
             const observation_1 = _dereq_('spica/observation');
             const global_1 = _dereq_('../module/global');
             exports.storageEventStream_ = new observation_1.Observation({ limit: Infinity });
@@ -3929,46 +4472,75 @@ require = function () {
             });
         },
         {
-            '../module/global': 60,
-            'spica/observation': 24
+            '../module/global': 62,
+            'spica/observation': 26
         }
     ],
-    60: [
+    62: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.sessionStorage = exports.localStorage = void 0;
             const api_1 = _dereq_('../../environment/api');
             const storable = api_1.verifyStorageAccess();
-            exports.localStorage = storable ? self.localStorage : undefined;
-            exports.sessionStorage = storable ? self.sessionStorage : undefined;
+            exports.localStorage = storable ? self.localStorage : void 0;
+            exports.sessionStorage = storable ? self.sessionStorage : void 0;
         },
-        { '../../environment/api': 50 }
+        { '../../environment/api': 52 }
     ],
-    61: [
+    63: [
         function (_dereq_, module, exports) {
             'use strict';
-            function __export(m) {
+            var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
+                if (k2 === undefined)
+                    k2 = k;
+                Object.defineProperty(o, k2, {
+                    enumerable: true,
+                    get: function () {
+                        return m[k];
+                    }
+                });
+            } : function (o, m, k, k2) {
+                if (k2 === undefined)
+                    k2 = k;
+                o[k2] = m[k];
+            });
+            var __exportStar = this && this.__exportStar || function (m, exports) {
                 for (var p in m)
                     if (!exports.hasOwnProperty(p))
-                        exports[p] = m[p];
-            }
+                        __createBinding(exports, m, p);
+            };
             Object.defineProperty(exports, '__esModule', { value: true });
-            __export(_dereq_('../application/api'));
+            __exportStar(_dereq_('../application/api'), exports);
         },
-        { '../application/api': 31 }
+        { '../application/api': 33 }
     ],
     'clientchannel': [
         function (_dereq_, module, exports) {
             'use strict';
-            function __export(m) {
+            var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
+                if (k2 === undefined)
+                    k2 = k;
+                Object.defineProperty(o, k2, {
+                    enumerable: true,
+                    get: function () {
+                        return m[k];
+                    }
+                });
+            } : function (o, m, k, k2) {
+                if (k2 === undefined)
+                    k2 = k;
+                o[k2] = m[k];
+            });
+            var __exportStar = this && this.__exportStar || function (m, exports) {
                 for (var p in m)
                     if (!exports.hasOwnProperty(p))
-                        exports[p] = m[p];
-            }
+                        __createBinding(exports, m, p);
+            };
             Object.defineProperty(exports, '__esModule', { value: true });
-            __export(_dereq_('./src/export'));
+            __exportStar(_dereq_('./src/export'), exports);
         },
-        { './src/export': 30 }
+        { './src/export': 32 }
     ]
 }, {}, [
     1,
