@@ -1,3 +1,5 @@
+export let isIDBAvailable = true;
+
 export const commands = new Map<string, Command>();
 export const enum Command {
   open = 'open',
@@ -147,6 +149,7 @@ export class SuccessState extends State {
   ) {
     super(state.database, state);
     this.STATE;
+    isIDBAvailable = true;
   }
 }
 
@@ -160,6 +163,9 @@ export class ErrorState extends State {
     super(state.database, state);
     this.STATE;
     assert(error);
+    if (state instanceof InitialState && error.message === 'A mutation operation was attempted on a database that did not allow mutations.') {
+      isIDBAvailable = false;
+    }
   }
 }
 

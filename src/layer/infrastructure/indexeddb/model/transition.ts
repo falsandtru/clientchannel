@@ -1,5 +1,5 @@
 import { indexedDB } from '../module/global';
-import { states, Command, InitialState, BlockState, UpgradeState, SuccessState, ErrorState, AbortState, CrashState, DestroyState, EndState } from './state';
+import { isIDBAvailable, states, Command, InitialState, BlockState, UpgradeState, SuccessState, ErrorState, AbortState, CrashState, DestroyState, EndState } from './state';
 import { idbEventStream_, IDBEvent, IDBEventType } from './event';
 import { verifyStorageAccess } from '../../environment/api';
 import { causeAsyncException } from 'spica/exception';
@@ -172,7 +172,7 @@ function handleFromCrashState(state: CrashState): void {
 
 function handleFromDestroyState(state: DestroyState): void {
   if (!state.alive) return;
-  if (!verifyStorageAccess()) return void handleFromEndState(new EndState(state));
+  if (!isIDBAvailable || !verifyStorageAccess()) return void handleFromEndState(new EndState(state));
   const { database } = state;
   const deleteRequest = indexedDB.deleteDatabase(database);
   deleteRequest.onsuccess = () => (
@@ -189,7 +189,7 @@ function handleFromEndState(state: EndState): void {
   void state.complete();
   void idbEventStream_
     .emit([database, IDBEventType.disconnect], new IDBEvent(database, IDBEventType.disconnect));
-  if (!verifyStorageAccess()) return;
+  if (!isIDBAvailable || !verifyStorageAccess()) return;
   switch (state.command) {
     case Command.open:
       return void handleFromInitialState(new InitialState(database, version));

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.27.6
+
+- Fix error handling in Firefox's private mode.
+
 ## 0.27.5
 
 - Fix module resolution.

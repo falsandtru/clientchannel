@@ -1,5 +1,7 @@
 import { uuid } from 'spica/uuid';
 
+export let isStorageAvailable = verifyStorageAccess();
+
 export function verifyStorageAccess(): boolean {
   try {
     if (!self.navigator.cookieEnabled) throw void 0;
@@ -7,9 +9,9 @@ export function verifyStorageAccess(): boolean {
     void self.sessionStorage.setItem(key, key);
     if (key !== self.sessionStorage.getItem(key)) throw void 0;
     void self.sessionStorage.removeItem(key);
-    return true;
+    return isStorageAvailable = true;
   }
   catch {
-    return false;
+    return isStorageAvailable = false;
   }
 }

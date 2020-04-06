@@ -1,6 +1,4 @@
-import { verifyStorageAccess } from "../../environment/api";
+import { isStorageAvailable } from "../../environment/api";
 
-const storable = verifyStorageAccess();
-
-export const localStorage: Storage | undefined = storable ? self.localStorage : void 0;
-export const sessionStorage: Storage | undefined = storable ? self.sessionStorage : void 0;
+export const localStorage: Storage | undefined = isStorageAvailable ? self.localStorage : void 0;
+export const sessionStorage: Storage | undefined = isStorageAvailable ? self.sessionStorage : void 0;

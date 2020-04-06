@@ -1,7 +1,7 @@
-import { states, commands, configs, requests, Command, Config } from './state';
+import { isIDBAvailable, states, commands, configs, requests, Command, Config } from './state';
 import { handle } from './transition';
 import { idbEventStream, IDBEventType } from './event';
-import { localStorage } from '../../webstorage/api';
+import { isStorageAvailable } from '../../environment/api';
 
 export type Listen = (success: (db: IDBDatabase) => void, failure?: () => void) => void;
 
@@ -54,7 +54,7 @@ function operate(database: string, command: Command, config: Config): void {
   }
   void commands.set(database, command);
   void configs.set(database, config);
-  if (!localStorage) return;
+  if (!isIDBAvailable || !isStorageAvailable) return;
   if (states.has(database)) {
     assert(requests.has(database));
     return void request(database, () => void 0);
@@ -67,7 +67,7 @@ function operate(database: string, command: Command, config: Config): void {
 }
 
 function request(database: string, success: (db: IDBDatabase) => void, failure: () => void = () => void 0): void {
-  if (!localStorage) return void failure();
+  if (!isIDBAvailable || !isStorageAvailable) return void failure();
   if (!requests.has(database)) return void failure();
   void requests.get(database)!.enqueue(success, failure);
   void handle(database);

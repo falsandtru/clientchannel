@@ -1,1 +1,1 @@
-export { verifyStorageAccess } from './module/storage';
+export { isStorageAvailable, verifyStorageAccess } from './module/storage';
