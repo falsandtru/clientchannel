@@ -1,3 +1,4 @@
+import { ChannelObject } from '../../../../..';
 import { isValidPropertyName, isValidPropertyValue } from '../../../data/es/event';
 import { noop } from 'spica/noop';
 
@@ -7,11 +8,11 @@ export {
 };
 
 export namespace Schema {
-  export const meta = Symbol.for('clientchannel/ChannelObject.meta');
-  export const id = Symbol.for('clientchannel/ChannelObject.id');
-  export const key = Symbol.for('clientchannel/ChannelObject.key');
-  export const date = Symbol.for('clientchannel/ChannelObject.data');
-  export const event = Symbol.for('clientchannel/ChannelObject.event');
+  export const meta: typeof ChannelObject.meta = Symbol.for('clientchannel/ChannelObject.meta') as any;
+  export const id: typeof ChannelObject.id = Symbol.for('clientchannel/ChannelObject.id') as any;
+  export const key: typeof ChannelObject.key = Symbol.for('clientchannel/ChannelObject.key') as any;
+  export const date: typeof ChannelObject.date = Symbol.for('clientchannel/ChannelObject.data') as any;
+  export const event: typeof ChannelObject.event = Symbol.for('clientchannel/ChannelObject.event') as any;
 }
 
 export function build<V extends object>(

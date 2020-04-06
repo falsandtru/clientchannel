@@ -1,8 +1,13 @@
 import { Observer } from 'spica/observation';
 import { AtomicPromise } from 'spica/promise';
-import { ChannelObject } from './index';
 
-export { ChannelObject } from './index';
+export namespace ChannelObject {
+  export const meta: unique symbol;
+  export const id: unique symbol;
+  export const key: unique symbol;
+  export const date: unique symbol;
+  export const event: unique symbol;
+}
 
 export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
   constructor(name: string, config: StoreChannelConfig<K, V>);

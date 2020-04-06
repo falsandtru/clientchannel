@@ -23,7 +23,7 @@
   "main": "./dist/clientchannel.js",
   "files": [
     "dist",
-    "index.*",
+    "*.d.ts",
     "src",
     "test",
     "*.js",

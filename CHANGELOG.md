@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.27.5
+
+- Fix module resolution.
+
 ## 0.27.4
 
 - Enable esModuleInterop option.
