@@ -1,4 +1,4 @@
-/*! clientchannel v0.27.3 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.27.4 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -1074,9 +1074,42 @@ require = function () {
     18: [
         function (_dereq_, module, exports) {
             'use strict';
+            var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
+                if (k2 === undefined)
+                    k2 = k;
+                Object.defineProperty(o, k2, {
+                    enumerable: true,
+                    get: function () {
+                        return m[k];
+                    }
+                });
+            } : function (o, m, k, k2) {
+                if (k2 === undefined)
+                    k2 = k;
+                o[k2] = m[k];
+            });
+            var __setModuleDefault = this && this.__setModuleDefault || (Object.create ? function (o, v) {
+                Object.defineProperty(o, 'default', {
+                    enumerable: true,
+                    value: v
+                });
+            } : function (o, v) {
+                o['default'] = v;
+            });
+            var __importStar = this && this.__importStar || function (mod) {
+                if (mod && mod.__esModule)
+                    return mod;
+                var result = {};
+                if (mod != null)
+                    for (var k in mod)
+                        if (Object.hasOwnProperty.call(mod, k))
+                            __createBinding(result, mod, k);
+                __setModuleDefault(result, mod);
+                return result;
+            };
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.Right = exports.Left = exports.Either = void 0;
-            const Monad = _dereq_('./either.impl');
+            const Monad = __importStar(_dereq_('./either.impl'));
             class Either extends Monad.Either {
                 constructor() {
                     super(() => void 0);
@@ -1251,9 +1284,42 @@ require = function () {
     22: [
         function (_dereq_, module, exports) {
             'use strict';
+            var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
+                if (k2 === undefined)
+                    k2 = k;
+                Object.defineProperty(o, k2, {
+                    enumerable: true,
+                    get: function () {
+                        return m[k];
+                    }
+                });
+            } : function (o, m, k, k2) {
+                if (k2 === undefined)
+                    k2 = k;
+                o[k2] = m[k];
+            });
+            var __setModuleDefault = this && this.__setModuleDefault || (Object.create ? function (o, v) {
+                Object.defineProperty(o, 'default', {
+                    enumerable: true,
+                    value: v
+                });
+            } : function (o, v) {
+                o['default'] = v;
+            });
+            var __importStar = this && this.__importStar || function (mod) {
+                if (mod && mod.__esModule)
+                    return mod;
+                var result = {};
+                if (mod != null)
+                    for (var k in mod)
+                        if (Object.hasOwnProperty.call(mod, k))
+                            __createBinding(result, mod, k);
+                __setModuleDefault(result, mod);
+                return result;
+            };
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.Nothing = exports.Just = exports.Maybe = void 0;
-            const Monad = _dereq_('./maybe.impl');
+            const Monad = __importStar(_dereq_('./maybe.impl'));
             class Maybe extends Monad.Maybe {
                 constructor() {
                     super(() => void 0);
@@ -1331,9 +1397,9 @@ require = function () {
                     this.subscribers = [];
                 }
             }
-            let id = 0;
             class Observation {
                 constructor(opts = {}) {
+                    this.id = 0;
                     this.node = new ListenerNode(global_1.undefined, global_1.undefined);
                     this.settings = {
                         limit: 10,
@@ -1350,10 +1416,10 @@ require = function () {
                     const {monitors} = this.seekNode(namespace, 0);
                     if (monitors.length === this.settings.limit)
                         throw new global_1.Error(`Spica: Observation: Exceeded max listener limit.`);
-                    if (id === global_1.Number.MAX_SAFE_INTEGER)
+                    if (this.id === global_1.Number.MAX_SAFE_INTEGER)
                         throw new global_1.Error(`Spica: Observation: Max listener ID reached max safe integer.`);
                     const item = {
-                        id: ++id,
+                        id: ++this.id,
                         type: 0,
                         namespace,
                         listener: monitor,
@@ -1370,10 +1436,10 @@ require = function () {
                     const {subscribers} = this.seekNode(namespace, 0);
                     if (subscribers.length === this.settings.limit)
                         throw new global_1.Error(`Spica: Observation: Exceeded max listener limit.`);
-                    if (id === global_1.Number.MAX_SAFE_INTEGER)
+                    if (this.id === global_1.Number.MAX_SAFE_INTEGER)
                         throw new global_1.Error(`Spica: Observation: Max listener ID reached max safe integer.`);
                     const item = {
-                        id: ++id,
+                        id: ++this.id,
                         type: 1,
                         namespace,
                         listener: subscriber,
@@ -1552,73 +1618,19 @@ require = function () {
             'use strict';
             var _a;
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.isPromiseLike = exports.AtomicPromise = void 0;
+            exports.isPromiseLike = exports.Internal = exports.AtomicPromise = void 0;
             const global_1 = _dereq_('./global');
             const alias_1 = _dereq_('./alias');
             const array_1 = _dereq_('./array');
-            class Internal {
-                constructor() {
-                    this.status = { state: 0 };
-                    this.reactable = true;
-                    this.fulfillReactions = [];
-                    this.rejectReactions = [];
-                    this.isHandled = false;
-                }
-            }
             const internal = Symbol.for('spica/promise::internal');
             class AtomicPromise {
                 constructor(executor) {
                     this[Symbol.toStringTag] = 'Promise';
                     this[_a] = new Internal();
-                    const intl = internal;
                     try {
-                        const internal = this[intl];
-                        executor(value => {
-                            if (internal.status.state !== 0)
-                                return;
-                            if (!isPromiseLike(value)) {
-                                internal.status = {
-                                    state: 2,
-                                    result: value
-                                };
-                                resume(internal);
-                            } else {
-                                internal.status = {
-                                    state: 1,
-                                    result: value
-                                };
-                                value.then(value => {
-                                    internal.status = {
-                                        state: 2,
-                                        result: value
-                                    };
-                                    resume(internal);
-                                }, reason => {
-                                    internal.status = {
-                                        state: 3,
-                                        result: reason
-                                    };
-                                    resume(internal);
-                                });
-                            }
-                        }, reason => {
-                            if (internal.status.state !== 0)
-                                return;
-                            internal.status = {
-                                state: 3,
-                                result: reason
-                            };
-                            resume(internal);
-                        });
+                        executor(value => this[internal].resolve(value), reason => this[internal].reject(reason));
                     } catch (reason) {
-                        const internal = this[intl];
-                        if (internal.status.state !== 0)
-                            return;
-                        internal.status = {
-                            state: 3,
-                            result: reason
-                        };
-                        resume(internal);
+                        this[internal].reject(reason);
                     }
                 }
                 static get [Symbol.species]() {
@@ -1626,7 +1638,7 @@ require = function () {
                 }
                 static all(vs) {
                     return new AtomicPromise((resolve, reject) => {
-                        const values = alias_1.isArray(vs) ? vs.slice() : [...vs];
+                        const values = alias_1.isArray(vs) ? vs : [...vs];
                         const results = global_1.Array(values.length);
                         let count = 0;
                         for (let i = 0; i < values.length; ++i) {
@@ -1634,38 +1646,63 @@ require = function () {
                             if (!isPromiseLike(value)) {
                                 results[i] = value;
                                 ++count;
-                            } else {
-                                value.then(value => {
-                                    results[i] = value;
-                                    ++count;
-                                    count === values.length && resolve(results);
-                                }, reason => {
-                                    i = values.length;
-                                    reject(reason);
-                                });
+                                continue;
                             }
+                            if (isAtomicPromiseLike(value)) {
+                                const {status} = value[internal];
+                                switch (status.state) {
+                                case 2:
+                                    results[i] = status.result;
+                                    ++count;
+                                    continue;
+                                case 3:
+                                    reject(status.result);
+                                    i = values.length;
+                                    continue;
+                                }
+                            }
+                            value.then(value => {
+                                results[i] = value;
+                                ++count;
+                                count === values.length && resolve(results);
+                            }, reason => {
+                                reject(reason);
+                                i = values.length;
+                            });
                         }
                         count === values.length && resolve(results);
                     });
                 }
-                static race(values) {
+                static race(vs) {
                     return new AtomicPromise((resolve, reject) => {
-                        let done = false;
-                        for (const value of values) {
+                        const values = alias_1.isArray(vs) ? vs : [...vs];
+                        for (let i = 0; i < values.length; ++i) {
+                            const value = values[i];
                             if (!isPromiseLike(value)) {
-                                done = true;
-                                resolve(value);
-                            } else {
-                                value.then(value => {
-                                    done = true;
-                                    resolve(value);
-                                }, reason => {
-                                    done = true;
-                                    reject(reason);
-                                });
+                                return resolve(value);
                             }
+                            if (isAtomicPromiseLike(value)) {
+                                const {status} = value[internal];
+                                switch (status.state) {
+                                case 2:
+                                    return resolve(status.result);
+                                case 3:
+                                    return reject(status.result);
+                                }
+                            }
+                        }
+                        let done = false;
+                        for (let i = 0; i < values.length; ++i) {
+                            const value = values[i];
+                            value.then(value => {
+                                resolve(value);
+                                done = true;
+                            }, reason => {
+                                reject(reason);
+                                done = true;
+                            });
                             if (done)
-                                break;
+                                return;
                         }
                     });
                 }
@@ -1676,32 +1713,7 @@ require = function () {
                     return new AtomicPromise((_, reject) => reject(reason));
                 }
                 then(onfulfilled, onrejected) {
-                    return new AtomicPromise((resolve, reject) => {
-                        const {status, fulfillReactions, rejectReactions} = this[internal];
-                        if (status.state !== 3) {
-                            fulfillReactions.push(value => {
-                                if (!onfulfilled)
-                                    return resolve(value);
-                                try {
-                                    resolve(onfulfilled(value));
-                                } catch (reason) {
-                                    reject(reason);
-                                }
-                            });
-                        }
-                        if (status.state !== 2) {
-                            rejectReactions.push(reason => {
-                                if (!onrejected)
-                                    return reject(reason);
-                                try {
-                                    resolve(onrejected(reason));
-                                } catch (reason) {
-                                    reject(reason);
-                                }
-                            });
-                        }
-                        resume(this[internal]);
-                    });
+                    return new AtomicPromise((resolve, reject) => this[internal].then(onfulfilled, onrejected, resolve, reject));
                 }
                 catch(onrejected) {
                     return this.then(global_1.undefined, onrejected);
@@ -1712,53 +1724,144 @@ require = function () {
             }
             exports.AtomicPromise = AtomicPromise;
             _a = internal;
+            class Internal {
+                constructor() {
+                    this.status = { state: 0 };
+                    this.reactable = true;
+                    this.fulfillReactions = [];
+                    this.rejectReactions = [];
+                    this.isHandled = false;
+                }
+                get isPending() {
+                    return this.status.state === 0;
+                }
+                resolve(value) {
+                    if (this.status.state !== 0)
+                        return;
+                    if (!isPromiseLike(value)) {
+                        this.status = {
+                            state: 2,
+                            result: value
+                        };
+                        return this.resume();
+                    }
+                    this.status = {
+                        state: 1,
+                        result: value
+                    };
+                    return void value.then(value => {
+                        this.status = {
+                            state: 2,
+                            result: value
+                        };
+                        this.resume();
+                    }, reason => {
+                        this.status = {
+                            state: 3,
+                            result: reason
+                        };
+                        this.resume();
+                    });
+                }
+                reject(reason) {
+                    if (this.status.state !== 0)
+                        return;
+                    this.status = {
+                        state: 3,
+                        result: reason
+                    };
+                    return this.resume();
+                }
+                then(onfulfilled, onrejected, resolve, reject) {
+                    const {status, fulfillReactions, rejectReactions} = this;
+                    switch (status.state) {
+                    case 2:
+                        if (fulfillReactions.length > 0)
+                            break;
+                        try {
+                            return onfulfilled ? resolve(onfulfilled(status.result)) : resolve(status.result);
+                        } catch (reason) {
+                            return reject(reason);
+                        }
+                    case 3:
+                        if (rejectReactions.length > 0)
+                            break;
+                        try {
+                            return onrejected ? resolve(onrejected(status.result)) : reject(status.result);
+                        } catch (reason) {
+                            return reject(reason);
+                        }
+                    }
+                    if (status.state !== 3) {
+                        fulfillReactions.push(value => {
+                            try {
+                                onfulfilled ? resolve(onfulfilled(value)) : resolve(value);
+                            } catch (reason) {
+                                reject(reason);
+                            }
+                        });
+                    }
+                    if (status.state !== 2) {
+                        rejectReactions.push(reason => {
+                            try {
+                                onrejected ? resolve(onrejected(reason)) : reject(reason);
+                            } catch (reason) {
+                                reject(reason);
+                            }
+                        });
+                    }
+                    this.resume();
+                }
+                resume() {
+                    if (!this.reactable)
+                        return;
+                    const {status, fulfillReactions, rejectReactions} = this;
+                    switch (status.state) {
+                    case 0:
+                    case 1:
+                        return;
+                    case 2:
+                        if (this.isHandled && rejectReactions.length > 0) {
+                            array_1.splice(rejectReactions, 0);
+                        }
+                        if (fulfillReactions.length === 0)
+                            return;
+                        this.isHandled = true;
+                        this.react(fulfillReactions, status.result);
+                        return;
+                    case 3:
+                        if (this.isHandled && fulfillReactions.length > 0) {
+                            array_1.splice(fulfillReactions, 0);
+                        }
+                        if (rejectReactions.length === 0)
+                            return;
+                        this.isHandled = true;
+                        this.react(rejectReactions, status.result);
+                        return;
+                    }
+                }
+                react(reactions, result) {
+                    this.reactable = false;
+                    if (reactions.length < 5) {
+                        while (reactions.length > 0) {
+                            reactions.shift()(result);
+                        }
+                    } else {
+                        for (let i = 0; i < reactions.length; ++i) {
+                            reactions[i](result);
+                        }
+                        array_1.splice(reactions, 0);
+                    }
+                    this.reactable = true;
+                }
+            }
+            exports.Internal = Internal;
             function isPromiseLike(value) {
                 return value !== null && typeof value === 'object' && 'then' in value && typeof value.then === 'function';
             }
             exports.isPromiseLike = isPromiseLike;
-            function resume(internal) {
-                if (!internal.reactable)
-                    return;
-                const {status, fulfillReactions, rejectReactions} = internal;
-                switch (status.state) {
-                case 0:
-                case 1:
-                    return;
-                case 2:
-                    if (!internal.isHandled && rejectReactions.length > 0) {
-                        array_1.splice(rejectReactions, 0);
-                    }
-                    if (fulfillReactions.length === 0)
-                        return;
-                    internal.isHandled = true;
-                    internal.reactable = false;
-                    react(fulfillReactions, status.result);
-                    internal.reactable = true;
-                    return;
-                case 3:
-                    if (!internal.isHandled && fulfillReactions.length > 0) {
-                        array_1.splice(fulfillReactions, 0);
-                    }
-                    if (rejectReactions.length === 0)
-                        return;
-                    internal.isHandled = true;
-                    internal.reactable = false;
-                    react(rejectReactions, status.result);
-                    internal.reactable = true;
-                    return;
-                }
-            }
-            function react(reactions, result) {
-                if (reactions.length < 5) {
-                    while (reactions.length > 0) {
-                        reactions.shift()(result);
-                    }
-                } else {
-                    for (let i = 0; i < reactions.length; ++i) {
-                        reactions[i](result);
-                    }
-                    array_1.splice(reactions, 0);
-                }
+            function isAtomicPromiseLike(value) {
+                return internal in value;
             }
         },
         {
