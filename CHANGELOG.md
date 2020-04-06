@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.27.4
+
+- Enable esModuleInterop option.
+
 ## 0.27.3
 
 - Update dependencies.
