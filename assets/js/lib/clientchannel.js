@@ -1,4 +1,4 @@
-/*! clientchannel v0.27.5 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.27.6 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -3931,6 +3931,12 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             var storage_1 = _dereq_('./module/storage');
+            Object.defineProperty(exports, 'isStorageAvailable', {
+                enumerable: true,
+                get: function () {
+                    return storage_1.isStorageAvailable;
+                }
+            });
             Object.defineProperty(exports, 'verifyStorageAccess', {
                 enumerable: true,
                 get: function () {
@@ -3944,8 +3950,9 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.verifyStorageAccess = void 0;
+            exports.verifyStorageAccess = exports.isStorageAvailable = void 0;
             const uuid_1 = _dereq_('spica/uuid');
+            exports.isStorageAvailable = verifyStorageAccess();
             function verifyStorageAccess() {
                 try {
                     if (!self.navigator.cookieEnabled)
@@ -3955,9 +3962,9 @@ require = function () {
                     if (key !== self.sessionStorage.getItem(key))
                         throw void 0;
                     void self.sessionStorage.removeItem(key);
-                    return true;
+                    return exports.isStorageAvailable = true;
                 } catch (_a) {
-                    return false;
+                    return exports.isStorageAvailable = false;
                 }
             }
             exports.verifyStorageAccess = verifyStorageAccess;
@@ -4034,7 +4041,7 @@ require = function () {
             const state_1 = _dereq_('./state');
             const transition_1 = _dereq_('./transition');
             const event_1 = _dereq_('./event');
-            const api_1 = _dereq_('../../webstorage/api');
+            const api_1 = _dereq_('../../environment/api');
             function open(database, config) {
                 void operate(database, 'open', config);
                 return (success, failure) => void request(database, success, failure);
@@ -4082,7 +4089,7 @@ require = function () {
                 }
                 void state_1.commands.set(database, command);
                 void state_1.configs.set(database, config);
-                if (!api_1.localStorage)
+                if (!state_1.isIDBAvailable || !api_1.isStorageAvailable)
                     return;
                 if (state_1.states.has(database)) {
                     return void request(database, () => void 0);
@@ -4091,7 +4098,7 @@ require = function () {
                 }
             }
             function request(database, success, failure = () => void 0) {
-                if (!api_1.localStorage)
+                if (!state_1.isIDBAvailable || !api_1.isStorageAvailable)
                     return void failure();
                 if (!state_1.requests.has(database))
                     return void failure();
@@ -4100,7 +4107,7 @@ require = function () {
             }
         },
         {
-            '../../webstorage/api': 60,
+            '../../environment/api': 52,
             './event': 56,
             './state': 57,
             './transition': 58
@@ -4129,7 +4136,8 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.EndState = exports.DestroyState = exports.CrashState = exports.AbortState = exports.ErrorState = exports.SuccessState = exports.UpgradeState = exports.BlockState = exports.InitialState = exports.states = exports.requests = exports.configs = exports.commands = void 0;
+            exports.EndState = exports.DestroyState = exports.CrashState = exports.AbortState = exports.ErrorState = exports.SuccessState = exports.UpgradeState = exports.BlockState = exports.InitialState = exports.states = exports.requests = exports.configs = exports.commands = exports.isIDBAvailable = void 0;
+            exports.isIDBAvailable = true;
             exports.commands = new Map();
             exports.configs = new Map();
             exports.requests = new Map();
@@ -4237,6 +4245,7 @@ require = function () {
                     super(state.database, state);
                     this.connection = connection;
                     this.STATE;
+                    exports.isIDBAvailable = true;
                 }
             }
             exports.SuccessState = SuccessState;
@@ -4246,6 +4255,9 @@ require = function () {
                     this.error = error;
                     this.event = event;
                     this.STATE;
+                    if (state instanceof InitialState && error.message === 'A mutation operation was attempted on a database that did not allow mutations.') {
+                        exports.isIDBAvailable = false;
+                    }
                 }
             }
             exports.ErrorState = ErrorState;
@@ -4464,7 +4476,7 @@ require = function () {
             function handleFromDestroyState(state) {
                 if (!state.alive)
                     return;
-                if (!api_1.verifyStorageAccess())
+                if (!state_1.isIDBAvailable || !api_1.verifyStorageAccess())
                     return void handleFromEndState(new state_1.EndState(state));
                 const {database} = state;
                 const deleteRequest = global_1.indexedDB.deleteDatabase(database);
@@ -4483,7 +4495,7 @@ require = function () {
                     database,
                     'disconnect'
                 ], new event_1.IDBEvent(database, 'disconnect'));
-                if (!api_1.verifyStorageAccess())
+                if (!state_1.isIDBAvailable || !api_1.verifyStorageAccess())
                     return;
                 switch (state.command) {
                 case 'open':
@@ -4585,9 +4597,8 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.sessionStorage = exports.localStorage = void 0;
             const api_1 = _dereq_('../../environment/api');
-            const storable = api_1.verifyStorageAccess();
-            exports.localStorage = storable ? self.localStorage : void 0;
-            exports.sessionStorage = storable ? self.sessionStorage : void 0;
+            exports.localStorage = api_1.isStorageAvailable ? self.localStorage : void 0;
+            exports.sessionStorage = api_1.isStorageAvailable ? self.sessionStorage : void 0;
         },
         { '../../environment/api': 52 }
     ],
