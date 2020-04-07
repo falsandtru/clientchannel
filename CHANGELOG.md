@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.28.0
+
+- Update compile target to ES2018.
+
 ## 0.27.6
 
 - Fix error handling in Firefox's private mode.
