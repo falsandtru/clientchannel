@@ -1,3 +1,4 @@
+import { Math, setTimeout } from 'spica/global';
 import { Channel, ChannelMessage } from '../broadcast/channel';
 import { AtomicPromise } from 'spica/promise';
 

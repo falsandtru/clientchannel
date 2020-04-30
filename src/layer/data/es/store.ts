@@ -1,3 +1,4 @@
+import { Math } from 'spica/global';
 import { Observation } from 'spica/observation';
 import { Cancellation } from 'spica/cancellation';
 import { tick } from 'spica/clock';

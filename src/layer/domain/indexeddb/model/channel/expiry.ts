@@ -1,3 +1,4 @@
+import { Math, setTimeout } from 'spica/global';
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
 import { ChannelStore } from '../channel';

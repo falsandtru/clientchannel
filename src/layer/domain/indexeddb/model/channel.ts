@@ -1,3 +1,4 @@
+import { setTimeout } from 'spica/global';
 import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../';
 import { Observation } from 'spica/observation';
 import { Cancellation } from 'spica/cancellation';
