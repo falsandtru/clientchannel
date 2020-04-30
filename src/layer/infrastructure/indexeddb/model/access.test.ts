@@ -104,8 +104,7 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
       destroy('test');
     });
 
-    it.skip('concurrent', done => {
-      // call in random order on IE
+    it('concurrent', done => {
       let cnt = 0;
       open('test', config)(db => {
         db.transaction('test', 'readwrite').objectStore('test').count().onsuccess = () => {
