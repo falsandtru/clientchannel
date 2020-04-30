@@ -37,7 +37,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     private readonly size: number,
     private readonly debug: boolean = false,
   ) {
-    if (cache.has(name)) throw new Error(`ClientChannel: Specified database channel "${name}" is already open.`);
+    if (cache.has(name)) throw new Error(`ClientChannel: Store channel "${name}" is already open.`);
     void cache.add(name);
     void this.cancellation.register(() =>
       void cache.delete(name));

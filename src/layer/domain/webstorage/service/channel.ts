@@ -14,7 +14,7 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
     factory: () => V,
     migrate: (link: V) => void = () => void 0,
   ) {
-    if (cache.has(name)) throw new Error(`ClientChannel: Specified storage channel "${name}" is already open.`);
+    if (cache.has(name)) throw new Error(`ClientChannel: Storage channel "${name}" is already open.`);
     void cache.add(name);
     void this.cancellation.register(() =>
       void cache.delete(name));
