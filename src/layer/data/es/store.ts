@@ -453,7 +453,9 @@ interface MetaData<K extends string> {
 export function record<K extends string, V extends EventRecordValue>(event: UnstoredEventRecord<K, V>): Omit<typeof event, 'id'> {
   const record = { ...event };
   assert(record.id === 0);
+  // @ts-expect-error
   delete record.id;
+
   return record;
 }
 

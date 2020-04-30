@@ -41,6 +41,7 @@ describe('Unit: layers/domain/dao/module/build', () => {
       const dao = build(source, factory);
 
       try {
+        // @ts-expect-error
         delete dao.n;
         throw 0;
       }
