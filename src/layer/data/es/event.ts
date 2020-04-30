@@ -72,7 +72,7 @@ export class UnstoredEventRecord<K extends string, V extends EventRecordValue> e
   ) {
     super(makeEventId(0), type, key, value, date);
     this.EVENT_RECORD;
-    // must not have id property
+    // Must not have id property.
     if (this.id !== 0) throw new TypeError(`ClientChannel: UnstoredEventRecord: Invalid event id: ${this.id}`);
   }
 }

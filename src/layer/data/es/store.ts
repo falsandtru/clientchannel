@@ -64,7 +64,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       }
     }();
 
-    // dispatch events
+    // Dispatch events.
     void this.events_.memory
       .monitor([], event => {
         if (event.date <= states.dates.get(event.key)! && event.id <= states.ids.get(event.key)!) return;
@@ -78,7 +78,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         }
         return;
       });
-    // update states
+    // Update states.
     void this.events_.memory
       .monitor([], event =>
         void states.update(new EventStore.Event<K, V>(event.type, event.id, event.key, event.attr, event.date)));
@@ -88,7 +88,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     void this.events.save
       .monitor([], event =>
         void states.update(event));
-    // clean events
+    // Clean events.
     void this.events.save
       .monitor([], event => {
         switch (event.type) {
@@ -142,10 +142,10 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       const proc = (cursor: IDBCursorWithValue | null, error: DOMException | Error | null): void => {
         if (error) return;
         if (!cursor || new LoadedEventRecord<K, V>(cursor.value).date < this.meta(key).date) {
-          // register latest events
+          // Register latest events.
           void [
             ...events
-              // remove overridable event
+              // Remove overridable events.
               .reduceRight<LoadedEventRecord<K, V>[]>((es, e) =>
                 es.length === 0 || es[0].type === EventStore.EventType.put
                   ? concat(es, [e])
@@ -331,7 +331,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           if (composedEvent instanceof StoredEventRecord) return;
           switch (composedEvent.type) {
             case EventStore.EventType.snapshot:
-              // snapshot's date must not be later than unsaved event's date.
+              // Snapshot's date must not be later than unsaved event's date.
               return void this.add(
                 new UnstoredEventRecord(
                   composedEvent.key,
@@ -459,7 +459,7 @@ export function record<K extends string, V extends EventRecordValue>(event: Unst
   return record;
 }
 
-// input order must be asc
+// Input order must be asc.
 export function compose<K extends string, V extends EventStore.Value>(
   key: K,
   attrs: string[],
