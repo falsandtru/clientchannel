@@ -44,7 +44,7 @@ export class AccessStore<K extends string> {
     void Object.freeze(this);
   }
   private store = new class extends KeyValueStore<K, AccessRecord<K>> { }(name, AccessStoreSchema.key, this.listen);
-  public recent(limit: number, cb: (keys: K[], error?: DOMException | Error | null) => void): void {
+  public recent(limit: number, cb: (keys: K[], error: DOMException | Error | null) => void): void {
     const keys: K[] = [];
     return void this.store.cursor(
       null,
@@ -52,8 +52,7 @@ export class AccessStore<K extends string> {
       'prev',
       'readonly',
       (cursor, error): void => {
-        if (error) return void cb([], error);
-        if (!cursor) return void cb(keys);
+        if (error || !cursor) return void cb(keys, error);
         if (--limit < 0) return;
         const { key }: AccessRecord<K> = cursor.value;
         void keys.push(key);

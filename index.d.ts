@@ -19,7 +19,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
   sync(keys: K[], cb?: (results: AtomicPromise<K>[]) => void): void;
   link(key: K, age?: number): V;
   delete(key: K): void;
-  recent(limit: number, cb: (keys: K[], err?: DOMException | Error | null) => void): void;
+  recent(limit: number, cb: (keys: K[], error: DOMException | Error | null) => void): void;
   close(): void;
   destroy(): void;
 }

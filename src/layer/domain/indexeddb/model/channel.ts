@@ -203,7 +203,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     void this.ages.set(key, age);
     return void this.schema.expire.set(key, age);
   }
-  public recent(limit: number, cb: (keys: K[], error: DOMException | null) => void): void {
+  public recent(limit: number, cb: (keys: K[], error: DOMException | Error | null) => void): void {
     return this.schema.access.recent(limit, cb);
   }
   public close(): void {
