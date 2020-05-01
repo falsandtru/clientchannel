@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.29.0
+
+- Add Ownership.release method.
+
 ## 0.28.0
 
 - Update compile target to ES2018.

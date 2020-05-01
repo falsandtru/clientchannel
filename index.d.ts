@@ -94,5 +94,6 @@ export class Ownership<K extends string> {
   take(key: K, age: number): boolean;
   take(key: K, age: number, wait: number): AtomicPromise<void>;
   extend(key: K, age: number): boolean;
+  release(key: K): void;
   close(): void;
 }
