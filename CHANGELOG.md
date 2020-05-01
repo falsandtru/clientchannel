@@ -4,6 +4,7 @@
 
 - Add Ownership.release method.
 - Change Ownership.take method to return `Promise<boolean>` type.
+- Change StoreChannel.sync method to return `Promise<PromiseSettledResult<K>[]>` type.
 
 ## 0.28.0
 

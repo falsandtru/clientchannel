@@ -1,8 +1,8 @@
-import { setTimeout } from 'spica/global';
+import { Infinity, Promise, setTimeout } from 'spica/global';
 import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../';
 import { Observation } from 'spica/observation';
 import { Cancellation } from 'spica/cancellation';
-import { AtomicPromise } from 'spica/promise';
+import { AtomicPromise, PromiseSettledResult } from 'spica/promise';
 import { Cache } from 'spica/cache';
 import { noop } from 'spica/noop';
 import { open, Listen, close, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
@@ -145,24 +145,17 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     save: new Observation<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
     loss: new Observation<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
   });
-  public sync(keys: K[], cb: (results: AtomicPromise<K>[]) => void = noop, timeout = Infinity): void {
+  public sync(keys: K[], timeout = Infinity): Promise<PromiseSettledResult<K>[]> {
     const cancellation = new Cancellation();
-    if (Number.isFinite(timeout)) {
-      void setTimeout(cancellation.cancel, timeout);
-    }
-    return void AtomicPromise.all(keys.map(key =>
-      new AtomicPromise<[K, Error | null]>(resolve =>
-        void this.fetch(
-          key,
-          error =>
-            void resolve([key, error]),
-          cancellation))))
-      .then(rs =>
-        rs.map(([key, error]) =>
-          error
-            ? AtomicPromise.reject(error)
-            : AtomicPromise.resolve(key)))
-      .then(cb);
+    Number.isFinite(timeout) && void setTimeout(cancellation.cancel, timeout);
+    return AtomicPromise.allSettled(
+      keys.map(key =>
+        new Promise<K>((resolve, reject) =>
+          void this.fetch(key, error =>
+            error
+              ? void reject(error)
+              : void resolve(key),
+            cancellation))));
   }
   public fetch(key: K, cb: (error: DOMException | Error | null) => void = noop, cancellation = new Cancellation()): void {
     void this.schema.access.fetch(key);

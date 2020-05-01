@@ -59,8 +59,11 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       listen_('test', db => {
         db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { n: 1 })));
         db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { s: '1' }))).onsuccess = () => {
-          chan.sync(['a', 'z'], async results => {
-            assert.deepStrictEqual(await Promise.all(results), ['a', 'z']);
+          chan.sync(['a', 'z'], 1000).then(results => {
+            assert.deepStrictEqual(results, [
+              { status: 'fulfilled', value: 'a' },
+              { status: 'fulfilled', value: 'z' },
+            ]);
             const link = chan.link('a');
             assert(link[Schema.id] === 2);
             assert(link[Schema.key] === 'a');
@@ -69,7 +72,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
             assert(link.s === '1');
             chan.destroy();
             done();
-          }, 1000);
+          });
         };
       });
     });

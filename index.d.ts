@@ -1,5 +1,5 @@
 import { Observer } from 'spica/observation';
-import { AtomicPromise } from 'spica/promise';
+import { PromiseSettledResult } from 'spica/promise';
 
 export namespace ChannelObject {
   export const meta: unique symbol;
@@ -16,7 +16,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
     readonly save: Observer<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, StoreChannelEventType], StoreChannelEvent<K, V>, void>;
     readonly loss: Observer<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, StoreChannelEventType], StoreChannelEvent<K, V>, void>;
   };
-  sync(keys: K[], cb?: (results: AtomicPromise<K>[]) => void): void;
+  sync(keys: K[], timeout?: number): Promise<PromiseSettledResult<K>[]>;
   link(key: K, age?: number): V;
   delete(key: K): void;
   recent(limit: number, cb: (keys: K[], error: DOMException | Error | null) => void): void;
