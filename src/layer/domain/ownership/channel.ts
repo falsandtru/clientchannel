@@ -1,6 +1,5 @@
-import { Math, setTimeout } from 'spica/global';
+import { Promise, Math, setTimeout } from 'spica/global';
 import { Channel, ChannelMessage } from '../broadcast/channel';
-import { AtomicPromise } from 'spica/promise';
 import { Cancellation } from 'spica/cancellation';
 
 declare global {
@@ -94,8 +93,8 @@ export class Ownership<K extends string> {
         || Ownership.genPriority(0) > Math.abs(priority);
   }
   public take(key: K, age: number): boolean
-  public take(key: K, age: number, wait: number): AtomicPromise<void>
-  public take(key: K, age: number, wait?: number): boolean | AtomicPromise<void> {
+  public take(key: K, age: number, wait: number): Promise<boolean>
+  public take(key: K, age: number, wait?: number): boolean | Promise<boolean> {
     if (!this.alive) throw new Error(`ClientChannel: Ownership channel "${this.channel.name}" is already closed.`);
     if (!this.isTakable(key)) return false;
     assert(0 <= age && age < 60 * 1000);
@@ -109,11 +108,7 @@ export class Ownership<K extends string> {
     assert(this.getPriority(key) > 0);
     return wait === void 0
       ? this.has(key)
-      : new AtomicPromise(resolve => setTimeout(resolve, wait))
-          .then(() =>
-            this.extend(key, age)
-              ? AtomicPromise.resolve()
-              : AtomicPromise.reject());
+      : new Promise(resolve => void setTimeout(() => void resolve(this.extend(key, age)), wait));
   }
   public extend(key: K, age: number): boolean {
     if (!this.alive) throw new Error(`ClientChannel: Ownership channel "${this.channel.name}" is already closed.`);

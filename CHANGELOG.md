@@ -3,6 +3,7 @@
 ## 0.29.0
 
 - Add Ownership.release method.
+- Change Ownership.take method to return `Promise<boolean>` type.
 
 ## 0.28.0
 
