@@ -55,10 +55,10 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
         ? tx
             .objectStore(this.name)
             .index(this.index)
-            .get(key)
+            .getKey(key)
         : tx
             .objectStore(this.name)
-            .get(key);
+            .getKey(key);
       void req.addEventListener('success', () =>
         void cb(req.error));
       void tx.addEventListener('complete', () =>
