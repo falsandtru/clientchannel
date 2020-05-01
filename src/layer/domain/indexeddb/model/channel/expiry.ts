@@ -64,6 +64,7 @@ export class ExpiryStore<K extends string> {
       scheduled = Date.now() + timeout;
       void clearTimeout(timer);
       timer = setTimeout(() => {
+        if (this.cancellation.canceled) return;
         if (running) return;
         scheduled = Infinity;
         if (!this.ownership.take('store', wait)) return this.schedule(wait *= 2);
