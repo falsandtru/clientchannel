@@ -6,16 +6,16 @@ describe('Integration: Package', function () {
       interface Value extends StoreChannelObject<string> {
       }
       class Value {
-        // Getter/setter will be excluded in schema.
+        // Getter and setter names will be excluded from schema.
         get key() {
           return this[ChannelObject.key];
         }
-        // Property names that has underscore prefix or postfix will be excluded in schema.
+        // Properties having an invalid name will be excluded from schema.
         private _separator = ' ';
-        // Basic property names will be included in schema.
+        // Only properties having a valid name and a storable value consist schema.
         firstName = '';
         lastName = '';
-        // Invalid value types will be excluded in schema.
+        // Properties having an invalid value will be excluded from schema.
         name() {
           return this.firstName + this._separator + this.lastName;
         }
@@ -23,12 +23,12 @@ describe('Integration: Package', function () {
 
       const chan = new StoreChannel('domain', {
         schema: () => new Value(),
-        // Delete linked records 3 days later since last access.
+        // Delete records of update events of a linked object 3 days later since the last access.
         age: 3 * 24 * 60 * 60 * 1e3,
       });
-      // Load data from indexeddb a little later.
+      // Load data from IndexedDB with little delay.
       const link = chan.link('path');
-      // Save data to indexeddb, and sync data between all tabs.
+      // Save data to IndexedDB, and sync data between all tabs.
       link.firstName = 'john';
       link.lastName = 'smith';
       chan.destroy();
@@ -50,12 +50,13 @@ describe('Integration: Package', function () {
       const link = chan.link();
       const VERSION = 1;
       link.event.on(['recv', 'version'], ({ newValue }) => {
-        if (newValue === VERSION) return;
-        if (newValue > VERSION) {
-          location.reload(true);
-        }
-        else {
-          link.version = VERSION;
+        switch (true) {
+          case newValue === VERSION:
+            return;
+          case newValue > VERSION:
+            return location.reload(true);
+          default:
+            return link.version = VERSION;
         }
       });
       link.version = VERSION;

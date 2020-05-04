@@ -70,7 +70,7 @@ Linked objects provede send/recv events.
 `recv` event will be emitted when a linked object was updated by another thread(tab).
 
 ```ts
-import { StorageChannel, StorageChannelObject } from 'clientchannel';
+import { StorageChannel, StorageChannelObject, ChannelObject } from 'clientchannel';
 
 interface Value extends StorageChannelObject {
 }
@@ -87,12 +87,13 @@ const chan = new StorageChannel('version', {
 const link = chan.link();
 const VERSION = 1;
 link.event.on(['recv', 'version'], ({ newValue }) => {
-  if (newValue === VERSION) return;
-  if (newValue > VERSION) {
-    location.reload(true);
-  }
-  else {
-    link.version = VERSION;
+  switch (true) {
+    case newValue === VERSION:
+      return;
+    case newValue > VERSION:
+      return location.reload(true);
+    default:
+      return link.version = VERSION;
   }
 });
 link.version = VERSION;
