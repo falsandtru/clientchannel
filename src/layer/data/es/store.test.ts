@@ -358,47 +358,47 @@ describe('Unit: layers/data/es/store', function () {
         .then(() =>
           new Promise(resolve => {
             es.add(new UnstoredEventRecord('a', new Value(1)));
-            es.events.save.once(['a', 'value', 'put'], () => resolve());
+            es.events.save.once(['a', 'value', 'put'], () => resolve(undefined));
           }))
         .then(() =>
           new Promise(resolve => {
             es.add(new UnstoredEventRecord('a', new Value(2)));
-            es.events.save.once(['a', 'value', 'put'], () => resolve());
+            es.events.save.once(['a', 'value', 'put'], () => resolve(undefined));
           }))
         .then(() =>
           new Promise(resolve => {
             es.add(new UnstoredEventRecord('a', new Value(3)));
-            es.events.save.once(['a', 'value', 'put'], () => resolve());
+            es.events.save.once(['a', 'value', 'put'], () => resolve(undefined));
           }))
         .then(() =>
           new Promise(resolve => {
             es.add(new UnstoredEventRecord('a', new Value(4)));
-            es.events.save.once(['a', 'value', 'put'], () => resolve());
+            es.events.save.once(['a', 'value', 'put'], () => resolve(undefined));
           }))
         .then(() =>
           new Promise(resolve => {
             es.add(new UnstoredEventRecord('a', new Value(5)));
-            es.events.save.once(['a', 'value', 'put'], () => resolve());
+            es.events.save.once(['a', 'value', 'put'], () => resolve(undefined));
           }))
         .then(() =>
           new Promise(resolve => {
             es.add(new UnstoredEventRecord('a', new Value(6)));
-            es.events.save.once(['a', 'value', 'put'], () => resolve());
+            es.events.save.once(['a', 'value', 'put'], () => resolve(undefined));
           }))
         .then(() =>
           new Promise(resolve => {
             es.add(new UnstoredEventRecord('a', new Value(7)));
-            es.events.save.once(['a', 'value', 'put'], () => resolve());
+            es.events.save.once(['a', 'value', 'put'], () => resolve(undefined));
           }))
         .then(() =>
           new Promise(resolve => {
             es.add(new UnstoredEventRecord('a', new Value(8)));
-            es.events.save.once(['a', 'value', 'put'], () => resolve());
+            es.events.save.once(['a', 'value', 'put'], () => resolve(undefined));
           }))
         .then(() =>
           new Promise(resolve => {
             es.add(new UnstoredEventRecord('a', new Value(9)));
-            es.events.save.once(['a', 'value', 'put'], () => resolve());
+            es.events.save.once(['a', 'value', 'put'], () => resolve(undefined));
             es.events.save.once(['a', '', 'snapshot'], ev => {
               assert(ev.id === 10);
               assert(ev.key === 'a');
