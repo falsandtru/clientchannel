@@ -1,4 +1,4 @@
-import { Observer } from 'spica/observation';
+import { Observer } from 'spica/observer';
 import { PromiseSettledResult } from 'spica/promise';
 
 export namespace ChannelObject {

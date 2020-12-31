@@ -1,5 +1,5 @@
 import { StoreChannel as IStoreChannel, StoreChannelConfig, StoreChannelObject } from '../../../../../';
-import { Observation, Observer } from 'spica/observation';
+import { Observation, Observer } from 'spica/observer';
 import { throttle } from 'spica/throttle';
 import { Schema, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { ChannelStore } from '../model/channel';

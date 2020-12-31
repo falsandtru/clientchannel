@@ -1,5 +1,5 @@
 import { StorageChannel as IStorageChannel, StorageChannelObject, StorageChannelEvent, StorageChannelEventType } from '../../../../../';
-import { Observation } from 'spica/observation';
+import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
 import { Schema, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { localStorage, sessionStorage, storageEventStream } from '../../../infrastructure/webstorage/api';

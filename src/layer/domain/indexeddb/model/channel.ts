@@ -1,6 +1,6 @@
 import { Infinity, Promise, setTimeout } from 'spica/global';
 import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../';
-import { Observation } from 'spica/observation';
+import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
 import { AtomicPromise, PromiseSettledResult } from 'spica/promise';
 import { Cache } from 'spica/cache';

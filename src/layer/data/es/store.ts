@@ -1,5 +1,5 @@
 import { Math } from 'spica/global';
-import { Observation } from 'spica/observation';
+import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
 import { tick } from 'spica/clock';
 import { sqid } from 'spica/sqid';

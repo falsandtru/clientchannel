@@ -1,4 +1,4 @@
-import { Observation, Observer } from 'spica/observation';
+import { Observation, Observer } from 'spica/observer';
 
 export const idbEventStream_ = new Observation<[string] | [string, IDBEventType], IDBEvent, void>({ limit: Infinity });
 export const idbEventStream: Observer<[string] | [string, IDBEventType], IDBEvent, void> = idbEventStream_;
