@@ -9,9 +9,9 @@ export const storageEventStream: Observer<Type, StorageEvent, void> = storageEve
 void self.addEventListener('storage', event => {
   switch (event.storageArea) {
     case localStorage:
-      return void storageEventStream_.emit(typeof event.key === 'string' ? ['local', event.key] : ['local'], event);
+      return void storageEventStream_.emit(event.key === null ? ['local'] : ['local', event.key], event);
     case sessionStorage:
-      return void storageEventStream_.emit(typeof event.key === 'string' ? ['session', event.key] : ['session'], event);
+      return void storageEventStream_.emit(event.key === null ? ['session'] : ['session', event.key], event);
     default:
       return;
   }
