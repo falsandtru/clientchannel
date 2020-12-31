@@ -136,14 +136,14 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     };
   })(), { ignore: { delete: true } });
   public readonly events_ = Object.freeze({
-    load: new Observation<[K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
-    save: new Observation<[K] | [K, keyof V | ''] | [K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
+    load: new Observation<[K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
+    save: new Observation<[K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
     clean: new Observation<[K], boolean, void>(),
   });
   public readonly events = Object.freeze({
-    load: new Observation<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
-    save: new Observation<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
-    loss: new Observation<[K] | [K, Extract<keyof V | '', string>] | [K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
+    load: new Observation<[K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
+    save: new Observation<[K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
+    loss: new Observation<[K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
   });
   public sync(keys: K[], timeout = Infinity): Promise<PromiseSettledResult<K>[]> {
     const cancellation = new Cancellation();

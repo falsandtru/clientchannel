@@ -21,7 +21,7 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
     const source: V = {
       ...parse<V>(this.storage.getItem(this.name)),
       [Schema.key]: this.name,
-      [Schema.event]: new Observation<[StorageChannelEventType] | [StorageChannelEventType, keyof V], StorageChannel.Event<V>, void>({ limit: Infinity }),
+      [Schema.event]: new Observation<[StorageChannelEventType, keyof V], StorageChannel.Event<V>, void>({ limit: Infinity }),
     };
     this.link_ = build<V>(source, factory, (attr, newValue, oldValue) => {
       void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, attr) => {

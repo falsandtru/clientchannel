@@ -1,7 +1,7 @@
 import { Observation, Observer } from 'spica/observer';
 
-export const idbEventStream_ = new Observation<[string] | [string, IDBEventType], IDBEvent, void>({ limit: Infinity });
-export const idbEventStream: Observer<[string] | [string, IDBEventType], IDBEvent, void> = idbEventStream_;
+export const idbEventStream_ = new Observation<[string, IDBEventType], IDBEvent, void>({ limit: Infinity });
+export const idbEventStream: Observer<[string, IDBEventType], IDBEvent, void> = idbEventStream_;
 
 export const enum IDBEventType {
   connect = 'connect',
