@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.29.1
+
+- Update dependencies.
+
 ## 0.29.0
 
 - Add Ownership.release method.
