@@ -134,11 +134,11 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     void tick(() => this.tx.rw = void 0);
   }
   public fetch(key: K, cb: (error: DOMException | Error | null) => void = noop, cancellation?: Cancellation): void {
-    if (!this.alive) return void cb(new Error('Session is closed.'));
+    if (!this.alive) return void cb(new Error('Session is already closed.'));
     const events: LoadedEventRecord<K, V>[] = [];
     return void this.listen(db => {
-      if (!this.alive) return void cb(new Error('Session is closed.'));
-      if (cancellation?.canceled) return void cb(new Error('Cancelled.'));
+      if (!this.alive) return void cb(new Error('Session is already closed.'));
+      if (cancellation?.canceled) return void cb(new Error('Request is cancelled.'));
       const tx = db.transaction(this.name, 'readonly');
       const req = tx
         .objectStore(this.name)
@@ -206,7 +206,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         void cb(tx.error || req.error)));
       void cancellation?.register(() =>
         events.length === 0 && void tx.abort());
-    }, () => void cb(new Error('Access has failed.')));
+    }, () => void cb(new Error('Request has failed.')));
   }
   public keys(): K[] {
     return this.memory.reflect([])
@@ -407,9 +407,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       });
   }
   public cursor(query: IDBValidKey | IDBKeyRange | null, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMException | Error | null) => void): void {
-    if (!this.alive) return void cb(null, new Error('Session is closed.'));
+    if (!this.alive) return void cb(null, new Error('Session is already closed.'));
     return void this.listen(db => {
-      if (!this.alive) return void cb(null, new Error('Session is closed.'));
+      if (!this.alive) return void cb(null, new Error('Session is already closed.'));
       const tx = db.transaction(this.name, mode);
       const req = index
         ? tx
@@ -427,7 +427,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       void tx.addEventListener('complete', () => void cb(null, tx.error || req.error));
       void tx.addEventListener('error', () => void cb(null, tx.error || req.error));
       void tx.addEventListener('abort ', () => void cb(null, tx.error || req.error));
-    }, () => void cb(null, new Error('Access has failed.')));
+    }, () => void cb(null, new Error('Request has failed.')));
   }
   public close(): void {
     this.alive = false;
