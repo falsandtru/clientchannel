@@ -133,12 +133,12 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     this.tx.rw = tx;
     void tick(() => this.tx.rw = void 0);
   }
-  public fetch(key: K, cb: (error: DOMException | Error | null) => void = noop, cancellation = new Cancellation()): void {
+  public fetch(key: K, cb: (error: DOMException | Error | null) => void = noop, cancellation?: Cancellation): void {
     if (!this.alive) return void cb(new Error('Session is closed.'));
     const events: LoadedEventRecord<K, V>[] = [];
     return void this.listen(db => {
       if (!this.alive) return void cb(new Error('Session is closed.'));
-      if (cancellation.canceled) return void cb(new Error('Cancelled.'));
+      if (cancellation?.canceled) return void cb(new Error('Cancelled.'));
       const tx = db.transaction(this.name, 'readonly');
       const req = tx
         .objectStore(this.name)
@@ -197,14 +197,14 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       void req.addEventListener('success', () =>
         void proc(req.result, req.error));
       void tx.addEventListener('complete', () =>
-        void cancellation.close());
+        void cancellation?.close());
       void tx.addEventListener('error', () => (
-        void cancellation.close(),
+        void cancellation?.close(),
         void cb(tx.error || req.error)));
       void tx.addEventListener('abort', () => (
-        void cancellation.close(),
+        void cancellation?.close(),
         void cb(tx.error || req.error)));
-      void cancellation.register(() =>
+      void cancellation?.register(() =>
         events.length === 0 && void tx.abort());
     }, () => void cb(new Error('Access has failed.')));
   }
