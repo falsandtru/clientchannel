@@ -117,11 +117,12 @@ export class Ownership<K extends string> {
       : false;
   }
   public release(key: K): void {
+    if (!this.alive) throw new Error(`ClientChannel: Ownership channel "${this.channel.name}" is already closed.`);
     void this.setPriority(key, 0);
     void this.castPriority(key);
   }
   public close(): void {
-    this.alive = false;
     void this.cancellation.cancel();
+    this.alive = false;
   }
 }

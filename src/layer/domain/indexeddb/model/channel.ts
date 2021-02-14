@@ -66,11 +66,14 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     void this.cancellation.register(() =>
       void this.schema.close());
 
+    void this.cancellation.register(() =>
+      void this.ownership.close());
+
+    void this.cancellation.register(() =>
+      void this.channel.close());
     void this.cancellation.register(this.channel.listen('save', ({ key }) => (
       void this.keys.delete(key) || void this.keys_.delete(key),
       void this.fetch(key))));
-    void this.cancellation.register(() =>
-      void this.channel.close());
 
     void this.events_.save.monitor([], ({ key }) =>
       void this.channel.post(new SaveMessage(key)));
@@ -108,7 +111,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   private readonly cancellation = new Cancellation();
   private readonly schema: Schema<K, V>;
   private readonly channel = new Channel<K>(this.name, this.debug);
-  private readonly ownership: Ownership<string> = new Ownership(this.channel);
+  private readonly ownership = new Ownership<string>(this.channel);
   private readonly keys_ = new Set<K>();
   private readonly keys = new Cache<K>(this.size, {
     disposer: (() => {
@@ -187,7 +190,6 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
       void this.log(key)));
   }
   public delete(key: K): void {
-    if (!this.alive) return;
     void this.ownership.take(`key:${key}`, 5 * 1000);
     void this.log(key);
     void this.schema.data.delete(key);

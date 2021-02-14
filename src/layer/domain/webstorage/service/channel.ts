@@ -56,7 +56,7 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
   }
   private cancellation = new Cancellation();
   private readonly mode = this.storage === localStorage ? 'local' : 'session';
-  protected get alive(): boolean {
+  private get alive(): boolean {
     return !this.cancellation.canceled;
   }
   public readonly events = ObjectFreeze({
