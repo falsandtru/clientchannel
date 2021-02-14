@@ -1,3 +1,4 @@
+import { ObjectDefineProperties, ObjectGetOwnPropertyDescriptor, ObjectKeys, ObjectSeal, ObjectValues } from 'spica/alias';
 import { ChannelObject } from '../../../../..';
 import { isValidPropertyName, isValidPropertyValue } from '../../../data/es/event';
 import { noop } from 'spica/noop';
@@ -22,17 +23,17 @@ export function build<V extends object>(
   get: <K extends Extract<keyof V, string>>(prop: K, val: V[K]) => void = noop,
 ): V {
   const dao = factory();
-  for (const prop of Object.values(Schema)) {
+  for (const prop of ObjectValues(Schema)) {
     delete dao[prop];
   }
   if (typeof source[Schema.key] !== 'string') throw new TypeError(`ClientChannel: DAO: Invalid key: ${source[Schema.key]}`);
   const descmap: PropertyDescriptorMap = {
-    ...(Object.keys(dao) as Extract<keyof typeof dao, string>[])
+    ...(ObjectKeys(dao) as Extract<keyof typeof dao, string>[])
       .filter(isValidPropertyName)
       .filter(isValidPropertyValue(dao))
       .reduce<PropertyDescriptorMap>((map, prop) => {
         {
-          const desc = Object.getOwnPropertyDescriptor(dao, prop)
+          const desc = ObjectGetOwnPropertyDescriptor(dao, prop)
           if (desc && (desc.get || desc.set)) return map;
         }
         const iniVal = dao[prop];
@@ -83,7 +84,7 @@ export function build<V extends object>(
       },
     }
   };
-  void Object.defineProperties(dao, descmap);
-  void Object.seal(dao);
+  void ObjectDefineProperties(dao, descmap);
+  void ObjectSeal(dao);
   return dao;
 }

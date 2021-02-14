@@ -1,3 +1,4 @@
+import { ObjectFreeze, ObjectKeys } from 'spica/alias';
 import { StorageChannel as IStorageChannel, StorageChannelObject, StorageChannelEvent, StorageChannelEventType } from '../../../../../';
 import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
@@ -25,7 +26,7 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
     };
     this.link_ = build<V>(source, factory, (attr, newValue, oldValue) => {
       if (!this.alive) return;
-      void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, attr) => {
+      void this.storage.setItem(this.name, JSON.stringify(ObjectKeys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, attr) => {
         acc[attr] = source[attr];
         return acc;
       }, {})));
@@ -37,7 +38,7 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
     void this.cancellation.register(
       storageEventStream.on([this.mode, this.name], ({ newValue }: StorageEvent): void => {
         const item = parse<V>(newValue);
-        void (Object.keys(item) as Extract<keyof V, string>[])
+        void (ObjectKeys(item) as Extract<keyof V, string>[])
           .filter(isValidPropertyName)
           .filter(isValidPropertyValue(item))
           .forEach(attr => {
@@ -51,14 +52,14 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
             void this.events.recv.emit([event.attr], event);
           });
       }));
-    void Object.freeze(this);
+    void ObjectFreeze(this);
   }
   private cancellation = new Cancellation();
   private readonly mode = this.storage === localStorage ? 'local' : 'session';
   protected get alive(): boolean {
     return !this.cancellation.canceled;
   }
-  public readonly events = Object.freeze({
+  public readonly events = ObjectFreeze({
     send: new Observation<[Extract<keyof V, string>], StorageChannel.Event<V>, void>({ limit: Infinity }),
     recv: new Observation<[Extract<keyof V, string>], StorageChannel.Event<V>, void>({ limit: Infinity }),
   });
@@ -84,7 +85,7 @@ export namespace StorageChannel {
     ) {
       assert(typeof type === 'string');
       assert(typeof attr === 'string');
-      void Object.freeze(this);
+      void ObjectFreeze(this);
     }
   }
   export type EventType = StorageChannelEventType;

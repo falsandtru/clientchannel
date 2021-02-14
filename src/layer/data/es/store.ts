@@ -1,4 +1,5 @@
 import { Math } from 'spica/global';
+import { ObjectAssign, ObjectCreate, ObjectFreeze } from 'spica/alias';
 import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
 import { tick } from 'spica/clock';
@@ -101,13 +102,13 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   }
   private alive = true;
   private readonly memory = new Observation<[] | [K] | [K, keyof V | ''] | [K, keyof V | '', string] | [K, keyof V | '', string, string], void, UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>>();
-  public readonly events = Object.freeze({
+  public readonly events = ObjectFreeze({
     load: new Observation<[K, Extract<keyof V | '', string>, EventStore.EventType], EventStore.Event<K, V>, void>(),
     save: new Observation<[K, Extract<keyof V | '', string>, EventStore.EventType], EventStore.Event<K, V>, void>(),
     loss: new Observation<[K, Extract<keyof V | '', string>, EventStore.EventType], EventStore.Event<K, V>, void>(),
     clean: new Observation<[K], boolean, void>(),
   });
-  private readonly events_ = Object.freeze({
+  private readonly events_ = ObjectFreeze({
     memory: new Observation<[K, keyof V | '', string], UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>, void>({ limit: Infinity }),
   });
   private tx_: {
@@ -221,7 +222,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   }
   public meta(key: K): MetaData<K> {
     const events = this.memory.reflect([key]);
-    return Object.freeze({
+    return ObjectFreeze({
       key: key,
       id: events.reduce((id, e) => (
         e.id > id ? e.id : id
@@ -232,7 +233,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     });
   }
   public get(key: K): Partial<V> {
-    return Object.assign(Object.create(null), compose(key, this.attrs, this.memory.reflect([key])).value);
+    return ObjectAssign(ObjectCreate(null), compose(key, this.attrs, this.memory.reflect([key])).value);
   }
   public add(event: UnstoredEventRecord<K, V>, tx?: IDBTransaction): void {
     assert(event instanceof UnstoredEventRecord);
@@ -443,7 +444,7 @@ export namespace EventStore {
       public readonly date: number
     ) {
       this.EVENT;
-      void Object.freeze(this);
+      void ObjectFreeze(this);
     }
   }
   export import EventType = EventRecordType;

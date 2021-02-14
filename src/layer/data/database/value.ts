@@ -1,3 +1,4 @@
+import { ObjectKeys } from 'spica/alias';
 import { isPrimitive } from 'spica/type';
 
 export function isStorable(value: IDBValidValue): boolean {
@@ -11,7 +12,7 @@ export function isStorable(value: IDBValidValue): boolean {
       try {
         return value === null
             || isBinary(value)
-            || Object.keys(value)
+            || ObjectKeys(value)
                  .every(key => isStorable(value[key]));
       }
       catch {
@@ -25,7 +26,7 @@ export function isStorable(value: IDBValidValue): boolean {
 export function hasBinary(value: IDBValidValue): boolean {
   return !isPrimitive(value)
     ? isBinary(value) ||
-      Object.keys(value)
+      ObjectKeys(value)
         .some(key => hasBinary(value[key]))
     : false;
 }

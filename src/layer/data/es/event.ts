@@ -1,3 +1,4 @@
+import { ObjectFreeze, ObjectKeys } from 'spica/alias';
 import { StoreChannelEventType } from '../../../../';
 import { clone } from 'spica/assign';
 import { EventId, makeEventId } from './identifier';
@@ -29,7 +30,7 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
     if (typeof this.value !== 'object' || !this.value) throw new TypeError(`ClientChannel: EventRecord: Invalid event value: ${JSON.stringify(this.value)}`);
     if (typeof this.date !== 'number' || !Number.isFinite(this.date) || this.date >= 0 === false) throw new TypeError(`ClientChannel: EventRecord: Invalid event date: ${this.date}`);
     this.attr = this.type === EventRecordType.put
-      ? Object.keys(value).filter(isValidPropertyName)[0] as Extract<keyof V, string>
+      ? ObjectKeys(value).filter(isValidPropertyName)[0] as Extract<keyof V, string>
       : '';
     if (typeof this.attr !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event attr: ${this.key}`);
 
@@ -38,23 +39,23 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
         if (!isValidPropertyName(this.attr)) throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
         assert(this.attr !== '');
         this.value = value = new EventRecordValue({ [this.attr]: value[this.attr as keyof V] });
-        void Object.freeze(this.value);
-        void Object.freeze(this);
+        void ObjectFreeze(this.value);
+        void ObjectFreeze(this);
         return;
       case EventRecordType.snapshot:
         if (this.attr !== '') throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
         this.value = value = new EventRecordValue(value);
         assert(Object.keys(this.value).every(isValidPropertyName));
         assert(Object.keys(this.value).every(isValidPropertyValue(this.value)));
-        void Object.freeze(this.value);
-        void Object.freeze(this);
+        void ObjectFreeze(this.value);
+        void ObjectFreeze(this);
         return;
       case EventRecordType.delete:
         if (this.attr !== '') throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
         this.value = value = new EventRecordValue();
         assert.deepStrictEqual(Object.keys(this.value), []);
-        void Object.freeze(this.value);
-        void Object.freeze(this);
+        void ObjectFreeze(this.value);
+        void ObjectFreeze(this);
         return;
       default:
         throw new TypeError(`ClientChannel: EventRecord: Invalid event type: ${type}`);

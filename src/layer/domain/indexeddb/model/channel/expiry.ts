@@ -1,4 +1,5 @@
 import { Math, setTimeout } from 'spica/global';
+import { ObjectFreeze } from 'spica/alias';
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
 import { ChannelStore } from '../channel';
@@ -49,7 +50,7 @@ export class ExpiryStore<K extends string> {
     private readonly listen: Listen,
   ) {
     void this.schedule(10 * 1000);
-    void Object.freeze(this);
+    void ObjectFreeze(this);
   }
   private store = new class extends KeyValueStore<K, ExpiryRecord<K>> { }(name, ExpiryStoreSchema.key, this.listen);
   private schedule = (() => {

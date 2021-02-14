@@ -1,3 +1,4 @@
+import { ObjectFreeze } from 'spica/alias';
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
 
@@ -41,7 +42,7 @@ export class AccessStore<K extends string> {
   constructor(
     private readonly listen: Listen,
   ) {
-    void Object.freeze(this);
+    void ObjectFreeze(this);
   }
   private store = new class extends KeyValueStore<K, AccessRecord<K>> { }(name, AccessStoreSchema.key, this.listen);
   public recent(limit: number, cb: (keys: K[], error: DOMException | Error | null) => void): void {

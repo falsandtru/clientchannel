@@ -1,3 +1,4 @@
+import { ObjectDefineProperties, ObjectFreeze, ObjectKeys } from 'spica/alias';
 import { StoreChannel as IStoreChannel, StoreChannelConfig, StoreChannelObject } from '../../../../../';
 import { Observation, Observer } from 'spica/observer';
 import { throttle } from 'spica/throttle';
@@ -17,9 +18,9 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
       debug = false,
     }: Partial<StoreChannelConfig<K, V>> & { size?: number; } = {},
   ) {
-    super(name, Object.keys(factory()).filter(isValidPropertyName).filter(isValidPropertyValue(factory())), destroy, age, size, debug);
+    super(name, ObjectKeys(factory()).filter(isValidPropertyName).filter(isValidPropertyValue(factory())), destroy, age, size, debug);
 
-    const attrs = <(keyof V)[]>Object.keys(factory())
+    const attrs = <(keyof V)[]>ObjectKeys(factory())
       .filter(isValidPropertyName)
       .filter(isValidPropertyValue(factory()));
 
@@ -61,7 +62,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
           }
         }
       });
-    void Object.freeze(this);
+    void ObjectFreeze(this);
   }
   private readonly links = new Map<K, V>();
   private readonly sources = new Map<K, Partial<V>>();
@@ -71,8 +72,8 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
     return this.links.has(key)
       ? this.links.get(key)!
       : this.links.set(key, build(
-          Object.defineProperties(
-            this.sources.set(key, this.get(key)).get(key)!,
+          ObjectDefineProperties(
+            this.sources.set(key, this.get(key)).get(key)! as V,
             {
               [Schema.meta]: {
                 get: () =>
@@ -97,7 +98,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
           this.factory,
           (attr, newValue, oldValue) => {
             if (!this.alive) return;
-            void this.add(new ChannelStore.Record<K, V>(key, { [attr]: newValue } as Partial<V>));
+            void this.add(new ChannelStore.Record<K, V>(key, { [attr]: newValue } as unknown as Partial<V>));
             void cast(this.sources.get(key)![Schema.event]!)
               .emit([StorageChannel.EventType.send, attr], new StorageChannel.Event<V>(StorageChannel.EventType.send, attr as never, newValue, oldValue));
           },
