@@ -40,13 +40,13 @@ class Value {
     return this[ChannelObject.key];
   }
   // Properties having an invalid name will be excluded from schema.
-  private _separator = ' ';
+  private separator_ = ' ';
   // Only properties having a valid name and a storable value consist schema.
   firstName = '';
   lastName = '';
   // Properties having an invalid value will be excluded from schema.
   name() {
-    return this.firstName + this._separator + this.lastName;
+    return this.firstName + this.separator_ + this.lastName;
   }
 }
 

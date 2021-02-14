@@ -26,27 +26,27 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
   }
   private alive = true;
   private readonly cache = new Map<K, V>();
-  private tx_: {
+  private tx: {
     rw?: IDBTransaction;
     rwc: number;
   } = {
     rwc: 0,
   };
   private get txrw(): IDBTransaction | undefined {
-    if (++this.tx_.rwc > 25) {
-      this.tx_.rwc = 0;
-      this.tx_.rw = void 0;
+    if (++this.tx.rwc > 25) {
+      this.tx.rwc = 0;
+      this.tx.rw = void 0;
       return;
     }
-    return this.tx_.rw;
+    return this.tx.rw;
   }
   private set txrw(tx: IDBTransaction | undefined) {
     if (!tx) return;
     assert(tx.mode === 'readwrite');
-    if (this.tx_.rw && this.tx_.rw === tx) return;
-    this.tx_.rwc = 0;
-    this.tx_.rw = tx;
-    void tick(() => this.tx_.rw = void 0);
+    if (this.tx.rw && this.tx.rw === tx) return;
+    this.tx.rwc = 0;
+    this.tx.rw = tx;
+    void tick(() => this.tx.rw = void 0);
   }
   public fetch(key: K, cb: (error: DOMException | Error | null) => void = noop, cancellation = new Cancellation()): undefined {
     if (!this.alive) return void cb(new Error('Session is closed.'));

@@ -107,9 +107,9 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   }
   private readonly cancellation = new Cancellation();
   private readonly schema: Schema<K, V>;
-  private readonly keys_ = new Set<K>();
   private readonly channel = new Channel<K>(this.name, this.debug);
   private readonly ownership: Ownership<string> = new Ownership(this.channel);
+  private readonly keys_ = new Set<K>();
   private readonly keys = new Cache<K>(this.size, {
     disposer: (() => {
       void this.ownership.take('store', 0);
@@ -223,43 +223,43 @@ export namespace ChannelStore {
 
 class Schema<K extends string, V extends StoreChannelObject<K>> {
   constructor(
-    private readonly store_: ChannelStore<K, V>,
-    private readonly ownership_: Ownership<string>,
-    private readonly attrs_: string[],
-    private readonly listen_: Listen,
+    private readonly store: ChannelStore<K, V>,
+    private readonly ownership: Ownership<string>,
+    private readonly attrs: string[],
+    private readonly listen: Listen,
   ) {
     void this.build();
   }
-  private cancellation_ = new Cancellation();
+  private cancellation = new Cancellation();
   private build(): void {
     const keys = this.data ? this.data.keys() : [];
 
-    this.data = new DataStore<K, V>(this.attrs_, this.listen_);
-    this.access = new AccessStore<K>(this.listen_);
-    this.expire = new ExpiryStore<K>(this.store_, this.cancellation_, this.ownership_, this.listen_);
+    this.data = new DataStore<K, V>(this.attrs, this.listen);
+    this.access = new AccessStore<K>(this.listen);
+    this.expire = new ExpiryStore<K>(this.store, this.cancellation, this.ownership, this.listen);
 
-    void this.cancellation_.register(() => this.data.close());
-    void this.cancellation_.register(() => this.access.close());
-    void this.cancellation_.register(() => this.expire.close());
+    void this.cancellation.register(() => this.data.close());
+    void this.cancellation.register(() => this.access.close());
+    void this.cancellation.register(() => this.expire.close());
 
-    void this.cancellation_.register(this.store_.events_.load.relay(this.data.events.load));
-    void this.cancellation_.register(this.store_.events_.save.relay(this.data.events.save));
-    void this.cancellation_.register(this.store_.events_.clean.relay(this.data.events.clean));
-    void this.cancellation_.register(this.store_.events.load.relay(this.data.events.load));
-    void this.cancellation_.register(this.store_.events.save.relay(this.data.events.save));
-    void this.cancellation_.register(this.store_.events.loss.relay(this.data.events.loss));
+    void this.cancellation.register(this.store.events_.load.relay(this.data.events.load));
+    void this.cancellation.register(this.store.events_.save.relay(this.data.events.save));
+    void this.cancellation.register(this.store.events_.clean.relay(this.data.events.clean));
+    void this.cancellation.register(this.store.events.load.relay(this.data.events.load));
+    void this.cancellation.register(this.store.events.save.relay(this.data.events.save));
+    void this.cancellation.register(this.store.events.loss.relay(this.data.events.loss));
 
-    void this.store_.sync(keys);
+    void this.store.sync(keys);
   }
   public rebuild(): void {
     void this.close();
-    this.cancellation_ = new Cancellation();
+    this.cancellation = new Cancellation();
     void this.build();
   }
   public data!: DataStore<K, V>;
   public access!: AccessStore<K>;
   public expire!: ExpiryStore<K>;
   public close(): void {
-    void this.cancellation_.cancel();
+    void this.cancellation.cancel();
   }
 }
