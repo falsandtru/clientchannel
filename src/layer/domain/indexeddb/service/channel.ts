@@ -56,7 +56,6 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
           if (changes.length === 0) return;
           void migrate(link);
           for (const { attr, oldVal } of changes) {
-            // @ts-ignore #31251
             void cast(source[Schema.event]!)
               .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr as never, memory[attr as never], oldVal as never));
           }
@@ -98,7 +97,6 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
           () => this.factory(),
           (attr, newValue, oldValue) => (
             void this.add(new ChannelStore.Record<K, V>(key, { [attr]: newValue } as Partial<V>)),
-            // @ts-ignore #31251
             void cast(this.sources.get(key)![Schema.event]!)
               .emit([StorageChannel.EventType.send, attr], new StorageChannel.Event<V>(StorageChannel.EventType.send, attr as never, newValue, oldValue))),
           throttle(100, () => this.has(key) && void this.log(key))))
