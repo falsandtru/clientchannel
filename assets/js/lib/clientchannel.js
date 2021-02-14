@@ -1,4 +1,4 @@
-/*! clientchannel v0.29.3 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.29.4 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -47,8 +47,9 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.isArray = exports.ObjectValues = exports.ObjectSetPrototypeOf = exports.ObjectSeal = exports.ObjectPreventExtensions = exports.ObjectKeys = exports.isSealed = exports.isFrozen = exports.isExtensible = exports.ObjectIs = exports.ObjectGetPrototypeOf = exports.ObjectGetOwnPropertySymbols = exports.ObjectGetOwnPropertyNames = exports.ObjectGetOwnPropertyDescriptors = exports.ObjectGetOwnPropertyDescriptor = exports.ObjectFromEntries = exports.ObjectFreeze = exports.ObjectEntries = exports.ObjectDefineProperty = exports.ObjectDefineProperties = exports.ObjectCreate = exports.ObjectAssign = exports.toString = exports.isEnumerable = exports.isPrototypeOf = exports.hasOwnProperty = exports.SymbolKeyFor = exports.SymbolFor = exports.parseInt = exports.parseFloat = exports.isSafeInteger = exports.isNaN = exports.isInteger = exports.isFinite = exports.NaN = void 0;
+            exports.isArray = exports.ObjectValues = exports.ObjectSetPrototypeOf = exports.ObjectSeal = exports.ObjectPreventExtensions = exports.ObjectKeys = exports.isSealed = exports.isFrozen = exports.isExtensible = exports.ObjectIs = exports.ObjectGetPrototypeOf = exports.ObjectGetOwnPropertySymbols = exports.ObjectGetOwnPropertyNames = exports.ObjectGetOwnPropertyDescriptors = exports.ObjectGetOwnPropertyDescriptor = exports.ObjectFromEntries = exports.ObjectFreeze = exports.ObjectEntries = exports.ObjectDefineProperty = exports.ObjectDefineProperties = exports.ObjectCreate = exports.ObjectAssign = exports.toString = exports.isEnumerable = exports.isPrototypeOf = exports.hasOwnProperty = exports.SymbolKeyFor = exports.SymbolFor = exports.sign = exports.round = exports.random = exports.min = exports.max = exports.floor = exports.ceil = exports.abs = exports.parseInt = exports.parseFloat = exports.isSafeInteger = exports.isNaN = exports.isInteger = exports.isFinite = exports.NaN = void 0;
             exports.NaN = Number.NaN, exports.isFinite = Number.isFinite, exports.isInteger = Number.isInteger, exports.isNaN = Number.isNaN, exports.isSafeInteger = Number.isSafeInteger, exports.parseFloat = Number.parseFloat, exports.parseInt = Number.parseInt;
+            exports.abs = Math.abs, exports.ceil = Math.ceil, exports.floor = Math.floor, exports.max = Math.max, exports.min = Math.min, exports.random = Math.random, exports.round = Math.round, exports.sign = Math.sign;
             exports.SymbolFor = Symbol.for;
             exports.SymbolKeyFor = Symbol.keyFor;
             exports.hasOwnProperty = Object.prototype.hasOwnProperty.call.bind(Object.prototype.hasOwnProperty);
@@ -84,12 +85,25 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.join = exports.splice = exports.push = exports.pop = exports.unshift = exports.shift = exports.indexOf = void 0;
+            exports.join = exports.splice = exports.pop = exports.push = exports.shift = exports.unshift = exports.indexOf = void 0;
             const global_1 = _dereq_('./global');
             function indexOf(as, a) {
+                if (as.length === 0)
+                    return -1;
                 return a === a ? as.indexOf(a) : as.findIndex(a => a !== a);
             }
             exports.indexOf = indexOf;
+            function unshift(as, bs) {
+                if ('length' in as) {
+                    for (let i = as.length - 1; i >= 0; --i) {
+                        bs.unshift(as[i]);
+                    }
+                } else {
+                    bs.unshift(...as);
+                }
+                return bs;
+            }
+            exports.unshift = unshift;
             function shift(as, count) {
                 if (count < 0)
                     throw new Error('Unexpected negative number');
@@ -102,29 +116,6 @@ require = function () {
                 ];
             }
             exports.shift = shift;
-            function unshift(as, bs) {
-                if ('length' in as) {
-                    for (let i = as.length - 1; i >= 0; --i) {
-                        bs.unshift(as[i]);
-                    }
-                } else {
-                    bs.unshift(...as);
-                }
-                return bs;
-            }
-            exports.unshift = unshift;
-            function pop(as, count) {
-                if (count < 0)
-                    throw new Error('Unexpected negative number');
-                return count === global_1.undefined ? [
-                    as,
-                    as.pop()
-                ] : [
-                    as,
-                    splice(as, as.length - count, count)
-                ];
-            }
-            exports.pop = pop;
             function push(as, bs) {
                 if ('length' in bs) {
                     for (let i = 0, len = bs.length; i < len; ++i) {
@@ -138,6 +129,18 @@ require = function () {
                 return as;
             }
             exports.push = push;
+            function pop(as, count) {
+                if (count < 0)
+                    throw new Error('Unexpected negative number');
+                return count === global_1.undefined ? [
+                    as,
+                    as.pop()
+                ] : [
+                    as,
+                    splice(as, as.length - count, count)
+                ];
+            }
+            exports.pop = pop;
             function splice(as, index, count, ...inserts) {
                 if (count === 0 && inserts.length === 0)
                     return [];
@@ -206,7 +209,7 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.template = exports.inherit = exports.merge = exports.extend = exports.clone = exports.assign = void 0;
+            exports.template = exports.inherit = exports.merge = exports.extend = exports.overwrite = exports.clone = exports.assign = void 0;
             const type_1 = _dereq_('./type');
             const global_1 = _dereq_('./global');
             const alias_1 = _dereq_('./alias');
@@ -227,10 +230,27 @@ require = function () {
                     return target[prop] = source[prop];
                 }
             });
-            exports.extend = template((prop, target, source) => {
+            exports.overwrite = template((prop, target, source) => {
                 switch (type_1.type(source[prop])) {
                 case 'Array':
-                    return target[prop] = source[prop].slice();
+                    return target[prop] = source[prop];
+                case 'Object':
+                    switch (type_1.type(target[prop])) {
+                    case 'Object':
+                        return target[prop] = exports.overwrite(target[prop], source[prop]);
+                    default:
+                        return target[prop] = exports.overwrite(empty(source[prop]), source[prop]);
+                    }
+                default:
+                    return target[prop] = source[prop];
+                }
+            });
+            exports.extend = template((prop, target, source) => {
+                switch (type_1.type(source[prop])) {
+                case 'undefined':
+                    return;
+                case 'Array':
+                    return target[prop] = source[prop];
                 case 'Object':
                     switch (type_1.type(target[prop])) {
                     case 'Object':
@@ -244,6 +264,8 @@ require = function () {
             });
             exports.merge = template((prop, target, source) => {
                 switch (type_1.type(source[prop])) {
+                case 'undefined':
+                    return;
                 case 'Array':
                     switch (type_1.type(target[prop])) {
                     case 'Array':
@@ -264,6 +286,8 @@ require = function () {
             });
             exports.inherit = template((prop, target, source) => {
                 switch (type_1.type(source[prop])) {
+                case 'undefined':
+                    return;
                 case 'Array':
                     return target[prop] = source[prop].slice();
                 case 'Object':
@@ -324,67 +348,58 @@ require = function () {
             const assign_1 = _dereq_('./assign');
             const array_1 = _dereq_('./array');
             class Cache {
-                constructor(capacity, callback = () => global_1.undefined, opts = {}) {
+                constructor(capacity, opts = {}) {
                     this.capacity = capacity;
-                    this.callback = callback;
                     this.settings = {
-                        ignore: {
-                            delete: false,
-                            clear: false
-                        },
-                        data: {
-                            stats: [
-                                [],
-                                []
-                            ],
-                            entries: []
+                        dispose: {
+                            delete: true,
+                            clear: true
                         }
                     };
                     this.nullish = false;
+                    this.store = new global_1.Map();
+                    this.indexes = {
+                        LRU: [],
+                        LFU: []
+                    };
+                    this.stats = {
+                        LRU: [
+                            0,
+                            0
+                        ],
+                        LFU: [
+                            0,
+                            0
+                        ],
+                        miss: 0
+                    };
+                    this.ratio = 50;
                     if (capacity > 0 === false)
                         throw new Error(`Spica: Cache: Cache capacity must be greater than 0.`);
                     assign_1.extend(this.settings, opts);
-                    const {stats, entries} = this.settings.data;
-                    const LFU = stats[1].slice(0, capacity);
-                    const LRU = stats[0].slice(0, capacity - LFU.length);
-                    this.stats = {
-                        LRU,
-                        LFU
-                    };
-                    this.store = new global_1.Map(entries);
-                    if (!opts.data)
-                        return;
-                    for (const k of array_1.push(stats[1].slice(LFU.length), stats[0].slice(LRU.length))) {
-                        this.store.delete(k);
-                    }
-                    if (this.store.size !== LFU.length + LRU.length)
-                        throw new Error(`Spica: Cache: Size of stats and entries is not matched.`);
-                    if (![
-                            ...LFU,
-                            ...LRU
-                        ].every(k => this.store.has(k)))
-                        throw new Error(`Spica: Cache: Keys of stats and entries is not matched.`);
                 }
                 put(key, value) {
-                    !this.nullish && value === global_1.undefined ? this.nullish = true : global_1.undefined;
-                    const hit = this.store.has(key);
-                    if (hit && this.access(key))
+                    value === global_1.undefined ? this.nullish || (this.nullish = true) : global_1.undefined;
+                    if (this.has(key))
                         return this.store.set(key, value), true;
-                    const {LRU, LFU} = this.stats;
-                    if (LRU.length + LFU.length === this.capacity && LRU.length < LFU.length) {
-                        const key = LFU.pop();
-                        const val = this.store.get(key);
-                        this.store.delete(key);
-                        this.callback(key, val);
+                    const {LRU, LFU} = this.indexes;
+                    if (this.size === this.capacity) {
+                        let key;
+                        if (LFU.length > this.capacity * this.ratio / 100 || LFU.length === this.capacity) {
+                            key = LFU.pop();
+                        } else {
+                            key = LRU.pop();
+                        }
+                        if (this.settings.disposer) {
+                            const val = this.store.get(key);
+                            this.store.delete(key);
+                            this.settings.disposer(key, val);
+                        } else {
+                            this.store.delete(key);
+                        }
                     }
                     LRU.unshift(key);
                     this.store.set(key, value);
-                    if (LRU.length + LFU.length > this.capacity) {
-                        const key = LRU.pop();
-                        const val = this.store.get(key);
-                        this.store.delete(key);
-                        this.callback(key, val);
-                    }
                     return false;
                 }
                 set(key, value) {
@@ -393,91 +408,151 @@ require = function () {
                 }
                 get(key) {
                     const val = this.store.get(key);
-                    const hit = val !== global_1.undefined || this.nullish && this.store.has(key);
-                    return hit && this.access(key) ? val : global_1.undefined;
+                    if (val !== global_1.undefined || this.nullish && this.has(key)) {
+                        this.access(key);
+                    } else {
+                        ++this.stats.miss;
+                        this.slide();
+                    }
+                    return val;
                 }
                 has(key) {
                     return this.store.has(key);
                 }
                 delete(key) {
-                    if (!this.store.has(key))
+                    if (!this.has(key))
                         return false;
-                    const {LRU, LFU} = this.stats;
-                    for (const stat of [
+                    const {LRU, LFU} = this.indexes;
+                    for (const index of [
                             LFU,
                             LRU
                         ]) {
-                        const index = array_1.indexOf(stat, key);
-                        if (index === -1)
+                        const i = array_1.indexOf(index, key);
+                        if (i === -1)
                             continue;
-                        const val = this.store.get(key);
-                        this.store.delete(array_1.splice(stat, index, 1)[0]);
-                        if (this.settings.ignore.delete)
-                            return true;
-                        this.callback(key, val);
+                        if (!this.settings.disposer || !this.settings.dispose.delete) {
+                            this.store.delete(array_1.splice(index, i, 1)[0]);
+                        } else {
+                            const val = this.store.get(key);
+                            this.store.delete(array_1.splice(index, i, 1)[0]);
+                            this.settings.disposer(key, val);
+                        }
                         return true;
                     }
                     return false;
                 }
                 clear() {
-                    const store = this.store;
-                    this.store = new global_1.Map();
-                    this.stats = {
+                    var _a;
+                    this.nullish = false;
+                    this.ratio = 50;
+                    this.indexes = {
                         LRU: [],
                         LFU: []
                     };
-                    if (this.settings.ignore.clear)
+                    this.stats = {
+                        LRU: [
+                            0,
+                            0
+                        ],
+                        LFU: [
+                            0,
+                            0
+                        ],
+                        miss: 0
+                    };
+                    const store = this.store;
+                    this.store = new global_1.Map();
+                    if (!this.settings.disposer || !((_a = this.settings.dispose) === null || _a === void 0 ? void 0 : _a.clear))
                         return;
-                    for (const kv of store) {
-                        this.callback(kv[0], kv[1]);
+                    for (const [key, value] of store) {
+                        this.settings.disposer(key, value);
                     }
                 }
                 get size() {
-                    return this.store.size;
+                    return this.indexes.LRU.length + this.indexes.LFU.length;
                 }
                 [Symbol.iterator]() {
                     return this.store[Symbol.iterator]();
                 }
-                export() {
-                    return {
-                        stats: [
-                            this.stats.LRU.slice(),
-                            this.stats.LFU.slice()
-                        ],
-                        entries: [...this]
-                    };
-                }
-                inspect() {
-                    const {LRU, LFU} = this.stats;
-                    return [
-                        LRU.slice(),
-                        LFU.slice()
-                    ];
+                slide() {
+                    const {LRU, LFU, miss} = this.stats;
+                    const capacity = this.capacity;
+                    const window = capacity;
+                    const rateR = rate(window, LRU[0], LRU[0] + LFU[0], LRU[1], LRU[1] + LFU[1]);
+                    const rateF = 100 - rateR;
+                    const ratio = this.ratio;
+                    const step = 1;
+                    if (ratio < 90 && rateF > rateR * 1.2) {
+                        this.ratio += step;
+                    } else if (ratio > 50 && rateR > rateF * 1.2) {
+                        this.ratio -= step;
+                    } else if (ratio <= 50 && rateR > rateF * 1.5 && this.indexes.LRU.length > capacity / 100 * (100 - ratio) - 1) {
+                        if (ratio > 10 && miss > capacity / 2) {
+                            this.ratio = 50;
+                        } else if (ratio > 10 && miss > 5 && this.indexes.LRU.length < miss * 5) {
+                            this.ratio -= step;
+                        } else if (ratio < 50) {
+                            this.ratio += step;
+                        }
+                    }
+                    if (LRU[0] + LFU[0] === window) {
+                        this.stats = {
+                            LRU: [
+                                0,
+                                LRU[0]
+                            ],
+                            LFU: [
+                                0,
+                                LFU[0]
+                            ],
+                            miss
+                        };
+                    }
                 }
                 access(key) {
-                    return this.accessLFU(key) || this.accessLRU(key);
+                    const stats = this.stats;
+                    const hit = false || this.accessLFU(key, stats) || this.accessLRU(key, stats);
+                    stats.miss = 0;
+                    this.slide();
+                    return hit;
                 }
-                accessLRU(key) {
-                    const {LRU} = this.stats;
+                accessLRU(key, stats) {
+                    const {LRU, LFU} = this.indexes;
                     const index = array_1.indexOf(LRU, key);
                     if (index === -1)
                         return false;
-                    const {LFU} = this.stats;
-                    LFU.unshift(array_1.splice(LRU, index, 1)[0]);
+                    stats && ++stats.LRU[0];
+                    if (index === 0)
+                        return LFU.unshift(LRU.shift()), true;
+                    [LRU[index - 1], LRU[index]] = [
+                        LRU[index],
+                        LRU[index - 1]
+                    ];
                     return true;
                 }
-                accessLFU(key) {
-                    const {LFU} = this.stats;
+                accessLFU(key, stats) {
+                    const {LFU} = this.indexes;
                     const index = array_1.indexOf(LFU, key);
                     if (index === -1)
                         return false;
+                    stats && ++stats.LFU[0];
                     if (index === 0)
                         return true;
-                    LFU.unshift(array_1.splice(LFU, index, 1)[0]);
+                    [LFU[index - 1], LFU[index]] = [
+                        LFU[index],
+                        LFU[index - 1]
+                    ];
                     return true;
                 }
             }
             exports.Cache = Cache;
+            function rate(window, currHits, currTotal, prevHits, prevTotal) {
+                const currRate = currHits * 100 / currTotal | 0;
+                const currRatio = currTotal / window;
+                const prevRate = prevHits * 100 / prevTotal | 0;
+                const prevRatio = 1 - currRatio;
+                return currRate * currRatio + prevRate * prevRatio | 0;
+            }
         },
         {
             './array': 5,
@@ -603,6 +678,7 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.tick = void 0;
             const global_1 = _dereq_('./global');
+            const alias_1 = _dereq_('./alias');
             const exception_1 = _dereq_('./exception');
             let queue = [];
             let jobs = [];
@@ -628,10 +704,11 @@ require = function () {
                         exception_1.causeAsyncException(reason);
                     }
                 }
-                jobs.length > 1000 && count < jobs.length * 0.5 && jobs.splice(global_1.Math.floor(jobs.length * 0.9), jobs.length);
+                jobs.length > 1000 && count < jobs.length * 0.5 && jobs.splice(alias_1.floor(jobs.length * 0.9), jobs.length);
             }
         },
         {
+            './alias': 4,
             './exception': 13,
             './global': 15
         }
@@ -709,7 +786,7 @@ require = function () {
             exports.curry = f => curry_(f, f.length);
             function curry_(f, arity, ...xs) {
                 let g;
-                return xs.length < arity ? (...ys) => curry_(g = g || xs.length && f.bind(global_1.undefined, ...xs) || f, arity - xs.length, ...ys) : f(...xs);
+                return xs.length < arity ? (...ys) => curry_(g !== null && g !== void 0 ? g : g = xs.length && f.bind(global_1.undefined, ...xs) || f, arity - xs.length, ...ys) : f(...xs);
             }
             const uncurry = f => uncurry_(f);
             exports.uncurry = uncurry;
@@ -1202,7 +1279,8 @@ require = function () {
                     this.memory_ = global_1.undefined;
                 }
                 evaluate() {
-                    return this.memory_ ? this.memory_ : this.memory_ = this.thunk();
+                    var _a;
+                    return (_a = this.memory_) !== null && _a !== void 0 ? _a : this.memory_ = this.thunk();
                 }
             }
             exports.Lazy = Lazy;
@@ -2234,6 +2312,7 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.hasBinary = exports.isStorable = void 0;
+            const alias_1 = _dereq_('spica/alias');
             const type_1 = _dereq_('spica/type');
             function isStorable(value) {
                 switch (typeof value) {
@@ -2244,7 +2323,7 @@ require = function () {
                     return true;
                 case 'object':
                     try {
-                        return value === null || isBinary(value) || Object.keys(value).every(key => isStorable(value[key]));
+                        return value === null || isBinary(value) || alias_1.ObjectKeys(value).every(key => isStorable(value[key]));
                     } catch (_a) {
                         return false;
                     }
@@ -2254,20 +2333,24 @@ require = function () {
             }
             exports.isStorable = isStorable;
             function hasBinary(value) {
-                return !type_1.isPrimitive(value) ? isBinary(value) || Object.keys(value).some(key => hasBinary(value[key])) : false;
+                return !type_1.isPrimitive(value) ? isBinary(value) || alias_1.ObjectKeys(value).some(key => hasBinary(value[key])) : false;
             }
             exports.hasBinary = hasBinary;
             function isBinary(value) {
                 return value instanceof Int8Array || value instanceof Int16Array || value instanceof Int32Array || value instanceof Uint8Array || value instanceof Uint8ClampedArray || value instanceof Uint16Array || value instanceof Uint32Array || value instanceof ArrayBuffer || value instanceof Blob;
             }
         },
-        { 'spica/type': 31 }
+        {
+            'spica/alias': 4,
+            'spica/type': 31
+        }
     ],
     36: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.isValidPropertyValue = exports.isValidPropertyName = exports.EventRecordValue = exports.SavedEventRecord = exports.LoadedEventRecord = exports.StoredEventRecord = exports.UnstoredEventRecord = exports.EventRecordType = void 0;
+            const alias_1 = _dereq_('spica/alias');
             const assign_1 = _dereq_('spica/assign');
             const identifier_1 = _dereq_('./identifier');
             const value_1 = _dereq_('../database/value');
@@ -2293,7 +2376,7 @@ require = function () {
                         throw new TypeError(`ClientChannel: EventRecord: Invalid event value: ${ JSON.stringify(this.value) }`);
                     if (typeof this.date !== 'number' || !Number.isFinite(this.date) || this.date >= 0 === false)
                         throw new TypeError(`ClientChannel: EventRecord: Invalid event date: ${ this.date }`);
-                    this.attr = this.type === exports.EventRecordType.put ? Object.keys(value).filter(isValidPropertyName)[0] : '';
+                    this.attr = this.type === exports.EventRecordType.put ? alias_1.ObjectKeys(value).filter(isValidPropertyName)[0] : '';
                     if (typeof this.attr !== 'string')
                         throw new TypeError(`ClientChannel: EventRecord: Invalid event attr: ${ this.key }`);
                     switch (type) {
@@ -2301,22 +2384,22 @@ require = function () {
                         if (!isValidPropertyName(this.attr))
                             throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${ this.type }: ${ this.attr }`);
                         this.value = value = new EventRecordValue({ [this.attr]: value[this.attr] });
-                        void Object.freeze(this.value);
-                        void Object.freeze(this);
+                        void alias_1.ObjectFreeze(this.value);
+                        void alias_1.ObjectFreeze(this);
                         return;
                     case exports.EventRecordType.snapshot:
                         if (this.attr !== '')
                             throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${ this.type }: ${ this.attr }`);
                         this.value = value = new EventRecordValue(value);
-                        void Object.freeze(this.value);
-                        void Object.freeze(this);
+                        void alias_1.ObjectFreeze(this.value);
+                        void alias_1.ObjectFreeze(this);
                         return;
                     case exports.EventRecordType.delete:
                         if (this.attr !== '')
                             throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${ this.type }: ${ this.attr }`);
                         this.value = value = new EventRecordValue();
-                        void Object.freeze(this.value);
-                        void Object.freeze(this);
+                        void alias_1.ObjectFreeze(this.value);
+                        void alias_1.ObjectFreeze(this);
                         return;
                     default:
                         throw new TypeError(`ClientChannel: EventRecord: Invalid event type: ${ type }`);
@@ -2374,6 +2457,7 @@ require = function () {
         {
             '../database/value': 35,
             './identifier': 37,
+            'spica/alias': 4,
             'spica/assign': 6
         }
     ],
@@ -2398,6 +2482,7 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.compose = exports.record = exports.EventStore = void 0;
             const global_1 = _dereq_('spica/global');
+            const alias_1 = _dereq_('spica/alias');
             const observer_1 = _dereq_('spica/observer');
             const cancellation_1 = _dereq_('spica/cancellation');
             const clock_1 = _dereq_('spica/clock');
@@ -2419,14 +2504,15 @@ require = function () {
                     this.name = name;
                     this.attrs = attrs;
                     this.listen = listen;
+                    this.alive = true;
                     this.memory = new observer_1.Observation();
-                    this.events = Object.freeze({
+                    this.events = alias_1.ObjectFreeze({
                         load: new observer_1.Observation(),
                         save: new observer_1.Observation(),
                         loss: new observer_1.Observation(),
                         clean: new observer_1.Observation()
                     });
-                    this.events_ = Object.freeze({ memory: new observer_1.Observation({ limit: Infinity }) });
+                    this.events_ = alias_1.ObjectFreeze({ memory: new observer_1.Observation({ limit: Infinity }) });
                     this.tx_ = { rwc: 0 };
                     this.snapshotCycle = 9;
                     const states = new class {
@@ -2510,8 +2596,12 @@ require = function () {
                     void clock_1.tick(() => this.tx_.rw = void 0);
                 }
                 fetch(key, cb = noop_1.noop, cancellation = new cancellation_1.Cancellation()) {
+                    if (!this.alive)
+                        return void cb(new Error('Session is closed.'));
                     const events = [];
                     return void this.listen(db => {
+                        if (!this.alive)
+                            return void cb(new Error('Session is closed.'));
                         if (cancellation.canceled)
                             return void cb(new Error('Cancelled.'));
                         const tx = db.transaction(this.name, 'readonly');
@@ -2576,16 +2666,18 @@ require = function () {
                 }
                 meta(key) {
                     const events = this.memory.reflect([key]);
-                    return Object.freeze({
+                    return alias_1.ObjectFreeze({
                         key: key,
                         id: events.reduce((id, e) => e.id > id ? e.id : id, 0),
                         date: events.reduce((date, e) => e.date > date ? e.date : date, 0)
                     });
                 }
                 get(key) {
-                    return Object.assign(Object.create(null), compose(key, this.attrs, this.memory.reflect([key])).value);
+                    return alias_1.ObjectAssign(alias_1.ObjectCreate(null), compose(key, this.attrs, this.memory.reflect([key])).value);
                 }
                 add(event, tx) {
+                    if (!this.alive)
+                        return;
                     switch (event.type) {
                     case EventStore.EventType.put: {
                             void this.memory.off([
@@ -2635,6 +2727,8 @@ require = function () {
                         event.type
                     ], new EventStore.Event(event.type, identifier_1.makeEventId(0), event.key, event.attr, event.date));
                     return void this.listen(db => {
+                        if (!this.alive)
+                            return;
                         tx = this.txrw = tx || this.txrw || db.transaction(this.name, 'readwrite');
                         const active = () => this.memory.refs([
                             event.key,
@@ -2680,7 +2774,11 @@ require = function () {
                     return void this.add(new event_1.UnstoredEventRecord(key, new EventStore.Value(), EventStore.EventType.delete));
                 }
                 snapshot(key) {
+                    if (!this.alive)
+                        return;
                     return void this.listen(db => {
+                        if (!this.alive)
+                            return;
                         if (!this.has(key) || this.meta(key).id === 0)
                             return;
                         const tx = this.txrw = this.txrw || db.transaction(this.name, 'readwrite');
@@ -2718,10 +2816,14 @@ require = function () {
                     });
                 }
                 clean(key) {
+                    if (!this.alive)
+                        return;
                     const events = [];
                     const cleanState = new Map();
                     const cleared = new cancellation_1.Cancellation();
                     return void this.cursor(api_1.IDBKeyRange.only(key), EventStoreSchema.key, 'prev', 'readwrite', (cursor, error) => {
+                        if (!this.alive)
+                            return;
                         if (error)
                             return;
                         if (!cursor) {
@@ -2767,7 +2869,11 @@ require = function () {
                     });
                 }
                 cursor(query, index, direction, mode, cb) {
+                    if (!this.alive)
+                        return void cb(null, new Error('Session is closed.'));
                     return void this.listen(db => {
+                        if (!this.alive)
+                            return void cb(null, new Error('Session is closed.'));
                         const tx = db.transaction(this.name, mode);
                         const req = index ? tx.objectStore(this.name).index(index).openCursor(query, direction) : tx.objectStore(this.name).openCursor(query, direction);
                         void req.addEventListener('success', () => {
@@ -2781,6 +2887,9 @@ require = function () {
                         void tx.addEventListener('abort ', () => void cb(null, tx.error || req.error));
                     }, () => void cb(null, new Error('Access has failed.')));
                 }
+                close() {
+                    this.alive = false;
+                }
             }
             exports.EventStore = EventStore;
             (function (EventStore) {
@@ -2792,7 +2901,7 @@ require = function () {
                         this.attr = attr;
                         this.date = date;
                         this.EVENT;
-                        void Object.freeze(this);
+                        void alias_1.ObjectFreeze(this);
                     }
                 }
                 EventStore.Event = Event;
@@ -2845,6 +2954,7 @@ require = function () {
             '../database/value': 35,
             './event': 36,
             './identifier': 37,
+            'spica/alias': 4,
             'spica/cancellation': 8,
             'spica/clock': 10,
             'spica/concat': 11,
@@ -2868,6 +2978,7 @@ require = function () {
                     this.name = name;
                     this.index = index;
                     this.listen = listen;
+                    this.alive = true;
                     this.cache = new Map();
                     this.tx_ = { rwc: 0 };
                     if (typeof index !== 'string')
@@ -2904,7 +3015,11 @@ require = function () {
                     void clock_1.tick(() => this.tx_.rw = void 0);
                 }
                 fetch(key, cb = noop_1.noop, cancellation = new cancellation_1.Cancellation()) {
+                    if (!this.alive)
+                        return void cb(new Error('Session is closed.'));
                     return void this.listen(db => {
+                        if (!this.alive)
+                            return void cb(new Error('Session is closed.'));
                         if (cancellation.canceled)
                             return void cb(new Error('Cancelled.'));
                         const tx = db.transaction(this.name, 'readonly');
@@ -2927,7 +3042,11 @@ require = function () {
                 }
                 put(value, key, cb = noop_1.noop) {
                     void this.cache.set(key, value);
+                    if (!this.alive)
+                        return value;
                     void this.listen(db => {
+                        if (!this.alive)
+                            return;
                         if (!this.cache.has(key))
                             return;
                         const tx = this.txrw = this.txrw || db.transaction(this.name, 'readwrite');
@@ -2940,7 +3059,11 @@ require = function () {
                 }
                 delete(key, cb = noop_1.noop) {
                     void this.cache.delete(key);
+                    if (!this.alive)
+                        return;
                     void this.listen(db => {
+                        if (!this.alive)
+                            return;
                         const tx = this.txrw = this.txrw || db.transaction(this.name, 'readwrite');
                         void tx.objectStore(this.name).delete(key);
                         void tx.addEventListener('complete', () => void cb(tx.error));
@@ -2949,7 +3072,11 @@ require = function () {
                     }, () => void cb(new Error('Access has failed.')));
                 }
                 cursor(query, index, direction, mode, cb) {
+                    if (!this.alive)
+                        return;
                     void this.listen(db => {
+                        if (!this.alive)
+                            return;
                         const tx = db.transaction(this.name, mode);
                         const req = index ? tx.objectStore(this.name).index(index).openCursor(query, direction) : tx.objectStore(this.name).openCursor(query, direction);
                         void req.addEventListener('success', () => {
@@ -2963,6 +3090,9 @@ require = function () {
                         void tx.addEventListener('error', () => void cb(null, req.error));
                         void tx.addEventListener('abort', () => void cb(null, req.error));
                     }, () => void cb(null, new Error('Access has failed.')));
+                }
+                close() {
+                    this.alive = false;
                 }
             }
             exports.KeyValueStore = KeyValueStore;
@@ -3074,6 +3204,7 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.build = exports.Schema = exports.isValidPropertyValue = exports.isValidPropertyName = void 0;
+            const alias_1 = _dereq_('spica/alias');
             const event_1 = _dereq_('../../../data/es/event');
             Object.defineProperty(exports, 'isValidPropertyName', {
                 enumerable: true,
@@ -3098,15 +3229,15 @@ require = function () {
             }(Schema = exports.Schema || (exports.Schema = {})));
             function build(source, factory, set = noop_1.noop, get = noop_1.noop) {
                 const dao = factory();
-                for (const prop of Object.values(Schema)) {
+                for (const prop of alias_1.ObjectValues(Schema)) {
                     delete dao[prop];
                 }
                 if (typeof source[Schema.key] !== 'string')
                     throw new TypeError(`ClientChannel: DAO: Invalid key: ${ source[Schema.key] }`);
                 const descmap = {
-                    ...Object.keys(dao).filter(event_1.isValidPropertyName).filter(event_1.isValidPropertyValue(dao)).reduce((map, prop) => {
+                    ...alias_1.ObjectKeys(dao).filter(event_1.isValidPropertyName).filter(event_1.isValidPropertyValue(dao)).reduce((map, prop) => {
                         {
-                            const desc = Object.getOwnPropertyDescriptor(dao, prop);
+                            const desc = alias_1.ObjectGetOwnPropertyDescriptor(dao, prop);
                             if (desc && (desc.get || desc.set))
                                 return map;
                         }
@@ -3159,14 +3290,15 @@ require = function () {
                         }
                     }
                 };
-                void Object.defineProperties(dao, descmap);
-                void Object.seal(dao);
+                void alias_1.ObjectDefineProperties(dao, descmap);
+                void alias_1.ObjectSeal(dao);
                 return dao;
             }
             exports.build = build;
         },
         {
             '../../../data/es/event': 36,
+            'spica/alias': 4,
             'spica/noop': 26
         }
     ],
@@ -3191,6 +3323,7 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.ChannelStore = void 0;
             const global_1 = _dereq_('spica/global');
+            const alias_1 = _dereq_('spica/alias');
             const observer_1 = _dereq_('spica/observer');
             const cancellation_1 = _dereq_('spica/cancellation');
             const promise_1 = _dereq_('spica/promise');
@@ -3219,46 +3352,49 @@ require = function () {
                     this.keys_ = new Set();
                     this.channel = new channel_1.Channel(this.name, this.debug);
                     this.ownership = new channel_2.Ownership(this.channel);
-                    this.keys = new cache_1.Cache(this.size, (() => {
-                        void this.ownership.take('store', 0);
-                        const keys = this.keys_;
-                        let timer = 0;
-                        const resolve = () => {
-                            timer = 0;
-                            const since = Date.now();
-                            let count = 0;
-                            if (!this.ownership.take('store', 5 * 1000))
-                                return;
-                            for (const key of keys) {
-                                if (this.cancellation.canceled)
-                                    return void this.keys.clear(), void keys.clear();
-                                void keys.delete(key);
+                    this.keys = new cache_1.Cache(this.size, {
+                        disposer: (() => {
+                            void this.ownership.take('store', 0);
+                            const keys = this.keys_;
+                            let timer = 0;
+                            const resolve = () => {
+                                timer = 0;
+                                const since = Date.now();
+                                let count = 0;
+                                if (!this.ownership.take('store', 5 * 1000))
+                                    return;
+                                for (const key of keys) {
+                                    if (!this.alive)
+                                        return void this.keys.clear(), void keys.clear();
+                                    void keys.delete(key);
+                                    if (timer > 0)
+                                        return;
+                                    if (this.keys.has(key))
+                                        continue;
+                                    if (++count > 10)
+                                        return void global_1.setTimeout(resolve, (Date.now() - since) * 3);
+                                    if (!this.ownership.extend('store', 5 * 1000))
+                                        return;
+                                    if (!this.ownership.take(`key:${ key }`, 5 * 1000))
+                                        continue;
+                                    void this.schema.expire.set(key, 0);
+                                }
+                            };
+                            return key => {
+                                void keys.add(key);
                                 if (timer > 0)
                                     return;
-                                if (this.keys.has(key))
-                                    continue;
-                                if (++count > 10)
-                                    return void global_1.setTimeout(resolve, (Date.now() - since) * 3);
-                                if (!this.ownership.extend('store', 5 * 1000))
-                                    return;
-                                if (!this.ownership.take(`key:${ key }`, 5 * 1000))
-                                    continue;
-                                void this.schema.expire.set(key, 0);
-                            }
-                        };
-                        return key => {
-                            void keys.add(key);
-                            if (timer > 0)
-                                return;
-                            timer = global_1.setTimeout(resolve, 3 * 1000);
-                        };
-                    })(), { ignore: { delete: true } });
-                    this.events_ = Object.freeze({
+                                timer = global_1.setTimeout(resolve, 3 * 1000);
+                            };
+                        })(),
+                        dispose: { delete: false }
+                    });
+                    this.events_ = alias_1.ObjectFreeze({
                         load: new observer_1.Observation(),
                         save: new observer_1.Observation(),
                         clean: new observer_1.Observation()
                     });
-                    this.events = Object.freeze({
+                    this.events = alias_1.ObjectFreeze({
                         load: new observer_1.Observation({ limit: global_1.Infinity }),
                         save: new observer_1.Observation({ limit: global_1.Infinity }),
                         loss: new observer_1.Observation({ limit: global_1.Infinity })
@@ -3301,7 +3437,7 @@ require = function () {
                     const limit = () => {
                         if (!Number.isFinite(size))
                             return;
-                        if (this.cancellation.canceled)
+                        if (!this.alive)
                             return;
                         void this.recent(global_1.Infinity, (ks, error) => {
                             if (error)
@@ -3312,6 +3448,9 @@ require = function () {
                         });
                     };
                     void limit();
+                }
+                get alive() {
+                    return !this.cancellation.canceled;
                 }
                 sync(keys, timeout = global_1.Infinity) {
                     const cancellation = new cancellation_1.Cancellation();
@@ -3343,7 +3482,7 @@ require = function () {
                     ], () => void this.log(key));
                 }
                 delete(key) {
-                    if (this.cancellation.canceled)
+                    if (!this.alive)
                         return;
                     void this.ownership.take(`key:${ key }`, 5 * 1000);
                     void this.log(key);
@@ -3391,6 +3530,9 @@ require = function () {
                     this.data = new data_1.DataStore(this.attrs_, this.listen_);
                     this.access = new access_1.AccessStore(this.listen_);
                     this.expire = new expiry_1.ExpiryStore(this.store_, this.cancellation_, this.ownership_, this.listen_);
+                    void this.cancellation_.register(() => this.data.close());
+                    void this.cancellation_.register(() => this.access.close());
+                    void this.cancellation_.register(() => this.expire.close());
                     void this.cancellation_.register(this.store_.events_.load.relay(this.data.events.load));
                     void this.cancellation_.register(this.store_.events_.save.relay(this.data.events.save));
                     void this.cancellation_.register(this.store_.events_.clean.relay(this.data.events.clean));
@@ -3401,11 +3543,11 @@ require = function () {
                 }
                 rebuild() {
                     void this.close();
+                    this.cancellation_ = new cancellation_1.Cancellation();
                     void this.build();
                 }
                 close() {
                     void this.cancellation_.cancel();
-                    this.cancellation_ = new cancellation_1.Cancellation();
                 }
             }
         },
@@ -3416,6 +3558,7 @@ require = function () {
             './channel/access': 45,
             './channel/data': 46,
             './channel/expiry': 47,
+            'spica/alias': 4,
             'spica/cache': 7,
             'spica/cancellation': 8,
             'spica/global': 15,
@@ -3429,6 +3572,7 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.AccessStore = exports.name = void 0;
+            const alias_1 = _dereq_('spica/alias');
             const store_1 = _dereq_('../../../../data/kvs/store');
             exports.name = 'access';
             class AccessStore {
@@ -3436,7 +3580,7 @@ require = function () {
                     this.listen = listen;
                     this.store = new class extends store_1.KeyValueStore {
                     }(exports.name, 'key', this.listen);
-                    void Object.freeze(this);
+                    void alias_1.ObjectFreeze(this);
                 }
                 static configure() {
                     return {
@@ -3485,6 +3629,9 @@ require = function () {
                 delete(key) {
                     void this.store.delete(key);
                 }
+                close() {
+                    void this.store.close();
+                }
             }
             exports.AccessStore = AccessStore;
             class AccessRecord {
@@ -3494,7 +3641,10 @@ require = function () {
                 }
             }
         },
-        { '../../../../data/kvs/store': 39 }
+        {
+            '../../../../data/kvs/store': 39,
+            'spica/alias': 4
+        }
     ],
     46: [
         function (_dereq_, module, exports) {
@@ -3527,6 +3677,7 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.ExpiryStore = void 0;
             const global_1 = _dereq_('spica/global');
+            const alias_1 = _dereq_('spica/alias');
             const store_1 = _dereq_('../../../../data/kvs/store');
             const name = 'expiry';
             class ExpiryStore {
@@ -3586,7 +3737,7 @@ require = function () {
                         };
                     })();
                     void this.schedule(10 * 1000);
-                    void Object.freeze(this);
+                    void alias_1.ObjectFreeze(this);
                 }
                 static configure() {
                     return {
@@ -3620,6 +3771,9 @@ require = function () {
                 delete(key) {
                     void this.store.delete(key);
                 }
+                close() {
+                    void this.store.close();
+                }
             }
             exports.ExpiryStore = ExpiryStore;
             class ExpiryRecord {
@@ -3631,6 +3785,7 @@ require = function () {
         },
         {
             '../../../../data/kvs/store': 39,
+            'spica/alias': 4,
             'spica/global': 15
         }
     ],
@@ -3639,6 +3794,7 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.StoreChannel = void 0;
+            const alias_1 = _dereq_('spica/alias');
             const observer_1 = _dereq_('spica/observer');
             const throttle_1 = _dereq_('spica/throttle');
             const api_1 = _dereq_('../../dao/api');
@@ -3646,11 +3802,11 @@ require = function () {
             const api_2 = _dereq_('../../webstorage/api');
             class StoreChannel extends channel_1.ChannelStore {
                 constructor(name, factory, {migrate = () => void 0, destroy = () => true, age = Infinity, size = Infinity, debug = false} = {}) {
-                    super(name, Object.keys(factory()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(factory())), destroy, age, size, debug);
+                    super(name, alias_1.ObjectKeys(factory()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(factory())), destroy, age, size, debug);
                     this.factory = factory;
                     this.links = new Map();
                     this.sources = new Map();
-                    const attrs = Object.keys(factory()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(factory()));
+                    const attrs = alias_1.ObjectKeys(factory()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(factory()));
                     void this.events_.load.monitor([], ({key, attr, type}) => {
                         if (!this.sources.has(key))
                             return;
@@ -3687,24 +3843,26 @@ require = function () {
                             }
                         }
                     });
-                    void Object.freeze(this);
+                    void alias_1.ObjectFreeze(this);
                 }
                 link(key, age) {
                     void this.fetch(key);
                     void this.expire(key, age);
-                    return this.links.has(key) ? this.links.get(key) : this.links.set(key, api_1.build(Object.defineProperties(this.sources.set(key, this.get(key)).get(key), {
+                    return this.links.has(key) ? this.links.get(key) : this.links.set(key, api_1.build(alias_1.ObjectDefineProperties(this.sources.set(key, this.get(key)).get(key), {
                         [api_1.Schema.meta]: { get: () => this.meta(key) },
                         [api_1.Schema.id]: { get: () => this.meta(key).id },
                         [api_1.Schema.key]: { get: () => this.meta(key).key },
                         [api_1.Schema.date]: { get: () => this.meta(key).date },
                         [api_1.Schema.event]: { value: new observer_1.Observation({ limit: Infinity }) }
-                    }), () => this.factory(), (attr, newValue, oldValue) => (void this.add(new channel_1.ChannelStore.Record(key, { [attr]: newValue })), void cast(this.sources.get(key)[api_1.Schema.event]).emit([
-                        api_2.StorageChannel.EventType.send,
-                        attr
-                    ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.send, attr, newValue, oldValue))), throttle_1.throttle(100, () => this.has(key) && void this.log(key)))).get(key);
-                }
-                destroy() {
-                    void super.destroy();
+                    }), this.factory, (attr, newValue, oldValue) => {
+                        if (!this.alive)
+                            return;
+                        void this.add(new channel_1.ChannelStore.Record(key, { [attr]: newValue }));
+                        void cast(this.sources.get(key)[api_1.Schema.event]).emit([
+                            api_2.StorageChannel.EventType.send,
+                            attr
+                        ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.send, attr, newValue, oldValue));
+                    }, throttle_1.throttle(100, () => this.alive && this.links.has(key) && this.has(key) && void this.log(key)))).get(key);
                 }
             }
             exports.StoreChannel = StoreChannel;
@@ -3716,6 +3874,7 @@ require = function () {
             '../../dao/api': 41,
             '../../webstorage/api': 50,
             '../model/channel': 44,
+            'spica/alias': 4,
             'spica/observer': 27,
             'spica/throttle': 30
         }
@@ -3893,6 +4052,7 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.StorageChannel = void 0;
+            const alias_1 = _dereq_('spica/alias');
             const observer_1 = _dereq_('spica/observer');
             const cancellation_1 = _dereq_('spica/cancellation');
             const api_1 = _dereq_('../../dao/api');
@@ -3905,7 +4065,7 @@ require = function () {
                     this.storage = storage;
                     this.cancellation = new cancellation_1.Cancellation();
                     this.mode = this.storage === api_2.localStorage ? 'local' : 'session';
-                    this.events = Object.freeze({
+                    this.events = alias_1.ObjectFreeze({
                         send: new observer_1.Observation({ limit: Infinity }),
                         recv: new observer_1.Observation({ limit: Infinity })
                     });
@@ -3919,7 +4079,9 @@ require = function () {
                         [api_1.Schema.event]: new observer_1.Observation({ limit: Infinity })
                     };
                     this.link_ = api_1.build(source, factory, (attr, newValue, oldValue) => {
-                        void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(source)).reduce((acc, attr) => {
+                        if (!this.alive)
+                            return;
+                        void this.storage.setItem(this.name, JSON.stringify(alias_1.ObjectKeys(source).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(source)).reduce((acc, attr) => {
                             acc[attr] = source[attr];
                             return acc;
                         }, {})));
@@ -3936,7 +4098,7 @@ require = function () {
                         this.name
                     ], ({newValue}) => {
                         const item = parse(newValue);
-                        void Object.keys(item).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(item)).forEach(attr => {
+                        void alias_1.ObjectKeys(item).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(item)).forEach(attr => {
                             const oldVal = source[attr];
                             const newVal = item[attr];
                             if ([newVal].includes(oldVal))
@@ -3951,7 +4113,10 @@ require = function () {
                             void this.events.recv.emit([event.attr], event);
                         });
                     }));
-                    void Object.freeze(this);
+                    void alias_1.ObjectFreeze(this);
+                }
+                get alive() {
+                    return !this.cancellation.canceled;
                 }
                 link() {
                     return this.link_;
@@ -3972,7 +4137,7 @@ require = function () {
                         this.attr = attr;
                         this.newValue = newValue;
                         this.oldValue = oldValue;
-                        void Object.freeze(this);
+                        void alias_1.ObjectFreeze(this);
                     }
                 }
                 StorageChannel.Event = Event;
@@ -3994,6 +4159,7 @@ require = function () {
             '../../../infrastructure/webstorage/api': 61,
             '../../dao/api': 41,
             '../model/storage': 51,
+            'spica/alias': 4,
             'spica/cancellation': 8,
             'spica/observer': 27
         }
@@ -4192,6 +4358,7 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.IDBEvent = exports.idbEventStream = exports.idbEventStream_ = void 0;
+            const alias_1 = _dereq_('spica/alias');
             const observer_1 = _dereq_('spica/observer');
             exports.idbEventStream_ = new observer_1.Observation({ limit: Infinity });
             exports.idbEventStream = exports.idbEventStream_;
@@ -4199,12 +4366,15 @@ require = function () {
                 constructor(name, type) {
                     this.name = name;
                     this.type = type;
-                    void Object.freeze(this);
+                    void alias_1.ObjectFreeze(this);
                 }
             }
             exports.IDBEvent = IDBEvent;
         },
-        { 'spica/observer': 27 }
+        {
+            'spica/alias': 4,
+            'spica/observer': 27
+        }
     ],
     58: [
         function (_dereq_, module, exports) {
