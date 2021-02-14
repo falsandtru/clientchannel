@@ -86,7 +86,7 @@ export class ExpiryStore<K extends string> {
           void this.chan.delete(key);
           return void cursor.continue();
         });
-      }, timeout);
+      }, timeout) as any;
     };
   })();
   public set(key: K, age: number): void {

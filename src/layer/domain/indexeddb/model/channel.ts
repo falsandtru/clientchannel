@@ -109,32 +109,35 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   private readonly keys_ = new Set<K>();
   private readonly channel = new Channel<K>(this.name, this.debug);
   private readonly ownership: Ownership<string> = new Ownership(this.channel);
-  private readonly keys = new Cache<K>(this.size, (() => {
-    void this.ownership.take('store', 0);
-    const keys = this.keys_;
-    let timer = 0;
-    const resolve = (): void => {
-      timer = 0;
-      const since = Date.now();
-      let count = 0;
-      if (!this.ownership.take('store', 5 * 1000)) return;
-      for (const key of keys) {
-        if (this.cancellation.canceled) return void this.keys.clear(), void keys.clear();
-        void keys.delete(key);
+  private readonly keys = new Cache<K>(this.size, {
+    disposer: (() => {
+      void this.ownership.take('store', 0);
+      const keys = this.keys_;
+      let timer = 0;
+      const resolve = (): void => {
+        timer = 0;
+        const since = Date.now();
+        let count = 0;
+        if (!this.ownership.take('store', 5 * 1000)) return;
+        for (const key of keys) {
+          if (this.cancellation.canceled) return void this.keys.clear(), void keys.clear();
+          void keys.delete(key);
+          if (timer > 0) return;
+          if (this.keys.has(key)) continue;
+          if (++count > 10) return void setTimeout(resolve, (Date.now() - since) * 3);
+          if (!this.ownership.extend('store', 5 * 1000)) return;
+          if (!this.ownership.take(`key:${key}`, 5 * 1000)) continue;
+          void this.schema.expire.set(key, 0);
+        }
+      };
+      return (key: K): void => {
+        void keys.add(key);
         if (timer > 0) return;
-        if (this.keys.has(key)) continue;
-        if (++count > 10) return void setTimeout(resolve, (Date.now() - since) * 3);
-        if (!this.ownership.extend('store', 5 * 1000)) return;
-        if (!this.ownership.take(`key:${key}`, 5 * 1000)) continue;
-        void this.schema.expire.set(key, 0);
-      }
-    };
-    return (key: K): void => {
-      void keys.add(key);
-      if (timer > 0) return;
-      timer = setTimeout(resolve, 3 * 1000);
-    };
-  })(), { ignore: { delete: true } });
+        timer = setTimeout(resolve, 3 * 1000) as any;
+      };
+    })(),
+    dispose: { delete: false },
+  });
   public readonly events_ = Object.freeze({
     load: new Observation<[K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
     save: new Observation<[K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
