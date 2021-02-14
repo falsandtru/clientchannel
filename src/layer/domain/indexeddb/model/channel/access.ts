@@ -73,6 +73,9 @@ export class AccessStore<K extends string> {
   public delete(key: K): void {
     void this.store.delete(key);
   }
+  public close(): void {
+    void this.store.close();
+  }
 }
 
 class AccessRecord<K extends string> {

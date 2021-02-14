@@ -99,6 +99,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         }
       });
   }
+  private alive = true;
   private readonly memory = new Observation<[] | [K] | [K, keyof V | ''] | [K, keyof V | '', string] | [K, keyof V | '', string, string], void, UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>>();
   public readonly events = Object.freeze({
     load: new Observation<[K, Extract<keyof V | '', string>, EventStore.EventType], EventStore.Event<K, V>, void>(),
@@ -132,8 +133,10 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     void tick(() => this.tx_.rw = void 0);
   }
   public fetch(key: K, cb: (error: DOMException | Error | null) => void = noop, cancellation = new Cancellation()): void {
+    if (!this.alive) return void cb(new Error('Session is closed.'));
     const events: LoadedEventRecord<K, V>[] = [];
     return void this.listen(db => {
+      if (!this.alive) return void cb(new Error('Session is closed.'));
       if (cancellation.canceled) return void cb(new Error('Cancelled.'));
       const tx = db.transaction(this.name, 'readonly');
       const req = tx
@@ -234,6 +237,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   public add(event: UnstoredEventRecord<K, V>, tx?: IDBTransaction): void {
     assert(event instanceof UnstoredEventRecord);
     assert(event.type === EventStore.EventType.snapshot ? tx : true);
+    if (!this.alive) return;
     switch (event.type) {
       case EventStore.EventType.put: {
         void this.memory
@@ -262,6 +266,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     const loss = () =>
       void this.events.loss.emit([event.key, event.attr, event.type], new EventStore.Event<K, V>(event.type, makeEventId(0), event.key, event.attr, event.date));
     return void this.listen(db => {
+      if (!this.alive) return;
       tx = this.txrw = tx || this.txrw || db.transaction(this.name, 'readwrite');
       const active = (): boolean =>
         this.memory.refs([event.key, event.attr, sqid(0)])
@@ -306,7 +311,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   }
   private readonly snapshotCycle: number = 9;
   private snapshot(key: K): void {
+    if (!this.alive) return;
     return void this.listen(db => {
+      if (!this.alive) return;
       if (!this.has(key) || this.meta(key).id === 0) return;
       const tx = this.txrw = this.txrw || db.transaction(this.name, 'readwrite');
       const store = tx.objectStore(this.name);
@@ -352,6 +359,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     });
   }
   public clean(key: K): void {
+    if (!this.alive) return;
     const events: StoredEventRecord<K, V>[] = [];
     const cleanState = new Map<K, boolean>();
     const cleared = new Cancellation();
@@ -361,6 +369,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       'prev',
       'readwrite',
       (cursor, error) => {
+        if (!this.alive) return;
         if (error) return;
         if (!cursor) {
           for (const event of events) {
@@ -397,7 +406,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       });
   }
   public cursor(query: IDBValidKey | IDBKeyRange | null, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMException | Error | null) => void): void {
+    if (!this.alive) return void cb(null, new Error('Session is closed.'));
     return void this.listen(db => {
+      if (!this.alive) return void cb(null, new Error('Session is closed.'));
       const tx = db.transaction(this.name, mode);
       const req = index
         ? tx
@@ -416,6 +427,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       void tx.addEventListener('error', () => void cb(null, tx.error || req.error));
       void tx.addEventListener('abort ', () => void cb(null, tx.error || req.error));
     }, () => void cb(null, new Error('Access has failed.')));
+  }
+  public close(): void {
+    this.alive = false;
   }
 }
 export namespace EventStore {

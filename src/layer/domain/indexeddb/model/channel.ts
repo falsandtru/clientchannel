@@ -94,7 +94,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
 
     const limit = () => {
       if (!Number.isFinite(size)) return;
-      if (this.cancellation.canceled) return;
+      if (!this.alive) return;
       void this.recent(Infinity, (ks, error) => {
         if (error) return void setTimeout(limit, 10 * 1000);
         for (const key of ks.reverse()) {
@@ -120,7 +120,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
         let count = 0;
         if (!this.ownership.take('store', 5 * 1000)) return;
         for (const key of keys) {
-          if (this.cancellation.canceled) return void this.keys.clear(), void keys.clear();
+          if (!this.alive) return void this.keys.clear(), void keys.clear();
           void keys.delete(key);
           if (timer > 0) return;
           if (this.keys.has(key)) continue;
@@ -138,6 +138,9 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     })(),
     dispose: { delete: false },
   });
+  protected get alive(): boolean {
+    return !this.cancellation.canceled;
+  }
   public readonly events_ = Object.freeze({
     load: new Observation<[K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
     save: new Observation<[K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
@@ -183,7 +186,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
       void this.log(key)));
   }
   public delete(key: K): void {
-    if (this.cancellation.canceled) return;
+    if (!this.alive) return;
     void this.ownership.take(`key:${key}`, 5 * 1000);
     void this.log(key);
     void this.schema.data.delete(key);
@@ -234,6 +237,10 @@ class Schema<K extends string, V extends StoreChannelObject<K>> {
     this.access = new AccessStore<K>(this.listen_);
     this.expire = new ExpiryStore<K>(this.store_, this.cancellation_, this.ownership_, this.listen_);
 
+    void this.cancellation_.register(() => this.data.close());
+    void this.cancellation_.register(() => this.access.close());
+    void this.cancellation_.register(() => this.expire.close());
+
     void this.cancellation_.register(this.store_.events_.load.relay(this.data.events.load));
     void this.cancellation_.register(this.store_.events_.save.relay(this.data.events.save));
     void this.cancellation_.register(this.store_.events_.clean.relay(this.data.events.clean));
@@ -245,6 +252,7 @@ class Schema<K extends string, V extends StoreChannelObject<K>> {
   }
   public rebuild(): void {
     void this.close();
+    this.cancellation_ = new Cancellation();
     void this.build();
   }
   public data!: DataStore<K, V>;
@@ -252,6 +260,5 @@ class Schema<K extends string, V extends StoreChannelObject<K>> {
   public expire!: ExpiryStore<K>;
   public close(): void {
     void this.cancellation_.cancel();
-    this.cancellation_ = new Cancellation();
   }
 }

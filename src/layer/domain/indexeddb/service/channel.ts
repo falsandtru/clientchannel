@@ -94,16 +94,15 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
                 value: new Observation<[StorageChannel.EventType], StorageChannel.Event<V>, void>({ limit: Infinity })
               },
             }),
-          () => this.factory(),
-          (attr, newValue, oldValue) => (
-            void this.add(new ChannelStore.Record<K, V>(key, { [attr]: newValue } as Partial<V>)),
+          this.factory,
+          (attr, newValue, oldValue) => {
+            if (!this.alive) return;
+            void this.add(new ChannelStore.Record<K, V>(key, { [attr]: newValue } as Partial<V>));
             void cast(this.sources.get(key)![Schema.event]!)
-              .emit([StorageChannel.EventType.send, attr], new StorageChannel.Event<V>(StorageChannel.EventType.send, attr as never, newValue, oldValue))),
-          throttle(100, () => this.has(key) && void this.log(key))))
+              .emit([StorageChannel.EventType.send, attr], new StorageChannel.Event<V>(StorageChannel.EventType.send, attr as never, newValue, oldValue));
+          },
+          throttle(100, () => this.alive && this.links.has(key) && this.has(key) && void this.log(key))))
           .get(key)!;
-  }
-  public destroy(): void {
-    void super.destroy();
   }
 }
 

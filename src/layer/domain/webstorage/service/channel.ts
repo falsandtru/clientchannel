@@ -24,6 +24,7 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
       [Schema.event]: new Observation<[StorageChannelEventType, keyof V], StorageChannel.Event<V>, void>({ limit: Infinity }),
     };
     this.link_ = build<V>(source, factory, (attr, newValue, oldValue) => {
+      if (!this.alive) return;
       void this.storage.setItem(this.name, JSON.stringify(Object.keys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, attr) => {
         acc[attr] = source[attr];
         return acc;
@@ -54,6 +55,9 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
   }
   private cancellation = new Cancellation();
   private readonly mode = this.storage === localStorage ? 'local' : 'session';
+  protected get alive(): boolean {
+    return !this.cancellation.canceled;
+  }
   public readonly events = Object.freeze({
     send: new Observation<[Extract<keyof V, string>], StorageChannel.Event<V>, void>({ limit: Infinity }),
     recv: new Observation<[Extract<keyof V, string>], StorageChannel.Event<V>, void>({ limit: Infinity }),

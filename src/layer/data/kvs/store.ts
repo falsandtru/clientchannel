@@ -24,6 +24,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
   ) {
     if (typeof index !== 'string') throw new TypeError();
   }
+  private alive = true;
   private readonly cache = new Map<K, V>();
   private tx_: {
     rw?: IDBTransaction;
@@ -48,7 +49,9 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     void tick(() => this.tx_.rw = void 0);
   }
   public fetch(key: K, cb: (error: DOMException | Error | null) => void = noop, cancellation = new Cancellation()): undefined {
+    if (!this.alive) return void cb(new Error('Session is closed.'));
     return void this.listen(db => {
+      if (!this.alive) return void cb(new Error('Session is closed.'));
       if (cancellation.canceled) return void cb(new Error('Cancelled.'));
       const tx = db.transaction(this.name, 'readonly');
       const req = this.index
@@ -84,7 +87,9 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
   }
   private put(value: V, key: K, cb: (key: K, error: DOMException | Error) => void = noop): V {
     void this.cache.set(key, value);
+    if (!this.alive) return value;
     void this.listen(db => {
+      if (!this.alive) return;
       if (!this.cache.has(key)) return;
       const tx = this.txrw = this.txrw || db.transaction(this.name, 'readwrite');
       this.index
@@ -105,7 +110,9 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
   }
   public delete(key: K, cb: (error: DOMException | Error) => void = noop): void {
     void this.cache.delete(key);
+    if (!this.alive) return;
     void this.listen(db => {
+      if (!this.alive) return;
       const tx = this.txrw = this.txrw || db.transaction(this.name, 'readwrite');
       void tx
         .objectStore(this.name)
@@ -119,7 +126,9 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     }, () => void cb(new Error('Access has failed.')));
   }
   public cursor(query: IDBValidKey | IDBKeyRange | null, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMException | Error | null) => void): void {
+    if (!this.alive) return;
     void this.listen(db => {
+      if (!this.alive) return;
       const tx = db.transaction(this.name, mode);
       const req = index
         ? tx
@@ -142,5 +151,8 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
       void tx.addEventListener('abort', () =>
         void cb(null, req.error));
     }, () => void cb(null, new Error('Access has failed.')));
+  }
+  public close() {
+    this.alive = false;
   }
 }
