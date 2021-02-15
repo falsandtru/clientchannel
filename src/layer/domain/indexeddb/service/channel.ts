@@ -1,4 +1,4 @@
-import { ObjectDefineProperties, ObjectFreeze, ObjectKeys } from 'spica/alias';
+import { ObjectDefineProperties, ObjectKeys } from 'spica/alias';
 import { StoreChannel as IStoreChannel, StoreChannelConfig, StoreChannelObject } from '../../../../../';
 import { Observation, Observer } from 'spica/observer';
 import { throttle } from 'spica/throttle';
@@ -62,7 +62,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
           }
         }
       });
-    void ObjectFreeze(this);
+    assert(Object.freeze(this));
   }
   private readonly links = new Map<K, V>();
   private readonly sources = new Map<K, Partial<V>>();

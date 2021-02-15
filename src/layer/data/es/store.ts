@@ -102,15 +102,15 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   }
   private alive = true;
   private readonly memory = new Observation<[] | [K] | [K, keyof V | ''] | [K, keyof V | '', string] | [K, keyof V | '', string, string], void, UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>>();
-  public readonly events = ObjectFreeze({
+  public readonly events = {
     load: new Observation<[K, Extract<keyof V | '', string>, EventStore.EventType], EventStore.Event<K, V>, void>(),
     save: new Observation<[K, Extract<keyof V | '', string>, EventStore.EventType], EventStore.Event<K, V>, void>(),
     loss: new Observation<[K, Extract<keyof V | '', string>, EventStore.EventType], EventStore.Event<K, V>, void>(),
     clean: new Observation<[K], undefined, void>(),
-  });
-  private readonly events_ = ObjectFreeze({
+  } as const;
+  private readonly events_ = {
     memory: new Observation<[K, keyof V | '', string], UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>, void>({ limit: Infinity }),
-  });
+  } as const;
   private tx: {
     rw?: IDBTransaction;
     rwc: number;
@@ -442,7 +442,7 @@ export namespace EventStore {
       public readonly date: number
     ) {
       this.EVENT;
-      void ObjectFreeze(this);
+      assert(Object.freeze(this));
     }
   }
   export import EventType = EventRecordType;

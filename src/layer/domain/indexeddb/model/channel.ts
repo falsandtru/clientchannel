@@ -1,5 +1,4 @@
 import { Infinity, Promise, setTimeout } from 'spica/global';
-import { ObjectFreeze } from 'spica/alias';
 import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../';
 import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
@@ -144,16 +143,16 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   protected get alive(): boolean {
     return this.cancellation.alive;
   }
-  public readonly events_ = ObjectFreeze({
+  public readonly events_ = {
     load: new Observation<[K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
     save: new Observation<[K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
     clean: new Observation<[K], undefined, void>(),
-  });
-  public readonly events = ObjectFreeze({
+  } as const;
+  public readonly events = {
     load: new Observation<[K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
     save: new Observation<[K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
     loss: new Observation<[K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
-  });
+  } as const;
   public sync(keys: K[], timeout?: number): Promise<PromiseSettledResult<K>[]> {
     const cancellation = timeout === void 0
       ? void 0

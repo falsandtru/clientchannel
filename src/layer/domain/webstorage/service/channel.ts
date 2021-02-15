@@ -1,4 +1,4 @@
-import { ObjectFreeze, ObjectKeys } from 'spica/alias';
+import { ObjectKeys } from 'spica/alias';
 import { StorageChannel as IStorageChannel, StorageChannelObject, StorageChannelEvent, StorageChannelEventType } from '../../../../../';
 import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
@@ -52,17 +52,17 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
             void this.events.recv.emit([event.attr], event);
           });
       }));
-    void ObjectFreeze(this);
+    assert(Object.freeze(this));
   }
   private cancellation = new Cancellation();
   private readonly mode = this.storage === localStorage ? 'local' : 'session';
   private get alive(): boolean {
     return this.cancellation.alive;
   }
-  public readonly events = ObjectFreeze({
+  public readonly events = {
     send: new Observation<[Extract<keyof V, string>], StorageChannel.Event<V>, void>({ limit: Infinity }),
     recv: new Observation<[Extract<keyof V, string>], StorageChannel.Event<V>, void>({ limit: Infinity }),
-  });
+  } as const;
   private readonly link_: V;
   public link(): V {
     return this.link_;
@@ -85,7 +85,7 @@ export namespace StorageChannel {
     ) {
       assert(typeof type === 'string');
       assert(typeof attr === 'string');
-      void ObjectFreeze(this);
+      assert(Object.freeze(this));
     }
   }
   export type EventType = StorageChannelEventType;

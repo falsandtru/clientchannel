@@ -1,4 +1,3 @@
-import { ObjectFreeze } from 'spica/alias';
 import { Observation, Observer } from 'spica/observer';
 
 export const idbEventStream_ = new Observation<[string, IDBEventType], IDBEvent, void>({ limit: Infinity });
@@ -19,6 +18,6 @@ export class IDBEvent {
     protected readonly name: string,
     public readonly type: IDBEventType,
   ) {
-    void ObjectFreeze(this);
+    assert(Object.freeze(this));
   }
 }

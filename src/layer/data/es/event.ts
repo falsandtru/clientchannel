@@ -1,5 +1,5 @@
 import { Number } from 'spica/global';
-import { ObjectFreeze, ObjectKeys } from 'spica/alias';
+import { ObjectKeys } from 'spica/alias';
 import { StoreChannelEventType } from '../../../../';
 import { clone } from 'spica/assign';
 import { EventId, makeEventId } from './identifier';
@@ -40,23 +40,23 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
         if (!isValidPropertyName(this.attr)) throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
         assert(this.attr !== '');
         this.value = value = new EventRecordValue({ [this.attr]: value[this.attr as keyof V] });
-        void ObjectFreeze(this.value);
-        void ObjectFreeze(this);
+        assert(Object.freeze(this.value));
+        assert(Object.freeze(this));
         return;
       case EventRecordType.snapshot:
         if (this.attr !== '') throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
         this.value = value = new EventRecordValue(value);
         assert(Object.keys(this.value).every(isValidPropertyName));
         assert(Object.keys(this.value).every(isValidPropertyValue(this.value)));
-        void ObjectFreeze(this.value);
-        void ObjectFreeze(this);
+        assert(Object.freeze(this.value));
+        assert(Object.freeze(this));
         return;
       case EventRecordType.delete:
         if (this.attr !== '') throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
         this.value = value = new EventRecordValue();
         assert.deepStrictEqual(Object.keys(this.value), []);
-        void ObjectFreeze(this.value);
-        void ObjectFreeze(this);
+        assert(Object.freeze(this.value));
+        assert(Object.freeze(this));
         return;
       default:
         throw new TypeError(`ClientChannel: EventRecord: Invalid event type: ${type}`);
