@@ -1,4 +1,4 @@
-import { Infinity, Promise, setTimeout } from 'spica/global';
+import { Infinity, Number, Promise, setTimeout } from 'spica/global';
 import { ObjectFreeze } from 'spica/alias';
 import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../';
 import { Observation } from 'spica/observer';
@@ -155,8 +155,10 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     loss: new Observation<[K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
   });
   public sync(keys: K[], timeout = Infinity): Promise<PromiseSettledResult<K>[]> {
-    const cancellation = new Cancellation();
-    Number.isFinite(timeout) && void setTimeout(cancellation.cancel, timeout);
+    const cancellation = Number.isFinite(timeout)
+      ? new Cancellation()
+      : void 0;
+    cancellation && void setTimeout(cancellation.cancel, timeout);
     return AtomicPromise.allSettled(
       keys.map(key =>
         new Promise<K>((resolve, reject) =>
@@ -166,7 +168,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
               : void resolve(key),
             cancellation))));
   }
-  public fetch(key: K, cb: (error: DOMException | Error | null) => void = noop, cancellation = new Cancellation()): void {
+  public fetch(key: K, cb: (error: DOMException | Error | null) => void = noop, cancellation?: Cancellation): void {
     void this.schema.access.fetch(key);
     return this.schema.data.fetch(key, cb, cancellation);
   }
