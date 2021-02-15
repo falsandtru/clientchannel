@@ -1,4 +1,4 @@
-import { Math } from 'spica/global';
+import { Math, Map } from 'spica/global';
 import { ObjectAssign, ObjectCreate, ObjectFreeze } from 'spica/alias';
 import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
