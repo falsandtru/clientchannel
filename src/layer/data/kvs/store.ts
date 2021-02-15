@@ -22,7 +22,6 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     private readonly index: string,
     private readonly listen: Listen,
   ) {
-    if (typeof index !== 'string') throw new TypeError();
   }
   private alive = true;
   private readonly cache = new Map<K, V>();
