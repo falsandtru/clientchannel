@@ -63,16 +63,19 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
     send: new Observation<[Extract<keyof V, string>], StorageChannel.Event<V>, void>({ limit: Infinity }),
     recv: new Observation<[Extract<keyof V, string>], StorageChannel.Event<V>, void>({ limit: Infinity }),
   } as const;
+  private ensureAliveness(): void {
+    if (!this.alive) throw new Error(`ClientChannel: Storage channel "${this.name}" is already closed.`);
+  }
   private readonly link_: V;
   public link(): V {
-    if (!this.alive) throw new Error(`ClientChannel: Storage channel "${this.name}" is already closed.`);
+    void this.ensureAliveness();
     return this.link_;
   }
   public close(): void {
     void this.cancellation.cancel();
   }
   public destroy(): void {
-    if (!this.alive) throw new Error(`ClientChannel: Storage channel "${this.name}" is already closed.`);
+    void this.ensureAliveness();
     void this.cancellation.cancel();
     void this.storage.removeItem(this.name);
   }
