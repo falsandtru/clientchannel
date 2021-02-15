@@ -142,6 +142,7 @@ function handleSuccessState(state: SuccessState): void {
 function handleErrorState(state: ErrorState): void {
   if (!state.alive) return;
   const { database, error, event, config } = state;
+  assert(error);
   void event.preventDefault();
   void idbEventStream_.emit([database, IDBEventType.error], new IDBEvent(database, IDBEventType.error));
   if (config.destroy(error, event)) {
