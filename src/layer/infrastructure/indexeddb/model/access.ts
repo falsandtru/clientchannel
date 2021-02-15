@@ -2,12 +2,13 @@ import { isIDBAvailable, states, commands, configs, requests, Command, Config } 
 import { handle } from './transition';
 import { idbEventStream, IDBEventType } from './event';
 import { isStorageAvailable } from '../../environment/api';
+import { noop } from 'spica/noop';
 
-export type Listen = (success: (db: IDBDatabase) => void, failure?: () => void) => void;
+export type Listen = (success: (db: IDBDatabase) => void, failure?: (reason: unknown) => void) => void;
 
 export function open(database: string, config: Config): Listen {
   void operate(database, Command.open, config);
-  return (success: (db: IDBDatabase) => void, failure?: () => void) =>
+  return (success: (db: IDBDatabase) => void, failure?: (reason: unknown) => void) =>
     void request(database, success, failure);
 }
 
@@ -57,7 +58,7 @@ function operate(database: string, command: Command, config: Config): void {
   if (!isIDBAvailable || !isStorageAvailable) return;
   if (states.has(database)) {
     assert(requests.has(database));
-    return void request(database, () => void 0);
+    return void request(database, noop);
   }
   else {
     assert(commands.get(database) === command);
@@ -66,9 +67,10 @@ function operate(database: string, command: Command, config: Config): void {
   }
 }
 
-function request(database: string, success: (db: IDBDatabase) => void, failure: () => void = () => void 0): void {
-  if (!isIDBAvailable || !isStorageAvailable) return void failure();
-  if (!requests.has(database)) return void failure();
+function request(database: string, success: (db: IDBDatabase) => void, failure: (reason: unknown) => void = noop): void {
+  if (!isIDBAvailable) return void failure(new Error('Database is unavailable.'));
+  if (!isStorageAvailable) return void failure(new Error('Storage is unavailable.'));
+  if (!requests.has(database)) return void failure(new Error('Database is inactive.'));
   void requests.get(database)!.enqueue(success, failure);
   void handle(database);
 }

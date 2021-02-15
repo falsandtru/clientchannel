@@ -21,9 +21,9 @@ class RequestQueue {
   ) {
   }
   private queue: Request[] = [];
-  public enqueue(success: (db: IDBDatabase) => void, failure: () => void): void {
+  public enqueue(success: (db: IDBDatabase) => void, failure: (reason: unknown) => void): void {
     const state = states.get(this.database);
-    if (!state || !state.alive || state.queue !== this) return void failure();
+    if (!state || !state.alive || state.queue !== this) return void failure(new Error('Request is invalid.'));
     void this.queue.push({ success, failure });
   }
   public dequeue(): Request | undefined {
@@ -36,7 +36,7 @@ class RequestQueue {
     while (true) {
       try {
         while (this.queue.length > 0) {
-          void this.queue.shift()!.failure();
+          void this.queue.shift()!.failure(new Error('Request is cancelled.'));
         }
         return;
       }
@@ -48,7 +48,7 @@ class RequestQueue {
 }
 interface Request {
   success: (db: IDBDatabase) => void;
-  failure: () => void;
+  failure: (reason: unknown) => void;
 }
 
 export const states = new Map<string, State>();
@@ -219,9 +219,7 @@ export class EndState extends State {
     switch (this.command) {
       case Command.close:
       case Command.destroy:
-        if (requests.has(this.database)) {
-          void requests.get(this.database)!.clear();
-        }
+        void requests.get(this.database)?.clear();
         void commands.delete(this.database);
         void configs.delete(this.database);
         void requests.delete(this.database);

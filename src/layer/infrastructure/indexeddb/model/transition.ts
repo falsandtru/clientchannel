@@ -110,7 +110,14 @@ function handleSuccessState(state: SuccessState): void {
       try {
         while (queue.size > 0 && state.alive) {
           assert(state.command === Command.open);
-          void queue.dequeue()!.success(connection);
+          const { success, failure } = queue.dequeue()!;
+          try {
+            success(connection);
+          }
+          catch (reason) {
+            failure(reason);
+            throw reason;
+          }
         }
         return;
       }
