@@ -32,6 +32,7 @@ export class Channel<K extends string> implements Channel<K> {
   private readonly channel = new BroadcastChannel(this.name);
   private readonly listeners = new Set<(ev: MessageEvent) => void>();
   public listen<C extends keyof ChannelMessageTypeMap<K>>(type: C, listener: (msg: ChannelMessageTypeMap<K>[C]) => void): () => void {
+    if (!this.alive) throw new Error(`ClientChannel: Broadcast channel "${this.name}" is already closed.`);
     void this.listeners.add(handler);
     void this.channel.addEventListener('message', handler);
     const { debug } = this;
@@ -47,7 +48,7 @@ export class Channel<K extends string> implements Channel<K> {
     }
   }
   public post(msg: ChannelMessage<K>): void {
-    if (!this.alive) return;
+    if (!this.alive) throw new Error(`ClientChannel: Broadcast channel "${this.name}" is already closed.`);
     this.debug && console.log('send', msg);
     void this.channel.postMessage(msg);
   }

@@ -65,12 +65,14 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
   } as const;
   private readonly link_: V;
   public link(): V {
+    if (!this.alive) throw new Error(`ClientChannel: Storage channel "${this.name}" is already closed.`);
     return this.link_;
   }
   public close(): void {
     void this.cancellation.cancel();
   }
   public destroy(): void {
+    if (!this.alive) throw new Error(`ClientChannel: Storage channel "${this.name}" is already closed.`);
     void this.cancellation.cancel();
     void this.storage.removeItem(this.name);
   }

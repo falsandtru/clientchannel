@@ -67,6 +67,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
   private readonly links = new Map<K, V>();
   private readonly sources = new Map<K, Partial<V>>();
   public link(key: K, age?: number): V {
+    if (!this.alive) throw new Error(`ClientChannel: Store channel "${this.name}" is already closed.`);
     void this.fetch(key);
     void this.expire(key, age);
     return this.links.has(key)

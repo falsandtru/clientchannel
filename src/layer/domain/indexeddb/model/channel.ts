@@ -154,6 +154,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     loss: new Observation<[K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
   } as const;
   public sync(keys: K[], timeout?: number): Promise<PromiseSettledResult<K>[]> {
+    if (!this.alive) throw new Error(`ClientChannel: Store channel "${this.name}" is already closed.`);
     const cancellation = timeout === void 0
       ? void 0
       : new Cancellation();
@@ -168,6 +169,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
             cancellation))));
   }
   public fetch(key: K, cb: (error: DOMException | Error | null) => void = noop, cancellation?: Cancellation): void {
+    if (!this.alive) throw new Error(`ClientChannel: Store channel "${this.name}" is already closed.`);
     void this.schema.access.fetch(key);
     return this.schema.data.fetch(key, cb, cancellation);
   }
@@ -175,14 +177,17 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     return this.schema.data.has(key);
   }
   public meta(key: K): StoreChannelObjectMetaData<K> {
+    if (!this.alive) throw new Error(`ClientChannel: Store channel "${this.name}" is already closed.`);
     return this.schema.data.meta(key);
   }
   public get(key: K): Partial<V> {
+    if (!this.alive) throw new Error(`ClientChannel: Store channel "${this.name}" is already closed.`);
     void this.log(key);
     return this.schema.data.get(key);
   }
   public add(record: DataStore.Record<K, V>): void {
     assert(record.type === DataStore.EventType.put);
+    if (!this.alive) throw new Error(`ClientChannel: Store channel "${this.name}" is already closed.`);
     const key = record.key;
     void this.log(key);
     void this.schema.data.add(record);
@@ -190,6 +195,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
       void this.log(key)));
   }
   public delete(key: K): void {
+    if (!this.alive) throw new Error(`ClientChannel: Store channel "${this.name}" is already closed.`);
     void this.ownership.take(`key:${key}`, 5 * 1000);
     void this.log(key);
     void this.schema.data.delete(key);
@@ -202,10 +208,12 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   private readonly ages = new Map<K, number>();
   public expire(key: K, age: number = this.age): void {
     assert(age > 0);
+    if (!this.alive) throw new Error(`ClientChannel: Store channel "${this.name}" is already closed.`);
     void this.ages.set(key, age);
     return void this.schema.expire.set(key, age);
   }
   public recent(limit: number, cb: (keys: K[], error: DOMException | Error | null) => void): void {
+    if (!this.alive) throw new Error(`ClientChannel: Store channel "${this.name}" is already closed.`);
     return this.schema.access.recent(limit, cb);
   }
   public close(): void {
@@ -213,6 +221,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     return void close(this.name);
   }
   public destroy(): void {
+    if (!this.alive) throw new Error(`ClientChannel: Store channel "${this.name}" is already closed.`);
     void this.cancellation.cancel();
     return void destroy(this.name);
   }
