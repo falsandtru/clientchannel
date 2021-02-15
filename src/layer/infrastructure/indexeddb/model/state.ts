@@ -60,23 +60,26 @@ abstract class State {
     assert(!curr || curr.alive);
     assert(commands.has(database));
     assert(configs.has(database));
+    assert(!this.alive);
+    if (curr?.alive === false) return;
     if (this instanceof InitialState) {
       this.alive = !curr;
       if (!this.alive) return;
+      assert(!states.has(database));
       void requests.set(database, requests.get(database) || new RequestQueue(database));
     }
     else {
       assert(requests.has(database));
-      assert(curr);
-      this.alive = !!curr && curr.alive;
-      if (!this.alive) return;
-    }
-    void states.set(database, this);
-    if (curr) {
+      assert(curr?.alive);
+      this.alive = !!curr;
+      if (!this.alive || !curr) return;
       curr.alive = false;
     }
+    assert(!curr || !curr.alive);
+    assert(this.alive);
+    void states.set(database, this);
   }
-  public alive = true;
+  public alive = false;
   public get command(): Command {
     assert(this.alive);
     assert(commands.has(this.database));
