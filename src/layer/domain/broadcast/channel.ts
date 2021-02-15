@@ -57,11 +57,9 @@ export class Channel<K extends string> implements Channel<K> {
   }
   private alive = true;
   public close(): void {
-    this.alive = false;
-    void cache.delete(this.name);
-    for (const listener of this.listeners) {
-      void this.channel.removeEventListener('message', listener);
-    }
+    void this.channel.close();
     void this.listeners.clear();
+    void cache.delete(this.name);
+    this.alive = false;
   }
 }
