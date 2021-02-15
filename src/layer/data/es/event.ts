@@ -1,3 +1,4 @@
+import { Number } from 'spica/global';
 import { ObjectFreeze, ObjectKeys } from 'spica/alias';
 import { StoreChannelEventType } from '../../../../';
 import { clone } from 'spica/assign';
