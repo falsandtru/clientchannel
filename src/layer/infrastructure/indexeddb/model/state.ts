@@ -81,30 +81,17 @@ abstract class State {
   public get command(): Command {
     assert(this.alive);
     assert(commands.has(this.database));
-    return commands.get(this.database)!
-        || Command.close;
+    return commands.get(this.database)!;
   }
   public get config(): Config {
     assert(this.alive);
     assert(configs.has(this.database));
-    return configs.get(this.database)!
-        || {
-             make() {
-               return false;
-             },
-             verify() {
-               return false;
-             },
-             destroy() {
-               return false;
-             },
-           };
+    return configs.get(this.database)!;
   }
   public get queue(): RequestQueue {
     assert(this.alive);
     assert(requests.has(this.database));
-    return requests.get(this.database)!
-        || new RequestQueue(this.database);
+    return requests.get(this.database)!;
   }
 }
 
