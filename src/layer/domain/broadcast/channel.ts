@@ -14,7 +14,7 @@ export class ChannelMessage<K extends string> {
   public readonly version = version;
 }
 
-function parse<K extends string>(msg: ChannelMessage<K>): ChannelMessage<K> | void {
+function parse<K extends string>(msg: ChannelMessage<K>): ChannelMessage<K> | undefined {
   if (msg.version !== version) return;
   return msg;
 }
@@ -30,7 +30,7 @@ export class Channel<K extends string> implements Channel<K> {
     void cache.add(this.name);
   }
   private readonly channel = new BroadcastChannel(this.name);
-  private readonly listeners = new Set<(ev: MessageEvent) => void>();
+  private readonly listeners = new Set<(ev: MessageEvent<ChannelMessage<K>>) => void>();
   private ensureAliveness(): void {
     if (!this.alive) throw new Error(`ClientChannel: Broadcast channel "${this.name}" is already closed.`);
   }
@@ -43,7 +43,7 @@ export class Channel<K extends string> implements Channel<K> {
       void this.listeners.delete(handler),
       void this.channel.removeEventListener('message', handler));
 
-    function handler(ev: MessageEvent): void {
+    function handler(ev: MessageEvent<ChannelMessage<K>>): void {
       const msg = parse<K>(ev.data);
       if (!msg || msg.type !== type) return;
       debug && console.log('recv', msg);
