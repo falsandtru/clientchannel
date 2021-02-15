@@ -1,4 +1,4 @@
-import { Infinity, Number, Promise, setTimeout } from 'spica/global';
+import { Infinity, Promise, setTimeout } from 'spica/global';
 import { ObjectFreeze } from 'spica/alias';
 import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../';
 import { Observation } from 'spica/observer';
@@ -84,7 +84,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
       void this.schema.expire.delete(key);
     });
 
-    if (!Number.isFinite(this.size)) return;
+    if (this.size === Infinity) return;
 
     void this.events_.load.monitor([], ({ key, type }) =>
       type === ChannelStore.EventType.delete
@@ -96,7 +96,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
         : void this.keys.put(key));
 
     const limit = () => {
-      if (!Number.isFinite(size)) return;
+      if (size === Infinity) return;
       if (!this.alive) return;
       void this.recent(Infinity, (ks, error) => {
         if (error) return void setTimeout(limit, 10 * 1000);
@@ -154,10 +154,10 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     save: new Observation<[K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
     loss: new Observation<[K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
   });
-  public sync(keys: K[], timeout = Infinity): Promise<PromiseSettledResult<K>[]> {
-    const cancellation = Number.isFinite(timeout)
-      ? new Cancellation()
-      : void 0;
+  public sync(keys: K[], timeout?: number): Promise<PromiseSettledResult<K>[]> {
+    const cancellation = timeout === void 0
+      ? void 0
+      : new Cancellation();
     cancellation && void setTimeout(cancellation.cancel, timeout);
     return AtomicPromise.allSettled(
       keys.map(key =>

@@ -1,4 +1,4 @@
-import { Math, setTimeout } from 'spica/global';
+import { Infinity, Math, setTimeout } from 'spica/global';
 import { ObjectFreeze } from 'spica/alias';
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
