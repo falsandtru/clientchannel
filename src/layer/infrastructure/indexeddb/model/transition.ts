@@ -95,16 +95,15 @@ function handleSuccessState(state: SuccessState): void {
   switch (state.command) {
     case Command.open: {
       const { verify } = state.config;
-      VERIFY: {
-        try {
-          if (verify(connection)) break VERIFY;
-          void connection.close();
-          return void handleEndState(new EndState(state, connection.version + 1));
-        }
-        catch (reason) {
-          void connection.close();
-          return void handleCrashState(new CrashState(state, reason));
-        }
+      VALIDATION:
+      try {
+        if (verify(connection)) break VALIDATION;
+        void connection.close();
+        return void handleEndState(new EndState(state, connection.version + 1));
+      }
+      catch (reason) {
+        void connection.close();
+        return void handleCrashState(new CrashState(state, reason));
       }
       void idbEventStream_.emit([database, IDBEventType.connect], new IDBEvent(database, IDBEventType.connect));
       try {
