@@ -7,11 +7,11 @@ import { causeAsyncException } from 'spica/exception';
 export function handle(database: string): void {
   const state = states.get(database);
   return state instanceof SuccessState
-    ? void handleFromSuccessState(state)
-    : void handleFromInitialState(new InitialState(database));
+    ? void handleSuccessState(state)
+    : void handleInitialState(new InitialState(database));
 }
 
-function handleFromInitialState(state: InitialState): void {
+function handleInitialState(state: InitialState): void {
   if (!state.alive) return;
   const { database, version } = state;
   assert(version >= 0);
@@ -21,34 +21,34 @@ function handleFromInitialState(state: InitialState): void {
       : indexedDB.open(database);
 
     openRequest.onblocked = () =>
-      void handleFromBlockedState(new BlockState(state, openRequest));
+      void handleBlockedState(new BlockState(state, openRequest));
     openRequest.onupgradeneeded = () =>
-      void handleFromUpgradeState(new UpgradeState(state, openRequest))
+      void handleUpgradeState(new UpgradeState(state, openRequest))
     openRequest.onsuccess = () =>
-      void handleFromSuccessState(new SuccessState(state, openRequest.result as IDBDatabase));
+      void handleSuccessState(new SuccessState(state, openRequest.result as IDBDatabase));
     openRequest.onerror = event =>
-      void handleFromErrorState(new ErrorState(state, openRequest.error!, event));
+      void handleErrorState(new ErrorState(state, openRequest.error!, event));
   }
   catch (reason) {
-    void handleFromCrashState(new CrashState(state, reason));
+    void handleCrashState(new CrashState(state, reason));
   }
 }
 
-function handleFromBlockedState(state: BlockState): void {
+function handleBlockedState(state: BlockState): void {
   if (!state.alive) return;
   const { database, session } = state;
   session.onblocked = () =>
-    void handleFromBlockedState(new BlockState(state, session));
+    void handleBlockedState(new BlockState(state, session));
   session.onupgradeneeded = () =>
-    void handleFromUpgradeState(new UpgradeState(state, session));
+    void handleUpgradeState(new UpgradeState(state, session));
   session.onsuccess = () =>
-    void handleFromSuccessState(new SuccessState(state, session.result as IDBDatabase));
+    void handleSuccessState(new SuccessState(state, session.result as IDBDatabase));
   session.onerror = event =>
-    void handleFromErrorState(new ErrorState(state, session.error!, event));
+    void handleErrorState(new ErrorState(state, session.error!, event));
   void idbEventStream_.emit([database, IDBEventType.block], new IDBEvent(database, IDBEventType.block));
 }
 
-function handleFromUpgradeState(state: UpgradeState): void {
+function handleUpgradeState(state: UpgradeState): void {
   if (!state.alive) return;
   const { session } = state;
   assert(session.transaction);
@@ -58,24 +58,24 @@ function handleFromUpgradeState(state: UpgradeState): void {
   try {
     if (make(session.transaction!)) {
       session.onsuccess = () =>
-        void handleFromSuccessState(new SuccessState(state, db));
+        void handleSuccessState(new SuccessState(state, db));
       session.onerror = event =>
-        void handleFromErrorState(new ErrorState(state, session.error!, event));
+        void handleErrorState(new ErrorState(state, session.error!, event));
     }
     else {
       session.onsuccess = session.onerror = event => (
         void db.close(),
         destroy(session.error, event)
-          ? void handleFromDestroyState(new DestroyState(state))
-          : void handleFromEndState(new EndState(state)));
+          ? void handleDestroyState(new DestroyState(state))
+          : void handleEndState(new EndState(state)));
     }
   }
   catch (reason) {
-    void handleFromCrashState(new CrashState(state, reason));
+    void handleCrashState(new CrashState(state, reason));
   }
 }
 
-function handleFromSuccessState(state: SuccessState): void {
+function handleSuccessState(state: SuccessState): void {
   if (!state.alive) return;
   const { database, connection, queue } = state;
 
@@ -83,14 +83,14 @@ function handleFromSuccessState(state: SuccessState): void {
     const curr = new EndState(state);
     void connection.close();
     void idbEventStream_.emit([database, IDBEventType.destroy], new IDBEvent(database, IDBEventType.destroy));
-    void handleFromEndState(curr);
+    void handleEndState(curr);
   };
   connection.onerror = event =>
-    void handleFromErrorState(new ErrorState(state, (event.target as any).error, event));
+    void handleErrorState(new ErrorState(state, (event.target as any).error, event));
   connection.onabort = event =>
-    void handleFromAbortState(new AbortState(state, event));
+    void handleAbortState(new AbortState(state, event));
   connection.onclose = () =>
-    void handleFromEndState(new EndState(state));
+    void handleEndState(new EndState(state));
 
   switch (state.command) {
     case Command.open: {
@@ -99,11 +99,11 @@ function handleFromSuccessState(state: SuccessState): void {
         try {
           if (verify(connection)) break VERIFY;
           void connection.close();
-          return void handleFromEndState(new EndState(state, connection.version + 1));
+          return void handleEndState(new EndState(state, connection.version + 1));
         }
         catch (reason) {
           void connection.close();
-          return void handleFromCrashState(new CrashState(state, reason));
+          return void handleCrashState(new CrashState(state, reason));
         }
       }
       void idbEventStream_.emit([database, IDBEventType.connect], new IDBEvent(database, IDBEventType.connect));
@@ -119,70 +119,70 @@ function handleFromSuccessState(state: SuccessState): void {
         void causeAsyncException(reason);
         const curr = new CrashState(state, reason);
         void connection.close();
-        return void handleFromCrashState(curr);
+        return void handleCrashState(curr);
       }
     }
     case Command.close: {
       const curr = new EndState(state);
       void connection.close();
-      return void handleFromEndState(curr);
+      return void handleEndState(curr);
     }
     case Command.destroy: {
       const curr = new DestroyState(state);
       void connection.close();
-      return void handleFromDestroyState(curr);
+      return void handleDestroyState(curr);
     }
   }
 }
 
-function handleFromErrorState(state: ErrorState): void {
+function handleErrorState(state: ErrorState): void {
   if (!state.alive) return;
   const { database, error, event } = state;
   void event.preventDefault();
   void idbEventStream_.emit([database, IDBEventType.error], new IDBEvent(database, IDBEventType.error));
   const { destroy } = state.config;
   if (destroy(error, event)) {
-    return void handleFromDestroyState(new DestroyState(state));
+    return void handleDestroyState(new DestroyState(state));
   }
   else {
-    return void handleFromEndState(new EndState(state));
+    return void handleEndState(new EndState(state));
   }
 }
 
-function handleFromAbortState(state: AbortState): void {
+function handleAbortState(state: AbortState): void {
   if (!state.alive) return;
   const { database, event } = state;
   void event.preventDefault();
   void idbEventStream_.emit([database, IDBEventType.abort], new IDBEvent(database, IDBEventType.abort));
-  return void handleFromEndState(new EndState(state));
+  return void handleEndState(new EndState(state));
 }
 
-function handleFromCrashState(state: CrashState): void {
+function handleCrashState(state: CrashState): void {
   if (!state.alive) return;
   const { database, reason } = state;
   void idbEventStream_.emit([database, IDBEventType.crash], new IDBEvent(database, IDBEventType.crash));
   const { destroy } = state.config;
   if (destroy(reason)) {
-    return void handleFromDestroyState(new DestroyState(state));
+    return void handleDestroyState(new DestroyState(state));
   }
   else {
-    return void handleFromEndState(new EndState(state));
+    return void handleEndState(new EndState(state));
   }
 }
 
-function handleFromDestroyState(state: DestroyState): void {
+function handleDestroyState(state: DestroyState): void {
   if (!state.alive) return;
-  if (!isIDBAvailable || !verifyStorageAccess()) return void handleFromEndState(new EndState(state));
+  if (!isIDBAvailable || !verifyStorageAccess()) return void handleEndState(new EndState(state));
   const { database } = state;
   const deleteRequest = indexedDB.deleteDatabase(database);
   deleteRequest.onsuccess = () => (
     void idbEventStream_.emit([database, IDBEventType.destroy], new IDBEvent(database, IDBEventType.destroy)),
-    void handleFromEndState(new EndState(state)));
+    void handleEndState(new EndState(state)));
   deleteRequest.onerror = event =>
-    void handleFromErrorState(new ErrorState(state, deleteRequest.error!, event));
+    void handleErrorState(new ErrorState(state, deleteRequest.error!, event));
 }
 
-function handleFromEndState(state: EndState): void {
+function handleEndState(state: EndState): void {
   if (!state.alive) return;
   const { database, version } = state;
   assert(version >= 0);
@@ -192,7 +192,7 @@ function handleFromEndState(state: EndState): void {
   if (!isIDBAvailable || !verifyStorageAccess()) return;
   switch (state.command) {
     case Command.open:
-      return void handleFromInitialState(new InitialState(database, version));
+      return void handleInitialState(new InitialState(database, version));
     case Command.close:
     case Command.destroy:
       return;
