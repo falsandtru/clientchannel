@@ -65,7 +65,7 @@ export class ExpiryStore<K extends string> {
       scheduled = Date.now() + timeout;
       void clearTimeout(timer);
       timer = setTimeout(() => {
-        if (this.cancellation.canceled) return;
+        if (this.cancellation.cancelled) return;
         if (running) return;
         scheduled = Infinity;
         if (!this.ownership.take('store', wait)) return this.schedule(wait *= 2);
@@ -75,7 +75,7 @@ export class ExpiryStore<K extends string> {
         running = true;
         return void this.store.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', (cursor, error) => {
           running = false;
-          if (this.cancellation.canceled) return;
+          if (this.cancellation.cancelled) return;
           if (error) return void this.schedule(wait * 10);
           if (!cursor) return retry && void this.schedule(wait);
           const { key, expiry }: ExpiryRecord<K> = cursor.value;

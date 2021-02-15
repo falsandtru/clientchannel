@@ -138,7 +138,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     const events: LoadedEventRecord<K, V>[] = [];
     return void this.listen(db => {
       if (!this.alive) return void cb(new Error('Session is already closed.'));
-      if (cancellation?.canceled) return void cb(new Error('Request is cancelled.'));
+      if (cancellation?.cancelled) return void cb(new Error('Request is cancelled.'));
       const tx = db.transaction(this.name, 'readonly');
       const req = tx
         .objectStore(this.name)
@@ -379,7 +379,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             void this.events_.memory
               .off([event.key, event.attr, sqid(event.id)]);
           }
-          return void this.events.clean.emit([key], !cleared.canceled);
+          return void this.events.clean.emit([key], !cleared.cancelled);
         }
         else {
           const event = new LoadedEventRecord<K, V>(cursor.value);

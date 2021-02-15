@@ -140,10 +140,10 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
         timer = setTimeout(resolve, 3 * 1000) as any;
       };
     })(),
-    dispose: { delete: false },
+    capture: { delete: false },
   });
   protected get alive(): boolean {
-    return !this.cancellation.canceled;
+    return !this.cancellation.cancelled;
   }
   public readonly events_ = ObjectFreeze({
     load: new Observation<[K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),

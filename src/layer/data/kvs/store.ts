@@ -52,7 +52,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     if (!this.alive) return void cb(new Error('Session is already closed.'));
     return void this.listen(db => {
       if (!this.alive) return void cb(new Error('Session is already closed.'));
-      if (cancellation?.canceled) return void cb(new Error('Request is cancelled.'));
+      if (cancellation?.cancelled) return void cb(new Error('Request is cancelled.'));
       const tx = db.transaction(this.name, 'readonly');
       const req = this.index
         ? tx
