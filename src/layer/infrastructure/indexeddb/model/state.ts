@@ -197,12 +197,8 @@ export class EndState extends State {
     super(state.database, state);
     this.STATE;
   }
-  public get command(): Command {
-    return commands.get(this.database)!
-        || Command.close;
-  }
   public complete(): void {
-    if (!this.alive) return;
+    assert(this.alive);
     switch (this.command) {
       case Command.close:
       case Command.destroy:

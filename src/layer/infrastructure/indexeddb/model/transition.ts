@@ -191,13 +191,13 @@ function handleDestroyState(state: DestroyState): void {
 
 function handleEndState(state: EndState): void {
   if (!state.alive) return;
-  const { database, version } = state;
+  const { database, version, command } = state;
   assert(version >= 0);
   void state.complete();
   void idbEventStream_
     .emit([database, IDBEventType.disconnect], new IDBEvent(database, IDBEventType.disconnect));
   if (!isIDBAvailable || !verifyStorageAccess()) return;
-  switch (state.command) {
+  switch (command) {
     case Command.open:
       return void handleInitialState(new InitialState(database, version));
     case Command.close:
