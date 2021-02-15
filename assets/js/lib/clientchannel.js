@@ -1,4 +1,4 @@
-/*! clientchannel v0.29.4 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.29.5 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -107,7 +107,7 @@ require = function () {
             function shift(as, count) {
                 if (count < 0)
                     throw new Error('Unexpected negative number');
-                return count === global_1.undefined ? [
+                return count === void 0 ? [
                     as.shift(),
                     as
                 ] : [
@@ -132,7 +132,7 @@ require = function () {
             function pop(as, count) {
                 if (count < 0)
                     throw new Error('Unexpected negative number');
-                return count === global_1.undefined ? [
+                return count === void 0 ? [
                     as,
                     as.pop()
                 ] : [
@@ -161,7 +161,7 @@ require = function () {
                             [as.shift()],
                             unshift(inserts, as)
                         ][0];
-                    case global_1.undefined:
+                    case void 0:
                         if (as.length > 1 || arguments.length > 2)
                             break;
                         return as.length === 0 ? [] : splice(as, index, 1);
@@ -178,7 +178,7 @@ require = function () {
                             [as.pop()],
                             push(as, inserts)
                         ][0];
-                    case global_1.undefined:
+                    case void 0:
                         if (as.length > 1 || arguments.length > 2)
                             break;
                         return as.length === 0 ? [] : splice(as, index, 1);
@@ -209,7 +209,7 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.template = exports.inherit = exports.merge = exports.extend = exports.overwrite = exports.clone = exports.assign = void 0;
+            exports.template = exports.overwrite = exports.inherit = exports.merge = exports.extend = exports.clone = exports.assign = void 0;
             const type_1 = _dereq_('./type');
             const global_1 = _dereq_('./global');
             const alias_1 = _dereq_('./alias');
@@ -225,21 +225,6 @@ require = function () {
                         return target[prop] = exports.clone(empty(source[prop]), source[prop]);
                     default:
                         return target[prop] = source[prop];
-                    }
-                default:
-                    return target[prop] = source[prop];
-                }
-            });
-            exports.overwrite = template((prop, target, source) => {
-                switch (type_1.type(source[prop])) {
-                case 'Array':
-                    return target[prop] = source[prop];
-                case 'Object':
-                    switch (type_1.type(target[prop])) {
-                    case 'Object':
-                        return target[prop] = exports.overwrite(target[prop], source[prop]);
-                    default:
-                        return target[prop] = exports.overwrite(empty(source[prop]), source[prop]);
                     }
                 default:
                     return target[prop] = source[prop];
@@ -301,6 +286,21 @@ require = function () {
                     return target[prop] = source[prop];
                 }
             });
+            exports.overwrite = template((prop, target, source) => {
+                switch (type_1.type(source[prop])) {
+                case 'Array':
+                    return target[prop] = source[prop];
+                case 'Object':
+                    switch (type_1.type(target[prop])) {
+                    case 'Object':
+                        return target[prop] = exports.overwrite(target[prop], source[prop]);
+                    default:
+                        return target[prop] = exports.overwrite(empty(source[prop]), source[prop]);
+                    }
+                default:
+                    return target[prop] = source[prop];
+                }
+            });
             function template(strategy) {
                 return walk;
                 function walk(target, ...sources) {
@@ -351,7 +351,7 @@ require = function () {
                 constructor(capacity, opts = {}) {
                     this.capacity = capacity;
                     this.settings = {
-                        dispose: {
+                        capture: {
                             delete: true,
                             clear: true
                         }
@@ -379,7 +379,7 @@ require = function () {
                     assign_1.extend(this.settings, opts);
                 }
                 put(key, value) {
-                    value === global_1.undefined ? this.nullish || (this.nullish = true) : global_1.undefined;
+                    value === void 0 ? this.nullish || (this.nullish = true) : void 0;
                     if (this.has(key))
                         return this.store.set(key, value), true;
                     const {LRU, LFU} = this.indexes;
@@ -408,7 +408,7 @@ require = function () {
                 }
                 get(key) {
                     const val = this.store.get(key);
-                    if (val !== global_1.undefined || this.nullish && this.has(key)) {
+                    if (val !== void 0 || this.nullish && this.has(key)) {
                         this.access(key);
                     } else {
                         ++this.stats.miss;
@@ -430,7 +430,7 @@ require = function () {
                         const i = array_1.indexOf(index, key);
                         if (i === -1)
                             continue;
-                        if (!this.settings.disposer || !this.settings.dispose.delete) {
+                        if (!this.settings.disposer || !this.settings.capture.delete) {
                             this.store.delete(array_1.splice(index, i, 1)[0]);
                         } else {
                             const val = this.store.get(key);
@@ -462,7 +462,7 @@ require = function () {
                     };
                     const store = this.store;
                     this.store = new global_1.Map();
-                    if (!this.settings.disposer || !((_a = this.settings.dispose) === null || _a === void 0 ? void 0 : _a.clear))
+                    if (!this.settings.disposer || !((_a = this.settings.capture) === null || _a === void 0 ? void 0 : _a.clear))
                         return;
                     for (const [key, value] of store) {
                         this.settings.disposer(key, value);
@@ -585,8 +585,8 @@ require = function () {
                 get alive() {
                     return this[internal].alive;
                 }
-                get canceled() {
-                    return this[internal].canceled;
+                get cancelled() {
+                    return this[internal].cancelled;
                 }
                 get register() {
                     return listener => this[internal].register(listener);
@@ -615,12 +615,12 @@ require = function () {
                     this.available = true;
                     this.listeners = new global_1.Set();
                 }
-                get canceled() {
+                get cancelled() {
                     return 'reason' in this;
                 }
                 register(listener) {
                     if (!this.alive) {
-                        this.canceled && handler(this.reason);
+                        this.cancelled && handler(this.reason);
                         return noop_1.noop;
                     }
                     this.listeners.add(handler);
@@ -652,13 +652,13 @@ require = function () {
                     this.alive = false;
                 }
                 promise(val) {
-                    return this.canceled ? promise_1.AtomicPromise.reject(this.reason) : promise_1.AtomicPromise.resolve(val);
+                    return this.cancelled ? promise_1.AtomicPromise.reject(this.reason) : promise_1.AtomicPromise.resolve(val);
                 }
                 maybe(val) {
-                    return maybe_1.Just(val).bind(val => this.canceled ? maybe_1.Nothing : maybe_1.Just(val));
+                    return maybe_1.Just(val).bind(val => this.cancelled ? maybe_1.Nothing : maybe_1.Just(val));
                 }
                 either(val) {
-                    return either_1.Right(val).bind(val => this.canceled ? either_1.Left(this.reason) : either_1.Right(val));
+                    return either_1.Right(val).bind(val => this.cancelled ? either_1.Left(this.reason) : either_1.Right(val));
                 }
             }
         },
@@ -677,7 +677,6 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.tick = void 0;
-            const global_1 = _dereq_('./global');
             const alias_1 = _dereq_('./alias');
             const exception_1 = _dereq_('./exception');
             let queue = [];
@@ -699,7 +698,7 @@ require = function () {
                 for (let i = 0; i < count; ++i) {
                     try {
                         jobs[i]();
-                        jobs[i] = global_1.undefined;
+                        jobs[i] = void 0;
                     } catch (reason) {
                         exception_1.causeAsyncException(reason);
                     }
@@ -709,8 +708,7 @@ require = function () {
         },
         {
             './alias': 4,
-            './exception': 13,
-            './global': 15
+            './exception': 13
         }
     ],
     10: [
@@ -781,12 +779,11 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.uncurry = exports.curry = void 0;
-            const global_1 = _dereq_('./global');
             const array_1 = _dereq_('./array');
             exports.curry = f => curry_(f, f.length);
             function curry_(f, arity, ...xs) {
                 let g;
-                return xs.length < arity ? (...ys) => curry_(g !== null && g !== void 0 ? g : g = xs.length && f.bind(global_1.undefined, ...xs) || f, arity - xs.length, ...ys) : f(...xs);
+                return xs.length < arity ? (...ys) => curry_(g !== null && g !== void 0 ? g : g = xs.length && f.bind(void 0, ...xs) || f, arity - xs.length, ...ys) : f(...xs);
             }
             const uncurry = f => uncurry_(f);
             exports.uncurry = uncurry;
@@ -795,10 +792,7 @@ require = function () {
                 return (...xs) => arity === 0 || xs.length < 2 || xs.length <= arity ? f(...xs) : uncurry_(f(...array_1.shift(xs, arity)[0]))(...xs);
             }
         },
-        {
-            './array': 5,
-            './global': 15
-        }
+        { './array': 5 }
     ],
     13: [
         function (_dereq_, module, exports) {
@@ -880,7 +874,6 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.MList = exports.List = void 0;
-            const global_1 = _dereq_('./global');
             function List(...values) {
                 let node = Nil();
                 for (let i = values.length - 1; i >= 0; --i) {
@@ -890,7 +883,7 @@ require = function () {
             }
             exports.List = List;
             function Nil() {
-                return new Cons(global_1.undefined, global_1.undefined);
+                return new Cons(void 0, void 0);
             }
             class Cons {
                 constructor(head, tail) {
@@ -946,7 +939,7 @@ require = function () {
             }
             exports.MList = MList;
             function MNil() {
-                return new MCons(global_1.undefined, global_1.undefined);
+                return new MCons(void 0, void 0);
             }
             class MCons {
                 constructor(head, tail) {
@@ -1003,7 +996,7 @@ require = function () {
                     return this;
                 }
                 clear() {
-                    return this.replaceWith(global_1.undefined, global_1.undefined);
+                    return this.replaceWith(void 0, void 0);
                 }
                 freeze() {
                     const first = List();
@@ -1059,7 +1052,7 @@ require = function () {
                 }
             }
         },
-        { './global': 15 }
+        {}
     ],
     17: [
         function (_dereq_, module, exports) {
@@ -1272,11 +1265,10 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.Lazy = void 0;
-            const global_1 = _dereq_('../global');
             class Lazy {
                 constructor(thunk) {
                     this.thunk = thunk;
-                    this.memory_ = global_1.undefined;
+                    this.memory_ = void 0;
                 }
                 evaluate() {
                     var _a;
@@ -1285,7 +1277,7 @@ require = function () {
             }
             exports.Lazy = Lazy;
         },
-        { '../global': 15 }
+        {}
     ],
     22: [
         function (_dereq_, module, exports) {
@@ -1524,7 +1516,7 @@ require = function () {
             class Observation {
                 constructor(opts = {}) {
                     this.id = 0;
-                    this.node = new ListenerNode(global_1.undefined, global_1.undefined);
+                    this.node = new ListenerNode(void 0, void 0);
                     this.settings = {
                         limit: 10,
                         cleanup: false
@@ -1893,7 +1885,7 @@ require = function () {
                     return new AtomicPromise((resolve, reject) => this[internal].then(onfulfilled, onrejected, resolve, reject));
                 }
                 catch(onrejected) {
-                    return this.then(global_1.undefined, onrejected);
+                    return this.then(void 0, onrejected);
                 }
                 finally(onfinally) {
                     return this.then(onfinally, onfinally).then(() => this);
@@ -2129,7 +2121,7 @@ require = function () {
             const alias_1 = _dereq_('./alias');
             const toString = global_1.Object.prototype.toString.call.bind(global_1.Object.prototype.toString);
             function type(value) {
-                if (value === global_1.undefined)
+                if (value === void 0)
                     return 'undefined';
                 if (value === null)
                     return 'null';
@@ -2513,7 +2505,7 @@ require = function () {
                         clean: new observer_1.Observation()
                     });
                     this.events_ = alias_1.ObjectFreeze({ memory: new observer_1.Observation({ limit: Infinity }) });
-                    this.tx_ = { rwc: 0 };
+                    this.tx = { rwc: 0 };
                     this.snapshotCycle = 9;
                     const states = new class {
                         constructor() {
@@ -2579,31 +2571,31 @@ require = function () {
                     };
                 }
                 get txrw() {
-                    if (++this.tx_.rwc > 25) {
-                        this.tx_.rwc = 0;
-                        this.tx_.rw = void 0;
+                    if (++this.tx.rwc > 25) {
+                        this.tx.rwc = 0;
+                        this.tx.rw = void 0;
                         return;
                     }
-                    return this.tx_.rw;
+                    return this.tx.rw;
                 }
                 set txrw(tx) {
                     if (!tx)
                         return;
-                    if (this.tx_.rw && this.tx_.rw === tx)
+                    if (this.tx.rw && this.tx.rw === tx)
                         return;
-                    this.tx_.rwc = 0;
-                    this.tx_.rw = tx;
-                    void clock_1.tick(() => this.tx_.rw = void 0);
+                    this.tx.rwc = 0;
+                    this.tx.rw = tx;
+                    void clock_1.tick(() => this.tx.rw = void 0);
                 }
-                fetch(key, cb = noop_1.noop, cancellation = new cancellation_1.Cancellation()) {
+                fetch(key, cb = noop_1.noop, cancellation) {
                     if (!this.alive)
-                        return void cb(new Error('Session is closed.'));
+                        return void cb(new Error('Session is already closed.'));
                     const events = [];
                     return void this.listen(db => {
                         if (!this.alive)
-                            return void cb(new Error('Session is closed.'));
-                        if (cancellation.canceled)
-                            return void cb(new Error('Cancelled.'));
+                            return void cb(new Error('Session is already closed.'));
+                        if (cancellation === null || cancellation === void 0 ? void 0 : cancellation.cancelled)
+                            return void cb(new Error('Request is cancelled.'));
                         const tx = db.transaction(this.name, 'readonly');
                         const req = tx.objectStore(this.name).index(EventStoreSchema.key).openCursor(key, 'prev');
                         const proc = (cursor, error) => {
@@ -2652,11 +2644,11 @@ require = function () {
                             }
                         };
                         void req.addEventListener('success', () => void proc(req.result, req.error));
-                        void tx.addEventListener('complete', () => void cancellation.close());
-                        void tx.addEventListener('error', () => (void cancellation.close(), void cb(tx.error || req.error)));
-                        void tx.addEventListener('abort', () => (void cancellation.close(), void cb(tx.error || req.error)));
-                        void cancellation.register(() => events.length === 0 && void tx.abort());
-                    }, () => void cb(new Error('Access has failed.')));
+                        void tx.addEventListener('complete', () => void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()));
+                        void tx.addEventListener('error', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void cb(tx.error || req.error)));
+                        void tx.addEventListener('abort', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void cb(tx.error || req.error)));
+                        void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.register(() => events.length === 0 && void tx.abort()));
+                    }, () => void cb(new Error('Request has failed.')));
                 }
                 keys() {
                     return this.memory.reflect([]).reduce((keys, e) => keys.length === 0 || keys[keys.length - 1] !== e.key ? concat_1.concat(keys, [e.key]) : keys, []).sort();
@@ -2839,7 +2831,7 @@ require = function () {
                                     sqid_1.sqid(event.id)
                                 ]);
                             }
-                            return void this.events.clean.emit([key], !cleared.canceled);
+                            return void this.events.clean.emit([key], !cleared.cancelled);
                         } else {
                             const event = new event_1.LoadedEventRecord(cursor.value);
                             switch (event.type) {
@@ -2870,10 +2862,10 @@ require = function () {
                 }
                 cursor(query, index, direction, mode, cb) {
                     if (!this.alive)
-                        return void cb(null, new Error('Session is closed.'));
+                        return void cb(null, new Error('Session is already closed.'));
                     return void this.listen(db => {
                         if (!this.alive)
-                            return void cb(null, new Error('Session is closed.'));
+                            return void cb(null, new Error('Session is already closed.'));
                         const tx = db.transaction(this.name, mode);
                         const req = index ? tx.objectStore(this.name).index(index).openCursor(query, direction) : tx.objectStore(this.name).openCursor(query, direction);
                         void req.addEventListener('success', () => {
@@ -2885,7 +2877,7 @@ require = function () {
                         void tx.addEventListener('complete', () => void cb(null, tx.error || req.error));
                         void tx.addEventListener('error', () => void cb(null, tx.error || req.error));
                         void tx.addEventListener('abort ', () => void cb(null, tx.error || req.error));
-                    }, () => void cb(null, new Error('Access has failed.')));
+                    }, () => void cb(null, new Error('Request has failed.')));
                 }
                 close() {
                     this.alive = false;
@@ -2970,7 +2962,6 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.KeyValueStore = void 0;
-            const cancellation_1 = _dereq_('spica/cancellation');
             const clock_1 = _dereq_('spica/clock');
             const noop_1 = _dereq_('spica/noop');
             class KeyValueStore {
@@ -2980,7 +2971,7 @@ require = function () {
                     this.listen = listen;
                     this.alive = true;
                     this.cache = new Map();
-                    this.tx_ = { rwc: 0 };
+                    this.tx = { rwc: 0 };
                     if (typeof index !== 'string')
                         throw new TypeError();
                 }
@@ -2998,38 +2989,38 @@ require = function () {
                     };
                 }
                 get txrw() {
-                    if (++this.tx_.rwc > 25) {
-                        this.tx_.rwc = 0;
-                        this.tx_.rw = void 0;
+                    if (++this.tx.rwc > 25) {
+                        this.tx.rwc = 0;
+                        this.tx.rw = void 0;
                         return;
                     }
-                    return this.tx_.rw;
+                    return this.tx.rw;
                 }
                 set txrw(tx) {
                     if (!tx)
                         return;
-                    if (this.tx_.rw && this.tx_.rw === tx)
+                    if (this.tx.rw && this.tx.rw === tx)
                         return;
-                    this.tx_.rwc = 0;
-                    this.tx_.rw = tx;
-                    void clock_1.tick(() => this.tx_.rw = void 0);
+                    this.tx.rwc = 0;
+                    this.tx.rw = tx;
+                    void clock_1.tick(() => this.tx.rw = void 0);
                 }
-                fetch(key, cb = noop_1.noop, cancellation = new cancellation_1.Cancellation()) {
+                fetch(key, cb = noop_1.noop, cancellation) {
                     if (!this.alive)
-                        return void cb(new Error('Session is closed.'));
+                        return void cb(new Error('Session is already closed.'));
                     return void this.listen(db => {
                         if (!this.alive)
-                            return void cb(new Error('Session is closed.'));
-                        if (cancellation.canceled)
-                            return void cb(new Error('Cancelled.'));
+                            return void cb(new Error('Session is already closed.'));
+                        if (cancellation === null || cancellation === void 0 ? void 0 : cancellation.cancelled)
+                            return void cb(new Error('Request is cancelled.'));
                         const tx = db.transaction(this.name, 'readonly');
                         const req = this.index ? tx.objectStore(this.name).index(this.index).getKey(key) : tx.objectStore(this.name).getKey(key);
                         void req.addEventListener('success', () => void cb(req.error));
-                        void tx.addEventListener('complete', () => void cancellation.close());
-                        void tx.addEventListener('error', () => (void cancellation.close(), void cb(tx.error || req.error)));
-                        void tx.addEventListener('abort', () => (void cancellation.close(), void cb(tx.error || req.error)));
-                        void cancellation.register(() => void tx.abort());
-                    }, () => void cb(new Error('Access has failed.')));
+                        void tx.addEventListener('complete', () => void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()));
+                        void tx.addEventListener('error', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void cb(tx.error || req.error)));
+                        void tx.addEventListener('abort', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void cb(tx.error || req.error)));
+                        void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.register(() => void tx.abort()));
+                    }, () => void cb(new Error('Request has failed.')));
                 }
                 has(key) {
                     return this.cache.has(key);
@@ -3054,7 +3045,7 @@ require = function () {
                         void tx.addEventListener('complete', () => void cb(key, tx.error));
                         void tx.addEventListener('error', () => void cb(key, tx.error));
                         void tx.addEventListener('abort', () => void cb(key, tx.error));
-                    }, () => void cb(key, new Error('Access has failed.')));
+                    }, () => void cb(key, new Error('Request has failed.')));
                     return value;
                 }
                 delete(key, cb = noop_1.noop) {
@@ -3069,7 +3060,7 @@ require = function () {
                         void tx.addEventListener('complete', () => void cb(tx.error));
                         void tx.addEventListener('error', () => void cb(tx.error));
                         void tx.addEventListener('abort', () => void cb(tx.error));
-                    }, () => void cb(new Error('Access has failed.')));
+                    }, () => void cb(new Error('Request has failed.')));
                 }
                 cursor(query, index, direction, mode, cb) {
                     if (!this.alive)
@@ -3089,7 +3080,7 @@ require = function () {
                         void tx.addEventListener('complete', () => void cb(null, req.error));
                         void tx.addEventListener('error', () => void cb(null, req.error));
                         void tx.addEventListener('abort', () => void cb(null, req.error));
-                    }, () => void cb(null, new Error('Access has failed.')));
+                    }, () => void cb(null, new Error('Request has failed.')));
                 }
                 close() {
                     this.alive = false;
@@ -3098,7 +3089,6 @@ require = function () {
             exports.KeyValueStore = KeyValueStore;
         },
         {
-            'spica/cancellation': 8,
             'spica/clock': 10,
             'spica/noop': 26
         }
@@ -3349,9 +3339,9 @@ require = function () {
                     this.size = size;
                     this.debug = debug;
                     this.cancellation = new cancellation_1.Cancellation();
-                    this.keys_ = new Set();
                     this.channel = new channel_1.Channel(this.name, this.debug);
                     this.ownership = new channel_2.Ownership(this.channel);
+                    this.keys_ = new Set();
                     this.keys = new cache_1.Cache(this.size, {
                         disposer: (() => {
                             void this.ownership.take('store', 0);
@@ -3387,7 +3377,7 @@ require = function () {
                                 timer = global_1.setTimeout(resolve, 3 * 1000);
                             };
                         })(),
-                        dispose: { delete: false }
+                        capture: { delete: false }
                     });
                     this.events_ = alias_1.ObjectFreeze({
                         load: new observer_1.Observation(),
@@ -3420,8 +3410,9 @@ require = function () {
                         'destroy'
                     ], () => void this.schema.rebuild()));
                     void this.cancellation.register(() => void this.schema.close());
-                    void this.cancellation.register(this.channel.listen('save', ({key}) => (void this.keys.delete(key) || void this.keys_.delete(key), void this.fetch(key))));
+                    void this.cancellation.register(() => void this.ownership.close());
                     void this.cancellation.register(() => void this.channel.close());
+                    void this.cancellation.register(this.channel.listen('save', ({key}) => (void this.keys.delete(key) || void this.keys_.delete(key), void this.fetch(key))));
                     void this.events_.save.monitor([], ({key}) => void this.channel.post(new SaveMessage(key)));
                     void this.events_.clean.monitor([], (cleared, [key]) => {
                         if (!cleared)
@@ -3450,7 +3441,7 @@ require = function () {
                     void limit();
                 }
                 get alive() {
-                    return !this.cancellation.canceled;
+                    return this.cancellation.alive;
                 }
                 sync(keys, timeout = global_1.Infinity) {
                     const cancellation = new cancellation_1.Cancellation();
@@ -3482,8 +3473,6 @@ require = function () {
                     ], () => void this.log(key));
                 }
                 delete(key) {
-                    if (!this.alive)
-                        return;
                     void this.ownership.take(`key:${ key }`, 5 * 1000);
                     void this.log(key);
                     void this.schema.data.delete(key);
@@ -3517,37 +3506,37 @@ require = function () {
                 ChannelStore.Record = data_1.DataStore.Record;
             }(ChannelStore = exports.ChannelStore || (exports.ChannelStore = {})));
             class Schema {
-                constructor(store_, ownership_, attrs_, listen_) {
-                    this.store_ = store_;
-                    this.ownership_ = ownership_;
-                    this.attrs_ = attrs_;
-                    this.listen_ = listen_;
-                    this.cancellation_ = new cancellation_1.Cancellation();
+                constructor(store, ownership, attrs, listen) {
+                    this.store = store;
+                    this.ownership = ownership;
+                    this.attrs = attrs;
+                    this.listen = listen;
+                    this.cancellation = new cancellation_1.Cancellation();
                     void this.build();
                 }
                 build() {
                     const keys = this.data ? this.data.keys() : [];
-                    this.data = new data_1.DataStore(this.attrs_, this.listen_);
-                    this.access = new access_1.AccessStore(this.listen_);
-                    this.expire = new expiry_1.ExpiryStore(this.store_, this.cancellation_, this.ownership_, this.listen_);
-                    void this.cancellation_.register(() => this.data.close());
-                    void this.cancellation_.register(() => this.access.close());
-                    void this.cancellation_.register(() => this.expire.close());
-                    void this.cancellation_.register(this.store_.events_.load.relay(this.data.events.load));
-                    void this.cancellation_.register(this.store_.events_.save.relay(this.data.events.save));
-                    void this.cancellation_.register(this.store_.events_.clean.relay(this.data.events.clean));
-                    void this.cancellation_.register(this.store_.events.load.relay(this.data.events.load));
-                    void this.cancellation_.register(this.store_.events.save.relay(this.data.events.save));
-                    void this.cancellation_.register(this.store_.events.loss.relay(this.data.events.loss));
-                    void this.store_.sync(keys);
+                    this.data = new data_1.DataStore(this.attrs, this.listen);
+                    this.access = new access_1.AccessStore(this.listen);
+                    this.expire = new expiry_1.ExpiryStore(this.store, this.cancellation, this.ownership, this.listen);
+                    void this.cancellation.register(() => this.data.close());
+                    void this.cancellation.register(() => this.access.close());
+                    void this.cancellation.register(() => this.expire.close());
+                    void this.cancellation.register(this.store.events_.load.relay(this.data.events.load));
+                    void this.cancellation.register(this.store.events_.save.relay(this.data.events.save));
+                    void this.cancellation.register(this.store.events_.clean.relay(this.data.events.clean));
+                    void this.cancellation.register(this.store.events.load.relay(this.data.events.load));
+                    void this.cancellation.register(this.store.events.save.relay(this.data.events.save));
+                    void this.cancellation.register(this.store.events.loss.relay(this.data.events.loss));
+                    void this.store.sync(keys);
                 }
                 rebuild() {
                     void this.close();
-                    this.cancellation_ = new cancellation_1.Cancellation();
+                    this.cancellation = new cancellation_1.Cancellation();
                     void this.build();
                 }
                 close() {
-                    void this.cancellation_.cancel();
+                    void this.cancellation.cancel();
                 }
             }
         },
@@ -3701,7 +3690,7 @@ require = function () {
                             scheduled = Date.now() + timeout;
                             void clearTimeout(timer);
                             timer = global_1.setTimeout(() => {
-                                if (this.cancellation.canceled)
+                                if (!this.cancellation.alive)
                                     return;
                                 if (running)
                                     return;
@@ -3714,7 +3703,7 @@ require = function () {
                                 running = true;
                                 return void this.store.cursor(null, 'expiry', 'next', 'readonly', (cursor, error) => {
                                     running = false;
-                                    if (this.cancellation.canceled)
+                                    if (!this.cancellation.alive)
                                         return;
                                     if (error)
                                         return void this.schedule(wait * 10);
@@ -3970,12 +3959,14 @@ require = function () {
                     return this.has(key) ? this.take(key, age) : false;
                 }
                 release(key) {
+                    if (!this.alive)
+                        throw new Error(`ClientChannel: Ownership channel "${ this.channel.name }" is already closed.`);
                     void this.setPriority(key, 0);
                     void this.castPriority(key);
                 }
                 close() {
-                    this.alive = false;
                     void this.cancellation.cancel();
+                    this.alive = false;
                 }
             }
             exports.Ownership = Ownership;
@@ -4116,7 +4107,7 @@ require = function () {
                     void alias_1.ObjectFreeze(this);
                 }
                 get alive() {
-                    return !this.cancellation.canceled;
+                    return this.cancellation.alive;
                 }
                 link() {
                     return this.link_;
@@ -4282,6 +4273,7 @@ require = function () {
             const transition_1 = _dereq_('./transition');
             const event_1 = _dereq_('./event');
             const api_1 = _dereq_('../../environment/api');
+            const noop_1 = _dereq_('spica/noop');
             function open(database, config) {
                 void operate(database, 'open', config);
                 return (success, failure) => void request(database, success, failure);
@@ -4332,16 +4324,18 @@ require = function () {
                 if (!state_1.isIDBAvailable || !api_1.isStorageAvailable)
                     return;
                 if (state_1.states.has(database)) {
-                    return void request(database, () => void 0);
+                    return void request(database, noop_1.noop);
                 } else {
                     return void transition_1.handle(database);
                 }
             }
-            function request(database, success, failure = () => void 0) {
-                if (!state_1.isIDBAvailable || !api_1.isStorageAvailable)
-                    return void failure();
+            function request(database, success, failure = noop_1.noop) {
+                if (!state_1.isIDBAvailable)
+                    return void failure(new Error('Database is unavailable.'));
+                if (!api_1.isStorageAvailable)
+                    return void failure(new Error('Storage is unavailable.'));
                 if (!state_1.requests.has(database))
-                    return void failure();
+                    return void failure(new Error('Database is inactive.'));
                 void state_1.requests.get(database).enqueue(success, failure);
                 void transition_1.handle(database);
             }
@@ -4350,7 +4344,8 @@ require = function () {
             '../../environment/api': 53,
             './event': 57,
             './state': 58,
-            './transition': 59
+            './transition': 59,
+            'spica/noop': 26
         }
     ],
     57: [
@@ -4393,7 +4388,7 @@ require = function () {
                 enqueue(success, failure) {
                     const state = exports.states.get(this.database);
                     if (!state || !state.alive || state.queue !== this)
-                        return void failure();
+                        return void failure(new Error('Request is invalid.'));
                     void this.queue.push({
                         success,
                         failure
@@ -4409,7 +4404,7 @@ require = function () {
                     while (true) {
                         try {
                             while (this.queue.length > 0) {
-                                void this.queue.shift().failure();
+                                void this.queue.shift().failure(new Error('Request is cancelled.'));
                             }
                             return;
                         } catch (_a) {
@@ -4538,14 +4533,13 @@ require = function () {
                     return exports.commands.get(this.database) || 'close';
                 }
                 complete() {
+                    var _a;
                     if (!this.alive)
                         return;
                     switch (this.command) {
                     case 'close':
                     case 'destroy':
-                        if (exports.requests.has(this.database)) {
-                            void exports.requests.get(this.database).clear();
-                        }
+                        void ((_a = exports.requests.get(this.database)) === null || _a === void 0 ? void 0 : _a.clear());
                         void exports.commands.delete(this.database);
                         void exports.configs.delete(this.database);
                         void exports.requests.delete(this.database);
@@ -4570,37 +4564,37 @@ require = function () {
             const exception_1 = _dereq_('spica/exception');
             function handle(database) {
                 const state = state_1.states.get(database);
-                return state instanceof state_1.SuccessState ? void handleFromSuccessState(state) : void handleFromInitialState(new state_1.InitialState(database));
+                return state instanceof state_1.SuccessState ? void handleSuccessState(state) : void handleInitialState(new state_1.InitialState(database));
             }
             exports.handle = handle;
-            function handleFromInitialState(state) {
+            function handleInitialState(state) {
                 if (!state.alive)
                     return;
                 const {database, version} = state;
                 try {
                     const openRequest = version ? global_1.indexedDB.open(database, version) : global_1.indexedDB.open(database);
-                    openRequest.onblocked = () => void handleFromBlockedState(new state_1.BlockState(state, openRequest));
-                    openRequest.onupgradeneeded = () => void handleFromUpgradeState(new state_1.UpgradeState(state, openRequest));
-                    openRequest.onsuccess = () => void handleFromSuccessState(new state_1.SuccessState(state, openRequest.result));
-                    openRequest.onerror = event => void handleFromErrorState(new state_1.ErrorState(state, openRequest.error, event));
+                    openRequest.onblocked = () => void handleBlockedState(new state_1.BlockState(state, openRequest));
+                    openRequest.onupgradeneeded = () => void handleUpgradeState(new state_1.UpgradeState(state, openRequest));
+                    openRequest.onsuccess = () => void handleSuccessState(new state_1.SuccessState(state, openRequest.result));
+                    openRequest.onerror = event => void handleErrorState(new state_1.ErrorState(state, openRequest.error, event));
                 } catch (reason) {
-                    void handleFromCrashState(new state_1.CrashState(state, reason));
+                    void handleCrashState(new state_1.CrashState(state, reason));
                 }
             }
-            function handleFromBlockedState(state) {
+            function handleBlockedState(state) {
                 if (!state.alive)
                     return;
                 const {database, session} = state;
-                session.onblocked = () => void handleFromBlockedState(new state_1.BlockState(state, session));
-                session.onupgradeneeded = () => void handleFromUpgradeState(new state_1.UpgradeState(state, session));
-                session.onsuccess = () => void handleFromSuccessState(new state_1.SuccessState(state, session.result));
-                session.onerror = event => void handleFromErrorState(new state_1.ErrorState(state, session.error, event));
+                session.onblocked = () => void handleBlockedState(new state_1.BlockState(state, session));
+                session.onupgradeneeded = () => void handleUpgradeState(new state_1.UpgradeState(state, session));
+                session.onsuccess = () => void handleSuccessState(new state_1.SuccessState(state, session.result));
+                session.onerror = event => void handleErrorState(new state_1.ErrorState(state, session.error, event));
                 void event_1.idbEventStream_.emit([
                     database,
                     'block'
                 ], new event_1.IDBEvent(database, 'block'));
             }
-            function handleFromUpgradeState(state) {
+            function handleUpgradeState(state) {
                 if (!state.alive)
                     return;
                 const {session} = state;
@@ -4608,16 +4602,16 @@ require = function () {
                 const {make, destroy} = state.config;
                 try {
                     if (make(session.transaction)) {
-                        session.onsuccess = () => void handleFromSuccessState(new state_1.SuccessState(state, db));
-                        session.onerror = event => void handleFromErrorState(new state_1.ErrorState(state, session.error, event));
+                        session.onsuccess = () => void handleSuccessState(new state_1.SuccessState(state, db));
+                        session.onerror = event => void handleErrorState(new state_1.ErrorState(state, session.error, event));
                     } else {
-                        session.onsuccess = session.onerror = event => (void db.close(), destroy(session.error, event) ? void handleFromDestroyState(new state_1.DestroyState(state)) : void handleFromEndState(new state_1.EndState(state)));
+                        session.onsuccess = session.onerror = event => (void db.close(), destroy(session.error, event) ? void handleDestroyState(new state_1.DestroyState(state)) : void handleEndState(new state_1.EndState(state)));
                     }
                 } catch (reason) {
-                    void handleFromCrashState(new state_1.CrashState(state, reason));
+                    void handleCrashState(new state_1.CrashState(state, reason));
                 }
             }
-            function handleFromSuccessState(state) {
+            function handleSuccessState(state) {
                 if (!state.alive)
                     return;
                 const {database, connection, queue} = state;
@@ -4628,11 +4622,11 @@ require = function () {
                         database,
                         'destroy'
                     ], new event_1.IDBEvent(database, 'destroy'));
-                    void handleFromEndState(curr);
+                    void handleEndState(curr);
                 };
-                connection.onerror = event => void handleFromErrorState(new state_1.ErrorState(state, event.target.error, event));
-                connection.onabort = event => void handleFromAbortState(new state_1.AbortState(state, event));
-                connection.onclose = () => void handleFromEndState(new state_1.EndState(state));
+                connection.onerror = event => void handleErrorState(new state_1.ErrorState(state, event.target.error, event));
+                connection.onabort = event => void handleAbortState(new state_1.AbortState(state, event));
+                connection.onclose = () => void handleEndState(new state_1.EndState(state));
                 switch (state.command) {
                 case 'open': {
                         const {verify} = state.config;
@@ -4641,10 +4635,10 @@ require = function () {
                                 if (verify(connection))
                                     break VERIFY;
                                 void connection.close();
-                                return void handleFromEndState(new state_1.EndState(state, connection.version + 1));
+                                return void handleEndState(new state_1.EndState(state, connection.version + 1));
                             } catch (reason) {
                                 void connection.close();
-                                return void handleFromCrashState(new state_1.CrashState(state, reason));
+                                return void handleCrashState(new state_1.CrashState(state, reason));
                             }
                         }
                         void event_1.idbEventStream_.emit([
@@ -4653,29 +4647,35 @@ require = function () {
                         ], new event_1.IDBEvent(database, 'connect'));
                         try {
                             while (queue.size > 0 && state.alive) {
-                                void queue.dequeue().success(connection);
+                                const {success, failure} = queue.dequeue();
+                                try {
+                                    success(connection);
+                                } catch (reason) {
+                                    failure(reason);
+                                    throw reason;
+                                }
                             }
                             return;
                         } catch (reason) {
                             void exception_1.causeAsyncException(reason);
                             const curr = new state_1.CrashState(state, reason);
                             void connection.close();
-                            return void handleFromCrashState(curr);
+                            return void handleCrashState(curr);
                         }
                     }
                 case 'close': {
                         const curr = new state_1.EndState(state);
                         void connection.close();
-                        return void handleFromEndState(curr);
+                        return void handleEndState(curr);
                     }
                 case 'destroy': {
                         const curr = new state_1.DestroyState(state);
                         void connection.close();
-                        return void handleFromDestroyState(curr);
+                        return void handleDestroyState(curr);
                     }
                 }
             }
-            function handleFromErrorState(state) {
+            function handleErrorState(state) {
                 if (!state.alive)
                     return;
                 const {database, error, event} = state;
@@ -4686,12 +4686,12 @@ require = function () {
                 ], new event_1.IDBEvent(database, 'error'));
                 const {destroy} = state.config;
                 if (destroy(error, event)) {
-                    return void handleFromDestroyState(new state_1.DestroyState(state));
+                    return void handleDestroyState(new state_1.DestroyState(state));
                 } else {
-                    return void handleFromEndState(new state_1.EndState(state));
+                    return void handleEndState(new state_1.EndState(state));
                 }
             }
-            function handleFromAbortState(state) {
+            function handleAbortState(state) {
                 if (!state.alive)
                     return;
                 const {database, event} = state;
@@ -4700,9 +4700,9 @@ require = function () {
                     database,
                     'abort'
                 ], new event_1.IDBEvent(database, 'abort'));
-                return void handleFromEndState(new state_1.EndState(state));
+                return void handleEndState(new state_1.EndState(state));
             }
-            function handleFromCrashState(state) {
+            function handleCrashState(state) {
                 if (!state.alive)
                     return;
                 const {database, reason} = state;
@@ -4712,25 +4712,25 @@ require = function () {
                 ], new event_1.IDBEvent(database, 'crash'));
                 const {destroy} = state.config;
                 if (destroy(reason)) {
-                    return void handleFromDestroyState(new state_1.DestroyState(state));
+                    return void handleDestroyState(new state_1.DestroyState(state));
                 } else {
-                    return void handleFromEndState(new state_1.EndState(state));
+                    return void handleEndState(new state_1.EndState(state));
                 }
             }
-            function handleFromDestroyState(state) {
+            function handleDestroyState(state) {
                 if (!state.alive)
                     return;
                 if (!state_1.isIDBAvailable || !api_1.verifyStorageAccess())
-                    return void handleFromEndState(new state_1.EndState(state));
+                    return void handleEndState(new state_1.EndState(state));
                 const {database} = state;
                 const deleteRequest = global_1.indexedDB.deleteDatabase(database);
                 deleteRequest.onsuccess = () => (void event_1.idbEventStream_.emit([
                     database,
                     'destroy'
-                ], new event_1.IDBEvent(database, 'destroy')), void handleFromEndState(new state_1.EndState(state)));
-                deleteRequest.onerror = event => void handleFromErrorState(new state_1.ErrorState(state, deleteRequest.error, event));
+                ], new event_1.IDBEvent(database, 'destroy')), void handleEndState(new state_1.EndState(state)));
+                deleteRequest.onerror = event => void handleErrorState(new state_1.ErrorState(state, deleteRequest.error, event));
             }
-            function handleFromEndState(state) {
+            function handleEndState(state) {
                 if (!state.alive)
                     return;
                 const {database, version} = state;
@@ -4743,7 +4743,7 @@ require = function () {
                     return;
                 switch (state.command) {
                 case 'open':
-                    return void handleFromInitialState(new state_1.InitialState(database, version));
+                    return void handleInitialState(new state_1.InitialState(database, version));
                 case 'close':
                 case 'destroy':
                     return;
