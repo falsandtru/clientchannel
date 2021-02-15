@@ -78,8 +78,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     void this.events_.save.monitor([], ({ key }) =>
       void this.channel.post(new SaveMessage(key)));
 
-    void this.events_.clean.monitor([], (cleared, [key]) => {
-      if (!cleared) return;
+    void this.events_.clean.monitor([], (_, [key]) => {
       void this.ownership.take(`key:${key}`, 5 * 1000);
       void this.schema.access.delete(key);
       void this.schema.expire.delete(key);
@@ -148,7 +147,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   public readonly events_ = ObjectFreeze({
     load: new Observation<[K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
     save: new Observation<[K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
-    clean: new Observation<[K], boolean, void>(),
+    clean: new Observation<[K], undefined, void>(),
   });
   public readonly events = ObjectFreeze({
     load: new Observation<[K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),

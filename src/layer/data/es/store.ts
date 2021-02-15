@@ -106,7 +106,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     load: new Observation<[K, Extract<keyof V | '', string>, EventStore.EventType], EventStore.Event<K, V>, void>(),
     save: new Observation<[K, Extract<keyof V | '', string>, EventStore.EventType], EventStore.Event<K, V>, void>(),
     loss: new Observation<[K, Extract<keyof V | '', string>, EventStore.EventType], EventStore.Event<K, V>, void>(),
-    clean: new Observation<[K], boolean, void>(),
+    clean: new Observation<[K], undefined, void>(),
   });
   private readonly events_ = ObjectFreeze({
     memory: new Observation<[K, keyof V | '', string], UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>, void>({ limit: Infinity }),
@@ -362,8 +362,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   public clean(key: K): void {
     if (!this.alive) return;
     const events: StoredEventRecord<K, V>[] = [];
-    const cleanState = new Map<K, boolean>();
-    const cleared = new Cancellation();
+    let deletion = false;
+    let clean = false;
     return void this.cursor(
       IDBKeyRange.only(key),
       EventStoreSchema.key,
@@ -379,25 +379,23 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             void this.events_.memory
               .off([event.key, event.attr, sqid(event.id)]);
           }
-          return void this.events.clean.emit([key], !cleared.cancelled);
+          clean && void this.events.clean.emit([key]);
+          return;
         }
         else {
           const event = new LoadedEventRecord<K, V>(cursor.value);
           switch (event.type) {
             case EventStore.EventType.put:
-              void cleared.cancel();
-              void cleanState.set(event.key, cleanState.get(event.key) || false);
-              if (cleanState.get(event.key)) break;
+              if (deletion) break;
               return void cursor.continue();
             case EventStore.EventType.snapshot:
-              void cleared.cancel();
-              if (cleanState.get(event.key)) break;
-              void cleanState.set(event.key, true);
+              if (deletion) break;
+              deletion = true;
               return void cursor.continue();
             case EventStore.EventType.delete:
-              void cleared.close();
-              if (cleanState.get(event.key)) break;
-              void cleanState.set(event.key, true);
+              if (deletion) break;
+              deletion = true;
+              clean = true;
               break;
           }
           void cursor.delete();
