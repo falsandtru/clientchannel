@@ -50,13 +50,12 @@ function handleBlockedState(state: BlockState): void {
 
 function handleUpgradeState(state: UpgradeState): void {
   if (!state.alive) return;
-  const { session } = state;
+  const { session, config } = state;
   assert(session.transaction);
   const db: IDBDatabase = session.transaction!.db;
   assert(db);
-  const { make, destroy } = state.config;
   try {
-    if (make(session.transaction!)) {
+    if (config.make(session.transaction!)) {
       session.onsuccess = () =>
         void handleSuccessState(new SuccessState(state, db));
       session.onerror = event =>
@@ -65,7 +64,7 @@ function handleUpgradeState(state: UpgradeState): void {
     else {
       session.onsuccess = session.onerror = event => (
         void db.close(),
-        destroy(session.error, event)
+        config.destroy(session.error, event)
           ? void handleDestroyState(new DestroyState(state))
           : void handleEndState(new EndState(state)));
     }
@@ -77,7 +76,7 @@ function handleUpgradeState(state: UpgradeState): void {
 
 function handleSuccessState(state: SuccessState): void {
   if (!state.alive) return;
-  const { database, connection, queue } = state;
+  const { database, connection, config, queue } = state;
 
   connection.onversionchange = () => {
     const curr = new EndState(state);
@@ -94,10 +93,9 @@ function handleSuccessState(state: SuccessState): void {
 
   switch (state.command) {
     case Command.open: {
-      const { verify } = state.config;
       VALIDATION:
       try {
-        if (verify(connection)) break VALIDATION;
+        if (config.verify(connection)) break VALIDATION;
         void connection.close();
         return void handleEndState(new EndState(state, connection.version + 1));
       }
@@ -143,11 +141,10 @@ function handleSuccessState(state: SuccessState): void {
 
 function handleErrorState(state: ErrorState): void {
   if (!state.alive) return;
-  const { database, error, event } = state;
+  const { database, error, event, config } = state;
   void event.preventDefault();
   void idbEventStream_.emit([database, IDBEventType.error], new IDBEvent(database, IDBEventType.error));
-  const { destroy } = state.config;
-  if (destroy(error, event)) {
+  if (config.destroy(error, event)) {
     return void handleDestroyState(new DestroyState(state));
   }
   else {
@@ -165,10 +162,9 @@ function handleAbortState(state: AbortState): void {
 
 function handleCrashState(state: CrashState): void {
   if (!state.alive) return;
-  const { database, reason } = state;
+  const { database, reason, config } = state;
   void idbEventStream_.emit([database, IDBEventType.crash], new IDBEvent(database, IDBEventType.crash));
-  const { destroy } = state.config;
-  if (destroy(reason)) {
+  if (config.destroy(reason)) {
     return void handleDestroyState(new DestroyState(state));
   }
   else {
