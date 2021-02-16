@@ -1,4 +1,4 @@
-/*! clientchannel v0.29.7 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.30.0 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -3715,7 +3715,6 @@ require = function () {
                                 if (!this.ownership.take('store', wait))
                                     return this.schedule(wait *= 2);
                                 wait = global_1.Math.max(global_1.Math.floor(wait / 1.5), 5 * 1000);
-                                const since = global_1.Date.now();
                                 let retry = false;
                                 running = true;
                                 return void this.store.cursor(null, 'expiry', 'next', 'readonly', (cursor, error) => {
@@ -3732,8 +3731,6 @@ require = function () {
                                             return void this.schedule(expiry - global_1.Date.now());
                                         if (!this.ownership.extend('store', wait))
                                             return;
-                                        if (global_1.Date.now() - since > 1000)
-                                            return void this.schedule(wait / 2);
                                         running = true;
                                         if (!this.ownership.take(`key:${ key }`, wait))
                                             return retry = true, void cursor.continue();
@@ -3927,8 +3924,8 @@ require = function () {
                     }) => {
                         const oldPriority = this.getPriority(key);
                         switch (true) {
-                        case newPriority === 0:
-                            return oldPriority < 0 ? void this.setPriority(key, 0) : void 0;
+                        case newPriority < 0:
+                            return newPriority === oldPriority ? void this.store.delete(key) : void 0;
                         case oldPriority > 0:
                             return newPriority > oldPriority && this.has(key) ? void this.castPriority(key) : void this.setPriority(key, -newPriority);
                         case oldPriority < 0:
@@ -3984,8 +3981,9 @@ require = function () {
                         throw new Error(`ClientChannel: Ownership channel "${ this.channel.name }" is already closed.`);
                     if (!this.has(key))
                         return;
-                    void this.setPriority(key, 0);
+                    void this.setPriority(key, -global_1.Math.abs(this.getPriority(key)));
                     void this.castPriority(key);
+                    void this.store.delete(key);
                 }
                 close() {
                     void this.cancellation.cancel();

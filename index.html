@@ -106,8 +106,8 @@
     },
     debug: true
   });
-  for (let i = 0; i < 25; ++i) {
-    var link = chan.link('v1/' + ('0'.repeat(4) + (Math.random() * 10000 | 0)).slice(-3));
+  for (let i = 0; i < 50; ++i) {
+    var link = chan.link('v1/' + `${Math.random() * 1000 | 0}`.padStart(3, '0'));
     link.data = 0;
   }
 </script>
