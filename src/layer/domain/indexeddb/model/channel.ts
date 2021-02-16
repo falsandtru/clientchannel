@@ -163,14 +163,14 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
       ? void 0
       : new Cancellation();
     cancellation && void setTimeout(cancellation.cancel, timeout);
-    return AtomicPromise.allSettled(
+    return Promise.resolve(AtomicPromise.allSettled(
       keys.map(key =>
         new Promise<K>((resolve, reject) =>
           void this.fetch(key, error =>
             error
               ? void reject(error)
               : void resolve(key),
-            cancellation))));
+            cancellation)))));
   }
   public fetch(key: K, cb: (error: DOMException | Error | null) => void = noop, cancellation?: Cancellation): void {
     void this.ensureAliveness();

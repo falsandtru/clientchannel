@@ -1,7 +1,6 @@
-import { Date, setTimeout } from 'spica/global';
+import { Date, Promise, setTimeout } from 'spica/global';
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
-import { AtomicPromise } from 'spica/promise';
 import { causeAsyncException } from 'spica/exception';
 
 export const name = 'access';
@@ -50,7 +49,7 @@ export class AccessStore<K extends string> {
   public recent(cb?: (key: K, keys: readonly K[]) => boolean | void, timeout?: number): Promise<K[]> {
     const keys: K[] = [];
     let done = false;
-    return new AtomicPromise((resolve, reject) => (
+    return new Promise((resolve, reject) => (
       timeout !== void 0 && void setTimeout(() => done = !void reject(new Error('Timeout.')), timeout),
       void this.store.cursor(
         null,
