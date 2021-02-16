@@ -61,7 +61,7 @@ export class Ownership<K extends string> {
       }
     });
   }
-  private readonly store: Map<K, number> = new Map();
+  private readonly store = new Map<K, number>();
   private readonly cancellation = new Cancellation();
   private alive = true;
   private getPriority(key: K): number {
