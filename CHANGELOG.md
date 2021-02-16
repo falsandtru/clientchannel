@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.31.0
+
+- Refine StoreChannel.recent method.
+
 ## 0.30.0
 
 - Improve ownership protocol.

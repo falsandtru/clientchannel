@@ -97,12 +97,13 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     const limit = () => {
       if (size === Infinity) return;
       if (!this.alive) return;
-      void this.recent(Infinity, (ks, error) => {
-        if (error) return void setTimeout(limit, 10 * 1000);
-        for (const key of ks.reverse()) {
-          void this.keys.put(key);
-        }
-      });
+      void this.recent().then(
+        keys =>
+          keys.reverse()
+            .forEach(key =>
+              void this.keys.put(key)),
+        () =>
+          void setTimeout(limit, 10 * 1000));
     };
     void limit();
   }
@@ -215,9 +216,12 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     void this.ages.set(key, age);
     return void this.schema.expire.set(key, age);
   }
-  public recent(limit: number, cb: (keys: K[], error: DOMException | Error | null) => void): void {
+  public recent(timeout?: number): Promise<K[]>;
+  public recent(cb?: (key: K, keys: readonly K[]) => boolean | void, timeout?: number): Promise<K[]>;
+  public recent(cb?: number | ((key: K, keys: readonly K[]) => boolean | void), timeout?: number): Promise<K[]> {
+    if (typeof cb === 'number') return this.recent(void 0, cb);
     void this.ensureAliveness();
-    return this.schema.access.recent(limit, cb);
+    return this.schema.access.recent(cb, timeout);
   }
   public close(): void {
     void this.cancellation.cancel();

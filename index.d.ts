@@ -19,7 +19,8 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
   sync(keys: K[], timeout?: number): Promise<PromiseSettledResult<K>[]>;
   link(key: K, age?: number): V;
   delete(key: K): void;
-  recent(limit: number, cb: (keys: K[], error: DOMException | Error | null) => void): void;
+  recent(timeout?: number): Promise<K[]>;
+  recent(cb?: (key: K, keys: readonly K[]) => boolean | void, timeout?: number): Promise<K[]>;
   close(): void;
   destroy(): void;
 }

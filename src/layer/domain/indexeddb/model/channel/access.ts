@@ -1,6 +1,7 @@
-import { Date } from 'spica/global';
+import { Date, setTimeout } from 'spica/global';
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
+import { AtomicPromise } from 'spica/promise';
 import { causeAsyncException } from 'spica/exception';
 
 export const name = 'access';
@@ -46,26 +47,33 @@ export class AccessStore<K extends string> {
     assert(Object.freeze(this));
   }
   private store = new class extends KeyValueStore<K, AccessRecord<K>> { }(name, AccessStoreSchema.key, this.listen);
-  public recent(limit: number, cb: (keys: K[], error: DOMException | Error | null) => void): void {
+  public recent(cb?: (key: K, keys: readonly K[]) => boolean | void, timeout?: number): Promise<K[]> {
     const keys: K[] = [];
-    return void this.store.cursor(
-      null,
-      AccessStoreSchema.date,
-      'prev',
-      'readonly',
-      (cursor, error): void => {
-        if (error || !cursor) return void cb(keys, error);
-        if (--limit < 0) return;
-        try {
-          const { key }: AccessRecord<K> = cursor.value;
-          void keys.push(key);
-        }
-        catch (reason) {
-          void cursor.delete();
-          void causeAsyncException(reason);
-        }
-        void cursor.continue();
-      });
+    let done = false;
+    return new AtomicPromise((resolve, reject) => (
+      timeout !== void 0 && void setTimeout(() => done = !void reject(new Error('Timeout.')), timeout),
+      void this.store.cursor(
+        null,
+        AccessStoreSchema.date,
+        'prev',
+        'readonly',
+        (cursor, error): void => {
+          if (done) return;
+          if (error) return void reject(error);
+          if (!cursor) return void resolve(keys);
+          let deletion = true;
+          try {
+            const { key }: AccessRecord<K> = cursor.value;
+            deletion = false;
+            void keys.push(key);
+            if (cb?.(key, keys) === false) return void resolve(keys);
+          }
+          catch (reason) {
+            deletion && void cursor.delete();
+            void causeAsyncException(reason);
+          }
+          void cursor.continue();
+        })));
   }
   public fetch(key: K): void {
     return this.store.fetch(key);
