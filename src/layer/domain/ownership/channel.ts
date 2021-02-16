@@ -96,7 +96,7 @@ export class Ownership<K extends string> {
   public take(key: K, age: number, wait: number): Promise<boolean>
   public take(key: K, age: number, wait?: number): boolean | Promise<boolean> {
     if (!this.alive) throw new Error(`ClientChannel: Ownership channel "${this.channel.name}" is already closed.`);
-    if (!this.isTakable(key)) return false;
+    if (!this.isTakable(key)) return wait === void 0 ? false : Promise.resolve(false);
     assert(0 <= age && age < 60 * 1000);
     age = Math.min(Math.max(age, 1 * 1000), 60 * 1000);
     wait = wait === void 0 ? wait : Math.max(wait, 0);
