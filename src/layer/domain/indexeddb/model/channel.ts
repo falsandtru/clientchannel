@@ -157,7 +157,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   protected ensureAliveness(): void {
     if (!this.alive) throw new Error(`ClientChannel: Store channel "${this.name}" is already closed.`);
   }
-  public sync(keys: K[], timeout?: number): Promise<PromiseSettledResult<K>[]> {
+  public sync(keys: readonly K[], timeout?: number): Promise<PromiseSettledResult<K>[]> {
     void this.ensureAliveness();
     const cancellation = timeout === void 0
       ? void 0

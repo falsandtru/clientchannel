@@ -16,7 +16,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
     readonly save: Observer<[K, Extract<keyof V | '', string>, StoreChannelEventType], StoreChannelEvent<K, V>, void>;
     readonly loss: Observer<[K, Extract<keyof V | '', string>, StoreChannelEventType], StoreChannelEvent<K, V>, void>;
   };
-  sync(keys: K[], timeout?: number): Promise<PromiseSettledResult<K>[]>;
+  sync(keys: readonly K[], timeout?: number): Promise<PromiseSettledResult<K>[]>;
   link(key: K, age?: number): V;
   delete(key: K): void;
   recent(timeout?: number): Promise<K[]>;
