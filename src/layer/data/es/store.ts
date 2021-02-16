@@ -182,7 +182,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         }
         else {
           const event = new LoadedEventRecord<K, V>(cursor.value);
-          if (this.memory.refs([event.key, event.attr, sqid(event.id)]).length > 0) return void proc(null, error);
+          if (this.memory.refs([event.key, event.attr, sqid(event.id)]).length > 0) return void proc(null, null);
           try {
             void events.unshift(event);
           }
@@ -190,7 +190,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             void tx.objectStore(this.name).delete(cursor.primaryKey);
             void causeAsyncException(reason);
           }
-          if (event.type !== EventStore.EventType.put) return void proc(null, error);
+          if (event.type !== EventStore.EventType.put) return void proc(null, null);
           return void cursor.continue();
         }
       };
@@ -205,7 +205,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         void cancellation?.close(),
         void cb(tx.error || req.error)));
       void cancellation?.register(() =>
-        events.length === 0 && void tx.abort());
+        void tx.abort());
     }, () => void cb(new Error('Request has failed.')));
   }
   public keys(): K[] {
@@ -240,15 +240,14 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     assert(event.type === EventStore.EventType.snapshot ? tx : true);
     if (!this.alive) return;
     switch (event.type) {
-      case EventStore.EventType.put: {
+      case EventStore.EventType.put:
         void this.memory
           .off([event.key, event.attr, sqid(0)]);
         void this.events_.memory
           .off([event.key, event.attr, sqid(0)]);
         break;
-      }
       case EventStore.EventType.delete:
-      case EventStore.EventType.snapshot: {
+      case EventStore.EventType.snapshot:
         void this.memory
           .refs([event.key])
           .filter(({ namespace: [, , id] }) => id === sqid(0))
@@ -258,7 +257,6 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             void this.events_.memory
               .off([key as K, attr as keyof V, id as string])));
         break;
-      }
     }
     const clean = this.memory
       .on([event.key, event.attr, sqid(0), sqid()], () => event);
@@ -393,7 +391,6 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
               deletion = true;
               return void cursor.continue();
             case EventStore.EventType.delete:
-              if (deletion) break;
               deletion = true;
               clean = true;
               break;
