@@ -38,23 +38,23 @@ export class Ownership<K extends string> {
       void this.channel.close();
     });
     void this.channel.listen('ownership', ({ key, priority: newPriority }) => {
-      assert(newPriority >= 0);
       const oldPriority = this.getPriority(key);
       switch (true) {
-        case newPriority === 0:
-          // Cancel the foreign ownership.
-          return oldPriority < 0
-            ? void this.setPriority(key, 0)
+        case newPriority < 0:
+          // Release the foreign ownership.
+          return newPriority === oldPriority
+            ? void this.store.delete(key)
             : void 0;
         case oldPriority > 0:
+          assert(newPriority >= 0);
           return newPriority > oldPriority
               && this.has(key)
-            // Reply my valid ownership.
+            // Notify my valid ownership.
             ? void this.castPriority(key)
-            // Keep the foreign ownership.
+            // Accept the foreign ownership.
             : void this.setPriority(key, -newPriority);
         case oldPriority < 0:
-          // Extend the foreign ownership.
+          // Update the foreign ownership.
           return void this.setPriority(key, -newPriority);
         default:
           assert(false);
@@ -72,6 +72,7 @@ export class Ownership<K extends string> {
     // Don't cast the same priority repeatedly.
     if (newPriority === oldPriority) return;
     void this.store.set(key, newPriority);
+    assert(this.getPriority(key) === newPriority);
     const mergin = 1000;
     assert(mergin < Ownership.mergin / 2);
     if (newPriority > 0 && newPriority > oldPriority + mergin) {
@@ -119,8 +120,9 @@ export class Ownership<K extends string> {
   public release(key: K): void {
     if (!this.alive) throw new Error(`ClientChannel: Ownership channel "${this.channel.name}" is already closed.`);
     if (!this.has(key)) return;
-    void this.setPriority(key, 0);
+    void this.setPriority(key, -Math.abs(this.getPriority(key)));
     void this.castPriority(key);
+    void this.store.delete(key);
   }
   public close(): void {
     void this.cancellation.cancel();

@@ -70,7 +70,6 @@ export class ExpiryStore<K extends string> {
         scheduled = Infinity;
         if (!this.ownership.take('store', wait)) return this.schedule(wait *= 2);
         wait = Math.max(Math.floor(wait / 1.5), 5 * 1000);
-        const since = Date.now();
         let retry = false;
         running = true;
         return void this.store.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', (cursor, error) => {
@@ -82,7 +81,6 @@ export class ExpiryStore<K extends string> {
             const { key, expiry }: ExpiryRecord<K> = cursor.value;
             if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
             if (!this.ownership.extend('store', wait)) return;
-            if (Date.now() - since > 1000) return void this.schedule(wait / 2);
             running = true;
             if (!this.ownership.take(`key:${key}`, wait)) return retry = true, void cursor.continue();
             void this.chan.delete(key);

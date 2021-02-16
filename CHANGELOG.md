@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.30.0
+
+- Improve ownership protocol.
+
 ## 0.29.7
 
 - Refactoring.
