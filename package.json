@@ -1,6 +1,6 @@
 {
   "name": "clientchannel",
-  "version": "0.29.7",
+  "version": "0.30.0",
   "description": "Store and sync data between tabs via IndexedDB or LocalStorage.",
   "private": true,
   "homepage": "https://github.com/falsandtru/clientchannel",
