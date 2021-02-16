@@ -1,4 +1,4 @@
-/*! clientchannel v0.29.5 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.29.6 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -2342,6 +2342,7 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.isValidPropertyValue = exports.isValidPropertyName = exports.EventRecordValue = exports.SavedEventRecord = exports.LoadedEventRecord = exports.StoredEventRecord = exports.UnstoredEventRecord = exports.EventRecordType = void 0;
+            const global_1 = _dereq_('spica/global');
             const alias_1 = _dereq_('spica/alias');
             const assign_1 = _dereq_('spica/assign');
             const identifier_1 = _dereq_('./identifier');
@@ -2358,7 +2359,7 @@ require = function () {
                     this.key = key;
                     this.value = value;
                     this.date = date;
-                    if (typeof this.id !== 'number' || !Number.isFinite(this.id) || this.id >= 0 === false || !Number.isSafeInteger(this.id))
+                    if (typeof this.id !== 'number' || this.id >= 0 === false || !global_1.Number.isSafeInteger(this.id))
                         throw new TypeError(`ClientChannel: EventRecord: Invalid event id: ${ this.id }`);
                     if (typeof this.type !== 'string')
                         throw new TypeError(`ClientChannel: EventRecord: Invalid event type: ${ this.type }`);
@@ -2366,7 +2367,7 @@ require = function () {
                         throw new TypeError(`ClientChannel: EventRecord: Invalid event key: ${ this.key }`);
                     if (typeof this.value !== 'object' || !this.value)
                         throw new TypeError(`ClientChannel: EventRecord: Invalid event value: ${ JSON.stringify(this.value) }`);
-                    if (typeof this.date !== 'number' || !Number.isFinite(this.date) || this.date >= 0 === false)
+                    if (typeof this.date !== 'number' || this.date >= 0 === false || !global_1.Number.isFinite(this.date))
                         throw new TypeError(`ClientChannel: EventRecord: Invalid event date: ${ this.date }`);
                     this.attr = this.type === exports.EventRecordType.put ? alias_1.ObjectKeys(value).filter(isValidPropertyName)[0] : '';
                     if (typeof this.attr !== 'string')
@@ -2376,22 +2377,16 @@ require = function () {
                         if (!isValidPropertyName(this.attr))
                             throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${ this.type }: ${ this.attr }`);
                         this.value = value = new EventRecordValue({ [this.attr]: value[this.attr] });
-                        void alias_1.ObjectFreeze(this.value);
-                        void alias_1.ObjectFreeze(this);
                         return;
                     case exports.EventRecordType.snapshot:
                         if (this.attr !== '')
                             throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${ this.type }: ${ this.attr }`);
                         this.value = value = new EventRecordValue(value);
-                        void alias_1.ObjectFreeze(this.value);
-                        void alias_1.ObjectFreeze(this);
                         return;
                     case exports.EventRecordType.delete:
                         if (this.attr !== '')
                             throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${ this.type }: ${ this.attr }`);
                         this.value = value = new EventRecordValue();
-                        void alias_1.ObjectFreeze(this.value);
-                        void alias_1.ObjectFreeze(this);
                         return;
                     default:
                         throw new TypeError(`ClientChannel: EventRecord: Invalid event type: ${ type }`);
@@ -2450,7 +2445,8 @@ require = function () {
             '../database/value': 35,
             './identifier': 37,
             'spica/alias': 4,
-            'spica/assign': 6
+            'spica/assign': 6,
+            'spica/global': 15
         }
     ],
     37: [
@@ -2476,7 +2472,6 @@ require = function () {
             const global_1 = _dereq_('spica/global');
             const alias_1 = _dereq_('spica/alias');
             const observer_1 = _dereq_('spica/observer');
-            const cancellation_1 = _dereq_('spica/cancellation');
             const clock_1 = _dereq_('spica/clock');
             const sqid_1 = _dereq_('spica/sqid');
             const concat_1 = _dereq_('spica/concat');
@@ -2498,19 +2493,19 @@ require = function () {
                     this.listen = listen;
                     this.alive = true;
                     this.memory = new observer_1.Observation();
-                    this.events = alias_1.ObjectFreeze({
+                    this.events = {
                         load: new observer_1.Observation(),
                         save: new observer_1.Observation(),
                         loss: new observer_1.Observation(),
                         clean: new observer_1.Observation()
-                    });
-                    this.events_ = alias_1.ObjectFreeze({ memory: new observer_1.Observation({ limit: Infinity }) });
+                    };
+                    this.events_ = { memory: new observer_1.Observation({ limit: Infinity }) };
                     this.tx = { rwc: 0 };
                     this.snapshotCycle = 9;
                     const states = new class {
                         constructor() {
-                            this.ids = new Map();
-                            this.dates = new Map();
+                            this.ids = new global_1.Map();
+                            this.dates = new global_1.Map();
                         }
                         update(event) {
                             void this.ids.set(event.key, identifier_1.makeEventId(global_1.Math.max(event.id, this.ids.get(event.key) || 0)));
@@ -2602,7 +2597,7 @@ require = function () {
                             if (error)
                                 return;
                             if (!cursor || new event_1.LoadedEventRecord(cursor.value).date < this.meta(key).date) {
-                                void [...events.reduceRight((es, e) => es.length === 0 || es[0].type === EventStore.EventType.put ? concat_1.concat(es, [e]) : es, []).reduceRight((dict, e) => dict.set(e.attr, e), new Map()).values()].sort((a, b) => a.date - b.date || a.id - b.id).forEach(e => (void this.memory.off([
+                                void [...events.reduceRight((es, e) => es.length === 0 || es[0].type === EventStore.EventType.put ? concat_1.concat(es, [e]) : es, []).reduceRight((dict, e) => dict.set(e.attr, e), new global_1.Map()).values()].sort((a, b) => a.date - b.date || a.id - b.id).forEach(e => (void this.memory.off([
                                     e.key,
                                     e.attr,
                                     sqid_1.sqid(e.id)
@@ -2811,8 +2806,8 @@ require = function () {
                     if (!this.alive)
                         return;
                     const events = [];
-                    const cleanState = new Map();
-                    const cleared = new cancellation_1.Cancellation();
+                    let deletion = false;
+                    let clean = false;
                     return void this.cursor(api_1.IDBKeyRange.only(key), EventStoreSchema.key, 'prev', 'readwrite', (cursor, error) => {
                         if (!this.alive)
                             return;
@@ -2831,27 +2826,25 @@ require = function () {
                                     sqid_1.sqid(event.id)
                                 ]);
                             }
-                            return void this.events.clean.emit([key], !cleared.cancelled);
+                            clean && void this.events.clean.emit([key]);
+                            return;
                         } else {
                             const event = new event_1.LoadedEventRecord(cursor.value);
                             switch (event.type) {
                             case EventStore.EventType.put:
-                                void cleared.cancel();
-                                void cleanState.set(event.key, cleanState.get(event.key) || false);
-                                if (cleanState.get(event.key))
+                                if (deletion)
                                     break;
                                 return void cursor.continue();
                             case EventStore.EventType.snapshot:
-                                void cleared.cancel();
-                                if (cleanState.get(event.key))
+                                if (deletion)
                                     break;
-                                void cleanState.set(event.key, true);
+                                deletion = true;
                                 return void cursor.continue();
                             case EventStore.EventType.delete:
-                                void cleared.close();
-                                if (cleanState.get(event.key))
+                                if (deletion)
                                     break;
-                                void cleanState.set(event.key, true);
+                                deletion = true;
+                                clean = true;
                                 break;
                             }
                             void cursor.delete();
@@ -2893,7 +2886,6 @@ require = function () {
                         this.attr = attr;
                         this.date = date;
                         this.EVENT;
-                        void alias_1.ObjectFreeze(this);
                     }
                 }
                 EventStore.Event = Event;
@@ -2947,7 +2939,6 @@ require = function () {
             './event': 36,
             './identifier': 37,
             'spica/alias': 4,
-            'spica/cancellation': 8,
             'spica/clock': 10,
             'spica/concat': 11,
             'spica/exception': 13,
@@ -2972,8 +2963,6 @@ require = function () {
                     this.alive = true;
                     this.cache = new Map();
                     this.tx = { rwc: 0 };
-                    if (typeof index !== 'string')
-                        throw new TypeError();
                 }
                 static configure() {
                     return {
@@ -3124,7 +3113,12 @@ require = function () {
                         throw new Error(`ClientChannel: Broadcast channel "${ name }" is already open.`);
                     void cache.add(this.name);
                 }
+                ensureAliveness() {
+                    if (!this.alive)
+                        throw new Error(`ClientChannel: Broadcast channel "${ this.name }" is already closed.`);
+                }
                 listen(type, listener) {
+                    void this.ensureAliveness();
                     void this.listeners.add(handler);
                     void this.channel.addEventListener('message', handler);
                     const {debug} = this;
@@ -3138,18 +3132,15 @@ require = function () {
                     }
                 }
                 post(msg) {
-                    if (!this.alive)
-                        return;
+                    void this.ensureAliveness();
                     this.debug && console.log('send', msg);
                     void this.channel.postMessage(msg);
                 }
                 close() {
-                    this.alive = false;
-                    void cache.delete(this.name);
-                    for (const listener of this.listeners) {
-                        void this.channel.removeEventListener('message', listener);
-                    }
+                    void this.channel.close();
                     void this.listeners.clear();
+                    void cache.delete(this.name);
+                    this.alive = false;
                 }
             }
             exports.Channel = Channel;
@@ -3313,7 +3304,6 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.ChannelStore = void 0;
             const global_1 = _dereq_('spica/global');
-            const alias_1 = _dereq_('spica/alias');
             const observer_1 = _dereq_('spica/observer');
             const cancellation_1 = _dereq_('spica/cancellation');
             const promise_1 = _dereq_('spica/promise');
@@ -3379,16 +3369,16 @@ require = function () {
                         })(),
                         capture: { delete: false }
                     });
-                    this.events_ = alias_1.ObjectFreeze({
+                    this.events_ = {
                         load: new observer_1.Observation(),
                         save: new observer_1.Observation(),
                         clean: new observer_1.Observation()
-                    });
-                    this.events = alias_1.ObjectFreeze({
+                    };
+                    this.events = {
                         load: new observer_1.Observation({ limit: global_1.Infinity }),
                         save: new observer_1.Observation({ limit: global_1.Infinity }),
                         loss: new observer_1.Observation({ limit: global_1.Infinity })
-                    });
+                    };
                     this.ages = new Map();
                     if (cache.has(name))
                         throw new Error(`ClientChannel: Store channel "${ name }" is already open.`);
@@ -3414,19 +3404,17 @@ require = function () {
                     void this.cancellation.register(() => void this.channel.close());
                     void this.cancellation.register(this.channel.listen('save', ({key}) => (void this.keys.delete(key) || void this.keys_.delete(key), void this.fetch(key))));
                     void this.events_.save.monitor([], ({key}) => void this.channel.post(new SaveMessage(key)));
-                    void this.events_.clean.monitor([], (cleared, [key]) => {
-                        if (!cleared)
-                            return;
+                    void this.events_.clean.monitor([], (_, [key]) => {
                         void this.ownership.take(`key:${ key }`, 5 * 1000);
                         void this.schema.access.delete(key);
                         void this.schema.expire.delete(key);
                     });
-                    if (!Number.isFinite(this.size))
+                    if (this.size === global_1.Infinity)
                         return;
                     void this.events_.load.monitor([], ({key, type}) => type === ChannelStore.EventType.delete ? void this.keys.delete(key) || void this.keys_.delete(key) : void this.keys.put(key));
                     void this.events_.save.monitor([], ({key, type}) => type === ChannelStore.EventType.delete ? void this.keys.delete(key) || void this.keys_.delete(key) : void this.keys.put(key));
                     const limit = () => {
-                        if (!Number.isFinite(size))
+                        if (size === global_1.Infinity)
                             return;
                         if (!this.alive)
                             return;
@@ -3443,12 +3431,18 @@ require = function () {
                 get alive() {
                     return this.cancellation.alive;
                 }
-                sync(keys, timeout = global_1.Infinity) {
-                    const cancellation = new cancellation_1.Cancellation();
-                    Number.isFinite(timeout) && void global_1.setTimeout(cancellation.cancel, timeout);
+                ensureAliveness() {
+                    if (!this.alive)
+                        throw new Error(`ClientChannel: Store channel "${ this.name }" is already closed.`);
+                }
+                sync(keys, timeout) {
+                    void this.ensureAliveness();
+                    const cancellation = timeout === void 0 ? void 0 : new cancellation_1.Cancellation();
+                    cancellation && void global_1.setTimeout(cancellation.cancel, timeout);
                     return promise_1.AtomicPromise.allSettled(keys.map(key => new global_1.Promise((resolve, reject) => void this.fetch(key, error => error ? void reject(error) : void resolve(key), cancellation))));
                 }
-                fetch(key, cb = noop_1.noop, cancellation = new cancellation_1.Cancellation()) {
+                fetch(key, cb = noop_1.noop, cancellation) {
+                    void this.ensureAliveness();
                     void this.schema.access.fetch(key);
                     return this.schema.data.fetch(key, cb, cancellation);
                 }
@@ -3456,13 +3450,16 @@ require = function () {
                     return this.schema.data.has(key);
                 }
                 meta(key) {
+                    void this.ensureAliveness();
                     return this.schema.data.meta(key);
                 }
                 get(key) {
+                    void this.ensureAliveness();
                     void this.log(key);
                     return this.schema.data.get(key);
                 }
                 add(record) {
+                    void this.ensureAliveness();
                     const key = record.key;
                     void this.log(key);
                     void this.schema.data.add(record);
@@ -3473,6 +3470,7 @@ require = function () {
                     ], () => void this.log(key));
                 }
                 delete(key) {
+                    void this.ensureAliveness();
                     void this.ownership.take(`key:${ key }`, 5 * 1000);
                     void this.log(key);
                     void this.schema.data.delete(key);
@@ -3484,10 +3482,12 @@ require = function () {
                     void this.schema.expire.set(key, this.ages.get(key) || this.age);
                 }
                 expire(key, age = this.age) {
+                    void this.ensureAliveness();
                     void this.ages.set(key, age);
                     return void this.schema.expire.set(key, age);
                 }
                 recent(limit, cb) {
+                    void this.ensureAliveness();
                     return this.schema.access.recent(limit, cb);
                 }
                 close() {
@@ -3495,6 +3495,7 @@ require = function () {
                     return void api_1.close(this.name);
                 }
                 destroy() {
+                    void this.ensureAliveness();
                     void this.cancellation.cancel();
                     return void api_1.destroy(this.name);
                 }
@@ -3547,7 +3548,6 @@ require = function () {
             './channel/access': 45,
             './channel/data': 46,
             './channel/expiry': 47,
-            'spica/alias': 4,
             'spica/cache': 7,
             'spica/cancellation': 8,
             'spica/global': 15,
@@ -3561,7 +3561,6 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.AccessStore = exports.name = void 0;
-            const alias_1 = _dereq_('spica/alias');
             const store_1 = _dereq_('../../../../data/kvs/store');
             exports.name = 'access';
             class AccessStore {
@@ -3569,7 +3568,6 @@ require = function () {
                     this.listen = listen;
                     this.store = new class extends store_1.KeyValueStore {
                     }(exports.name, 'key', this.listen);
-                    void alias_1.ObjectFreeze(this);
                 }
                 static configure() {
                     return {
@@ -3630,10 +3628,7 @@ require = function () {
                 }
             }
         },
-        {
-            '../../../../data/kvs/store': 39,
-            'spica/alias': 4
-        }
+        { '../../../../data/kvs/store': 39 }
     ],
     46: [
         function (_dereq_, module, exports) {
@@ -3666,7 +3661,6 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.ExpiryStore = void 0;
             const global_1 = _dereq_('spica/global');
-            const alias_1 = _dereq_('spica/alias');
             const store_1 = _dereq_('../../../../data/kvs/store');
             const name = 'expiry';
             class ExpiryStore {
@@ -3679,7 +3673,7 @@ require = function () {
                     }(name, 'key', this.listen);
                     this.schedule = (() => {
                         let timer = 0;
-                        let scheduled = Infinity;
+                        let scheduled = global_1.Infinity;
                         let running = false;
                         let wait = 5 * 1000;
                         void this.ownership.take('store', 0);
@@ -3694,7 +3688,7 @@ require = function () {
                                     return;
                                 if (running)
                                     return;
-                                scheduled = Infinity;
+                                scheduled = global_1.Infinity;
                                 if (!this.ownership.take('store', wait))
                                     return this.schedule(wait *= 2);
                                 wait = global_1.Math.max(global_1.Math.floor(wait / 1.5), 5 * 1000);
@@ -3726,7 +3720,6 @@ require = function () {
                         };
                     })();
                     void this.schedule(10 * 1000);
-                    void alias_1.ObjectFreeze(this);
                 }
                 static configure() {
                     return {
@@ -3752,7 +3745,7 @@ require = function () {
                     };
                 }
                 set(key, age) {
-                    if (age === Infinity)
+                    if (age === global_1.Infinity)
                         return void this.delete(key);
                     void this.schedule(age);
                     void this.store.set(key, new ExpiryRecord(key, Date.now() + age));
@@ -3774,7 +3767,6 @@ require = function () {
         },
         {
             '../../../../data/kvs/store': 39,
-            'spica/alias': 4,
             'spica/global': 15
         }
     ],
@@ -3832,9 +3824,9 @@ require = function () {
                             }
                         }
                     });
-                    void alias_1.ObjectFreeze(this);
                 }
                 link(key, age) {
+                    void this.ensureAliveness();
                     void this.fetch(key);
                     void this.expire(key, age);
                     return this.links.has(key) ? this.links.get(key) : this.links.set(key, api_1.build(alias_1.ObjectDefineProperties(this.sources.set(key, this.get(key)).get(key), {
@@ -4056,10 +4048,10 @@ require = function () {
                     this.storage = storage;
                     this.cancellation = new cancellation_1.Cancellation();
                     this.mode = this.storage === api_2.localStorage ? 'local' : 'session';
-                    this.events = alias_1.ObjectFreeze({
+                    this.events = {
                         send: new observer_1.Observation({ limit: Infinity }),
                         recv: new observer_1.Observation({ limit: Infinity })
-                    });
+                    };
                     if (cache.has(name))
                         throw new Error(`ClientChannel: Storage channel "${ name }" is already open.`);
                     void cache.add(name);
@@ -4104,18 +4096,23 @@ require = function () {
                             void this.events.recv.emit([event.attr], event);
                         });
                     }));
-                    void alias_1.ObjectFreeze(this);
                 }
                 get alive() {
                     return this.cancellation.alive;
                 }
+                ensureAliveness() {
+                    if (!this.alive)
+                        throw new Error(`ClientChannel: Storage channel "${ this.name }" is already closed.`);
+                }
                 link() {
+                    void this.ensureAliveness();
                     return this.link_;
                 }
                 close() {
                     void this.cancellation.cancel();
                 }
                 destroy() {
+                    void this.ensureAliveness();
                     void this.cancellation.cancel();
                     void this.storage.removeItem(this.name);
                 }
@@ -4128,7 +4125,6 @@ require = function () {
                         this.attr = attr;
                         this.newValue = newValue;
                         this.oldValue = oldValue;
-                        void alias_1.ObjectFreeze(this);
                     }
                 }
                 StorageChannel.Event = Event;
@@ -4353,7 +4349,6 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.IDBEvent = exports.idbEventStream = exports.idbEventStream_ = void 0;
-            const alias_1 = _dereq_('spica/alias');
             const observer_1 = _dereq_('spica/observer');
             exports.idbEventStream_ = new observer_1.Observation({ limit: Infinity });
             exports.idbEventStream = exports.idbEventStream_;
@@ -4361,15 +4356,11 @@ require = function () {
                 constructor(name, type) {
                     this.name = name;
                     this.type = type;
-                    void alias_1.ObjectFreeze(this);
                 }
             }
             exports.IDBEvent = IDBEvent;
         },
-        {
-            'spica/alias': 4,
-            'spica/observer': 27
-        }
+        { 'spica/observer': 27 }
     ],
     58: [
         function (_dereq_, module, exports) {
@@ -4417,42 +4408,30 @@ require = function () {
             class State {
                 constructor(database, curr) {
                     this.database = database;
-                    this.alive = true;
-                    switch (true) {
-                    case this instanceof InitialState:
+                    this.alive = false;
+                    if ((curr === null || curr === void 0 ? void 0 : curr.alive) === false)
+                        return;
+                    if (this instanceof InitialState) {
                         this.alive = !curr;
                         if (!this.alive)
                             return;
                         void exports.requests.set(database, exports.requests.get(database) || new RequestQueue(database));
-                        break;
-                    default:
-                        this.alive = !!curr && curr.alive;
-                        if (!this.alive)
+                    } else {
+                        this.alive = !!curr;
+                        if (!this.alive || !curr)
                             return;
-                    }
-                    void exports.states.set(database, this);
-                    if (curr) {
                         curr.alive = false;
                     }
+                    void exports.states.set(database, this);
                 }
                 get command() {
-                    return exports.commands.get(this.database) || 'close';
+                    return exports.commands.get(this.database);
                 }
                 get config() {
-                    return exports.configs.get(this.database) || {
-                        make() {
-                            return false;
-                        },
-                        verify() {
-                            return false;
-                        },
-                        destroy() {
-                            return false;
-                        }
-                    };
+                    return exports.configs.get(this.database);
                 }
                 get queue() {
-                    return exports.requests.get(this.database) || new RequestQueue(this.database);
+                    return exports.requests.get(this.database);
                 }
             }
             class InitialState extends State {
@@ -4529,13 +4508,8 @@ require = function () {
                     this.version = version;
                     this.STATE;
                 }
-                get command() {
-                    return exports.commands.get(this.database) || 'close';
-                }
                 complete() {
                     var _a;
-                    if (!this.alive)
-                        return;
                     switch (this.command) {
                     case 'close':
                     case 'destroy':
@@ -4597,15 +4571,14 @@ require = function () {
             function handleUpgradeState(state) {
                 if (!state.alive)
                     return;
-                const {session} = state;
+                const {session, config} = state;
                 const db = session.transaction.db;
-                const {make, destroy} = state.config;
                 try {
-                    if (make(session.transaction)) {
+                    if (config.make(session.transaction)) {
                         session.onsuccess = () => void handleSuccessState(new state_1.SuccessState(state, db));
                         session.onerror = event => void handleErrorState(new state_1.ErrorState(state, session.error, event));
                     } else {
-                        session.onsuccess = session.onerror = event => (void db.close(), destroy(session.error, event) ? void handleDestroyState(new state_1.DestroyState(state)) : void handleEndState(new state_1.EndState(state)));
+                        session.onsuccess = session.onerror = event => (void db.close(), config.destroy(session.error, event) ? void handleDestroyState(new state_1.DestroyState(state)) : void handleEndState(new state_1.EndState(state)));
                     }
                 } catch (reason) {
                     void handleCrashState(new state_1.CrashState(state, reason));
@@ -4614,7 +4587,7 @@ require = function () {
             function handleSuccessState(state) {
                 if (!state.alive)
                     return;
-                const {database, connection, queue} = state;
+                const {database, connection, config, queue} = state;
                 connection.onversionchange = () => {
                     const curr = new state_1.EndState(state);
                     void connection.close();
@@ -4629,18 +4602,16 @@ require = function () {
                 connection.onclose = () => void handleEndState(new state_1.EndState(state));
                 switch (state.command) {
                 case 'open': {
-                        const {verify} = state.config;
-                        VERIFY: {
+                        VALIDATION:
                             try {
-                                if (verify(connection))
-                                    break VERIFY;
+                                if (config.verify(connection))
+                                    break VALIDATION;
                                 void connection.close();
                                 return void handleEndState(new state_1.EndState(state, connection.version + 1));
                             } catch (reason) {
                                 void connection.close();
                                 return void handleCrashState(new state_1.CrashState(state, reason));
                             }
-                        }
                         void event_1.idbEventStream_.emit([
                             database,
                             'connect'
@@ -4678,14 +4649,13 @@ require = function () {
             function handleErrorState(state) {
                 if (!state.alive)
                     return;
-                const {database, error, event} = state;
+                const {database, error, event, config} = state;
                 void event.preventDefault();
                 void event_1.idbEventStream_.emit([
                     database,
                     'error'
                 ], new event_1.IDBEvent(database, 'error'));
-                const {destroy} = state.config;
-                if (destroy(error, event)) {
+                if (config.destroy(error, event)) {
                     return void handleDestroyState(new state_1.DestroyState(state));
                 } else {
                     return void handleEndState(new state_1.EndState(state));
@@ -4705,13 +4675,12 @@ require = function () {
             function handleCrashState(state) {
                 if (!state.alive)
                     return;
-                const {database, reason} = state;
+                const {database, reason, config} = state;
                 void event_1.idbEventStream_.emit([
                     database,
                     'crash'
                 ], new event_1.IDBEvent(database, 'crash'));
-                const {destroy} = state.config;
-                if (destroy(reason)) {
+                if (config.destroy(reason)) {
                     return void handleDestroyState(new state_1.DestroyState(state));
                 } else {
                     return void handleEndState(new state_1.EndState(state));
@@ -4733,7 +4702,7 @@ require = function () {
             function handleEndState(state) {
                 if (!state.alive)
                     return;
-                const {database, version} = state;
+                const {database, version, command} = state;
                 void state.complete();
                 void event_1.idbEventStream_.emit([
                     database,
@@ -4741,7 +4710,7 @@ require = function () {
                 ], new event_1.IDBEvent(database, 'disconnect'));
                 if (!state_1.isIDBAvailable || !api_1.verifyStorageAccess())
                     return;
-                switch (state.command) {
+                switch (command) {
                 case 'open':
                     return void handleInitialState(new state_1.InitialState(database, version));
                 case 'close':
