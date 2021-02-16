@@ -2,8 +2,9 @@ import { Infinity, Math, Date, setTimeout } from 'spica/global';
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
 import { ChannelStore } from '../channel';
-import { Cancellee } from 'spica/cancellation';
 import { Ownership } from '../../../ownership/channel';
+import { Cancellee } from 'spica/cancellation';
+import { causeAsyncException } from 'spica/exception';
 
 const name = 'expiry';
 
@@ -77,13 +78,19 @@ export class ExpiryStore<K extends string> {
           if (!this.cancellation.alive) return;
           if (error) return void this.schedule(wait * 10);
           if (!cursor) return retry && void this.schedule(wait);
-          const { key, expiry }: ExpiryRecord<K> = cursor.value;
-          if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
-          if (!this.ownership.extend('store', wait)) return;
-          if (Date.now() - since > 1000) return void this.schedule(wait / 2);
-          running = true;
-          if (!this.ownership.take(`key:${key}`, wait)) return retry = true, void cursor.continue();
-          void this.chan.delete(key);
+          try {
+            const { key, expiry }: ExpiryRecord<K> = cursor.value;
+            if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
+            if (!this.ownership.extend('store', wait)) return;
+            if (Date.now() - since > 1000) return void this.schedule(wait / 2);
+            running = true;
+            if (!this.ownership.take(`key:${key}`, wait)) return retry = true, void cursor.continue();
+            void this.chan.delete(key);
+          }
+          catch (reason) {
+            void cursor.delete();
+            void causeAsyncException(reason);
+          }
           return void cursor.continue();
         });
       }, timeout) as any;

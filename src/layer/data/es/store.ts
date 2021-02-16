@@ -146,6 +146,16 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         .openCursor(key, 'prev');
       const proc = (cursor: IDBCursorWithValue | null, error: DOMException | Error | null): void => {
         if (error) return;
+        if (cursor) {
+          try {
+            new LoadedEventRecord<K, V>(cursor.value);
+          }
+          catch (reason) {
+            void cursor.delete();
+            void causeAsyncException(reason);
+            return void cursor.continue();
+          }
+        }
         if (!cursor || new LoadedEventRecord<K, V>(cursor.value).date < this.meta(key).date) {
           // Register latest events.
           void [
@@ -183,13 +193,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         else {
           const event = new LoadedEventRecord<K, V>(cursor.value);
           if (this.memory.refs([event.key, event.attr, sqid(event.id)]).length > 0) return void proc(null, null);
-          try {
-            void events.unshift(event);
-          }
-          catch (reason) {
-            void tx.objectStore(this.name).delete(cursor.primaryKey);
-            void causeAsyncException(reason);
-          }
+          void events.unshift(event);
           if (event.type !== EventStore.EventType.put) return void proc(null, null);
           return void cursor.continue();
         }
@@ -323,8 +327,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       void req.addEventListener('success', (): void => {
         const cursor: IDBCursorWithValue | null = req.result;
         if (cursor) {
-          const event = new LoadedEventRecord<K, V>(cursor.value);
           try {
+            const event = new LoadedEventRecord<K, V>(cursor.value);
             void events.unshift(event);
           }
           catch (reason) {
@@ -381,22 +385,27 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           return;
         }
         else {
-          const event = new LoadedEventRecord<K, V>(cursor.value);
-          switch (event.type) {
-            case EventStore.EventType.put:
-              if (deletion) break;
-              return void cursor.continue();
-            case EventStore.EventType.snapshot:
-              if (deletion) break;
-              deletion = true;
-              return void cursor.continue();
-            case EventStore.EventType.delete:
-              deletion = true;
-              clean = true;
-              break;
+          try {
+            const event = new LoadedEventRecord<K, V>(cursor.value);
+            switch (event.type) {
+              case EventStore.EventType.put:
+                if (deletion) break;
+                return void cursor.continue();
+              case EventStore.EventType.snapshot:
+                if (deletion) break;
+                deletion = true;
+                return void cursor.continue();
+              case EventStore.EventType.delete:
+                clean = true;
+                break;
+            }
+            void events.unshift(event);
           }
+          catch (reason) {
+            void causeAsyncException(reason);
+          }
+          deletion = true;
           void cursor.delete();
-          void events.unshift(event);
           return void cursor.continue();
         }
       });

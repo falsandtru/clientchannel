@@ -1,6 +1,7 @@
 import { Listen, Config } from '../../infrastructure/indexeddb/api';
 import { Cancellation } from 'spica/cancellation';
 import { tick } from 'spica/clock';
+import { causeAsyncException } from 'spica/exception';
 import { noop } from 'spica/noop';
 
 export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
@@ -140,8 +141,14 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
       void req.addEventListener('success', () => {
         const cursor: IDBCursorWithValue | null = req.result;
         if (!cursor) return;
-        void this.cache.set(cursor.primaryKey as K, { ...cursor.value });
-        void cb(cursor, req.error);
+        try {
+          void this.cache.set(cursor.primaryKey as K, { ...cursor.value });
+          void cb(cursor, req.error);
+        }
+        catch (reason) {
+          void cursor.delete();
+          void causeAsyncException(reason);
+        }
       });
       void tx.addEventListener('complete', () =>
         void cb(null, req.error));

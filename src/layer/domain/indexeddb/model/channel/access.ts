@@ -1,6 +1,7 @@
 import { Date } from 'spica/global';
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
+import { causeAsyncException } from 'spica/exception';
 
 export const name = 'access';
 
@@ -55,8 +56,14 @@ export class AccessStore<K extends string> {
       (cursor, error): void => {
         if (error || !cursor) return void cb(keys, error);
         if (--limit < 0) return;
-        const { key }: AccessRecord<K> = cursor.value;
-        void keys.push(key);
+        try {
+          const { key }: AccessRecord<K> = cursor.value;
+          void keys.push(key);
+        }
+        catch (reason) {
+          void cursor.delete();
+          void causeAsyncException(reason);
+        }
         void cursor.continue();
       });
   }
