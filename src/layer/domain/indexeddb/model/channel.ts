@@ -1,4 +1,4 @@
-import { Infinity, Promise, setTimeout } from 'spica/global';
+import { Infinity, Date, Promise, setTimeout } from 'spica/global';
 import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../';
 import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';

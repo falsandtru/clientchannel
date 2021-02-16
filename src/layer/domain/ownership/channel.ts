@@ -1,4 +1,4 @@
-import { Promise, Math, setTimeout } from 'spica/global';
+import { Math, Date, Promise, setTimeout } from 'spica/global';
 import { Channel, ChannelMessage } from '../broadcast/channel';
 import { Cancellation } from 'spica/cancellation';
 

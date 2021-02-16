@@ -1,4 +1,4 @@
-import { Number } from 'spica/global';
+import { Number, Date } from 'spica/global';
 import { ObjectKeys } from 'spica/alias';
 import { StoreChannelEventType } from '../../../../';
 import { clone } from 'spica/assign';
