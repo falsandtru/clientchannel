@@ -1,4 +1,4 @@
-/*! clientchannel v0.30.0 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.31.0 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -3429,13 +3429,7 @@ require = function () {
                             return;
                         if (!this.alive)
                             return;
-                        void this.recent(global_1.Infinity, (ks, error) => {
-                            if (error)
-                                return void global_1.setTimeout(limit, 10 * 1000);
-                            for (const key of ks.reverse()) {
-                                void this.keys.put(key);
-                            }
-                        });
+                        void this.recent().then(keys => keys.reverse().forEach(key => void this.keys.put(key)), () => void global_1.setTimeout(limit, 10 * 1000));
                     };
                     void limit();
                 }
@@ -3450,7 +3444,7 @@ require = function () {
                     void this.ensureAliveness();
                     const cancellation = timeout === void 0 ? void 0 : new cancellation_1.Cancellation();
                     cancellation && void global_1.setTimeout(cancellation.cancel, timeout);
-                    return promise_1.AtomicPromise.allSettled(keys.map(key => new global_1.Promise((resolve, reject) => void this.fetch(key, error => error ? void reject(error) : void resolve(key), cancellation))));
+                    return global_1.Promise.resolve(promise_1.AtomicPromise.allSettled(keys.map(key => new global_1.Promise((resolve, reject) => void this.fetch(key, error => error ? void reject(error) : void resolve(key), cancellation)))));
                 }
                 fetch(key, cb = noop_1.noop, cancellation) {
                     void this.ensureAliveness();
@@ -3497,9 +3491,11 @@ require = function () {
                     void this.ages.set(key, age);
                     return void this.schema.expire.set(key, age);
                 }
-                recent(limit, cb) {
+                recent(cb, timeout) {
+                    if (typeof cb === 'number')
+                        return this.recent(void 0, cb);
                     void this.ensureAliveness();
-                    return this.schema.access.recent(limit, cb);
+                    return this.schema.access.recent(cb, timeout);
                 }
                 close() {
                     void this.cancellation.cancel();
@@ -3605,22 +3601,29 @@ require = function () {
                         }
                     };
                 }
-                recent(limit, cb) {
+                recent(cb, timeout) {
                     const keys = [];
-                    return void this.store.cursor(null, 'date', 'prev', 'readonly', (cursor, error) => {
-                        if (error || !cursor)
-                            return void cb(keys, error);
-                        if (--limit < 0)
+                    let done = false;
+                    return new global_1.Promise((resolve, reject) => (timeout !== void 0 && void global_1.setTimeout(() => done = !void reject(new Error('Timeout.')), timeout), void this.store.cursor(null, 'date', 'prev', 'readonly', (cursor, error) => {
+                        if (done)
                             return;
+                        if (error)
+                            return void reject(error);
+                        if (!cursor)
+                            return void resolve(keys);
+                        let deletion = true;
                         try {
                             const {key} = cursor.value;
+                            deletion = false;
                             void keys.push(key);
+                            if ((cb === null || cb === void 0 ? void 0 : cb(key, keys)) === false)
+                                return void resolve(keys);
                         } catch (reason) {
-                            void cursor.delete();
+                            deletion && void cursor.delete();
                             void exception_1.causeAsyncException(reason);
                         }
                         void cursor.continue();
-                    });
+                    })));
                 }
                 fetch(key) {
                     return this.store.fetch(key);
