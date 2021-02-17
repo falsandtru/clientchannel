@@ -6,7 +6,6 @@ import { tick } from 'spica/clock';
 import { sqid } from 'spica/sqid';
 import { concat } from 'spica/concat';
 import { causeAsyncException } from 'spica/exception';
-import { noop } from 'spica/noop';
 import { Listen, Config, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { EventId, makeEventId } from './identifier';
 import { EventRecordType, UnstoredEventRecord, StoredEventRecord, LoadedEventRecord, SavedEventRecord, EventRecordValue, isValidPropertyName } from './event';
@@ -133,12 +132,12 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     this.tx.rw = tx;
     void tick(() => this.tx.rw = void 0);
   }
-  public fetch(key: K, cb: (error: DOMException | Error | null) => void = noop, cancellation?: Cancellation): void {
-    if (!this.alive) return void cb(new Error('Session is already closed.'));
+  public fetch(key: K, cb?: (error: DOMException | Error | null) => void, cancellation?: Cancellation): void {
+    if (!this.alive) return void cb?.(new Error('Session is already closed.'));
     const events: LoadedEventRecord<K, V>[] = [];
     return void this.listen(db => {
-      if (!this.alive) return void cb(new Error('Session is already closed.'));
-      if (cancellation?.cancelled) return void cb(new Error('Request is cancelled.'));
+      if (!this.alive) return void cb?.(new Error('Session is already closed.'));
+      if (cancellation?.cancelled) return void cb?.(new Error('Request is cancelled.'));
       const tx = db.transaction(this.name, 'readonly');
       const req = tx
         .objectStore(this.name)
@@ -180,7 +179,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
               void this.events_.memory
                 .emit([e.key, e.attr, sqid(e.id)], e)));
           try {
-            void cb(req.error);
+            void cb?.(req.error);
           }
           catch (reason) {
             void causeAsyncException(reason);
@@ -204,13 +203,13 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         void cancellation?.close());
       void tx.addEventListener('error', () => (
         void cancellation?.close(),
-        void cb(tx.error || req.error)));
+        void cb?.(tx.error || req.error)));
       void tx.addEventListener('abort', () => (
         void cancellation?.close(),
-        void cb(tx.error || req.error)));
+        void cb?.(tx.error || req.error)));
       void cancellation?.register(() =>
         void tx.abort());
-    }, () => void cb(new Error('Request has failed.')));
+    }, () => void cb?.(new Error('Request has failed.')));
   }
   public keys(): K[] {
     return this.memory.reflect([])

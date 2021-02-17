@@ -2,7 +2,6 @@ import { Listen, Config } from '../../infrastructure/indexeddb/api';
 import { Cancellation } from 'spica/cancellation';
 import { tick } from 'spica/clock';
 import { causeAsyncException } from 'spica/exception';
-import { noop } from 'spica/noop';
 
 export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
   public static configure(): Config {
@@ -48,11 +47,11 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     this.tx.rw = tx;
     void tick(() => this.tx.rw = void 0);
   }
-  public fetch(key: K, cb: (error: DOMException | Error | null) => void = noop, cancellation?: Cancellation): undefined {
-    if (!this.alive) return void cb(new Error('Session is already closed.'));
+  public fetch(key: K, cb?: (error: DOMException | Error | null) => void, cancellation?: Cancellation): undefined {
+    if (!this.alive) return void cb?.(new Error('Session is already closed.'));
     return void this.listen(db => {
-      if (!this.alive) return void cb(new Error('Session is already closed.'));
-      if (cancellation?.cancelled) return void cb(new Error('Request is cancelled.'));
+      if (!this.alive) return void cb?.(new Error('Session is already closed.'));
+      if (cancellation?.cancelled) return void cb?.(new Error('Request is cancelled.'));
       const tx = db.transaction(this.name, 'readonly');
       const req = this.index
         ? tx
@@ -63,18 +62,18 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
             .objectStore(this.name)
             .getKey(key);
       void req.addEventListener('success', () =>
-        void cb(req.error));
+        void cb?.(req.error));
       void tx.addEventListener('complete', () =>
         void cancellation?.close());
       void tx.addEventListener('error', () => (
         void cancellation?.close(),
-        void cb(tx.error || req.error)));
+        void cb?.(tx.error || req.error)));
       void tx.addEventListener('abort', () => (
         void cancellation?.close(),
-        void cb(tx.error || req.error)));
+        void cb?.(tx.error || req.error)));
       void cancellation?.register(() =>
         void tx.abort());
-    }, () => void cb(new Error('Request has failed.')));
+    }, () => void cb?.(new Error('Request has failed.')));
   }
   public has(key: K): boolean {
     return this.cache.has(key);
@@ -82,10 +81,10 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
   public get(key: K): V | undefined {
     return this.cache.get(key);
   }
-  public set(key: K, value: V, cb: (key: K, error: DOMException | Error) => void = noop): V {
+  public set(key: K, value: V, cb?: (key: K, error: DOMException | Error) => void): V {
     return this.put(value, key, cb);
   }
-  private put(value: V, key: K, cb: (key: K, error: DOMException | Error) => void = noop): V {
+  private put(value: V, key: K, cb?: (key: K, error: DOMException | Error) => void): V {
     void this.cache.set(key, value);
     if (!this.alive) return value;
     void this.listen(db => {
@@ -100,15 +99,15 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
           .objectStore(this.name)
           .put(this.cache.get(key), key);
       void tx.addEventListener('complete', () =>
-        void cb(key, tx.error));
+        void cb?.(key, tx.error));
       void tx.addEventListener('error', () =>
-        void cb(key, tx.error));
+        void cb?.(key, tx.error));
       void tx.addEventListener('abort', () =>
-        void cb(key, tx.error));
-    }, () => void cb(key, new Error('Request has failed.')));
+        void cb?.(key, tx.error));
+    }, () => void cb?.(key, new Error('Request has failed.')));
     return value;
   }
-  public delete(key: K, cb: (error: DOMException | Error) => void = noop): void {
+  public delete(key: K, cb?: (error: DOMException | Error) => void): void {
     void this.cache.delete(key);
     if (!this.alive) return;
     void this.listen(db => {
@@ -118,12 +117,12 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
         .objectStore(this.name)
         .delete(key);
       void tx.addEventListener('complete', () =>
-        void cb(tx.error));
+        void cb?.(tx.error));
       void tx.addEventListener('error', () =>
-        void cb(tx.error));
+        void cb?.(tx.error));
       void tx.addEventListener('abort', () =>
-        void cb(tx.error));
-    }, () => void cb(new Error('Request has failed.')));
+        void cb?.(tx.error));
+    }, () => void cb?.(new Error('Request has failed.')));
   }
   public cursor(query: IDBValidKey | IDBKeyRange | null, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMException | Error | null) => void): void {
     if (!this.alive) return;

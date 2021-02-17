@@ -4,7 +4,6 @@ import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
 import { AtomicPromise, PromiseSettledResult } from 'spica/promise';
 import { Cache } from 'spica/cache';
-import { noop } from 'spica/noop';
 import { open, Listen, close, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { DataStore } from './channel/data';
 import { AccessStore } from './channel/access';
@@ -172,7 +171,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
               : void resolve(key),
             cancellation)))));
   }
-  public fetch(key: K, cb: (error: DOMException | Error | null) => void = noop, cancellation?: Cancellation): void {
+  public fetch(key: K, cb?: (error: DOMException | Error | null) => void, cancellation?: Cancellation): void {
     void this.ensureAliveness();
     void this.schema.access.fetch(key);
     return this.schema.data.fetch(key, cb, cancellation);

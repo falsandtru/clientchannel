@@ -1,7 +1,6 @@
 import { ObjectDefineProperties, ObjectGetOwnPropertyDescriptor, ObjectKeys, ObjectSeal, ObjectValues } from 'spica/alias';
 import { ChannelObject } from '../../../../..';
 import { isValidPropertyName, isValidPropertyValue } from '../../../data/es/event';
-import { noop } from 'spica/noop';
 
 export {
   isValidPropertyName,
@@ -19,8 +18,8 @@ export namespace Schema {
 export function build<V extends object>(
   source: V,
   factory: () => V,
-  set: <K extends Extract<keyof V, string>>(prop: K, newVal: V[K], oldVal: V[K]) => void = noop,
-  get: <K extends Extract<keyof V, string>>(prop: K, val: V[K]) => void = noop,
+  set?: <K extends Extract<keyof V, string>>(prop: K, newVal: V[K], oldVal: V[K]) => void,
+  get?: <K extends Extract<keyof V, string>>(prop: K, val: V[K]) => void,
 ): V {
   const dao = factory();
   for (const prop of ObjectValues(Schema)) {
@@ -44,14 +43,14 @@ export function build<V extends object>(
           enumerable: true,
           get: () => {
             const val = source[prop] === void 0 ? iniVal : source[prop];
-            void get(prop, val);
+            void get?.(prop, val);
             return val;
           },
           set: newVal => {
             if (!isValidPropertyValue({ [prop]: newVal })(prop)) throw new TypeError(`ClientChannel: DAO: Invalid value: ${JSON.stringify(newVal)}`);
             const oldVal = source[prop];
             source[prop] = newVal === void 0 ? iniVal : newVal;
-            void set(prop, newVal, oldVal);
+            void set?.(prop, newVal, oldVal);
           },
         };
         return map;
