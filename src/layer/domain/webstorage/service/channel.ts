@@ -13,7 +13,7 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
     public readonly name: string,
     private readonly storage: StorageLike = sessionStorage || fakeStorage,
     factory: () => V,
-    migrate: (link: V) => void = () => void 0,
+    migrate?: (link: V) => void,
   ) {
     if (cache.has(name)) throw new Error(`ClientChannel: Storage channel "${name}" is already open.`);
     void cache.add(name);
@@ -34,7 +34,7 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
       void (source[Schema.event] as Observation<[StorageChannelEventType, Extract<keyof V, string>], StorageChannel.Event<V>, void>).emit([event.type, event.attr], event);
       void this.events.send.emit([event.attr], event);
     });
-    void migrate(this.link_);
+    void migrate?.(this.link_);
     void this.cancellation.register(
       storageEventStream.on([this.mode, this.name], ({ newValue }: StorageEvent): void => {
         const item = parse<V>(newValue);
@@ -46,7 +46,7 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
             const newVal = item[attr];
             if ([newVal].includes(oldVal)) return;
             source[attr] = newVal;
-            void migrate(this.link_);
+            void migrate?.(this.link_);
             const event = new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, source[attr], oldVal);
             void (source[Schema.event] as Observation<[StorageChannelEventType, Extract<keyof V, string>], StorageChannel.Event<V>, void>).emit([event.type, event.attr], event);
             void this.events.recv.emit([event.attr], event);

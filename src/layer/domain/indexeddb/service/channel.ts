@@ -11,7 +11,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
     name: string,
     private readonly factory: () => V,
     {
-      migrate = () => void 0,
+      migrate,
       destroy = () => true,
       age = Infinity,
       size = Infinity,
@@ -56,7 +56,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
             .filter(({ newVal, oldVal }) =>
               ![newVal].includes(oldVal));
           if (changes.length === 0) return;
-          void migrate(link);
+          void migrate?.(link);
           for (const { attr, oldVal } of changes) {
             void cast(source[Schema.event]!)
               .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr as never, memory[attr as never], oldVal as never));
