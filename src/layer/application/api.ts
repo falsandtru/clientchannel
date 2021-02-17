@@ -22,7 +22,7 @@ export class StorageChannel<V extends StorageChannelObject> extends BaseStorageC
   constructor(
     name: string,
     {
-      schema: schema,
+      schema,
       migrate = () => void 0,
     }: StorageChannelConfig<V>
   ) {
