@@ -40,6 +40,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
         return;
 
         function update(attrs: (keyof V)[]): void {
+          assert(memory instanceof Object === false);
           const changes = attrs
             .filter(attr => attr in memory)
             .map(attr => {
