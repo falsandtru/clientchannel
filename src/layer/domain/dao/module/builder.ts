@@ -41,12 +41,12 @@ export function build<V extends object>(
         }
         map[prop] = {
           enumerable: true,
-          get: () => {
+          get() {
             const val = source[prop] === void 0 ? iniVal : source[prop];
             void get?.(prop, val);
             return val;
           },
-          set: newVal => {
+          set(newVal) {
             if (!isValidPropertyValue({ [prop]: newVal })(prop)) throw new TypeError(`ClientChannel: DAO: Invalid value: ${JSON.stringify(newVal)}`);
             const oldVal = source[prop];
             source[prop] = newVal === void 0 ? iniVal : newVal;
