@@ -58,7 +58,6 @@ export class ExpiryStore<K extends string> {
     let scheduled = Infinity;
     let running = false;
     let wait = 5 * 1000;
-    void this.ownership.take('store', 0);
     return (timeout: number): void => {
       timeout = Math.max(timeout, 3 * 1000);
       if (Date.now() + timeout >= scheduled) return;

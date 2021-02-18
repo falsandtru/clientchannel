@@ -114,7 +114,6 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   private readonly keys_ = new Set<K>();
   private readonly keys = new Cache<K>(this.size, {
     disposer: (() => {
-      void this.ownership.take('store', 0);
       const keys = this.keys_;
       let timer = 0;
       const resolve = (): void => {
