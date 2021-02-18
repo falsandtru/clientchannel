@@ -29,7 +29,6 @@ export interface StoreChannelConfig<K extends string, V extends StoreChannelObje
   age?: number;
   migrate?(link: V): void;
   destroy?(reason: unknown, event?: Event): boolean;
-  debug?: boolean;
 }
 export interface StoreChannelObject<K extends string> {
   readonly [ChannelObject.meta]: StoreChannelObjectMetaData<K>;

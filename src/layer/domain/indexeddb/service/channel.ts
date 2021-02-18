@@ -16,7 +16,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
       age = Infinity,
       size = Infinity,
       debug = false,
-    }: Partial<StoreChannelConfig<K, V>> & { size?: number; } = {},
+    }: Partial<StoreChannelConfig<K, V>> & { size?: number; debug?: boolean; } = {},
   ) {
     super(name, ObjectKeys(factory()).filter(isValidPropertyName).filter(isValidPropertyValue(factory())), destroy, age, size, debug);
 
