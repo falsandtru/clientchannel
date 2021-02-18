@@ -47,14 +47,16 @@ export class Ownership<K extends string> {
             : void 0;
         case oldPriority > 0:
           assert(newPriority >= 0);
-          return newPriority > oldPriority
+          // First commit wins.
+          return oldPriority < newPriority
               && this.has(key)
-            // Notify my valid ownership.
+            // Notify my active ownership.
             ? void this.castPriority(key)
             // Accept the foreign ownership.
             : void this.setPriority(key, -newPriority);
         case oldPriority < 0:
           // Update the foreign ownership.
+          // Last commit wins.
           return void this.setPriority(key, -newPriority);
         default:
           assert(false);
