@@ -171,13 +171,22 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
               .values()
           ]
             .sort((a, b) => a.date - b.date || a.id - b.id)
-            .forEach(e => (
+            .forEach(e => {
+              if (e.type !== EventStore.EventType.put) {
+                void this.memory
+                  .refs([e.key])
+                  .filter(({ namespace: [, , id] }) => id !== sqid(0))
+                  .forEach(({ namespace: [key, attr, id] }) =>
+                    void this.memory
+                      .off([key as K, attr as keyof V, id as string]));
+              }
               void this.memory
-                .off([e.key, e.attr, sqid(e.id)]),
+                .off([e.key, e.attr, sqid(e.id)]);
               void this.memory
-                .on([e.key, e.attr, sqid(e.id)], () => e),
+                .on([e.key, e.attr, sqid(e.id)], () => e);
               void this.events_.memory
-                .emit([e.key, e.attr, sqid(e.id)], e)));
+                .emit([e.key, e.attr, sqid(e.id)], e);
+            });
           try {
             void cb?.(req.error);
           }
