@@ -69,9 +69,8 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
 
     void this.cancellation.register(() =>
       void this.channel.close());
-    void this.cancellation.register(this.channel.listen('save', ({ key }) => (
-      void this.keys.delete(key) || void this.keys_.delete(key),
-      void this.fetch(key))));
+    void this.cancellation.register(this.channel.listen('save', ({ key }) =>
+      void this.fetch(key)));
 
     void this.events_.save.monitor([], ({ key }) =>
       void this.channel.post(new SaveMessage(key)));
@@ -84,6 +83,8 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
 
     if (this.size === Infinity) return;
 
+    void this.cancellation.register(this.channel.listen('save', ({ key }) =>
+      void this.keys.put(key) || void this.keys_.delete(key)));
     void this.events_.load.monitor([], ({ key, type }) =>
       type === ChannelStore.EventType.delete
         ? void this.keys.delete(key) || void this.keys_.delete(key)
