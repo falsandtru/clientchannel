@@ -1,5 +1,5 @@
 import { Math, Map } from 'spica/global';
-import { ObjectAssign, ObjectCreate, ObjectFreeze } from 'spica/alias';
+import { ObjectAssign, ObjectCreate } from 'spica/alias';
 import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
 import { tick } from 'spica/clock';
@@ -225,7 +225,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   }
   public meta(key: K): MetaData<K> {
     const events = this.memory.reflect([key]);
-    return ObjectFreeze({
+    return {
       key: key,
       id: events.reduce((id, e) => (
         e.id > id ? e.id : id
@@ -233,7 +233,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       date: events.reduce((date, e) => (
         e.date > date ? e.date : date
       ), 0),
-    });
+    };
   }
   public get(key: K): Partial<V> {
     return ObjectAssign(ObjectCreate(null), compose(key, this.attrs, this.memory.reflect([key])).value);
