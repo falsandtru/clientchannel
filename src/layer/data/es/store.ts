@@ -164,7 +164,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             new LoadedEventRecord<K, V>(cursor.value);
           }
           catch (reason) {
-            void cursor.delete();
+            void this.delete(key);
             void causeAsyncException(reason);
             return void cursor.continue();
           }

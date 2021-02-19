@@ -145,7 +145,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
           void cb(cursor, req.error);
         }
         catch (reason) {
-          void cursor.delete();
+          void this.delete(cursor.primaryKey as K);
           void causeAsyncException(reason);
         }
       });

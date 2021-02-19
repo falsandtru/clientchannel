@@ -4,7 +4,6 @@ import { KeyValueStore } from '../../../../data/kvs/store';
 import { ChannelStore } from '../channel';
 import { Ownership } from '../../../ownership/channel';
 import { Cancellee } from 'spica/cancellation';
-import { causeAsyncException } from 'spica/exception';
 
 const name = 'expiry';
 
@@ -75,22 +74,15 @@ export class ExpiryStore<K extends string> {
           if (error) return void this.schedule(delay * 10);
           if (!cursor) return retry && void this.schedule(delay *= 2);
           if (count > 100) return void this.schedule(100);
-          try {
-            const { key, expiry }: ExpiryRecord<K> = cursor.value;
-            if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
-            if (!this.chan.has(key)) return void cursor.continue();
-            if (!this.ownership.extend('store', 10 * 1000)) return void this.schedule(delay *= 2);
-            schedule = 0;
-            if (!this.ownership.take(`key:${key}`, 10 * 1000)) return retry = true, void cursor.continue();
-            ++count;
-            void this.chan.delete(key);
-            assert(!this.chan.has(key));
-          }
-          catch (reason) {
-            schedule = 0;
-            void cursor.delete();
-            void causeAsyncException(reason);
-          }
+          const { key, expiry }: ExpiryRecord<K> = cursor.value;
+          if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
+          if (!this.chan.has(key)) return void cursor.continue();
+          if (!this.ownership.extend('store', 10 * 1000)) return void this.schedule(delay *= 2);
+          schedule = 0;
+          if (!this.ownership.take(`key:${key}`, 10 * 1000)) return retry = true, void cursor.continue();
+          ++count;
+          void this.chan.delete(key);
+          assert(!this.chan.has(key));
           return void cursor.continue();
         });
       }, timeout) as any;

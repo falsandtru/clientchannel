@@ -1,7 +1,6 @@
 import { Date, Promise, setTimeout } from 'spica/global';
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
-import { causeAsyncException } from 'spica/exception';
 
 export const name = 'access';
 
@@ -60,17 +59,9 @@ export class AccessStore<K extends string> {
           if (done) return;
           if (error) return void reject(error);
           if (!cursor) return void resolve(keys);
-          let deletion = true;
-          try {
-            const { key }: AccessRecord<K> = cursor.value;
-            deletion = false;
-            void keys.push(key);
-            if (cb?.(key, keys) === false) return void resolve(keys);
-          }
-          catch (reason) {
-            deletion && void cursor.delete();
-            void causeAsyncException(reason);
-          }
+          const { key }: AccessRecord<K> = cursor.value;
+          void keys.push(key);
+          if (cb?.(key, keys) === false) return void resolve(keys);
           void cursor.continue();
         })));
   }
