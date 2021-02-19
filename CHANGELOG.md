@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.31.1
+
+- Refactoring.
+
 ## 0.31.0
 
 - Refine StoreChannel.recent method.
