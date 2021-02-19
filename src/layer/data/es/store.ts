@@ -105,7 +105,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     load: new Observation<[K, Extract<keyof V | '', string>, EventStore.EventType], EventStore.Event<K, V>, void>(),
     save: new Observation<[K, Extract<keyof V | '', string>, EventStore.EventType], EventStore.Event<K, V>, void>(),
     loss: new Observation<[K, Extract<keyof V | '', string>, EventStore.EventType], EventStore.Event<K, V>, void>(),
-    clean: new Observation<[K], undefined, void>(),
+    clear: new Observation<[K], undefined, void>(),
   } as const;
   private readonly events_ = {
     memory: new Observation<[K, keyof V | '', string], UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>, void>({ limit: Infinity }),
@@ -387,7 +387,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     if (!this.alive) return;
     const events: StoredEventRecord<K, V>[] = [];
     let deletion = false;
-    let clean = false;
+    let clear = false;
     return void this.cursor(
       IDBKeyRange.only(key),
       EventStoreSchema.key,
@@ -403,7 +403,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             void this.events_.memory
               .off([event.key, event.attr, sqid(event.id)]);
           }
-          clean && void this.events.clean.emit([key]);
+          clear && this.meta(key).date === 0 && void this.events.clear.emit([key]);
           return;
         }
         else {
@@ -418,7 +418,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
                 deletion = true;
                 return void cursor.continue();
               case EventStore.EventType.delete:
-                clean = true;
+                deletion = true;
+                clear = true;
                 break;
             }
             void events.unshift(event);
@@ -426,7 +427,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           catch (reason) {
             void causeAsyncException(reason);
           }
-          deletion = true;
+          assert(deletion);
           void cursor.delete();
           return void cursor.continue();
         }

@@ -75,9 +75,9 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     void this.events_.save.monitor([], ({ key }) =>
       void this.channel.post(new SaveMessage(key)));
 
-    void this.events_.clean.monitor([], (_, [key]) => {
+    void this.events_.clear.monitor([], (_, [key]) => {
+      assert(this.meta(key).date === 0);
       void this.ownership.take(`key:${key}`, 10 * 1000);
-      if (this.meta(key).date > 0) return;
       void this.schema.access.delete(key);
       void this.schema.expire.delete(key);
     });
@@ -131,7 +131,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   public readonly events_ = {
     load: new Observation<[K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
     save: new Observation<[K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
-    clean: new Observation<[K], undefined, void>(),
+    clear: new Observation<[K], undefined, void>(),
   } as const;
   public readonly events = {
     load: new Observation<[K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
@@ -244,7 +244,7 @@ class Schema<K extends string, V extends StoreChannelObject<K>> {
 
     void this.cancellation.register(this.store.events_.load.relay(this.data.events.load));
     void this.cancellation.register(this.store.events_.save.relay(this.data.events.save));
-    void this.cancellation.register(this.store.events_.clean.relay(this.data.events.clean));
+    void this.cancellation.register(this.store.events_.clear.relay(this.data.events.clear));
     void this.cancellation.register(this.store.events.load.relay(this.data.events.load));
     void this.cancellation.register(this.store.events.save.relay(this.data.events.save));
     void this.cancellation.register(this.store.events.loss.relay(this.data.events.loss));
