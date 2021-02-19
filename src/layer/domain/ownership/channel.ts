@@ -103,11 +103,9 @@ export class Ownership<K extends string> {
     assert(0 <= age && age < 60 * 1000);
     age = Math.min(Math.max(age, 1 * 1000), 60 * 1000);
     wait = wait === void 0 ? wait : Math.max(wait, 0);
-    void this.setPriority(
-      key,
-      Math.max(
-        Ownership.genPriority(age) + Ownership.mergin,
-        this.getPriority(key)));
+    const priority = Ownership.genPriority(age) + Ownership.mergin;
+    if (priority <= this.getPriority(key)) return this.has(key);
+    void this.setPriority(key, priority);
     assert(this.getPriority(key) > 0);
     return wait === void 0
       ? this.has(key)
