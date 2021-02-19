@@ -1,4 +1,4 @@
-/*! clientchannel v0.31.0 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.31.1 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -345,6 +345,7 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.Cache = void 0;
             const global_1 = _dereq_('./global');
+            const alias_1 = _dereq_('./alias');
             const assign_1 = _dereq_('./assign');
             const array_1 = _dereq_('./array');
             class Cache {
@@ -547,14 +548,16 @@ require = function () {
             }
             exports.Cache = Cache;
             function rate(window, currHits, currTotal, prevHits, prevTotal) {
-                const currRate = currHits * 100 / currTotal | 0;
+                window = alias_1.min(currTotal + prevTotal, window);
+                const currRate = currHits * 100 / currTotal;
                 const currRatio = currTotal / window;
-                const prevRate = prevHits * 100 / prevTotal | 0;
+                const prevRate = prevHits * 100 / prevTotal;
                 const prevRatio = 1 - currRatio;
                 return currRate * currRatio + prevRate * prevRatio | 0;
             }
         },
         {
+            './alias': 4,
             './array': 5,
             './assign': 6,
             './global': 15
@@ -2276,10 +2279,7 @@ require = function () {
             }
             exports.StoreChannel = StoreChannel;
             class StorageChannel extends api_2.StorageChannel {
-                constructor(name, {
-                    schema: schema,
-                    migrate = () => void 0
-                }) {
+                constructor(name, {schema, migrate}) {
                     super(name, api_2.localStorage, schema, migrate);
                 }
             }
@@ -2476,7 +2476,6 @@ require = function () {
             const sqid_1 = _dereq_('spica/sqid');
             const concat_1 = _dereq_('spica/concat');
             const exception_1 = _dereq_('spica/exception');
-            const noop_1 = _dereq_('spica/noop');
             const api_1 = _dereq_('../../infrastructure/indexeddb/api');
             const identifier_1 = _dereq_('./identifier');
             const event_1 = _dereq_('./event');
@@ -2497,10 +2496,13 @@ require = function () {
                         load: new observer_1.Observation(),
                         save: new observer_1.Observation(),
                         loss: new observer_1.Observation(),
-                        clean: new observer_1.Observation()
+                        clear: new observer_1.Observation()
                     };
                     this.events_ = { memory: new observer_1.Observation({ limit: Infinity }) };
-                    this.tx = { rwc: 0 };
+                    this.tx = {
+                        rw: void 0,
+                        rwc: 0
+                    };
                     this.snapshotCycle = 9;
                     const states = new class {
                         constructor() {
@@ -2567,30 +2569,41 @@ require = function () {
                 }
                 get txrw() {
                     if (++this.tx.rwc > 25) {
-                        this.tx.rwc = 0;
-                        this.tx.rw = void 0;
+                        this.tx = {
+                            rw: void 0,
+                            rwc: 0
+                        };
                         return;
                     }
                     return this.tx.rw;
                 }
                 set txrw(tx) {
-                    if (!tx)
+                    if (!tx || this.tx.rw === tx)
                         return;
-                    if (this.tx.rw && this.tx.rw === tx)
-                        return;
-                    this.tx.rwc = 0;
-                    this.tx.rw = tx;
-                    void clock_1.tick(() => this.tx.rw = void 0);
+                    this.tx = {
+                        rw: tx,
+                        rwc: 0
+                    };
+                    const clear = () => {
+                        this.tx = {
+                            rw: void 0,
+                            rwc: 0
+                        };
+                    };
+                    void tx.addEventListener('complete', clear);
+                    void tx.addEventListener('error', clear);
+                    void tx.addEventListener('abort', clear);
+                    void clock_1.tick(clear);
                 }
-                fetch(key, cb = noop_1.noop, cancellation) {
+                fetch(key, cb, cancellation) {
                     if (!this.alive)
-                        return void cb(new Error('Session is already closed.'));
+                        return void (cb === null || cb === void 0 ? void 0 : cb(new Error('Session is already closed.')));
                     const events = [];
                     return void this.listen(db => {
                         if (!this.alive)
-                            return void cb(new Error('Session is already closed.'));
+                            return void (cb === null || cb === void 0 ? void 0 : cb(new Error('Session is already closed.')));
                         if (cancellation === null || cancellation === void 0 ? void 0 : cancellation.cancelled)
-                            return void cb(new Error('Request is cancelled.'));
+                            return void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request is cancelled.')));
                         const tx = db.transaction(this.name, 'readonly');
                         const req = tx.objectStore(this.name).index(EventStoreSchema.key).openCursor(key, 'prev');
                         const proc = (cursor, error) => {
@@ -2600,27 +2613,42 @@ require = function () {
                                 try {
                                     new event_1.LoadedEventRecord(cursor.value);
                                 } catch (reason) {
-                                    void cursor.delete();
+                                    void this.delete(key);
                                     void exception_1.causeAsyncException(reason);
                                     return void cursor.continue();
                                 }
                             }
                             if (!cursor || new event_1.LoadedEventRecord(cursor.value).date < this.meta(key).date) {
-                                void [...events.reduceRight((es, e) => es.length === 0 || es[0].type === EventStore.EventType.put ? concat_1.concat(es, [e]) : es, []).reduceRight((dict, e) => dict.set(e.attr, e), new global_1.Map()).values()].sort((a, b) => a.date - b.date || a.id - b.id).forEach(e => (void this.memory.off([
-                                    e.key,
-                                    e.attr,
-                                    sqid_1.sqid(e.id)
-                                ]), void this.memory.on([
-                                    e.key,
-                                    e.attr,
-                                    sqid_1.sqid(e.id)
-                                ], () => e), void this.events_.memory.emit([
-                                    e.key,
-                                    e.attr,
-                                    sqid_1.sqid(e.id)
-                                ], e)));
+                                void [...events.reduceRight((es, e) => es.length === 0 || es[0].type === EventStore.EventType.put ? concat_1.concat(es, [e]) : es, []).reduceRight((dict, e) => dict.set(e.attr, e), new global_1.Map()).values()].sort((a, b) => a.date - b.date || a.id - b.id).forEach(e => {
+                                    if (e.type !== EventStore.EventType.put) {
+                                        void this.memory.refs([e.key]).filter(({
+                                            namespace: [, , id]
+                                        }) => id !== sqid_1.sqid(0)).forEach(({
+                                            namespace: [key, attr, id]
+                                        }) => void this.memory.off([
+                                            key,
+                                            attr,
+                                            id
+                                        ]));
+                                    }
+                                    void this.memory.off([
+                                        e.key,
+                                        e.attr,
+                                        sqid_1.sqid(e.id)
+                                    ]);
+                                    void this.memory.on([
+                                        e.key,
+                                        e.attr,
+                                        sqid_1.sqid(e.id)
+                                    ], () => e);
+                                    void this.events_.memory.emit([
+                                        e.key,
+                                        e.attr,
+                                        sqid_1.sqid(e.id)
+                                    ], e);
+                                });
                                 try {
-                                    void cb(req.error);
+                                    void (cb === null || cb === void 0 ? void 0 : cb(req.error));
                                 } catch (reason) {
                                     void exception_1.causeAsyncException(reason);
                                 }
@@ -2644,10 +2672,10 @@ require = function () {
                         };
                         void req.addEventListener('success', () => void proc(req.result, req.error));
                         void tx.addEventListener('complete', () => void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()));
-                        void tx.addEventListener('error', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void cb(tx.error || req.error)));
-                        void tx.addEventListener('abort', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void cb(tx.error || req.error)));
+                        void tx.addEventListener('error', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error))));
+                        void tx.addEventListener('abort', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error))));
                         void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.register(() => void tx.abort()));
-                    }, () => void cb(new Error('Request has failed.')));
+                    }, () => void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request has failed.'))));
                 }
                 keys() {
                     return this.memory.reflect([]).reduce((keys, e) => keys.length === 0 || keys[keys.length - 1] !== e.key ? concat_1.concat(keys, [e.key]) : keys, []).sort();
@@ -2657,11 +2685,11 @@ require = function () {
                 }
                 meta(key) {
                     const events = this.memory.reflect([key]);
-                    return alias_1.ObjectFreeze({
+                    return {
                         key: key,
                         id: events.reduce((id, e) => e.id > id ? e.id : id, 0),
                         date: events.reduce((date, e) => e.date > date ? e.date : date, 0)
-                    });
+                    };
                 }
                 get(key) {
                     return alias_1.ObjectAssign(alias_1.ObjectCreate(null), compose(key, this.attrs, this.memory.reflect([key])).value);
@@ -2809,7 +2837,7 @@ require = function () {
                         return;
                     const events = [];
                     let deletion = false;
-                    let clean = false;
+                    let clear = false;
                     return void this.cursor(api_1.IDBKeyRange.only(key), EventStoreSchema.key, 'prev', 'readwrite', (cursor, error) => {
                         if (!this.alive)
                             return;
@@ -2828,7 +2856,7 @@ require = function () {
                                     sqid_1.sqid(event.id)
                                 ]);
                             }
-                            clean && void this.events.clean.emit([key]);
+                            clear && this.meta(key).date === 0 && void this.events.clear.emit([key]);
                             return;
                         } else {
                             try {
@@ -2844,14 +2872,14 @@ require = function () {
                                     deletion = true;
                                     return void cursor.continue();
                                 case EventStore.EventType.delete:
-                                    clean = true;
+                                    deletion = true;
+                                    clear = true;
                                     break;
                                 }
                                 void events.unshift(event);
                             } catch (reason) {
                                 void exception_1.causeAsyncException(reason);
                             }
-                            deletion = true;
                             void cursor.delete();
                             return void cursor.continue();
                         }
@@ -2947,7 +2975,6 @@ require = function () {
             'spica/concat': 11,
             'spica/exception': 13,
             'spica/global': 15,
-            'spica/noop': 26,
             'spica/observer': 27,
             'spica/sqid': 29
         }
@@ -2959,7 +2986,6 @@ require = function () {
             exports.KeyValueStore = void 0;
             const clock_1 = _dereq_('spica/clock');
             const exception_1 = _dereq_('spica/exception');
-            const noop_1 = _dereq_('spica/noop');
             class KeyValueStore {
                 constructor(name, index, listen) {
                     this.name = name;
@@ -2999,22 +3025,22 @@ require = function () {
                     this.tx.rw = tx;
                     void clock_1.tick(() => this.tx.rw = void 0);
                 }
-                fetch(key, cb = noop_1.noop, cancellation) {
+                fetch(key, cb, cancellation) {
                     if (!this.alive)
-                        return void cb(new Error('Session is already closed.'));
+                        return void (cb === null || cb === void 0 ? void 0 : cb(new Error('Session is already closed.')));
                     return void this.listen(db => {
                         if (!this.alive)
-                            return void cb(new Error('Session is already closed.'));
+                            return void (cb === null || cb === void 0 ? void 0 : cb(new Error('Session is already closed.')));
                         if (cancellation === null || cancellation === void 0 ? void 0 : cancellation.cancelled)
-                            return void cb(new Error('Request is cancelled.'));
+                            return void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request is cancelled.')));
                         const tx = db.transaction(this.name, 'readonly');
                         const req = this.index ? tx.objectStore(this.name).index(this.index).getKey(key) : tx.objectStore(this.name).getKey(key);
-                        void req.addEventListener('success', () => void cb(req.error));
+                        void req.addEventListener('success', () => void (cb === null || cb === void 0 ? void 0 : cb(req.error)));
                         void tx.addEventListener('complete', () => void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()));
-                        void tx.addEventListener('error', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void cb(tx.error || req.error)));
-                        void tx.addEventListener('abort', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void cb(tx.error || req.error)));
+                        void tx.addEventListener('error', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error))));
+                        void tx.addEventListener('abort', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error))));
                         void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.register(() => void tx.abort()));
-                    }, () => void cb(new Error('Request has failed.')));
+                    }, () => void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request has failed.'))));
                 }
                 has(key) {
                     return this.cache.has(key);
@@ -3022,10 +3048,10 @@ require = function () {
                 get(key) {
                     return this.cache.get(key);
                 }
-                set(key, value, cb = noop_1.noop) {
+                set(key, value, cb) {
                     return this.put(value, key, cb);
                 }
-                put(value, key, cb = noop_1.noop) {
+                put(value, key, cb) {
                     void this.cache.set(key, value);
                     if (!this.alive)
                         return value;
@@ -3036,13 +3062,13 @@ require = function () {
                             return;
                         const tx = this.txrw = this.txrw || db.transaction(this.name, 'readwrite');
                         this.index ? tx.objectStore(this.name).put(this.cache.get(key)) : tx.objectStore(this.name).put(this.cache.get(key), key);
-                        void tx.addEventListener('complete', () => void cb(key, tx.error));
-                        void tx.addEventListener('error', () => void cb(key, tx.error));
-                        void tx.addEventListener('abort', () => void cb(key, tx.error));
-                    }, () => void cb(key, new Error('Request has failed.')));
+                        void tx.addEventListener('complete', () => void (cb === null || cb === void 0 ? void 0 : cb(key, tx.error)));
+                        void tx.addEventListener('error', () => void (cb === null || cb === void 0 ? void 0 : cb(key, tx.error)));
+                        void tx.addEventListener('abort', () => void (cb === null || cb === void 0 ? void 0 : cb(key, tx.error)));
+                    }, () => void (cb === null || cb === void 0 ? void 0 : cb(key, new Error('Request has failed.'))));
                     return value;
                 }
-                delete(key, cb = noop_1.noop) {
+                delete(key, cb) {
                     void this.cache.delete(key);
                     if (!this.alive)
                         return;
@@ -3051,10 +3077,10 @@ require = function () {
                             return;
                         const tx = this.txrw = this.txrw || db.transaction(this.name, 'readwrite');
                         void tx.objectStore(this.name).delete(key);
-                        void tx.addEventListener('complete', () => void cb(tx.error));
-                        void tx.addEventListener('error', () => void cb(tx.error));
-                        void tx.addEventListener('abort', () => void cb(tx.error));
-                    }, () => void cb(new Error('Request has failed.')));
+                        void tx.addEventListener('complete', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error)));
+                        void tx.addEventListener('error', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error)));
+                        void tx.addEventListener('abort', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error)));
+                    }, () => void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request has failed.'))));
                 }
                 cursor(query, index, direction, mode, cb) {
                     if (!this.alive)
@@ -3072,7 +3098,7 @@ require = function () {
                                 void this.cache.set(cursor.primaryKey, { ...cursor.value });
                                 void cb(cursor, req.error);
                             } catch (reason) {
-                                void cursor.delete();
+                                void this.delete(cursor.primaryKey);
                                 void exception_1.causeAsyncException(reason);
                             }
                         });
@@ -3089,8 +3115,7 @@ require = function () {
         },
         {
             'spica/clock': 10,
-            'spica/exception': 13,
-            'spica/noop': 26
+            'spica/exception': 13
         }
     ],
     40: [
@@ -3210,7 +3235,6 @@ require = function () {
                     return event_1.isValidPropertyValue;
                 }
             });
-            const noop_1 = _dereq_('spica/noop');
             var Schema;
             (function (Schema) {
                 Schema.meta = Symbol.for('clientchannel/ChannelObject.meta');
@@ -3219,7 +3243,7 @@ require = function () {
                 Schema.date = Symbol.for('clientchannel/ChannelObject.data');
                 Schema.event = Symbol.for('clientchannel/ChannelObject.event');
             }(Schema = exports.Schema || (exports.Schema = {})));
-            function build(source, factory, set = noop_1.noop, get = noop_1.noop) {
+            function build(source, factory, set, get) {
                 const dao = factory();
                 for (const prop of alias_1.ObjectValues(Schema)) {
                     delete dao[prop];
@@ -3239,17 +3263,17 @@ require = function () {
                         }
                         map[prop] = {
                             enumerable: true,
-                            get: () => {
+                            get() {
                                 const val = source[prop] === void 0 ? iniVal : source[prop];
-                                void get(prop, val);
+                                void (get === null || get === void 0 ? void 0 : get(prop, val));
                                 return val;
                             },
-                            set: newVal => {
+                            set(newVal) {
                                 if (!event_1.isValidPropertyValue({ [prop]: newVal })(prop))
                                     throw new TypeError(`ClientChannel: DAO: Invalid value: ${ JSON.stringify(newVal) }`);
                                 const oldVal = source[prop];
                                 source[prop] = newVal === void 0 ? iniVal : newVal;
-                                void set(prop, newVal, oldVal);
+                                void (set === null || set === void 0 ? void 0 : set(prop, newVal, oldVal));
                             }
                         };
                         return map;
@@ -3290,8 +3314,7 @@ require = function () {
         },
         {
             '../../../data/es/event': 36,
-            'spica/alias': 4,
-            'spica/noop': 26
+            'spica/alias': 4
         }
     ],
     43: [
@@ -3319,7 +3342,6 @@ require = function () {
             const cancellation_1 = _dereq_('spica/cancellation');
             const promise_1 = _dereq_('spica/promise');
             const cache_1 = _dereq_('spica/cache');
-            const noop_1 = _dereq_('spica/noop');
             const api_1 = _dereq_('../../../infrastructure/indexeddb/api');
             const data_1 = _dereq_('./channel/data');
             const access_1 = _dereq_('./channel/access');
@@ -3345,37 +3367,32 @@ require = function () {
                     this.keys_ = new Set();
                     this.keys = new cache_1.Cache(this.size, {
                         disposer: (() => {
-                            void this.ownership.take('store', 0);
-                            const keys = this.keys_;
+                            const queue = this.keys_;
                             let timer = 0;
-                            const resolve = () => {
-                                timer = 0;
-                                const since = global_1.Date.now();
-                                let count = 0;
-                                if (!this.ownership.take('store', 5 * 1000))
+                            const schedule = () => {
+                                if (!this.alive)
                                     return;
-                                for (const key of keys) {
+                                if (timer === 0)
+                                    return;
+                                timer = 0;
+                                if (!this.ownership.take('store', 10 * 1000))
+                                    return;
+                                for (const key of queue) {
                                     if (!this.alive)
-                                        return void this.keys.clear(), void keys.clear();
-                                    void keys.delete(key);
-                                    if (timer > 0)
-                                        return;
-                                    if (this.keys.has(key))
-                                        continue;
-                                    if (++count > 10)
-                                        return void global_1.setTimeout(resolve, (global_1.Date.now() - since) * 3);
-                                    if (!this.ownership.extend('store', 5 * 1000))
-                                        return;
-                                    if (!this.ownership.take(`key:${ key }`, 5 * 1000))
-                                        continue;
-                                    void this.schema.expire.set(key, 0);
+                                        return void this.keys.clear(), void queue.clear();
+                                    if (!this.ownership.extend('store', 10 * 1000))
+                                        return timer = global_1.setTimeout(schedule, 10 * 1000);
+                                    if (!this.ownership.take(`key:${ key }`, 10 * 1000))
+                                        return timer = global_1.setTimeout(schedule, 10 * 1000);
+                                    void queue.delete(key);
+                                    this.has(key) ? void this.delete(key) : void this.clean(key);
                                 }
                             };
                             return key => {
-                                void keys.add(key);
+                                void queue.add(key);
                                 if (timer > 0)
                                     return;
-                                timer = global_1.setTimeout(resolve, 3 * 1000);
+                                timer = global_1.setTimeout(schedule, 3 * 1000);
                             };
                         })(),
                         capture: { delete: false }
@@ -3383,7 +3400,7 @@ require = function () {
                     this.events_ = {
                         load: new observer_1.Observation(),
                         save: new observer_1.Observation(),
-                        clean: new observer_1.Observation()
+                        clear: new observer_1.Observation()
                     };
                     this.events = {
                         load: new observer_1.Observation({ limit: global_1.Infinity }),
@@ -3413,25 +3430,17 @@ require = function () {
                     void this.cancellation.register(() => void this.schema.close());
                     void this.cancellation.register(() => void this.ownership.close());
                     void this.cancellation.register(() => void this.channel.close());
-                    void this.cancellation.register(this.channel.listen('save', ({key}) => (void this.keys.delete(key) || void this.keys_.delete(key), void this.fetch(key))));
+                    void this.cancellation.register(this.channel.listen('save', ({key}) => void this.fetch(key)));
                     void this.events_.save.monitor([], ({key}) => void this.channel.post(new SaveMessage(key)));
-                    void this.events_.clean.monitor([], (_, [key]) => {
-                        void this.ownership.take(`key:${ key }`, 5 * 1000);
+                    void this.events_.clear.monitor([], (_, [key]) => {
+                        void this.ownership.take(`key:${ key }`, 10 * 1000);
                         void this.schema.access.delete(key);
                         void this.schema.expire.delete(key);
                     });
                     if (this.size === global_1.Infinity)
                         return;
-                    void this.events_.load.monitor([], ({key, type}) => type === ChannelStore.EventType.delete ? void this.keys.delete(key) || void this.keys_.delete(key) : void this.keys.put(key));
-                    void this.events_.save.monitor([], ({key, type}) => type === ChannelStore.EventType.delete ? void this.keys.delete(key) || void this.keys_.delete(key) : void this.keys.put(key));
-                    const limit = () => {
-                        if (size === global_1.Infinity)
-                            return;
-                        if (!this.alive)
-                            return;
-                        void this.recent().then(keys => keys.reverse().forEach(key => void this.keys.put(key)), () => void global_1.setTimeout(limit, 10 * 1000));
-                    };
-                    void limit();
+                    void this.events_.load.monitor([], ({key, type}) => type === ChannelStore.EventType.delete ? void this.keys_.delete(key) || void this.keys.delete(key) : void this.keys_.delete(key) || void this.keys.put(key));
+                    void this.events_.save.monitor([], ({key, type}) => type === ChannelStore.EventType.delete ? void this.keys_.delete(key) || void this.keys.delete(key) : void this.keys_.delete(key) || void this.keys.put(key));
                 }
                 get alive() {
                     return this.cancellation.alive;
@@ -3446,12 +3455,13 @@ require = function () {
                     cancellation && void global_1.setTimeout(cancellation.cancel, timeout);
                     return global_1.Promise.resolve(promise_1.AtomicPromise.allSettled(keys.map(key => new global_1.Promise((resolve, reject) => void this.fetch(key, error => error ? void reject(error) : void resolve(key), cancellation)))));
                 }
-                fetch(key, cb = noop_1.noop, cancellation) {
+                fetch(key, cb, cancellation) {
                     void this.ensureAliveness();
                     void this.schema.access.fetch(key);
                     return this.schema.data.fetch(key, cb, cancellation);
                 }
                 has(key) {
+                    void this.ensureAliveness();
                     return this.schema.data.has(key);
                 }
                 meta(key) {
@@ -3466,30 +3476,34 @@ require = function () {
                 add(record) {
                     void this.ensureAliveness();
                     const key = record.key;
-                    void this.log(key);
                     void this.schema.data.add(record);
-                    void this.events_.save.once([
-                        record.key,
-                        record.attr,
-                        record.type
-                    ], () => void this.log(key));
+                    void this.log(key);
                 }
                 delete(key) {
                     void this.ensureAliveness();
-                    void this.ownership.take(`key:${ key }`, 5 * 1000);
-                    void this.log(key);
+                    void this.ownership.take(`key:${ key }`, 10 * 1000);
                     void this.schema.data.delete(key);
+                    void this.events.save.once([
+                        key,
+                        '',
+                        ChannelStore.EventType.delete
+                    ], () => void this.ownership.take(`key:${ key }`, 10 * 1000));
+                }
+                clean(key) {
+                    void this.ensureAliveness();
+                    void this.ownership.take(`key:${ key }`, 10 * 1000);
+                    void this.schema.data.clean(key);
                 }
                 log(key) {
-                    if (this.meta(key).id > 0 && !this.has(key))
+                    var _a;
+                    if (!this.has(key))
                         return;
                     void this.schema.access.set(key);
-                    void this.schema.expire.set(key, this.ages.get(key) || this.age);
+                    void this.schema.expire.set(key, (_a = this.ages.get(key)) !== null && _a !== void 0 ? _a : this.age);
                 }
                 expire(key, age = this.age) {
                     void this.ensureAliveness();
                     void this.ages.set(key, age);
-                    return void this.schema.expire.set(key, age);
                 }
                 recent(cb, timeout) {
                     if (typeof cb === 'number')
@@ -3532,7 +3546,7 @@ require = function () {
                     void this.cancellation.register(() => this.expire.close());
                     void this.cancellation.register(this.store.events_.load.relay(this.data.events.load));
                     void this.cancellation.register(this.store.events_.save.relay(this.data.events.save));
-                    void this.cancellation.register(this.store.events_.clean.relay(this.data.events.clean));
+                    void this.cancellation.register(this.store.events_.clear.relay(this.data.events.clear));
                     void this.cancellation.register(this.store.events.load.relay(this.data.events.load));
                     void this.cancellation.register(this.store.events.save.relay(this.data.events.save));
                     void this.cancellation.register(this.store.events.loss.relay(this.data.events.loss));
@@ -3558,7 +3572,6 @@ require = function () {
             'spica/cache': 7,
             'spica/cancellation': 8,
             'spica/global': 15,
-            'spica/noop': 26,
             'spica/observer': 27,
             'spica/promise': 28
         }
@@ -3570,7 +3583,6 @@ require = function () {
             exports.AccessStore = exports.name = void 0;
             const global_1 = _dereq_('spica/global');
             const store_1 = _dereq_('../../../../data/kvs/store');
-            const exception_1 = _dereq_('spica/exception');
             exports.name = 'access';
             class AccessStore {
                 constructor(listen) {
@@ -3611,17 +3623,10 @@ require = function () {
                             return void reject(error);
                         if (!cursor)
                             return void resolve(keys);
-                        let deletion = true;
-                        try {
-                            const {key} = cursor.value;
-                            deletion = false;
-                            void keys.push(key);
-                            if ((cb === null || cb === void 0 ? void 0 : cb(key, keys)) === false)
-                                return void resolve(keys);
-                        } catch (reason) {
-                            deletion && void cursor.delete();
-                            void exception_1.causeAsyncException(reason);
-                        }
+                        const {key} = cursor.value;
+                        void keys.push(key);
+                        if ((cb === null || cb === void 0 ? void 0 : cb(key, keys)) === false)
+                            return void resolve(keys);
                         void cursor.continue();
                     })));
                 }
@@ -3651,7 +3656,6 @@ require = function () {
         },
         {
             '../../../../data/kvs/store': 39,
-            'spica/exception': 13,
             'spica/global': 15
         }
     ],
@@ -3687,7 +3691,6 @@ require = function () {
             exports.ExpiryStore = void 0;
             const global_1 = _dereq_('spica/global');
             const store_1 = _dereq_('../../../../data/kvs/store');
-            const exception_1 = _dereq_('spica/exception');
             const name = 'expiry';
             class ExpiryStore {
                 constructor(chan, cancellation, ownership, listen) {
@@ -3699,49 +3702,40 @@ require = function () {
                     }(name, 'key', this.listen);
                     this.schedule = (() => {
                         let timer = 0;
-                        let scheduled = global_1.Infinity;
-                        let running = false;
-                        let wait = 5 * 1000;
-                        void this.ownership.take('store', 0);
+                        let delay = 10 * 1000;
+                        let schedule = global_1.Infinity;
                         return timeout => {
-                            timeout = global_1.Math.max(timeout, 3 * 1000);
-                            if (global_1.Date.now() + timeout >= scheduled)
+                            if (global_1.Date.now() + timeout >= schedule)
                                 return;
-                            scheduled = global_1.Date.now() + timeout;
+                            schedule = global_1.Date.now() + timeout;
                             void clearTimeout(timer);
                             timer = global_1.setTimeout(() => {
                                 if (!this.cancellation.alive)
                                     return;
-                                if (running)
+                                if (schedule === 0)
                                     return;
-                                scheduled = global_1.Infinity;
-                                if (!this.ownership.take('store', wait))
-                                    return this.schedule(wait *= 2);
-                                wait = global_1.Math.max(global_1.Math.floor(wait / 1.5), 5 * 1000);
+                                if (!this.ownership.take('store', 10 * 1000))
+                                    return this.schedule(delay *= 2);
+                                delay = global_1.Math.max(global_1.Math.floor(delay / 1.5), delay);
                                 let retry = false;
-                                running = true;
+                                schedule = 0;
                                 return void this.store.cursor(null, 'expiry', 'next', 'readonly', (cursor, error) => {
-                                    running = false;
+                                    schedule = global_1.Infinity;
                                     if (!this.cancellation.alive)
                                         return;
                                     if (error)
-                                        return void this.schedule(wait * 10);
+                                        return void this.schedule(delay * 10);
                                     if (!cursor)
-                                        return retry && void this.schedule(wait);
-                                    try {
-                                        const {key, expiry} = cursor.value;
-                                        if (expiry > global_1.Date.now())
-                                            return void this.schedule(expiry - global_1.Date.now());
-                                        if (!this.ownership.extend('store', wait))
-                                            return;
-                                        running = true;
-                                        if (!this.ownership.take(`key:${ key }`, wait))
-                                            return retry = true, void cursor.continue();
-                                        void this.chan.delete(key);
-                                    } catch (reason) {
-                                        void cursor.delete();
-                                        void exception_1.causeAsyncException(reason);
-                                    }
+                                        return retry && void this.schedule(delay *= 2);
+                                    const {key, expiry} = cursor.value;
+                                    if (expiry > global_1.Date.now())
+                                        return void this.schedule(expiry - global_1.Date.now());
+                                    if (!this.ownership.extend('store', 10 * 1000))
+                                        return void this.schedule(delay *= 2);
+                                    schedule = 0;
+                                    if (!this.ownership.take(`key:${ key }`, 10 * 1000))
+                                        return retry = true, void cursor.continue();
+                                    this.chan.has(key) ? void this.chan.delete(key) : void this.chan.clean(key);
                                     return void cursor.continue();
                                 });
                             }, timeout);
@@ -3795,7 +3789,6 @@ require = function () {
         },
         {
             '../../../../data/kvs/store': 39,
-            'spica/exception': 13,
             'spica/global': 15
         }
     ],
@@ -3811,7 +3804,7 @@ require = function () {
             const channel_1 = _dereq_('../model/channel');
             const api_2 = _dereq_('../../webstorage/api');
             class StoreChannel extends channel_1.ChannelStore {
-                constructor(name, factory, {migrate = () => void 0, destroy = () => true, age = Infinity, size = Infinity, debug = false} = {}) {
+                constructor(name, factory, {migrate, destroy = () => true, age = Infinity, size = Infinity, debug = false} = {}) {
                     super(name, alias_1.ObjectKeys(factory()).filter(api_1.isValidPropertyName).filter(api_1.isValidPropertyValue(factory())), destroy, age, size, debug);
                     this.factory = factory;
                     this.links = new Map();
@@ -3844,7 +3837,7 @@ require = function () {
                             }).filter(({newVal, oldVal}) => ![newVal].includes(oldVal));
                             if (changes.length === 0)
                                 return;
-                            void migrate(link);
+                            void (migrate === null || migrate === void 0 ? void 0 : migrate(link));
                             for (const {attr, oldVal} of changes) {
                                 void cast(source[api_1.Schema.event]).emit([
                                     api_2.StorageChannel.EventType.recv,
@@ -3856,8 +3849,8 @@ require = function () {
                 }
                 link(key, age) {
                     void this.ensureAliveness();
-                    void this.fetch(key);
                     void this.expire(key, age);
+                    void this.fetch(key, error => !error && this.alive && this.links.has(key) && void this.log(key));
                     return this.links.has(key) ? this.links.get(key) : this.links.set(key, api_1.build(alias_1.ObjectDefineProperties(this.sources.set(key, this.get(key)).get(key), {
                         [api_1.Schema.meta]: { get: () => this.meta(key) },
                         [api_1.Schema.id]: { get: () => this.meta(key).id },
@@ -3872,7 +3865,7 @@ require = function () {
                             api_2.StorageChannel.EventType.send,
                             attr
                         ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.send, attr, newValue, oldValue));
-                    }, throttle_1.throttle(100, () => this.alive && this.links.has(key) && this.has(key) && void this.log(key)))).get(key);
+                    }, throttle_1.throttle(100, () => this.alive && this.links.has(key) && void this.log(key)))).get(key);
                 }
             }
             exports.StoreChannel = StoreChannel;
@@ -3929,8 +3922,10 @@ require = function () {
                         switch (true) {
                         case newPriority < 0:
                             return newPriority === oldPriority ? void this.store.delete(key) : void 0;
+                        case oldPriority === 0:
+                            return void this.setPriority(key, -newPriority);
                         case oldPriority > 0:
-                            return newPriority > oldPriority && this.has(key) ? void this.castPriority(key) : void this.setPriority(key, -newPriority);
+                            return oldPriority < newPriority && this.has(key) ? void this.castPriority(key) : void this.setPriority(key, -newPriority);
                         case oldPriority < 0:
                             return void this.setPriority(key, -newPriority);
                         default:
@@ -3971,7 +3966,10 @@ require = function () {
                         return wait === void 0 ? false : global_1.Promise.resolve(false);
                     age = global_1.Math.min(global_1.Math.max(age, 1 * 1000), 60 * 1000);
                     wait = wait === void 0 ? wait : global_1.Math.max(wait, 0);
-                    void this.setPriority(key, global_1.Math.max(Ownership.genPriority(age) + Ownership.mergin, this.getPriority(key)));
+                    const priority = Ownership.genPriority(age) + Ownership.mergin;
+                    if (priority <= this.getPriority(key))
+                        return this.has(key);
+                    void this.setPriority(key, priority);
                     return wait === void 0 ? this.has(key) : new global_1.Promise(resolve => void global_1.setTimeout(() => void resolve(this.extend(key, age)), wait));
                 }
                 extend(key, age) {
@@ -4075,7 +4073,7 @@ require = function () {
             const storage_1 = _dereq_('../model/storage');
             const cache = new Set();
             class StorageChannel {
-                constructor(name, storage = api_2.sessionStorage || storage_1.fakeStorage, factory, migrate = () => void 0) {
+                constructor(name, storage = api_2.sessionStorage || storage_1.fakeStorage, factory, migrate) {
                     this.name = name;
                     this.storage = storage;
                     this.cancellation = new cancellation_1.Cancellation();
@@ -4107,7 +4105,7 @@ require = function () {
                         ], event);
                         void this.events.send.emit([event.attr], event);
                     });
-                    void migrate(this.link_);
+                    void (migrate === null || migrate === void 0 ? void 0 : migrate(this.link_));
                     void this.cancellation.register(api_2.storageEventStream.on([
                         this.mode,
                         this.name
@@ -4119,7 +4117,7 @@ require = function () {
                             if ([newVal].includes(oldVal))
                                 return;
                             source[attr] = newVal;
-                            void migrate(this.link_);
+                            void (migrate === null || migrate === void 0 ? void 0 : migrate(this.link_));
                             const event = new StorageChannel.Event(StorageChannel.EventType.recv, attr, source[attr], oldVal);
                             void source[api_1.Schema.event].emit([
                                 event.type,
