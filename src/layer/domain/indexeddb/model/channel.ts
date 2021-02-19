@@ -185,6 +185,8 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     void this.ensureAliveness();
     void this.ownership.take(`key:${key}`, 10 * 1000);
     void this.schema.data.delete(key);
+    void this.events.save.once([key, '', ChannelStore.EventType.delete], () =>
+      void this.ownership.take(`key:${key}`, 10 * 1000));
   }
   protected log(key: K): void {
     if (!this.has(key)) return;
