@@ -1,4 +1,4 @@
-import { Infinity, Date, Promise, setTimeout } from 'spica/global';
+import { Infinity, Promise, setTimeout } from 'spica/global';
 import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../';
 import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
@@ -76,36 +76,21 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
       void this.channel.post(new SaveMessage(key)));
 
     void this.events_.clean.monitor([], (_, [key]) => {
-      void this.ownership.take(`key:${key}`, 5 * 1000);
+      void this.ownership.take(`key:${key}`, 10 * 1000);
       void this.schema.access.delete(key);
       void this.schema.expire.delete(key);
     });
 
     if (this.size === Infinity) return;
 
-    void this.cancellation.register(this.channel.listen('save', ({ key }) =>
-      void this.keys.put(key) || void this.keys_.delete(key)));
     void this.events_.load.monitor([], ({ key, type }) =>
       type === ChannelStore.EventType.delete
-        ? void this.keys.delete(key) || void this.keys_.delete(key)
-        : void this.keys.put(key));
+        ? void this.keys_.delete(key) || void this.keys.delete(key)
+        : void this.keys_.delete(key) || void this.keys.put(key));
     void this.events_.save.monitor([], ({ key, type }) =>
       type === ChannelStore.EventType.delete
-        ? void this.keys.delete(key) || void this.keys_.delete(key)
-        : void this.keys.put(key));
-
-    const limit = () => {
-      if (size === Infinity) return;
-      if (!this.alive) return;
-      void this.recent().then(
-        keys =>
-          keys.reverse()
-            .forEach(key =>
-              void this.keys.put(key)),
-        () =>
-          void setTimeout(limit, 10 * 1000));
-    };
-    void limit();
+        ? void this.keys_.delete(key) || void this.keys.delete(key)
+        : void this.keys_.delete(key) || void this.keys.put(key));
   }
   private readonly cancellation = new Cancellation();
   private readonly schema: Schema<K, V>;
@@ -114,28 +99,29 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   private readonly keys_ = new Set<K>();
   private readonly keys = new Cache<K>(this.size, {
     disposer: (() => {
-      const keys = this.keys_;
+      const queue = this.keys_;
       let timer = 0;
-      const resolve = (): void => {
+      const schedule = (): void => {
+        if (!this.alive) return;
+        if (timer === 0) return;
         timer = 0;
-        const since = Date.now();
+        if (!this.ownership.take('store', 10 * 1000)) return;
         let count = 0;
-        if (!this.ownership.take('store', 5 * 1000)) return;
-        for (const key of keys) {
-          if (!this.alive) return void this.keys.clear(), void keys.clear();
-          void keys.delete(key);
-          if (timer > 0) return;
-          if (this.keys.has(key)) continue;
-          if (++count > 10) return void setTimeout(resolve, (Date.now() - since) * 3);
-          if (!this.ownership.extend('store', 5 * 1000)) return;
-          if (!this.ownership.take(`key:${key}`, 5 * 1000)) continue;
-          void this.schema.expire.set(key, 0);
+        for (const key of queue) {
+          if (!this.alive) return void this.keys.clear(), void queue.clear();
+          if (!this.has(key)) continue;
+          if (++count > 100) return timer = setTimeout(schedule, 100) as any;
+          if (!this.ownership.extend('store', 10 * 1000)) return timer = setTimeout(schedule, 10 * 1000) as any;
+          if (!this.ownership.take(`key:${key}`, 10 * 1000)) return timer = setTimeout(schedule, 10 * 1000) as any;
+          void queue.delete(key);
+          void this.delete(key);
+          assert(!this.has(key));
         }
       };
       return (key: K): void => {
-        void keys.add(key);
+        void queue.add(key);
         if (timer > 0) return;
-        timer = setTimeout(resolve, 3 * 1000) as any;
+        timer = setTimeout(schedule, 3 * 1000) as any;
       };
     })(),
     capture: { delete: false },

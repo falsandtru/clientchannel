@@ -125,7 +125,7 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
       });
     });
 
-    it.skip('size', done => {
+    it('size', done => {
       const chan = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity, 1);
 
       chan.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
