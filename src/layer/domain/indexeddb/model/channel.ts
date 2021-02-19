@@ -129,8 +129,8 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     return this.cancellation.alive;
   }
   public readonly events_ = {
-    load: new Observation<[K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
-    save: new Observation<[K, keyof V | '', ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
+    load: new Observation<[K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
+    save: new Observation<[K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
     clean: new Observation<[K], undefined, void>(),
   } as const;
   public readonly events = {
@@ -231,6 +231,7 @@ class Schema<K extends string, V extends StoreChannelObject<K>> {
   }
   private cancellation = new Cancellation();
   private build(): void {
+    assert(this.cancellation.alive);
     const keys = this.data ? this.data.keys() : [];
 
     this.data = new DataStore<K, V>(this.attrs, this.listen);
