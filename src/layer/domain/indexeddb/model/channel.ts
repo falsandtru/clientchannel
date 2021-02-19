@@ -77,6 +77,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
 
     void this.events_.clean.monitor([], (_, [key]) => {
       void this.ownership.take(`key:${key}`, 10 * 1000);
+      if (this.meta(key).date > 0) return;
       void this.schema.access.delete(key);
       void this.schema.expire.delete(key);
     });
