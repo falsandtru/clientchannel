@@ -109,11 +109,12 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
         if (!this.ownership.take('store', 10 * 1000)) return;
         for (const key of queue) {
           if (!this.alive) return void this.keys.clear(), void queue.clear();
-          if (!this.has(key)) continue;
           if (!this.ownership.extend('store', 10 * 1000)) return timer = setTimeout(schedule, 10 * 1000) as any;
           if (!this.ownership.take(`key:${key}`, 10 * 1000)) return timer = setTimeout(schedule, 10 * 1000) as any;
           void queue.delete(key);
-          void this.delete(key);
+          this.has(key)
+            ? void this.delete(key)
+            : void this.clean(key);
           assert(!this.has(key));
         }
       };
@@ -187,6 +188,11 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     void this.schema.data.delete(key);
     void this.events.save.once([key, '', ChannelStore.EventType.delete], () =>
       void this.ownership.take(`key:${key}`, 10 * 1000));
+  }
+  public clean(key: K): void {
+    void this.ensureAliveness();
+    void this.ownership.take(`key:${key}`, 10 * 1000);
+    void this.schema.data.clean(key);
   }
   protected log(key: K): void {
     if (!this.has(key)) return;
