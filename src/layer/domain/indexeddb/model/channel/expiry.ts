@@ -65,7 +65,6 @@ export class ExpiryStore<K extends string> {
         if (schedule === 0) return;
         if (!this.ownership.take('store', 10 * 1000)) return this.schedule(delay *= 2);
         delay = Math.max(Math.floor(delay / 1.5), delay);
-        let count = 0;
         let retry = false;
         schedule = 0;
         return void this.store.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', (cursor, error) => {
@@ -73,14 +72,12 @@ export class ExpiryStore<K extends string> {
           if (!this.cancellation.alive) return;
           if (error) return void this.schedule(delay * 10);
           if (!cursor) return retry && void this.schedule(delay *= 2);
-          if (count > 100) return void this.schedule(100);
           const { key, expiry }: ExpiryRecord<K> = cursor.value;
           if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
           if (!this.chan.has(key)) return void cursor.continue();
           if (!this.ownership.extend('store', 10 * 1000)) return void this.schedule(delay *= 2);
           schedule = 0;
           if (!this.ownership.take(`key:${key}`, 10 * 1000)) return retry = true, void cursor.continue();
-          ++count;
           void this.chan.delete(key);
           assert(!this.chan.has(key));
           return void cursor.continue();

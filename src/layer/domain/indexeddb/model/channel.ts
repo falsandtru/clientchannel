@@ -106,14 +106,11 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
         if (timer === 0) return;
         timer = 0;
         if (!this.ownership.take('store', 10 * 1000)) return;
-        let count = 0;
         for (const key of queue) {
           if (!this.alive) return void this.keys.clear(), void queue.clear();
-          if (count > 100) return timer = setTimeout(schedule, 100) as any;
           if (!this.has(key)) continue;
           if (!this.ownership.extend('store', 10 * 1000)) return timer = setTimeout(schedule, 10 * 1000) as any;
           if (!this.ownership.take(`key:${key}`, 10 * 1000)) return timer = setTimeout(schedule, 10 * 1000) as any;
-          ++count;
           void queue.delete(key);
           void this.delete(key);
           assert(!this.has(key));
