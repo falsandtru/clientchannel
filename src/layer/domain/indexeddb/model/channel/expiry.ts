@@ -76,9 +76,9 @@ export class ExpiryStore<K extends string> {
           if (!cursor) return retry && void this.schedule(delay);
           try {
             const { key, expiry }: ExpiryRecord<K> = cursor.value;
+            if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
             if (!this.chan.has(key)) return void cursor.continue();
             if (++count > 100) return void this.schedule(100);
-            if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
             if (!this.ownership.extend('store', delay)) return void this.schedule(delay);
             schedule = 0;
             if (!this.ownership.take(`key:${key}`, delay)) return retry = true, void cursor.continue();
