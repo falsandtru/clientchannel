@@ -55,36 +55,38 @@ export class ExpiryStore<K extends string> {
   private store = new class extends KeyValueStore<K, ExpiryRecord<K>> { }(name, ExpiryStoreSchema.key, this.listen);
   private schedule = (() => {
     let timer = 0;
-    let scheduled = Infinity;
-    let running = false;
-    let delay = 5 * 1000;
+    let delay = 10 * 1000;
+    let schedule = Infinity;
     return (timeout: number): void => {
-      timeout = Math.max(timeout, 3 * 1000);
-      if (Date.now() + timeout >= scheduled) return;
-      scheduled = Date.now() + timeout;
+      if (Date.now() + timeout >= schedule) return;
+      schedule = Date.now() + timeout;
       void clearTimeout(timer);
       timer = setTimeout(() => {
         if (!this.cancellation.alive) return;
-        if (running) return;
-        scheduled = Infinity;
+        if (schedule === 0) return;
         if (!this.ownership.take('store', delay)) return this.schedule(delay *= 2);
-        delay = Math.max(Math.floor(delay / 1.5), 5 * 1000);
+        delay = Math.max(Math.floor(delay / 1.5), delay);
+        let count = 0;
         let retry = false;
-        running = true;
+        schedule = 0;
         return void this.store.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', (cursor, error) => {
-          running = false;
+          schedule = Infinity;
           if (!this.cancellation.alive) return;
           if (error) return void this.schedule(delay * 10);
           if (!cursor) return retry && void this.schedule(delay);
           try {
             const { key, expiry }: ExpiryRecord<K> = cursor.value;
+            if (!this.chan.has(key)) return void cursor.continue();
+            if (++count > 100) return void this.schedule(100);
             if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
-            if (!this.ownership.extend('store', delay)) return;
-            running = true;
+            if (!this.ownership.extend('store', delay)) return void this.schedule(delay);
+            schedule = 0;
             if (!this.ownership.take(`key:${key}`, delay)) return retry = true, void cursor.continue();
             void this.chan.delete(key);
+            assert(!this.chan.has(key));
           }
           catch (reason) {
+            schedule = 0;
             void cursor.delete();
             void causeAsyncException(reason);
           }

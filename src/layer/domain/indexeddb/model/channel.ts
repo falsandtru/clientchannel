@@ -192,19 +192,16 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     assert(record.type === DataStore.EventType.put);
     void this.ensureAliveness();
     const key = record.key;
-    void this.log(key);
     void this.schema.data.add(record);
-    void this.events_.save.once([record.key, record.attr, record.type], () => (
-      void this.log(key)));
+    void this.log(key);
   }
   public delete(key: K): void {
     void this.ensureAliveness();
-    void this.ownership.take(`key:${key}`, 5 * 1000);
-    void this.log(key);
+    void this.ownership.take(`key:${key}`, 10 * 1000);
     void this.schema.data.delete(key);
   }
   protected log(key: K): void {
-    if (this.meta(key).id > 0 && !this.has(key)) return;
+    if (!this.has(key)) return;
     void this.schema.access.set(key);
     void this.schema.expire.set(key, this.ages.get(key) || this.age);
   }
