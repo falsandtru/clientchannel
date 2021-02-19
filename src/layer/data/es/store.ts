@@ -111,26 +111,40 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     memory: new Observation<[K, keyof V | '', string], UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>, void>({ limit: Infinity }),
   } as const;
   private tx: {
-    rw?: IDBTransaction;
+    readonly rw: IDBTransaction | undefined;
     rwc: number;
   } = {
+    rw: void 0,
     rwc: 0,
   };
   private get txrw(): IDBTransaction | undefined {
     if (++this.tx.rwc > 25) {
-      this.tx.rwc = 0;
-      this.tx.rw = void 0;
+      this.tx = {
+        rw: void 0,
+        rwc: 0,
+      };
       return;
     }
     return this.tx.rw;
   }
   private set txrw(tx: IDBTransaction | undefined) {
-    if (!tx) return;
-    assert(tx.mode === 'readwrite');
-    if (this.tx.rw && this.tx.rw === tx) return;
-    this.tx.rwc = 0;
-    this.tx.rw = tx;
-    void tick(() => this.tx.rw = void 0);
+    assert(tx);
+    assert(tx!.mode === 'readwrite');
+    if (!tx || this.tx.rw === tx) return;
+    this.tx = {
+      rw: tx,
+      rwc: 0,
+    };
+    const clear = () => {
+      this.tx = {
+        rw: void 0,
+        rwc: 0,
+      };
+    };
+    void tx.addEventListener('complete', clear);
+    void tx.addEventListener('error', clear);
+    void tx.addEventListener('abort', clear);
+    void tick(clear);
   }
   public fetch(key: K, cb?: (error: DOMException | Error | null) => void, cancellation?: Cancellation): void {
     if (!this.alive) return void cb?.(new Error('Session is already closed.'));
