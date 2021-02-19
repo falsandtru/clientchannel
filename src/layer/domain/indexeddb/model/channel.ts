@@ -189,7 +189,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   protected log(key: K): void {
     if (!this.has(key)) return;
     void this.schema.access.set(key);
-    void this.schema.expire.set(key, this.ages.get(key) || this.age);
+    void this.schema.expire.set(key, this.ages.get(key) ?? this.age);
   }
   private readonly ages = new Map<K, number>();
   public expire(key: K, age: number = this.age): void {
