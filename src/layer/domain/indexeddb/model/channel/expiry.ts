@@ -57,7 +57,7 @@ export class ExpiryStore<K extends string> {
     let timer = 0;
     let scheduled = Infinity;
     let running = false;
-    let wait = 5 * 1000;
+    let delay = 5 * 1000;
     return (timeout: number): void => {
       timeout = Math.max(timeout, 3 * 1000);
       if (Date.now() + timeout >= scheduled) return;
@@ -67,21 +67,21 @@ export class ExpiryStore<K extends string> {
         if (!this.cancellation.alive) return;
         if (running) return;
         scheduled = Infinity;
-        if (!this.ownership.take('store', wait)) return this.schedule(wait *= 2);
-        wait = Math.max(Math.floor(wait / 1.5), 5 * 1000);
+        if (!this.ownership.take('store', delay)) return this.schedule(delay *= 2);
+        delay = Math.max(Math.floor(delay / 1.5), 5 * 1000);
         let retry = false;
         running = true;
         return void this.store.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', (cursor, error) => {
           running = false;
           if (!this.cancellation.alive) return;
-          if (error) return void this.schedule(wait * 10);
-          if (!cursor) return retry && void this.schedule(wait);
+          if (error) return void this.schedule(delay * 10);
+          if (!cursor) return retry && void this.schedule(delay);
           try {
             const { key, expiry }: ExpiryRecord<K> = cursor.value;
             if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
-            if (!this.ownership.extend('store', wait)) return;
+            if (!this.ownership.extend('store', delay)) return;
             running = true;
-            if (!this.ownership.take(`key:${key}`, wait)) return retry = true, void cursor.continue();
+            if (!this.ownership.take(`key:${key}`, delay)) return retry = true, void cursor.continue();
             void this.chan.delete(key);
           }
           catch (reason) {
