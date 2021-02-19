@@ -45,6 +45,10 @@ export class Ownership<K extends string> {
           return newPriority === oldPriority
             ? void this.store.delete(key)
             : void 0;
+        case oldPriority === 0:
+          assert(newPriority >= 0);
+          // Accept the foreign ownership.
+          return void this.setPriority(key, -newPriority);
         case oldPriority > 0:
           assert(newPriority >= 0);
           // First commit wins.
@@ -55,6 +59,7 @@ export class Ownership<K extends string> {
             // Accept the foreign ownership.
             : void this.setPriority(key, -newPriority);
         case oldPriority < 0:
+          assert(newPriority >= 0);
           // Update the foreign ownership.
           // Last commit wins.
           return void this.setPriority(key, -newPriority);
