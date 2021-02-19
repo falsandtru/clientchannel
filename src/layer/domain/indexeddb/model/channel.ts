@@ -162,6 +162,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     return this.schema.data.fetch(key, cb, cancellation);
   }
   public has(key: K): boolean {
+    void this.ensureAliveness();
     return this.schema.data.has(key);
   }
   public meta(key: K): StoreChannelObjectMetaData<K> {
@@ -195,7 +196,6 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     assert(age > 0);
     void this.ensureAliveness();
     void this.ages.set(key, age);
-    return void this.schema.expire.set(key, age);
   }
   public recent(timeout?: number): Promise<K[]>;
   public recent(cb?: (key: K, keys: readonly K[]) => boolean | void, timeout?: number): Promise<K[]>;

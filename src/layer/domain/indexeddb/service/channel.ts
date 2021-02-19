@@ -69,8 +69,9 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
   private readonly sources = new Map<K, Partial<V>>();
   public link(key: K, age?: number): V {
     void this.ensureAliveness();
-    void this.fetch(key);
     void this.expire(key, age);
+    void this.fetch(key, error =>
+      !error && this.alive && this.links.has(key) && void this.log(key));
     return this.links.has(key)
       ? this.links.get(key)!
       : this.links.set(key, build(
@@ -104,7 +105,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
             void cast(this.sources.get(key)![Schema.event]!)
               .emit([StorageChannel.EventType.send, attr], new StorageChannel.Event<V>(StorageChannel.EventType.send, attr as never, newValue, oldValue));
           },
-          throttle(100, () => this.alive && this.links.has(key) && this.has(key) && void this.log(key))))
+          throttle(100, () => this.alive && this.links.has(key) && void this.log(key))))
           .get(key)!;
   }
 }
