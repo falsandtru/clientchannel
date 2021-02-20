@@ -99,7 +99,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       });
   }
   private alive = true;
-  private readonly memory = new Observation<[] | [K] | [K, keyof V | ''] | [K, keyof V | '', number] | [K, keyof V | '', number, number], void, UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>>();
+  private readonly memory = new Observation<[K, keyof V | '', number] | [K, keyof V | '', number, number], void, UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>>();
   public readonly events = {
     load: new Observation<[K, Extract<keyof V | '', string>, EventStore.EventType], EventStore.Event<K, V>, void>(),
     save: new Observation<[K, Extract<keyof V | '', string>, EventStore.EventType], EventStore.Event<K, V>, void>(),
@@ -312,7 +312,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           .emit([savedEvent.key, savedEvent.attr, savedEvent.id], savedEvent);
         const events: StoredEventRecord<K, V>[] = this.memory.refs([savedEvent.key])
           .map(({ listener }) =>
-            listener(void 0, [savedEvent.key]) as UnstoredEventRecord<K, V> | StoredEventRecord<K, V>)
+            listener(void 0, [savedEvent.key, savedEvent.attr, savedEvent.id]) as UnstoredEventRecord<K, V> | StoredEventRecord<K, V>)
           .reduce<StoredEventRecord<K, V>[]>((es, e) =>
             e instanceof StoredEventRecord
               ? concat(es, [e])

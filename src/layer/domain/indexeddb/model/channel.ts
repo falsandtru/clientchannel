@@ -76,6 +76,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
       void this.channel.post(new SaveMessage(key)));
 
     void this.events_.clear.monitor([], (_, [key]) => {
+      if (key === void 0) return;
       assert(this.meta(key).date === 0);
       void this.ownership.take(`key:${key}`, 10 * 1000);
       void this.schema.access.delete(key);
