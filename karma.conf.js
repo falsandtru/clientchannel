@@ -36,6 +36,7 @@ module.exports = function (config) {
     },
     autoWatch: true,
     autoWatchBatchDelay: 500,
+    browserDisconnectTimeout: 30000,
     browsers: ['Chrome'],
     singleRun: true,
   });
