@@ -32,7 +32,7 @@ export function build<V extends object>(
       .filter(isValidPropertyValue(dao))
       .reduce<PropertyDescriptorMap>((map, prop) => {
         {
-          const desc = ObjectGetOwnPropertyDescriptor(dao, prop)
+          const desc = ObjectGetOwnPropertyDescriptor(dao, prop);
           if (desc && (desc.get || desc.set)) return map;
         }
         const iniVal = dao[prop];
@@ -59,27 +59,27 @@ export function build<V extends object>(
       [Schema.meta]: {
         configurable: false,
         enumerable: false,
-        get: () => source[Schema.meta]
+        get: () => source[Schema.meta],
       },
       [Schema.id]: {
         configurable: false,
         enumerable: false,
-        get: () => source[Schema.id]
+        get: () => source[Schema.id],
       },
       [Schema.key]: {
         configurable: false,
         enumerable: false,
-        get: () => source[Schema.key]
+        get: () => source[Schema.key],
       },
       [Schema.date]: {
         configurable: false,
         enumerable: false,
-        get: () => source[Schema.date]
+        get: () => source[Schema.date],
       },
       [Schema.event]: {
         configurable: false,
         enumerable: false,
-        get: () => source[Schema.event]
+        get: () => source[Schema.event],
       },
     }
   };
