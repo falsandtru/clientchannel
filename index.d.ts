@@ -48,8 +48,8 @@ export interface StoreChannelEvent<K extends string, V> {
   readonly key: K;
   readonly attr: Extract<keyof V | '', string>;
 }
-export type StoreChannelEventType
-  = StoreChannelEventType.Put
+export type StoreChannelEventType =
+  | StoreChannelEventType.Put
   | StoreChannelEventType.Delete
   | StoreChannelEventType.Snapshot;
 export namespace StoreChannelEventType {
@@ -81,8 +81,8 @@ export interface StorageChannelEvent<V> {
   readonly newValue: V[Extract<keyof V, string>];
   readonly oldValue: V[Extract<keyof V, string>];
 }
-export type StorageChannelEventType
-  = StorageChannelEventType.Send
+export type StorageChannelEventType =
+  | StorageChannelEventType.Send
   | StorageChannelEventType.Recv;
 export namespace StorageChannelEventType {
   export type Send = 'send';
