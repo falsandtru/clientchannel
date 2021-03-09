@@ -33,7 +33,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     attrs: string[],
     destroy: (reason: unknown, event?: Event) => boolean,
     private readonly age: number,
-    private readonly size: number,
+    private readonly capacity: number,
     private readonly debug = false,
   ) {
     if (cache.has(name)) throw new Error(`ClientChannel: Store channel "${name}" is already open.`);
@@ -83,7 +83,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
       void this.schema.expire.delete(key);
     });
 
-    if (this.size === Infinity) return;
+    if (this.capacity === Infinity) return;
 
     void this.events_.load.monitor([], ({ key, type }) =>
       type === ChannelStore.EventType.delete
@@ -99,7 +99,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   private readonly channel = new Channel<K>(this.name, this.debug);
   private readonly ownership = new Ownership<string>(this.channel);
   private readonly keys_ = new Set<K>();
-  private readonly keys = new Cache<K>(this.size, {
+  private readonly keys = new Cache<K>(this.capacity, {
     disposer: (() => {
       const queue = this.keys_;
       let timer = 0;

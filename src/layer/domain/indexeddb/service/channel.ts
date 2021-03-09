@@ -14,11 +14,11 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
       migrate,
       destroy = () => true,
       age = Infinity,
-      size = Infinity,
+      capacity = Infinity,
       debug = false,
-    }: Partial<StoreChannelConfig<K, V>> & { size?: number; debug?: boolean; } = {},
+    }: Partial<StoreChannelConfig<K, V>> & { capacity?: number; debug?: boolean; } = {},
   ) {
-    super(name, ObjectKeys(factory()).filter(isValidPropertyName).filter(isValidPropertyValue(factory())), destroy, age, size, debug);
+    super(name, ObjectKeys(factory()).filter(isValidPropertyName).filter(isValidPropertyValue(factory())), destroy, age, capacity, debug);
 
     const attrs = <(keyof V)[]>ObjectKeys(factory())
       .filter(isValidPropertyName)
