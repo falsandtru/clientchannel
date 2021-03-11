@@ -119,7 +119,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
           assert(!this.has(key));
         }
       };
-      return (key: K): void => {
+      return (_: void, key: K): void => {
         void queue.add(key);
         if (timer > 0) return;
         timer = setTimeout(schedule, 3 * 1000) as any;
