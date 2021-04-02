@@ -92,7 +92,7 @@ export abstract class StoredEventRecord<K extends string, V extends EventRecordV
   }
 }
 export class LoadedEventRecord<K extends string, V extends EventRecordValue> extends StoredEventRecord<K, V> {
-  protected readonly EVENT_RECORD!: this;
+  protected override readonly EVENT_RECORD!: this;
   constructor(
     {
       id,
@@ -107,7 +107,7 @@ export class LoadedEventRecord<K extends string, V extends EventRecordValue> ext
   }
 }
 export class SavedEventRecord<K extends string, V extends EventRecordValue> extends StoredEventRecord<K, V> {
-  protected readonly EVENT_RECORD!: this;
+  protected override readonly EVENT_RECORD!: this;
   constructor(
     id: EventId,
     key: K,

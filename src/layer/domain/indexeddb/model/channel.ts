@@ -19,7 +19,9 @@ declare global {
 
 class SaveMessage<K extends string> extends ChannelMessage<K> {
   constructor(
-    public readonly key: K,
+    // Bug
+    // @ts-expect-error
+    public override readonly key: K,
   ) {
     super(key, 'save');
   }
