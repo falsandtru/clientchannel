@@ -4,7 +4,7 @@ import { EventStore } from '../../../../data/es/store';
 export const name = 'data';
 
 export class DataStore<K extends string, V extends DataStore.Value> extends EventStore<K, V> {
-  public static configure(): Config {
+  public static override configure(): Config {
     return EventStore.configure(name);
   }
   constructor(

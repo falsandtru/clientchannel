@@ -10,8 +10,6 @@ declare global {
 
 class OwnershipMessage<K extends string> extends ChannelMessage<K> {
   constructor(
-    // Bug
-    // @ts-expect-error
     public override readonly key: K,
     public readonly priority: number,
   ) {

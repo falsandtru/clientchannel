@@ -6,7 +6,7 @@ describe('Unit: layers/data/kvs/store', function () {
 
   describe('spec', () => {
     class Store<K extends string, V extends IDBValidValue> extends KeyValueStore<K, V> {
-      public static configure(): Config {
+      public static override configure(): Config {
         return {
           make(tx) {
             if (tx.db.objectStoreNames.contains('test')) {
