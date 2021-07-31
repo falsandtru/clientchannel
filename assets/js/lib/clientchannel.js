@@ -1,4 +1,4 @@
-/*! clientchannel v0.31.2 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.31.3 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -889,9 +889,20 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.run = exports.once = exports.clear = exports.mapReturn = exports.mapParameters = void 0;
+            exports.run = exports.clear = exports.mapReturn = exports.mapParameters = exports.once = void 0;
             const global_1 = _dereq_('./global');
             const noop_1 = _dereq_('./noop');
+            function once(f) {
+                let result;
+                return function (...as) {
+                    if (f === noop_1.noop)
+                        return result;
+                    result = f.call(this, ...as);
+                    f = noop_1.noop;
+                    return result;
+                };
+            }
+            exports.once = once;
             function mapParameters(f, g) {
                 return (...as) => f(...g(...as));
             }
@@ -904,16 +915,6 @@ require = function () {
                 return (...as) => void f(...as);
             }
             exports.clear = clear;
-            function once(f) {
-                return (...as) => {
-                    if (f === noop_1.noop)
-                        return;
-                    f(...as);
-                    f = noop_1.noop;
-                    as = [];
-                };
-            }
-            exports.once = once;
             function run(fs) {
                 const gs = global_1.Array(fs.length);
                 try {
@@ -2551,10 +2552,11 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.debounce = exports.throttle = void 0;
             const global_1 = _dereq_('./global');
+            const exception_1 = _dereq_('./exception');
             function throttle(interval, callback, capacity = 1) {
                 let timer = 0;
                 let buffer = [];
-                return data => {
+                return function self(data) {
                     if (capacity === 1) {
                         buffer = [data];
                     } else {
@@ -2563,11 +2565,16 @@ require = function () {
                     }
                     if (timer !== 0)
                         return;
-                    timer = global_1.setTimeout(() => {
-                        timer = 0;
+                    timer = global_1.setTimeout(async () => {
                         const buf = buffer;
                         buffer = [];
-                        void callback(buf[0], buf);
+                        try {
+                            await callback.call(this, buf[0], buf);
+                        } catch (reason) {
+                            exception_1.causeAsyncException(reason);
+                        }
+                        timer = 0;
+                        buffer.length > 0 && self.call(this, buffer.shift());
                     }, interval);
                 };
             }
@@ -2575,7 +2582,8 @@ require = function () {
             function debounce(delay, callback, capacity = 1) {
                 let timer = 0;
                 let buffer = [];
-                return data => {
+                let callable = true;
+                return function self(data) {
                     if (capacity === 1) {
                         buffer = [data];
                     } else {
@@ -2586,19 +2594,31 @@ require = function () {
                         return;
                     timer = global_1.setTimeout(() => {
                         timer = 0;
-                        void global_1.setTimeout(() => {
+                        void global_1.setTimeout(async () => {
                             if (timer !== 0)
+                                return;
+                            if (!callable)
                                 return;
                             const buf = buffer;
                             buffer = [];
-                            void callback(buf[0], buf);
-                        }, buffer.length > 1 ? delay : 0);
+                            callable = false;
+                            try {
+                                await callback.call(this, buf[0], buf);
+                            } catch (reason) {
+                                exception_1.causeAsyncException(reason);
+                            }
+                            callable = true;
+                            timer === 0 && buffer.length > 0 && self.call(this, buffer.shift());
+                        }, delay);
                     }, delay);
                 };
             }
             exports.debounce = debounce;
         },
-        { './global': 16 }
+        {
+            './exception': 14,
+            './global': 16
+        }
     ],
     36: [
         function (_dereq_, module, exports) {
@@ -2662,20 +2682,20 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.uuid = void 0;
             const global_1 = _dereq_('./global');
-            const FORMAT_V4 = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx';
             function uuid() {
-                return body(rnd16, hex);
+                return body(rnd16, HEX);
             }
             exports.uuid = uuid;
-            const body = Function('rnd16', 'hex', [
+            const HEX = [...Array(16)].map((_, i) => i.toString(16));
+            const body = Function('rnd16', 'HEX', [
                 '"use strict";',
                 'return ""',
-                FORMAT_V4.replace(/./g, c => {
+                'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/./g, c => {
                     switch (c) {
                     case 'x':
-                        return `+ hex[rnd16()]`;
+                        return `+ HEX[rnd16()]`;
                     case 'y':
-                        return `+ hex[rnd16() & 0x03 | 0x08]`;
+                        return `+ HEX[rnd16() & 0x03 | 0x08]`;
                     default:
                         return `+ '${ c }'`;
                     }
@@ -2699,7 +2719,6 @@ require = function () {
                     return buffer[index] >> offset & mask;
                 }
             }
-            const hex = [...Array(16)].map((_, i) => i.toString(16));
         },
         { './global': 16 }
     ],
