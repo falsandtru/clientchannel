@@ -81,10 +81,10 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
   public get(key: K): V | undefined {
     return this.cache.get(key);
   }
-  public set(key: K, value: V, cb?: (key: K, error: DOMException | Error) => void): V {
+  public set(key: K, value: V, cb?: (key: K, error: DOMException | Error | null) => void): V {
     return this.put(value, key, cb);
   }
-  private put(value: V, key: K, cb?: (key: K, error: DOMException | Error) => void): V {
+  private put(value: V, key: K, cb?: (key: K, error: DOMException | Error | null) => void): V {
     void this.cache.set(key, value);
     if (!this.alive) return value;
     void this.listen(db => {
@@ -107,7 +107,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     }, () => void cb?.(key, new Error('Request has failed.')));
     return value;
   }
-  public delete(key: K, cb?: (error: DOMException | Error) => void): void {
+  public delete(key: K, cb?: (error: DOMException | Error | null) => void): void {
     void this.cache.delete(key);
     if (!this.alive) return;
     void this.listen(db => {

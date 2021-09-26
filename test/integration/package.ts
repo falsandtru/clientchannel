@@ -54,7 +54,7 @@ describe('Integration: Package', function () {
           case newValue === VERSION:
             return;
           case newValue > VERSION:
-            return location.reload(true);
+            return location.reload();
           default:
             return link.version = VERSION;
         }
