@@ -2,7 +2,7 @@ import { Infinity, Promise, setTimeout } from 'spica/global';
 import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../';
 import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
-import { AtomicPromise, PromiseSettledResult } from 'spica/promise';
+import { AtomicPromise } from 'spica/promise';
 import { Cache } from 'spica/cache';
 import { open, Listen, close, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { DataStore } from './channel/data';

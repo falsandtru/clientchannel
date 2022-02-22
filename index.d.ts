@@ -1,5 +1,4 @@
 import { Observer } from 'spica/observer';
-import { PromiseSettledResult } from 'spica/promise';
 
 export namespace ChannelObject {
   export const meta: unique symbol;
