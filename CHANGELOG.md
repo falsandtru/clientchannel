@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.31.4
+
+- Fix expiry processing.
+
 ## 0.31.3
 
 - Update dependencies.
