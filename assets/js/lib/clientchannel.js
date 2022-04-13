@@ -1,4 +1,4 @@
-/*! clientchannel v0.31.4 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.31.5 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -4291,7 +4291,7 @@ require = function () {
                                 if (!this.ownership.take('store', 10 * 1000))
                                     return this.schedule(delay *= 2);
                                 delay = global_1.Math.max(global_1.Math.floor(delay / 1.5), delay);
-                                const since = global_1.Date.now();
+                                let count = 0;
                                 let retry = false;
                                 schedule = 0;
                                 return void this.store.cursor(null, 'expiry', 'next', 'readonly', (cursor, error) => {
@@ -4307,7 +4307,7 @@ require = function () {
                                         return void this.schedule(expiry - global_1.Date.now());
                                     if (!this.ownership.extend('store', 10 * 1000))
                                         return void this.schedule(delay *= 2);
-                                    if (global_1.Date.now() > since + 3 * 1000)
+                                    if (++count > 100)
                                         return void this.schedule(5 * 1000);
                                     schedule = 0;
                                     if (!this.ownership.take(`key:${ key }`, 10 * 1000))
