@@ -294,8 +294,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       if (!this.alive) return;
       tx = this.txrw = tx || this.txrw || db.transaction(this.name, 'readwrite');
       const active = (): boolean =>
-        this.memory.refs([event.key, event.attr, 0])
-          .some(({ listener }) => listener(void 0, [event.key, event.attr, 0]) === event);
+        this.memory.reflect([event.key, event.attr, 0])
+          .includes(event);
       if (!active()) return;
       const req = tx
         .objectStore(this.name)
@@ -310,9 +310,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           .on([savedEvent.key, savedEvent.attr, savedEvent.id], () => savedEvent);
         void this.events_.memory
           .emit([savedEvent.key, savedEvent.attr, savedEvent.id], savedEvent);
-        const events: StoredEventRecord<K, V>[] = this.memory.refs([savedEvent.key])
-          .map(({ listener }) =>
-            listener(void 0, [savedEvent.key, savedEvent.attr, savedEvent.id]) as UnstoredEventRecord<K, V> | StoredEventRecord<K, V>)
+        const events: StoredEventRecord<K, V>[] = this.memory.reflect([savedEvent.key])
           .reduce<StoredEventRecord<K, V>[]>((es, e) =>
             e instanceof StoredEventRecord
               ? concat(es, [e])
