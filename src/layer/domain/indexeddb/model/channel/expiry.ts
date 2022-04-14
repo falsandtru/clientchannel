@@ -1,4 +1,5 @@
-import { Infinity, Math, Date, setTimeout, setInterval, clearInterval } from 'spica/global';
+import { Infinity, Date, setTimeout, setInterval, clearInterval } from 'spica/global';
+import { min } from 'spica/alias';
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
 import { ChannelStore } from '../channel';
@@ -57,7 +58,7 @@ export class ExpiryStore<K extends string> {
     let delay = 10 * 1000;
     let schedule = Infinity;
     return (timeout: number): void => {
-      timeout = Math.min(timeout, 60 * 60 * 1000);
+      timeout = min(timeout, 60 * 60 * 1000);
       if (Date.now() + timeout >= schedule) return;
       schedule = Date.now() + timeout;
       void clearTimeout(timer);

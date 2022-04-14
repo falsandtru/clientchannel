@@ -1,4 +1,5 @@
-import { Math, Date, Promise, setTimeout } from 'spica/global';
+import { Date, Promise, setTimeout } from 'spica/global';
+import { abs, max, min } from 'spica/alias';
 import { Channel, ChannelMessage } from '../broadcast/channel';
 import { Cancellation } from 'spica/cancellation';
 
@@ -98,7 +99,7 @@ export class Ownership<K extends string> {
   private isTakable(key: K): boolean {
     const priority = this.getPriority(key);
     return priority >= 0
-        || Ownership.genPriority(0) > Math.abs(priority);
+        || Ownership.genPriority(0) > abs(priority);
   }
   public take(key: K, age: number): boolean
   public take(key: K, age: number, wait: number): Promise<boolean>
@@ -106,8 +107,8 @@ export class Ownership<K extends string> {
     if (!this.alive) throw new Error(`ClientChannel: Ownership channel "${this.channel.name}" is already closed.`);
     if (!this.isTakable(key)) return wait === void 0 ? false : Promise.resolve(false);
     assert(0 <= age && age < 60 * 1000);
-    age = Math.min(Math.max(age, 1 * 1000), 60 * 1000);
-    wait = wait === void 0 ? wait : Math.max(wait, 0);
+    age = min(max(age, 1 * 1000), 60 * 1000);
+    wait = wait === void 0 ? wait : min(wait, 0);
     const priority = Ownership.genPriority(age) + Ownership.mergin;
     priority > this.getPriority(key) && void this.setPriority(key, priority);
     assert(this.getPriority(key) > 0);
@@ -124,7 +125,7 @@ export class Ownership<K extends string> {
   public release(key: K): void {
     if (!this.alive) throw new Error(`ClientChannel: Ownership channel "${this.channel.name}" is already closed.`);
     if (!this.has(key)) return;
-    void this.setPriority(key, -Math.abs(this.getPriority(key)));
+    void this.setPriority(key, -abs(this.getPriority(key)));
     void this.castPriority(key);
     void this.store.delete(key);
   }
