@@ -77,15 +77,15 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       });
     });
 
-    it('fetch', done => {
+    it('load', done => {
       const chan = new StoreChannel('test', () => new Value());
 
-      chan.fetch('z', err => {
+      chan.load('z', err => {
         assert(!err);
         listen_('test', db => {
           db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { n: 1 })));
           db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { s: '1' }))).onsuccess = () => {
-            chan.fetch('a', err => {
+            chan.load('a', err => {
               assert(!err);
               const link = chan.link('a');
               assert(link[Schema.id] === 2);
@@ -137,7 +137,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       assert(link.n === 0);
       listen_('test', db => {
         db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { n: 1 }))).onsuccess = () => {
-          chan['schema'].data.fetch('a');
+          chan['schema'].data.load('a');
           link[Schema.event].once(['recv', 'n'], () => {
             assert(link[Schema.id] === 1);
             assert(link[Schema.key] === 'a');

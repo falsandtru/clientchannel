@@ -70,7 +70,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     void this.cancellation.register(() =>
       void this.channel.close());
     void this.cancellation.register(this.channel.listen('save', ({ key }) =>
-      void this.fetch(key)));
+      void this.load(key)));
 
     void this.events_.save.monitor([], ({ key }) =>
       void this.channel.post(new SaveMessage(key)));
@@ -155,15 +155,15 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     return Promise.resolve(AtomicPromise.allSettled(
       keys.map(key =>
         new Promise<K>((resolve, reject) =>
-          void this.fetch(key, error =>
+          void this.load(key, error =>
             error
               ? void reject(error)
               : void resolve(key),
             cancellation)))));
   }
-  public fetch(key: K, cb?: (error: DOMException | Error | null) => void, cancellation?: Cancellation): void {
+  public load(key: K, cb?: (error: DOMException | Error | null) => void, cancellation?: Cancellation): void {
     void this.ensureAliveness();
-    return this.schema.data.fetch(key, cb, cancellation);
+    return this.schema.data.load(key, cb, cancellation);
   }
   public has(key: K): boolean {
     void this.ensureAliveness();

@@ -145,7 +145,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     void tx.addEventListener('abort', clear);
     void tick(clear);
   }
-  public fetch(key: K, cb?: (error: DOMException | Error | null) => void, cancellation?: Cancellation): void {
+  public load(key: K, cb?: (error: DOMException | Error | null) => void, cancellation?: Cancellation): void {
     if (!this.alive) return void cb?.(new Error('Session is already closed.'));
     const events: LoadedEventRecord<K, V>[] = [];
     return void this.listen(db => {

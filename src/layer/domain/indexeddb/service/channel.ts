@@ -70,7 +70,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
   public link(key: K, age?: number): V {
     void this.ensureAliveness();
     void this.expire(key, age);
-    void this.fetch(key, error =>
+    void this.load(key, error =>
       !error && this.alive && this.links.has(key) && void this.log(key));
     return this.links.has(key)
       ? this.links.get(key)!

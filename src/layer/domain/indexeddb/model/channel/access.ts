@@ -65,8 +65,8 @@ export class AccessStore<K extends string> {
           void cursor.continue();
         })));
   }
-  public fetch(key: K): void {
-    return this.store.fetch(key);
+  public load(key: K): void {
+    return this.store.load(key);
   }
   public get(key: K): number {
     return this.store.has(key)

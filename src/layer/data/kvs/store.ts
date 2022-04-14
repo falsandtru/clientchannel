@@ -47,7 +47,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     this.tx.rw = tx;
     void tick(() => this.tx.rw = void 0);
   }
-  public fetch(key: K, cb?: (error: DOMException | Error | null) => void, cancellation?: Cancellation): undefined {
+  public load(key: K, cb?: (error: DOMException | Error | null) => void, cancellation?: Cancellation): undefined {
     if (!this.alive) return void cb?.(new Error('Session is already closed.'));
     return void this.listen(db => {
       if (!this.alive) return void cb?.(new Error('Session is already closed.'));
