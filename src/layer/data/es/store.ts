@@ -206,7 +206,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           catch (reason) {
             void causeAsyncException(reason);
           }
-          if (events.length >= this.snapshotCycle) {
+          if (events.length >= this.snapshotCycle ||
+              events[events.length - 1]?.type !== EventStore.EventType.snapshot && events[events.length - 1]?.date < Date.now() - 3 * 24 * 3600 * 1000) {
             void this.snapshot(key);
           }
           return;
