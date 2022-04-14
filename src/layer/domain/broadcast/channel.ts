@@ -29,7 +29,7 @@ export class Channel<K extends string> implements Channel<K> {
     if (cache.has(name)) throw new Error(`ClientChannel: Broadcast channel "${name}" is already open.`);
     void cache.add(this.name);
   }
-  private readonly channel = new BroadcastChannel(this.name);
+  private readonly channel = new BroadcastChannel(`clientchannel::${this.name}`);
   private readonly listeners = new Set<(ev: MessageEvent<ChannelMessage<K>>) => void>();
   private ensureAliveness(): void {
     if (!this.alive) throw new Error(`ClientChannel: Broadcast channel "${this.name}" is already closed.`);
