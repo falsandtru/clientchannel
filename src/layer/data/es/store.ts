@@ -403,6 +403,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             void this.events_.memory
               .off([event.key, event.attr, event.id]);
           }
+          clear ||= events.length === 0;
           clear && this.meta(key).date === 0 && void this.events.clear.emit([key]);
           return;
         }
