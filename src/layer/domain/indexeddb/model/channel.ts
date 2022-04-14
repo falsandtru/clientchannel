@@ -163,7 +163,6 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   }
   public fetch(key: K, cb?: (error: DOMException | Error | null) => void, cancellation?: Cancellation): void {
     void this.ensureAliveness();
-    void this.schema.access.fetch(key);
     return this.schema.data.fetch(key, cb, cancellation);
   }
   public has(key: K): boolean {

@@ -57,12 +57,13 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
         ? tx
             .objectStore(this.name)
             .index(this.index)
-            .getKey(key)
+            .get(key)
         : tx
             .objectStore(this.name)
-            .getKey(key);
-      void req.addEventListener('success', () =>
-        void cb?.(req.error));
+            .get(key);
+      void req.addEventListener('success', () => (
+        this.cache.set(key, req.result),
+        void cb?.(req.error)));
       void tx.addEventListener('complete', () =>
         void cancellation?.close());
       void tx.addEventListener('error', () => (
