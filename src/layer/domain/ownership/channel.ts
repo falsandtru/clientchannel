@@ -61,7 +61,7 @@ export class Ownership<K extends string> {
         case oldPriority < 0:
           assert(newPriority >= 0);
           // Update the foreign ownership.
-          // Last commit wins.
+          // Last statement wins.
           return void this.setPriority(key, -newPriority);
         default:
           assert(false);
@@ -109,8 +109,7 @@ export class Ownership<K extends string> {
     age = Math.min(Math.max(age, 1 * 1000), 60 * 1000);
     wait = wait === void 0 ? wait : Math.max(wait, 0);
     const priority = Ownership.genPriority(age) + Ownership.mergin;
-    if (priority <= this.getPriority(key)) return this.has(key);
-    void this.setPriority(key, priority);
+    priority > this.getPriority(key) && void this.setPriority(key, priority);
     assert(this.getPriority(key) > 0);
     return wait === void 0
       ? this.has(key)
