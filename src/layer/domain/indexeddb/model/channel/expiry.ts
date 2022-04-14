@@ -1,4 +1,4 @@
-import { Infinity, Math, Date, setTimeout } from 'spica/global';
+import { Infinity, Math, Date, setTimeout, setInterval, clearInterval } from 'spica/global';
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
 import { ChannelStore } from '../channel';
@@ -57,29 +57,35 @@ export class ExpiryStore<K extends string> {
     let delay = 10 * 1000;
     let schedule = Infinity;
     return (timeout: number): void => {
+      timeout = Math.min(timeout, 60 * 60 * 1000);
       if (Date.now() + timeout >= schedule) return;
       schedule = Date.now() + timeout;
       void clearTimeout(timer);
       timer = setTimeout(() => {
         if (!this.cancellation.alive) return;
         if (schedule === 0) return;
-        if (!this.ownership.take('store', 10 * 1000)) return this.schedule(delay *= 2);
-        delay = Math.max(Math.floor(delay / 1.5), delay);
+        if (!this.ownership.take('store', delay)) return this.schedule(delay *= 2);
         const since = Date.now();
         let count = 0;
         let retry = false;
         schedule = 0;
+        let timer = setInterval(() => {
+          if (this.ownership.extend('store', delay)) return;
+          clearInterval(timer);
+          timer = 0 as any;
+        }, delay / 2);
         return void this.store.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', (cursor, error) => {
+          timer && clearInterval(timer);
           schedule = Infinity;
           if (!this.cancellation.alive) return;
           if (error) return void this.schedule(delay * 10);
           if (!cursor) return retry && void this.schedule(delay *= 2);
           const { key, expiry }: ExpiryRecord<K> = cursor.value;
           if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
-          if (!this.ownership.extend('store', 10 * 1000)) return void this.schedule(delay *= 2);
+          if (!this.ownership.extend('store', delay)) return void this.schedule(delay *= 2);
           if (++count > 100 || Date.now() > since + 1 * 1000) return void this.schedule(5 * 1000);
           schedule = 0;
-          if (!this.ownership.take(`key:${key}`, 10 * 1000)) return retry = true, void cursor.continue();
+          if (!this.ownership.take(`key:${key}`, delay)) return retry = true, void cursor.continue();
           this.chan.has(key) || this.chan.meta(key).date === 0
             ? void this.chan.delete(key)
             : void this.chan.clean(key);
