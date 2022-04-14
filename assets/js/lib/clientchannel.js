@@ -1,4 +1,4 @@
-/*! clientchannel v0.31.6 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.31.7 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -3077,8 +3077,8 @@ require = function () {
                         ids: new global_1.Map(),
                         dates: new global_1.Map(),
                         update(event) {
-                            void this.ids.set(event.key, (0, identifier_1.makeEventId)(global_1.Math.max(event.id, this.ids.get(event.key) || 0)));
-                            void this.dates.set(event.key, global_1.Math.max(event.date, this.dates.get(event.key) || 0));
+                            void this.ids.set(event.key, (0, identifier_1.makeEventId)((0, alias_1.max)(event.id, this.ids.get(event.key) || 0)));
+                            void this.dates.set(event.key, (0, alias_1.max)(event.date, this.dates.get(event.key) || 0));
                         }
                     };
                     void this.events_.memory.monitor([], event => {
@@ -3705,7 +3705,7 @@ require = function () {
                 constructor(name, debug) {
                     this.name = name;
                     this.debug = debug;
-                    this.channel = new BroadcastChannel(this.name);
+                    this.channel = new BroadcastChannel(`clientchannel::${ this.name }`);
                     this.listeners = new Set();
                     this.alive = true;
                     if (cache.has(name))
@@ -4256,6 +4256,7 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.ExpiryStore = void 0;
             const global_1 = _dereq_('spica/global');
+            const alias_1 = _dereq_('spica/alias');
             const store_1 = _dereq_('../../../../data/kvs/store');
             const name = 'expiry';
             class ExpiryStore {
@@ -4271,6 +4272,7 @@ require = function () {
                         let delay = 10 * 1000;
                         let schedule = global_1.Infinity;
                         return timeout => {
+                            timeout = (0, alias_1.min)(timeout, 60 * 60 * 1000);
                             if (global_1.Date.now() + timeout >= schedule)
                                 return;
                             schedule = global_1.Date.now() + timeout;
@@ -4280,14 +4282,20 @@ require = function () {
                                     return;
                                 if (schedule === 0)
                                     return;
-                                if (!this.ownership.take('store', 10 * 1000))
+                                if (!this.ownership.take('store', delay))
                                     return this.schedule(delay *= 2);
-                                delay = global_1.Math.max(global_1.Math.floor(delay / 1.5), delay);
                                 const since = global_1.Date.now();
                                 let count = 0;
                                 let retry = false;
                                 schedule = 0;
+                                let timer = (0, global_1.setInterval)(() => {
+                                    if (this.ownership.extend('store', delay))
+                                        return;
+                                    (0, global_1.clearInterval)(timer);
+                                    timer = 0;
+                                }, delay / 2);
                                 return void this.store.cursor(null, 'expiry', 'next', 'readonly', (cursor, error) => {
+                                    timer && (0, global_1.clearInterval)(timer);
                                     schedule = global_1.Infinity;
                                     if (!this.cancellation.alive)
                                         return;
@@ -4298,12 +4306,12 @@ require = function () {
                                     const {key, expiry} = cursor.value;
                                     if (expiry > global_1.Date.now())
                                         return void this.schedule(expiry - global_1.Date.now());
-                                    if (!this.ownership.extend('store', 10 * 1000))
+                                    if (!this.ownership.extend('store', delay))
                                         return void this.schedule(delay *= 2);
                                     if (++count > 100 || global_1.Date.now() > since + 1 * 1000)
                                         return void this.schedule(5 * 1000);
                                     schedule = 0;
-                                    if (!this.ownership.take(`key:${ key }`, 10 * 1000))
+                                    if (!this.ownership.take(`key:${ key }`, delay))
                                         return retry = true, void cursor.continue();
                                     this.chan.has(key) || this.chan.meta(key).date === 0 ? void this.chan.delete(key) : void this.chan.clean(key);
                                     return void cursor.continue();
@@ -4359,6 +4367,7 @@ require = function () {
         },
         {
             '../../../../data/kvs/store': 45,
+            'spica/alias': 4,
             'spica/global': 16
         }
     ],
@@ -4458,6 +4467,7 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.Ownership = void 0;
             const global_1 = _dereq_('spica/global');
+            const alias_1 = _dereq_('spica/alias');
             const channel_1 = _dereq_('../broadcast/channel');
             const cancellation_1 = _dereq_('spica/cancellation');
             class OwnershipMessage extends channel_1.ChannelMessage {
@@ -4527,19 +4537,17 @@ require = function () {
                 }
                 isTakable(key) {
                     const priority = this.getPriority(key);
-                    return priority >= 0 || Ownership.genPriority(0) > global_1.Math.abs(priority);
+                    return priority >= 0 || Ownership.genPriority(0) > (0, alias_1.abs)(priority);
                 }
                 take(key, age, wait) {
                     if (!this.alive)
                         throw new Error(`ClientChannel: Ownership channel "${ this.channel.name }" is already closed.`);
                     if (!this.isTakable(key))
                         return wait === void 0 ? false : global_1.Promise.resolve(false);
-                    age = global_1.Math.min(global_1.Math.max(age, 1 * 1000), 60 * 1000);
-                    wait = wait === void 0 ? wait : global_1.Math.max(wait, 0);
+                    age = (0, alias_1.min)((0, alias_1.max)(age, 1 * 1000), 60 * 1000);
+                    wait = wait === void 0 ? wait : (0, alias_1.min)(wait, 0);
                     const priority = Ownership.genPriority(age) + Ownership.mergin;
-                    if (priority <= this.getPriority(key))
-                        return this.has(key);
-                    void this.setPriority(key, priority);
+                    priority > this.getPriority(key) && void this.setPriority(key, priority);
                     return wait === void 0 ? this.has(key) : new global_1.Promise(resolve => void (0, global_1.setTimeout)(() => void resolve(this.extend(key, age)), wait));
                 }
                 extend(key, age) {
@@ -4552,7 +4560,7 @@ require = function () {
                         throw new Error(`ClientChannel: Ownership channel "${ this.channel.name }" is already closed.`);
                     if (!this.has(key))
                         return;
-                    void this.setPriority(key, -global_1.Math.abs(this.getPriority(key)));
+                    void this.setPriority(key, -(0, alias_1.abs)(this.getPriority(key)));
                     void this.castPriority(key);
                     void this.store.delete(key);
                 }
@@ -4566,6 +4574,7 @@ require = function () {
         },
         {
             '../broadcast/channel': 46,
+            'spica/alias': 4,
             'spica/cancellation': 8,
             'spica/global': 16
         }
