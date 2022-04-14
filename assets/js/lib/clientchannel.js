@@ -1,4 +1,4 @@
-/*! clientchannel v0.31.5 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.31.6 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -3073,16 +3073,14 @@ require = function () {
                     };
                     this.counter = 0;
                     this.snapshotCycle = 9;
-                    const states = new class {
-                        constructor() {
-                            this.ids = new global_1.Map();
-                            this.dates = new global_1.Map();
-                        }
+                    const states = {
+                        ids: new global_1.Map(),
+                        dates: new global_1.Map(),
                         update(event) {
                             void this.ids.set(event.key, (0, identifier_1.makeEventId)(global_1.Math.max(event.id, this.ids.get(event.key) || 0)));
                             void this.dates.set(event.key, global_1.Math.max(event.date, this.dates.get(event.key) || 0));
                         }
-                    }();
+                    };
                     void this.events_.memory.monitor([], event => {
                         if (event.date <= states.dates.get(event.key) && event.id <= states.ids.get(event.key))
                             return;
@@ -3316,15 +3314,11 @@ require = function () {
                         if (!this.alive)
                             return;
                         tx = this.txrw = tx || this.txrw || db.transaction(this.name, 'readwrite');
-                        const active = () => this.memory.refs([
+                        const active = () => this.memory.reflect([
                             event.key,
                             event.attr,
                             0
-                        ]).some(({listener}) => listener(void 0, [
-                            event.key,
-                            event.attr,
-                            0
-                        ]) === event);
+                        ]).includes(event);
                         if (!active())
                             return;
                         const req = tx.objectStore(this.name).add(record(event));
@@ -3346,11 +3340,7 @@ require = function () {
                                 savedEvent.attr,
                                 savedEvent.id
                             ], savedEvent);
-                            const events = this.memory.refs([savedEvent.key]).map(({listener}) => listener(void 0, [
-                                savedEvent.key,
-                                savedEvent.attr,
-                                savedEvent.id
-                            ])).reduce((es, e) => e instanceof event_1.StoredEventRecord ? (0, concat_1.concat)(es, [e]) : es, []);
+                            const events = this.memory.reflect([savedEvent.key]).reduce((es, e) => e instanceof event_1.StoredEventRecord ? (0, concat_1.concat)(es, [e]) : es, []);
                             if (events.length >= this.snapshotCycle || (0, value_1.hasBinary)(event.value)) {
                                 void this.snapshot(savedEvent.key);
                             }
@@ -3429,6 +3419,7 @@ require = function () {
                                     event.id
                                 ]);
                             }
+                            clear || (clear = events.length === 0);
                             clear && this.meta(key).date === 0 && void this.events.clear.emit([key]);
                             return;
                         } else {
@@ -3946,6 +3937,7 @@ require = function () {
                                 timer = 0;
                                 if (!this.ownership.take('store', 10 * 1000))
                                     return;
+                                const since = Date.now();
                                 let count = 0;
                                 for (const key of queue) {
                                     if (!this.alive)
@@ -3954,7 +3946,7 @@ require = function () {
                                         return timer = (0, global_1.setTimeout)(schedule, 10 * 1000);
                                     if (!this.ownership.take(`key:${ key }`, 10 * 1000))
                                         return timer = (0, global_1.setTimeout)(schedule, 10 * 1000);
-                                    if (++count > 100)
+                                    if (++count > 100 || Date.now() > since + 1 * 1000)
                                         return timer = (0, global_1.setTimeout)(schedule, 5 * 1000);
                                     void queue.delete(key);
                                     this.has(key) || this.meta(key).date === 0 ? void this.delete(key) : void this.clean(key);
@@ -4291,6 +4283,7 @@ require = function () {
                                 if (!this.ownership.take('store', 10 * 1000))
                                     return this.schedule(delay *= 2);
                                 delay = global_1.Math.max(global_1.Math.floor(delay / 1.5), delay);
+                                const since = global_1.Date.now();
                                 let count = 0;
                                 let retry = false;
                                 schedule = 0;
@@ -4307,7 +4300,7 @@ require = function () {
                                         return void this.schedule(expiry - global_1.Date.now());
                                     if (!this.ownership.extend('store', 10 * 1000))
                                         return void this.schedule(delay *= 2);
-                                    if (++count > 100)
+                                    if (++count > 100 || global_1.Date.now() > since + 1 * 1000)
                                         return void this.schedule(5 * 1000);
                                     schedule = 0;
                                     if (!this.ownership.take(`key:${ key }`, 10 * 1000))
