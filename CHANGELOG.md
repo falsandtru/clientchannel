@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.31.7
+
+- Refactoring.
+
 ## 0.31.6
 
 - Refactoring.
