@@ -25,7 +25,7 @@ function handleInitialState(state: InitialState): void {
     openRequest.onupgradeneeded = () =>
       void handleUpgradeState(new UpgradeState(state, openRequest))
     openRequest.onsuccess = () =>
-      void handleSuccessState(new SuccessState(state, openRequest.result as IDBDatabase));
+      void handleSuccessState(new SuccessState(state, openRequest.result));
     openRequest.onerror = event =>
       void handleErrorState(new ErrorState(state, openRequest.error!, event));
   }
@@ -42,7 +42,7 @@ function handleBlockedState(state: BlockState): void {
   session.onupgradeneeded = () =>
     void handleUpgradeState(new UpgradeState(state, session));
   session.onsuccess = () =>
-    void handleSuccessState(new SuccessState(state, session.result as IDBDatabase));
+    void handleSuccessState(new SuccessState(state, session.result));
   session.onerror = event =>
     void handleErrorState(new ErrorState(state, session.error!, event));
   void idbEventStream_.emit([database, IDBEventType.block], new IDBEvent(database, IDBEventType.block));

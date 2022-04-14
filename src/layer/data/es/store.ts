@@ -346,7 +346,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         .openCursor(key, 'prev');
       const events: StoredEventRecord<K, V>[] = [];
       void req.addEventListener('success', (): void => {
-        const cursor: IDBCursorWithValue | null = req.result;
+        const cursor = req.result;
         if (cursor) {
           try {
             const event = new LoadedEventRecord<K, V>(cursor.value);
@@ -447,7 +447,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           .objectStore(this.name)
           .openCursor(query, direction);
       void req.addEventListener('success', () => {
-        const cursor: IDBCursorWithValue | null = req.result;
+        const cursor = req.result;
         if (!cursor) return;
         void cb(cursor, req.error);
       });

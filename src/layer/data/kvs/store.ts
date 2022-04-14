@@ -53,7 +53,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
       if (!this.alive) return void cb?.(new Error('Session is already closed.'));
       if (cancellation?.cancelled) return void cb?.(new Error('Request is cancelled.'));
       const tx = db.transaction(this.name, 'readonly');
-      const req = this.index
+      const req: IDBRequest<V> = this.index
         ? tx
             .objectStore(this.name)
             .index(this.index)
@@ -139,7 +139,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
           .objectStore(this.name)
           .openCursor(query, direction);
       void req.addEventListener('success', () => {
-        const cursor: IDBCursorWithValue | null = req.result;
+        const cursor = req.result;
         if (!cursor) return;
         try {
           void this.cache.set(cursor.primaryKey as K, { ...cursor.value });
