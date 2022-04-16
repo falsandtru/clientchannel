@@ -1,4 +1,4 @@
-/*! clientchannel v0.31.7 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.31.8 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -3162,7 +3162,7 @@ require = function () {
                     void tx.addEventListener('abort', clear);
                     void (0, clock_1.tick)(clear);
                 }
-                fetch(key, cb, cancellation) {
+                load(key, cb, cancellation) {
                     if (!this.alive)
                         return void (cb === null || cb === void 0 ? void 0 : cb(new Error('Session is already closed.')));
                     const events = [];
@@ -3174,6 +3174,7 @@ require = function () {
                         const tx = db.transaction(this.name, 'readonly');
                         const req = tx.objectStore(this.name).index(EventStoreSchema.key).openCursor(key, 'prev');
                         const proc = (cursor, error) => {
+                            var _a, _b;
                             if (error)
                                 return;
                             if (cursor) {
@@ -3219,7 +3220,7 @@ require = function () {
                                 } catch (reason) {
                                     void (0, exception_1.causeAsyncException)(reason);
                                 }
-                                if (events.length >= this.snapshotCycle) {
+                                if (events.length >= this.snapshotCycle || ((_a = events[events.length - 1]) === null || _a === void 0 ? void 0 : _a.type) !== EventStore.EventType.snapshot && ((_b = events[events.length - 1]) === null || _b === void 0 ? void 0 : _b.date) < Date.now() - 3 * 24 * 3600 * 1000) {
                                     void this.snapshot(key);
                                 }
                                 return;
@@ -3588,7 +3589,7 @@ require = function () {
                     this.tx.rw = tx;
                     void (0, clock_1.tick)(() => this.tx.rw = void 0);
                 }
-                fetch(key, cb, cancellation) {
+                load(key, cb, cancellation) {
                     if (!this.alive)
                         return void (cb === null || cb === void 0 ? void 0 : cb(new Error('Session is already closed.')));
                     return void this.listen(db => {
@@ -3597,8 +3598,8 @@ require = function () {
                         if (cancellation === null || cancellation === void 0 ? void 0 : cancellation.cancelled)
                             return void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request is cancelled.')));
                         const tx = db.transaction(this.name, 'readonly');
-                        const req = this.index ? tx.objectStore(this.name).index(this.index).getKey(key) : tx.objectStore(this.name).getKey(key);
-                        void req.addEventListener('success', () => void (cb === null || cb === void 0 ? void 0 : cb(req.error)));
+                        const req = this.index ? tx.objectStore(this.name).index(this.index).get(key) : tx.objectStore(this.name).get(key);
+                        void req.addEventListener('success', () => (this.cache.set(key, req.result), void (cb === null || cb === void 0 ? void 0 : cb(req.error))));
                         void tx.addEventListener('complete', () => void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()));
                         void tx.addEventListener('error', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error))));
                         void tx.addEventListener('abort', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error))));
@@ -3994,7 +3995,7 @@ require = function () {
                     void this.cancellation.register(() => void this.schema.close());
                     void this.cancellation.register(() => void this.ownership.close());
                     void this.cancellation.register(() => void this.channel.close());
-                    void this.cancellation.register(this.channel.listen('save', ({key}) => void this.fetch(key)));
+                    void this.cancellation.register(this.channel.listen('save', ({key}) => void this.load(key)));
                     void this.events_.save.monitor([], ({key}) => void this.channel.post(new SaveMessage(key)));
                     void this.events_.clear.monitor([], (_, [key]) => {
                         if (key === void 0)
@@ -4019,12 +4020,11 @@ require = function () {
                     void this.ensureAliveness();
                     const cancellation = timeout === void 0 ? void 0 : new cancellation_1.Cancellation();
                     cancellation && void (0, global_1.setTimeout)(cancellation.cancel, timeout);
-                    return global_1.Promise.resolve(promise_1.AtomicPromise.allSettled(keys.map(key => new global_1.Promise((resolve, reject) => void this.fetch(key, error => error ? void reject(error) : void resolve(key), cancellation)))));
+                    return global_1.Promise.resolve(promise_1.AtomicPromise.allSettled(keys.map(key => new global_1.Promise((resolve, reject) => void this.load(key, error => error ? void reject(error) : void resolve(key), cancellation)))));
                 }
-                fetch(key, cb, cancellation) {
+                load(key, cb, cancellation) {
                     void this.ensureAliveness();
-                    void this.schema.access.fetch(key);
-                    return this.schema.data.fetch(key, cb, cancellation);
+                    return this.schema.data.load(key, cb, cancellation);
                 }
                 has(key) {
                     void this.ensureAliveness();
@@ -4196,8 +4196,8 @@ require = function () {
                         void cursor.continue();
                     })));
                 }
-                fetch(key) {
-                    return this.store.fetch(key);
+                load(key) {
+                    return this.store.load(key);
                 }
                 get(key) {
                     return this.store.has(key) ? this.store.get(key).date : 0;
@@ -4429,7 +4429,7 @@ require = function () {
                 link(key, age) {
                     void this.ensureAliveness();
                     void this.expire(key, age);
-                    void this.fetch(key, error => !error && this.alive && this.links.has(key) && void this.log(key));
+                    void this.load(key, error => !error && this.alive && this.links.has(key) && void this.log(key));
                     return this.links.has(key) ? this.links.get(key) : this.links.set(key, (0, api_1.build)((0, alias_1.ObjectDefineProperties)(this.sources.set(key, this.get(key)).get(key), {
                         [api_1.Schema.meta]: { get: () => this.meta(key) },
                         [api_1.Schema.id]: { get: () => this.meta(key).id },
