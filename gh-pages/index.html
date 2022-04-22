@@ -106,7 +106,7 @@
     },
     debug: true
   });
-  for (let i = 0; i < 50; ++i) {
+  for (let i = 0; i < 100; ++i) {
     var link = chan.link('v1/' + `${Math.random() * 1000 | 0}`.padStart(3, '0'));
     link.data = 0;
   }
