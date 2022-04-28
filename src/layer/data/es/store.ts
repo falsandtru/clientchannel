@@ -7,7 +7,7 @@ import { concat } from 'spica/concat';
 import { causeAsyncException } from 'spica/exception';
 import { Listen, Config, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { EventId, makeEventId } from './identifier';
-import { EventRecordType, UnstoredEventRecord, StoredEventRecord, LoadedEventRecord, SavedEventRecord, EventRecordValue, isValidPropertyName } from './event';
+import { EventRecordType, UnstoredEventRecord, StoredEventRecord, LoadedEventRecord, SavedEventRecord, EventRecordValue } from './event';
 import { hasBinary } from '../database/value';
 
 namespace EventStoreSchema {
@@ -50,10 +50,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   }
   constructor(
     protected readonly name: string,
-    protected readonly attrs: string[],
     private readonly listen: Listen,
   ) {
-    assert(this.attrs.every(isValidPropertyName));
     const states = {
       ids: new Map<K, EventId>(),
       dates: new Map<K, number>(),
@@ -244,7 +242,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       .sort();
   }
   public has(key: K): boolean {
-    return compose(key, this.attrs, this.memory.reflect([key])).type !== EventStore.EventType.delete;
+    return compose(key, this.memory.reflect([key])).type !== EventStore.EventType.delete;
   }
   public meta(key: K): MetaData<K> {
     const events = this.memory.reflect([key]);
@@ -259,7 +257,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     };
   }
   public get(key: K): Partial<V> {
-    return ObjectAssign(ObjectCreate(null), compose(key, this.attrs, this.memory.reflect([key])).value);
+    return ObjectAssign(ObjectCreate(null), compose(key, this.memory.reflect([key])).value);
   }
   private counter = 0;
   public add(event: UnstoredEventRecord<K, V>, tx?: IDBTransaction): void {
@@ -359,7 +357,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         }
         if (!cursor) {
           if (events.length === 0) return;
-          const composedEvent = compose(key, this.attrs, events);
+          const composedEvent = compose(key, events);
           if (composedEvent instanceof StoredEventRecord) return;
           switch (composedEvent.type) {
             case EventStore.EventType.snapshot:
@@ -505,10 +503,8 @@ export function record<K extends string, V extends EventRecordValue>(event: Unst
 // Input order must be asc.
 export function compose<K extends string, V extends EventStore.Value>(
   key: K,
-  attrs: string[],
   events: Array<UnstoredEventRecord<K, V> | StoredEventRecord<K, V>>,
 ): UnstoredEventRecord<K, V> | StoredEventRecord<K, V> {
-  assert(attrs.every(isValidPropertyName));
   assert(events.every(event => event.key === key));
   assert(events.every(event => event instanceof UnstoredEventRecord || event instanceof StoredEventRecord));
   type E = UnstoredEventRecord<K, V> | StoredEventRecord<K, V>;

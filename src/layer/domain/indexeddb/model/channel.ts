@@ -30,7 +30,6 @@ const cache = new Set<string>();
 export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   constructor(
     public readonly name: string,
-    attrs: string[],
     destroy: (reason: unknown, event?: Event) => boolean,
     private readonly age: number,
     private readonly capacity: number,
@@ -41,7 +40,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     void this.cancellation.register(() =>
       void cache.delete(name));
 
-    this.schema = new Schema<K, V>(this, this.ownership, attrs, open(name, {
+    this.schema = new Schema<K, V>(this, this.ownership, this.capacity, open(name, {
       make(db) {
         return DataStore.configure().make(db)
             && AccessStore.configure().make(db)
@@ -235,7 +234,7 @@ class Schema<K extends string, V extends StoreChannelObject<K>> {
   constructor(
     private readonly store: ChannelStore<K, V>,
     private readonly ownership: Ownership<string>,
-    private readonly attrs: string[],
+    private readonly capacity: number,
     private readonly listen: Listen,
   ) {
     void this.build();
@@ -245,8 +244,8 @@ class Schema<K extends string, V extends StoreChannelObject<K>> {
     assert(this.cancellation.alive);
     const keys = this.data ? this.data.keys() : [];
 
-    this.data = new DataStore<K, V>(this.attrs, this.listen);
-    this.access = new AccessStore<K>(this.listen);
+    this.data = new DataStore<K, V>(this.listen);
+    this.access = new AccessStore<K>(this.store, this.cancellation, this.ownership, this.listen, this.capacity);
     this.expire = new ExpiryStore<K>(this.store, this.cancellation, this.ownership, this.listen);
 
     void this.cancellation.register(() => this.data.close());

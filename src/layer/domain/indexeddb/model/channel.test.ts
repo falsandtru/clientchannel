@@ -33,13 +33,13 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
     }
 
     it('resource', () => {
-      const chan = new ChannelStore('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity, Infinity);
-      assert.throws(() => new ChannelStore('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity, Infinity));
+      const chan = new ChannelStore('test', () => true, Infinity, Infinity);
+      assert.throws(() => new ChannelStore('test', () => true, Infinity, Infinity));
       chan.destroy();
     });
 
     it('recent', done => {
-      const chan = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity, Infinity);
+      const chan = new ChannelStore<string, CustomSocketValue>('test', () => true, Infinity, Infinity);
 
       chan.recent().then(keys => {
         assert.deepStrictEqual(keys, []);
@@ -72,7 +72,7 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
     });
 
     it('clean', done => {
-      const chan = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity, Infinity);
+      const chan = new ChannelStore<string, CustomSocketValue>('test', () => true, Infinity, Infinity);
 
       chan.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
       chan.recent().then(keys => {
@@ -105,7 +105,7 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
     });
 
     it('age', done => {
-      const chan = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity, Infinity);
+      const chan = new ChannelStore<string, CustomSocketValue>('test', () => true, Infinity, Infinity);
 
       chan.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
       chan.expire('b', 1000);
@@ -126,7 +126,7 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
     });
 
     it('size', done => {
-      const chan = new ChannelStore<string, CustomSocketValue>('test', Object.keys(new CustomSocketValue(0)), () => true, Infinity, 1);
+      const chan = new ChannelStore<string, CustomSocketValue>('test', () => true, Infinity, 1);
 
       chan.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
       assert(chan.has('a') === true);

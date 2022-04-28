@@ -18,7 +18,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
       debug = false,
     }: Partial<StoreChannelConfig<K, V>> & { capacity?: number; debug?: boolean; } = {},
   ) {
-    super(name, ObjectKeys(factory()).filter(isValidPropertyName).filter(isValidPropertyValue(factory())), destroy, age, capacity, debug);
+    super(name, destroy, age, capacity, debug);
 
     const attrs = <(keyof V)[]>ObjectKeys(factory())
       .filter(isValidPropertyName)

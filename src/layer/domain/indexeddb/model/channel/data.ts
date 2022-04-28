@@ -8,10 +8,9 @@ export class DataStore<K extends string, V extends DataStore.Value> extends Even
     return EventStore.configure(name);
   }
   constructor(
-    attrs: string[],
     listen: Listen,
   ) {
-    super(name, attrs, listen);
+    super(name, listen);
   }
 }
 export namespace DataStore {
