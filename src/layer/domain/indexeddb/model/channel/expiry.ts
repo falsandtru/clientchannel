@@ -65,7 +65,7 @@ export class ExpiryStore<K extends string> {
       timer = setTimeout(() => {
         if (!this.cancellation.alive) return;
         if (schedule === 0) return;
-        if (!this.ownership.take('store', delay)) return this.schedule(delay *= 2);
+        if (!this.ownership.take('store', delay)) return void this.schedule(delay *= 2);
         const since = Date.now();
         let count = 0;
         let retry = false;
