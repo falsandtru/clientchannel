@@ -315,7 +315,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
               ? concat(es, [e])
               : es
           , []);
-        if (events.length >= this.snapshotCycle || hasBinary(event.value)) {
+        if (events.length >= this.snapshotCycle ||
+            events.filter(event => hasBinary(event.value)).length >= 3) {
           void this.snapshot(savedEvent.key);
         }
       });

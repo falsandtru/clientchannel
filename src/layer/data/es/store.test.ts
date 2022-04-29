@@ -383,12 +383,16 @@ describe('Unit: layers/data/es/store', function () {
 
       es.add(new UnstoredEventRecord('a', new Value(new ArrayBuffer(0))));
       await new Promise(resolve => es.events.save.once(['a', 'value', 'put'], resolve));
+      es.add(new UnstoredEventRecord('a', new Value(new ArrayBuffer(0))));
+      await new Promise(resolve => es.events.save.once(['a', 'value', 'put'], resolve));
+      es.add(new UnstoredEventRecord('a', new Value(new ArrayBuffer(0))));
+      await new Promise(resolve => es.events.save.once(['a', 'value', 'put'], resolve));
       let ev: EventStore.Event<string, string>;
       ev = await new Promise(resolve => es.events.save.once(['a', '', 'snapshot'], resolve));
       assert(ev.key === 'a');
       assert(ev.prop === '');
       assert(ev.type === 'snapshot');
-      assert(es.meta('a').id === 2);
+      assert(es.meta('a').id === 4);
       assert(es.get('a').value instanceof ArrayBuffer);
     });
 
