@@ -38,7 +38,7 @@ describe('Integration: Package', function () {
       interface Value extends StorageChannelObject {
       }
       class Value {
-        get event() {
+        event() {
           return this[ChannelObject.event];
         }
         version = 0;
@@ -49,7 +49,7 @@ describe('Integration: Package', function () {
       });
       const link = chan.link();
       const VERSION = 1;
-      link.event.on(['recv', 'version'], ({ newValue }) => {
+      link.event().on(['recv', 'version'], ({ newValue }) => {
         switch (true) {
           case newValue === VERSION:
             return;

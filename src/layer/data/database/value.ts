@@ -1,5 +1,9 @@
-import { ObjectKeys } from 'spica/alias';
+import { ObjectValues } from 'spica/alias';
 import { isPrimitive } from 'spica/type';
+
+export type Prop<O, K extends keyof O = keyof O> = K extends PropName<keyof O & string> ? [PropValue<O[K]>] extends [never] ? never : K : never;
+type PropName<K> = K extends string ? K extends '' | `${'_' | '$'}${string}` | `${string}${'_' | '$'}` ? never : K : never;
+type PropValue<V> = V extends bigint | symbol | ((..._: unknown[]) => void) ? never : V;
 
 export function isStorable(value: IDBValidValue): boolean {
   switch (typeof value) {
@@ -12,8 +16,7 @@ export function isStorable(value: IDBValidValue): boolean {
       try {
         return value === null
             || isBinary(value)
-            || ObjectKeys(value)
-                 .every(key => isStorable(value[key]));
+            || ObjectValues(value).every(value => isStorable(value));
       }
       catch {
         return false;
@@ -26,8 +29,7 @@ export function isStorable(value: IDBValidValue): boolean {
 export function hasBinary(value: IDBValidValue): boolean {
   return !isPrimitive(value)
     ? isBinary(value) ||
-      ObjectKeys(value)
-        .some(key => hasBinary(value[key]))
+      ObjectValues(value).some(value => hasBinary(value))
     : false;
 }
 

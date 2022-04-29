@@ -3,7 +3,7 @@ import { ObjectKeys } from 'spica/alias';
 import { StoreChannelEventType } from '../../../../';
 import { clone } from 'spica/assign';
 import { EventId, makeEventId } from './identifier';
-import { isStorable } from '../database/value';
+import { Prop, isStorable } from '../database/value';
 
 export const EventRecordType = {
   put: 'put',
@@ -31,7 +31,7 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
     if (typeof this.value !== 'object' || !this.value) throw new TypeError(`ClientChannel: EventRecord: Invalid event value: ${JSON.stringify(this.value)}`);
     if (typeof this.date !== 'number' || this.date >= 0 === false || !Number.isFinite(this.date)) throw new TypeError(`ClientChannel: EventRecord: Invalid event date: ${this.date}`);
     this.attr = this.type === EventRecordType.put
-      ? ObjectKeys(value).filter(isValidPropertyName)[0] as Extract<keyof V, string>
+      ? ObjectKeys(value).filter(isValidPropertyName)[0] as Prop<V>
       : '';
     if (typeof this.attr !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event attr: ${this.key}`);
 
@@ -39,7 +39,7 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
       case EventRecordType.put:
         if (!isValidPropertyName(this.attr)) throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
         assert(this.attr !== '');
-        this.value = value = new EventRecordValue({ [this.attr]: value[this.attr as keyof V] });
+        this.value = value = new EventRecordValue({ [this.attr]: value[this.attr as Prop<V>] });
         assert(Object.freeze(this.value));
         assert(Object.freeze(this));
         return;
@@ -62,7 +62,7 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
         throw new TypeError(`ClientChannel: EventRecord: Invalid event type: ${type}`);
     }
   }
-  public readonly attr: Extract<keyof V | '', string>;
+  public readonly attr: Prop<V> | '';
 }
 export class UnstoredEventRecord<K extends string, V extends EventRecordValue> extends EventRecord<K, V> {
   private readonly EVENT_RECORD!: this;

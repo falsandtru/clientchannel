@@ -1,5 +1,6 @@
 import { ObjectDefineProperties, ObjectGetOwnPropertyDescriptor, ObjectKeys, ObjectSeal } from 'spica/alias';
 import { ChannelObject } from '../../../../..';
+import { Prop } from '../../../data/database/value';
 import { isValidPropertyName, isValidPropertyValue } from '../../../data/es/event';
 
 export {
@@ -18,14 +19,14 @@ export namespace Schema {
 export function build<V extends object>(
   source: V,
   factory: () => V,
-  set?: <K extends Extract<keyof V, string>>(prop: K, newVal: V[K], oldVal: V[K]) => void,
-  get?: <K extends Extract<keyof V, string>>(prop: K, val: V[K]) => void,
+  set?: <K extends Prop<V>>(prop: K, newVal: V[K], oldVal: V[K]) => void,
+  get?: <K extends Prop<V>>(prop: K, val: V[K]) => void,
 ): V {
   const dao = factory();
   assert(Object.values(dao).every(prop => !(prop in dao)));
   if (typeof source[Schema.key] !== 'string') throw new TypeError(`ClientChannel: DAO: Invalid key: ${source[Schema.key]}`);
   const descmap: PropertyDescriptorMap = {
-    ...(ObjectKeys(dao) as Extract<keyof typeof dao, string>[])
+    ...(ObjectKeys(dao) as Prop<typeof dao>[])
       .filter(isValidPropertyName)
       .filter(isValidPropertyValue(dao))
       .reduce<PropertyDescriptorMap>((map, prop) => {

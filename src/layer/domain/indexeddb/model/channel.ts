@@ -1,5 +1,6 @@
 import { Infinity, Promise, setTimeout } from 'spica/global';
 import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../';
+import { Prop } from '../../../data/database/value';
 import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
 import { AtomicPromise } from 'spica/promise';
@@ -74,7 +75,8 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
       void this.channel.post(new SaveMessage(key)));
 
     void this.events_.clear.monitor([], (_, [key]) => {
-      if (key === void 0) return;
+      assert(key !== void 0);
+      assert(key = key!);
       assert(this.meta(key).date === 0);
       void this.ownership.take(`key:${key}`, 10 * 1000);
       void this.schema.access.delete(key);
@@ -112,14 +114,14 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     return this.cancellation.alive;
   }
   public readonly events_ = {
-    load: new Observation<[K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
-    save: new Observation<[K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>(),
+    load: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>(),
+    save: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>(),
     clear: new Observation<[K], undefined, void>(),
   } as const;
   public readonly events = {
-    load: new Observation<[K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
-    save: new Observation<[K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
-    loss: new Observation<[K, Extract<keyof V | '', string>, ChannelStore.EventType], ChannelStore.Event<K, V>, void>({ limit: Infinity }),
+    load: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>({ limit: Infinity }),
+    save: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>({ limit: Infinity }),
+    loss: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>({ limit: Infinity }),
   } as const;
   protected ensureAliveness(): void {
     if (!this.alive) throw new Error(`ClientChannel: Store channel "${this.name}" is already closed.`);

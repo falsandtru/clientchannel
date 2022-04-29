@@ -1,4 +1,5 @@
 import { Observer } from 'spica/observer';
+import { Prop } from './src/layer/data/database/value';
 
 export namespace ChannelObject {
   export const meta: unique symbol;
@@ -11,9 +12,9 @@ export namespace ChannelObject {
 export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
   constructor(name: string, config: StoreChannelConfig<K, V>);
   readonly events: {
-    readonly load: Observer<[K, Extract<keyof V | '', string>, StoreChannelEventType], StoreChannelEvent<K, V>, void>;
-    readonly save: Observer<[K, Extract<keyof V | '', string>, StoreChannelEventType], StoreChannelEvent<K, V>, void>;
-    readonly loss: Observer<[K, Extract<keyof V | '', string>, StoreChannelEventType], StoreChannelEvent<K, V>, void>;
+    readonly load: Observer<[K, Prop<V> | '', StoreChannelEventType], StoreChannelEvent<K, Prop<V> | ''>, void>;
+    readonly save: Observer<[K, Prop<V> | '', StoreChannelEventType], StoreChannelEvent<K, Prop<V> | ''>, void>;
+    readonly loss: Observer<[K, Prop<V> | '', StoreChannelEventType], StoreChannelEvent<K, Prop<V> | ''>, void>;
   };
   sync(keys: readonly K[], timeout?: number): Promise<PromiseSettledResult<K>[]>;
   link(key: K, age?: number): V;
@@ -35,18 +36,18 @@ export interface StoreChannelObject<K extends string> {
   readonly [ChannelObject.id]: number;
   readonly [ChannelObject.key]: K;
   readonly [ChannelObject.date]: number;
-  readonly [ChannelObject.event]: Observer<[StorageChannelEventType, Extract<keyof this, string>], StorageChannelEvent<this>, void>;
+  readonly [ChannelObject.event]: Observer<[StorageChannelEventType, Prop<this>], StorageChannelEvent<this>, void>;
 }
 export interface StoreChannelObjectMetaData<K extends string> {
   readonly id: number;
   readonly key: K;
   readonly date: number;
 }
-export interface StoreChannelEvent<K extends string, V> {
+export interface StoreChannelEvent<K extends string, P extends string> {
   readonly type: StoreChannelEventType;
   readonly id: number;
   readonly key: K;
-  readonly attr: Extract<keyof V | '', string>;
+  readonly attr: P;
 }
 export type StoreChannelEventType =
   | StoreChannelEventType.Put
@@ -61,8 +62,8 @@ export namespace StoreChannelEventType {
 export class StorageChannel<V extends StorageChannelObject> {
   constructor(name: string, config: StorageChannelConfig<V>);
   readonly events: {
-    readonly send: Observer<[Extract<keyof V, string>], StorageChannelEvent<V>, void>;
-    readonly recv: Observer<[Extract<keyof V, string>], StorageChannelEvent<V>, void>;
+    readonly send: Observer<[Prop<V>], { [P in Prop<V>]: StorageChannelEvent<V, P>; }[Prop<V>], void>;
+    readonly recv: Observer<[Prop<V>], { [P in Prop<V>]: StorageChannelEvent<V, P>; }[Prop<V>], void>;
   };
   link(): V;
   close(): void;
@@ -73,13 +74,13 @@ export interface StorageChannelConfig<V extends StorageChannelObject> {
   migrate?(link: V): void;
 }
 export interface StorageChannelObject {
-  readonly [ChannelObject.event]: Observer<[StorageChannelEventType, Extract<keyof this, string>], StorageChannelEvent<this>, void>;
+  readonly [ChannelObject.event]: Observer<[StorageChannelEventType, Prop<this>], StorageChannelEvent<this>, void>;
 }
-export interface StorageChannelEvent<V> {
+export interface StorageChannelEvent<V, P extends Prop<V> = Prop<V>> {
   readonly type: StorageChannelEventType;
-  readonly attr: Extract<keyof V, string>;
-  readonly newValue: V[Extract<keyof V, string>];
-  readonly oldValue: V[Extract<keyof V, string>];
+  readonly attr: P;
+  readonly newValue: V[P];
+  readonly oldValue: V[P];
 }
 export type StorageChannelEventType =
   | StorageChannelEventType.Send

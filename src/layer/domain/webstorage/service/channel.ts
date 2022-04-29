@@ -1,5 +1,6 @@
 import { ObjectKeys } from 'spica/alias';
 import { StorageChannel as IStorageChannel, StorageChannelObject, StorageChannelEvent, StorageChannelEventType } from '../../../../../';
+import { Prop } from '../../../data/database/value';
 import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
 import { Schema, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
@@ -22,7 +23,7 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
     const source: V = {
       ...parse<V>(this.storage.getItem(this.name)),
       [Schema.key]: this.name,
-      [Schema.event]: new Observation<[StorageChannelEventType, keyof V], StorageChannel.Event<V>, void>({ limit: Infinity }),
+      [Schema.event]: new Observation<[StorageChannelEventType, Prop<V>], StorageChannel.Event<V>, void>({ limit: Infinity }),
     };
     this.link_ = build<V>(source, factory, (attr, newValue, oldValue) => {
       if (!this.alive) return;
@@ -31,14 +32,14 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
         return acc;
       }, {})));
       const event = new StorageChannel.Event<V>(StorageChannel.EventType.send, attr, newValue, oldValue);
-      void (source[Schema.event] as Observation<[StorageChannelEventType, Extract<keyof V, string>], StorageChannel.Event<V>, void>).emit([event.type, event.attr], event);
       void this.events.send.emit([event.attr], event);
+      void (source[Schema.event] as Observation<[StorageChannelEventType, Prop<V>], StorageChannel.Event<V>, void>).emit([event.type, event.attr], event);
     });
     void migrate?.(this.link_);
     void this.cancellation.register(
       storageEventStream.on([this.mode, this.name], ({ newValue }: StorageEvent): void => {
         const item = parse<V>(newValue);
-        void (ObjectKeys(item) as Extract<keyof V, string>[])
+        void (ObjectKeys(item) as Prop<V>[])
           .filter(isValidPropertyName)
           .filter(isValidPropertyValue(item))
           .forEach(attr => {
@@ -47,9 +48,9 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
             if ([newVal].includes(oldVal)) return;
             source[attr] = newVal;
             void migrate?.(this.link_);
-            const event = new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, source[attr], oldVal);
-            void (source[Schema.event] as Observation<[StorageChannelEventType, Extract<keyof V, string>], StorageChannel.Event<V>, void>).emit([event.type, event.attr], event);
+            const event = new StorageChannel.Event(StorageChannel.EventType.recv, attr, source[attr], oldVal);
             void this.events.recv.emit([event.attr], event);
+            void (source[Schema.event] as Observation<[StorageChannelEventType, Prop<V>], StorageChannel.Event<V>, void>).emit([event.type, event.attr], event);
           });
       }));
     assert(Object.freeze(this));
@@ -60,8 +61,8 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
     return this.cancellation.alive;
   }
   public readonly events = {
-    send: new Observation<[Extract<keyof V, string>], StorageChannel.Event<V>, void>({ limit: Infinity }),
-    recv: new Observation<[Extract<keyof V, string>], StorageChannel.Event<V>, void>({ limit: Infinity }),
+    send: new Observation<[Prop<V>], { [P in Prop<V>]: StorageChannel.Event<V, P>; }[Prop<V>], void>({ limit: Infinity }),
+    recv: new Observation<[Prop<V>], { [P in Prop<V>]: StorageChannel.Event<V, P>; }[Prop<V>], void>({ limit: Infinity }),
   } as const;
   private ensureAliveness(): void {
     if (!this.alive) throw new Error(`ClientChannel: Storage channel "${this.name}" is already closed.`);
@@ -81,12 +82,12 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
   }
 }
 export namespace StorageChannel {
-  export class Event<V> implements StorageChannelEvent<V> {
+  export class Event<V, P extends Prop<V> = Prop<V>> implements StorageChannelEvent<V, P> {
     constructor(
       public readonly type: EventType,
-      public readonly attr: Extract<keyof V, string>,
-      public readonly newValue: V[Extract<keyof V, string>],
-      public readonly oldValue: V[Extract<keyof V, string>],
+      public readonly attr: P,
+      public readonly newValue: V[P],
+      public readonly oldValue: V[P],
     ) {
       assert(typeof type === 'string');
       assert(typeof attr === 'string');

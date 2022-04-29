@@ -71,19 +71,19 @@ export class AccessStore<K extends string> {
         const since = Date.now();
         let count = 0;
         schedule = 0;
+        if (this.chan.lock) return void this.schedule(delay *= 2);
+        schedule = Infinity;
+        this.chan.lock = true;
         let timer = setInterval(() => {
           if (this.ownership.extend('store', delay)) return;
           clearInterval(timer);
           timer = 0 as any;
         }, delay / 2);
-        if (this.chan.lock) return void this.schedule(delay *= 2);
-        schedule = Infinity;
-        this.chan.lock = true;
         const size = await this.store.count(null, AccessStoreSchema.key).catch(() => NaN);
         this.chan.lock = false;
         schedule = 0;
-        if (size >= 0 === false) return void this.schedule(delay *= 2);
-        if (size <= this.capacity) return;
+        if (size >= 0 === false) return void clearInterval(timer) || void this.schedule(delay *= 2);
+        if (size <= this.capacity) return void clearInterval(timer);
         this.chan.lock = true;
         return void this.store.cursor(null, AccessStoreSchema.date, 'next', 'readonly', (cursor, error) => {
           this.chan.lock = false;

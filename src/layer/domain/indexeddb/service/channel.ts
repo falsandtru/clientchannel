@@ -1,6 +1,7 @@
 import { ObjectDefineProperties, ObjectKeys } from 'spica/alias';
 import { StoreChannel as IStoreChannel, StoreChannelConfig, StoreChannelObject } from '../../../../../';
-import { Observation, Observer } from 'spica/observer';
+import { Prop } from '../../../data/database/value';
+import { Observation } from 'spica/observer';
 import { throttle } from 'spica/throttle';
 import { Schema, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { ChannelStore } from '../model/channel';
@@ -20,47 +21,46 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
   ) {
     super(name, destroy, age, capacity, debug);
 
-    const attrs = <(keyof V)[]>ObjectKeys(factory())
+    const attrs = <Prop<V>[]>ObjectKeys(factory())
       .filter(isValidPropertyName)
       .filter(isValidPropertyValue(factory()));
+
+    const update = (key: K, attrs: Prop<V>[]): void => {
+      const source = this.sources.get(key)! as V;
+      const memory = this.get(key)! as V;
+      const link = this.link(key);
+      assert(memory instanceof Object === false);
+      const changes = attrs
+        .filter(attr => attr in memory)
+        .map(attr => {
+          const newVal = memory[attr];
+          const oldVal = source[attr];
+          source[attr] = newVal;
+          return {
+            attr,
+            newVal,
+            oldVal,
+          };
+        })
+        .filter(({ newVal, oldVal }) =>
+          ![newVal].includes(oldVal));
+      if (changes.length === 0) return;
+      void migrate?.(link);
+      for (const { attr, oldVal } of changes) {
+        void (source[Schema.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>)
+          .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, memory[attr], oldVal));
+      }
+    }
 
     void this.events_.load
       .monitor([], ({ key, attr, type }) => {
         if (!this.sources.has(key)) return;
-        const source = this.sources.get(key)!;
-        const memory = this.get(key)!;
-        const link = this.link(key);
         switch (type) {
           case ChannelStore.EventType.put:
-            return void update(attrs.filter(a => a === attr));
+            return void update(key, attrs.filter(a => a === attr));
           case ChannelStore.EventType.delete:
           case ChannelStore.EventType.snapshot:
-            return void update(attrs);
-        }
-        return;
-
-        function update(attrs: (keyof V)[]): void {
-          assert(memory instanceof Object === false);
-          const changes = attrs
-            .filter(attr => attr in memory)
-            .map(attr => {
-              const newVal = memory[attr];
-              const oldVal = source[attr];
-              source[attr] = newVal;
-              return {
-                attr,
-                newVal,
-                oldVal,
-              };
-            })
-            .filter(({ newVal, oldVal }) =>
-              ![newVal].includes(oldVal));
-          if (changes.length === 0) return;
-          void migrate?.(link);
-          for (const { attr, oldVal } of changes) {
-            void cast(source[Schema.event]!)
-              .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr as never, memory[attr as never], oldVal as never));
-          }
+            return void update(key, attrs);
         }
       });
     assert(Object.freeze(this));
@@ -99,17 +99,13 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
               },
             }),
           this.factory,
-          (attr, newValue, oldValue) => {
-            if (!this.alive) return;
-            void this.add(new ChannelStore.Record<K, V>(key, { [attr]: newValue } as unknown as Partial<V>));
-            void cast(this.sources.get(key)![Schema.event]!)
-              .emit([StorageChannel.EventType.send, attr], new StorageChannel.Event<V>(StorageChannel.EventType.send, attr as never, newValue, oldValue));
-          },
-          throttle(100, () => this.alive && this.links.has(key) && void this.log(key))))
+        (attr, newValue, oldValue) => {
+          if (!this.alive) return;
+          void this.add(new ChannelStore.Record<K, V>(key, { [attr]: newValue } as unknown as Partial<V>));
+          void (this.sources.get(key)![Schema.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>)
+            .emit([StorageChannel.EventType.send, attr], new StorageChannel.Event<V>(StorageChannel.EventType.send, attr, newValue, oldValue));
+        },
+        throttle(100, () => this.alive && this.links.has(key) && void this.log(key))))
           .get(key)!;
   }
-}
-
-function cast<V extends Observer<K, D, R>, K extends unknown[], D, R>(o: V): Observation<K, D, R> {
-  return o as any;
 }

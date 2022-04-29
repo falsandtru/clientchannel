@@ -2,7 +2,7 @@ import { isStorable, hasBinary } from './value';
 import { extend } from 'spica/assign';
 
 describe('Unit: layers/data/database/value', () => {
-  describe('isStorableValue', () => {
+  describe('isStorable', () => {
     it('undefined', () => {
       assert(isStorable(undefined as any) === true);
     });
@@ -21,8 +21,9 @@ describe('Unit: layers/data/database/value', () => {
 
     it('object', () => {
       assert(isStorable([]) === true);
-      assert(isStorable({}) === true);
       assert(isStorable(null as any) === true);
+      assert(isStorable({}) === true);
+      assert(isStorable(new Date()) === true);
       const a: any[] = [];
       a.push(a);
       assert(isStorable(a) === false);
@@ -48,9 +49,9 @@ describe('Unit: layers/data/database/value', () => {
       assert(hasBinary(0) === false);
       assert(hasBinary('') === false);
       assert(hasBinary([]) === false);
+      assert(hasBinary(null as any) === false);
       assert(hasBinary({}) === false);
       assert(hasBinary(Object.create(null)) === false);
-      assert(hasBinary(null as any) === false);
       assert(hasBinary(() => 0) === false);
     });
 

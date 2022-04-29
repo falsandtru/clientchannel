@@ -26,7 +26,7 @@ https://falsandtru.github.io/clientchannel/
 ### Persist data
 
 A schema is defined by properties of objects made by the registered factory function.
-Property names having underscore(`_`) prefix or postfix will be excluded from schema.
+Property names having underscore(`_`) or dollar(`$`) prefix or postfix will be excluded from schema.
 Property values of linked objects will be stored by updates.
 Linked objects will be updated automatically when a linked object is updated on another thread(tab).
 
@@ -77,7 +77,7 @@ import { StorageChannel, StorageChannelObject, ChannelObject } from 'clientchann
 interface Value extends StorageChannelObject {
 }
 class Value {
-  get event() {
+  event() {
     return this[ChannelObject.event];
   }
   version = 0;
@@ -88,7 +88,7 @@ const chan = new StorageChannel('version', {
 });
 const link = chan.link();
 const VERSION = 1;
-link.event.on(['recv', 'version'], ({ newValue }) => {
+link.event().on(['recv', 'version'], ({ newValue }) => {
   switch (true) {
     case newValue === VERSION:
       return;
