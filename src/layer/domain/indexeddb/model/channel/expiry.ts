@@ -52,6 +52,7 @@ export class ExpiryStore<K extends string> {
     void this.schedule(10 * 1000);
     assert(Object.freeze(this));
   }
+  public readonly name = name;
   private store = new class extends KeyValueStore<K, ExpiryRecord<K>> { }(name, ExpiryStoreSchema.key, this.listen);
   public schedule = (() => {
     let timer = 0;
@@ -75,29 +76,31 @@ export class ExpiryStore<K extends string> {
           timer = 0 as any;
         }, delay / 2);
         this.chan.lock = true;
-        return void this.store.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', (cursor, error) => {
-          this.chan.lock = false;
-          if (timer) {
-            clearInterval(timer);
-            timer = 0 as any;
-          }
-          schedule = Infinity;
-          if (!this.cancellation.alive) return;
-          if (this.chan.lock) return void this.schedule(delay *= 2);
-          if (error) return void this.schedule(delay * 10);
-          if (!cursor) return;
-          const { key, expiry }: ExpiryRecord<K> = cursor.value;
-          if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
-          if (!this.ownership.extend('store', delay)) return void this.schedule(delay *= 2);
-          if (++count > 100 || Date.now() > since + 1 * 1000) return void this.schedule(5 * 1000);
-          schedule = 0;
-          this.chan.lock = true;
-          this.chan.has(key) || this.chan.meta(key).date === 0
-            ? void this.chan.delete(key)
-            : void this.chan.clean(key);
-          assert(!this.chan.has(key));
-          return void cursor.continue();
-        });
+        return void this.store.cursor(
+          null, ExpiryStoreSchema.expiry, 'next', 'readonly', [],
+          (error, cursor) => {
+            this.chan.lock = false;
+            if (timer) {
+              clearInterval(timer);
+              timer = 0 as any;
+            }
+            schedule = Infinity;
+            if (!this.cancellation.alive) return;
+            if (this.chan.lock) return void this.schedule(delay *= 2);
+            if (error) return void this.schedule(delay * 10);
+            if (!cursor) return;
+            const { key, expiry }: ExpiryRecord<K> = cursor.value;
+            if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
+            if (!this.ownership.extend('store', delay)) return void this.schedule(delay *= 2);
+            if (++count > 50 || Date.now() > since + 1 * 1000) return void this.schedule(5 * 1000);
+            schedule = 0;
+            this.chan.lock = true;
+            this.chan.has(key) || this.chan.meta(key).date === 0
+              ? void this.chan.delete(key)
+              : void this.chan.clean(key);
+            assert(!this.chan.has(key));
+            return void cursor.continue();
+          });
       }, timeout) as any;
     };
   })();

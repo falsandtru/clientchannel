@@ -9,8 +9,12 @@ export class DataStore<K extends string, V extends DataStore.Value> extends Even
   }
   constructor(
     listen: Listen,
+    relation: {
+      readonly stores: string[];
+      delete(key: K, tx: IDBTransaction): void;
+    },
   ) {
-    super(name, listen);
+    super(name, listen, relation);
   }
 }
 export namespace DataStore {

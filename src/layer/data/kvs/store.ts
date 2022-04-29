@@ -41,9 +41,10 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     return this.tx.rw;
   }
   private set txrw(tx: IDBTransaction | undefined) {
-    if (!tx) return;
+    assert(tx = tx!);
     assert(tx.mode === 'readwrite');
-    if (this.tx.rw && this.tx.rw === tx) return;
+    assert.deepStrictEqual([...tx.objectStoreNames], [this.name]);
+    if (this.tx.rw === tx) return;
     this.tx.rwc = 0;
     this.tx.rw = tx;
     void tick(() => this.tx.rw = void 0);
@@ -148,11 +149,15 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
         void reject(req.error));
     }, () => void reject(new Error('Request has failed.'))));
   }
-  public cursor(query: IDBValidKey | IDBKeyRange | null | undefined, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMException | Error | null) => void): void {
+  public cursor(
+    query: IDBValidKey | IDBKeyRange | null | undefined,
+    index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, stores: string[],
+    cb: (error: DOMException | Error | null, cursor: IDBCursorWithValue | null, tx: IDBTransaction | null) => void,
+  ): void {
     if (!this.alive) return;
     void this.listen(db => {
       if (!this.alive) return;
-      const tx = db.transaction(this.name, mode);
+      const tx = db.transaction([this.name, ...stores], mode);
       const req = index
         ? tx
           .objectStore(this.name)
@@ -163,23 +168,23 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
           .openCursor(query, direction);
       void req.addEventListener('success', () => {
         const cursor = req.result;
-        if (!cursor) return;
+        if (!cursor) return void cb(tx.error || req.error, cursor, tx);
         try {
           void this.cache.set(cursor.primaryKey as K, { ...cursor.value });
-          void cb(cursor, req.error);
+          void cb(tx.error || req.error, cursor, tx);
         }
         catch (reason) {
-          void this.delete(cursor.primaryKey as K);
+          void cursor.delete();
           void causeAsyncException(reason);
         }
       });
       void tx.addEventListener('complete', () =>
-        void cb(null, req.error));
+        (tx.error || req.error) && void cb(tx.error || req.error, null, null));
       void tx.addEventListener('error', () =>
-        void cb(null, req.error));
+        void cb(tx.error || req.error, null, null));
       void tx.addEventListener('abort', () =>
-        void cb(null, req.error));
-    }, () => void cb(null, new Error('Request has failed.')));
+        void cb(tx.error || req.error, null, null));
+    }, () => void cb(new Error('Request has failed.'), null, null));
   }
   public close() {
     this.alive = false;

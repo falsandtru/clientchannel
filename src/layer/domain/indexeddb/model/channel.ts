@@ -76,14 +76,6 @@ export class ChannelStore<K extends string, V extends StoreChannel.Value<K>> {
     void this.events_.save.monitor([], ({ key }) =>
       void this.channel.post(new SaveMessage(key)));
 
-    void this.events_.clear.monitor([], (_, [key]) => {
-      assert(key !== void 0);
-      assert(key = key!);
-      assert(this.meta(key).date === 0);
-      void this.schema.access.delete(key);
-      void this.schema.expire.delete(key);
-    });
-
     if (this.capacity === Infinity) return;
 
     void this.events_.load.monitor([], ({ key, type }) => {
@@ -117,7 +109,6 @@ export class ChannelStore<K extends string, V extends StoreChannel.Value<K>> {
   public readonly events_ = {
     load: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>(),
     save: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>(),
-    clear: new Observation<[K], undefined, void>(),
   } as const;
   public readonly events = {
     load: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>({ limit: Infinity }),
@@ -239,9 +230,15 @@ class Schema<K extends string, V extends StoreChannel.Value<K>> {
     assert(this.cancellation.alive);
     const keys = this.data ? this.data.keys() : [];
 
-    this.data = new DataStore<K, V>(this.listen);
     this.access = new AccessStore<K>(this.store, this.cancellation, this.ownership, this.listen, this.capacity);
     this.expire = new ExpiryStore<K>(this.store, this.cancellation, this.ownership, this.listen);
+    this.data = new DataStore<K, V>(this.listen, {
+      stores: [this.access.name, this.expire.name],
+      delete: (key, tx) => {
+        void tx.objectStore(this.access.name).delete(key);
+        void tx.objectStore(this.expire.name).delete(key);
+      },
+    });
 
     void this.cancellation.register(() => this.data.close());
     void this.cancellation.register(() => this.access.close());
@@ -249,7 +246,6 @@ class Schema<K extends string, V extends StoreChannel.Value<K>> {
 
     void this.cancellation.register(this.store.events_.load.relay(this.data.events.load));
     void this.cancellation.register(this.store.events_.save.relay(this.data.events.save));
-    void this.cancellation.register(this.store.events_.clear.relay(this.data.events.clear));
     void this.cancellation.register(this.store.events.load.relay(this.data.events.load));
     void this.cancellation.register(this.store.events.save.relay(this.data.events.save));
     void this.cancellation.register(this.store.events.loss.relay(this.data.events.loss));
