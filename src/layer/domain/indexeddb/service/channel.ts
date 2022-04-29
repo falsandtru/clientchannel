@@ -76,36 +76,32 @@ export class StoreChannel<K extends string, V extends StoreChannel.Value<K>> ext
       ? this.links.get(key)!
       : this.links.set(key, build(
           ObjectDefineProperties(
-            this.sources.set(key, this.get(key)).get(key)! as V,
+            this.sources.set(key, this.get(key)).get(key)!,
             {
               [StoreChannel.Value.meta]: {
-                get: () =>
-                  this.meta(key)
+                get: () => this.meta(key)
               },
               [StoreChannel.Value.id]: {
-                get: () =>
-                  this.meta(key).id
+                get: () => this.meta(key).id
               },
               [StoreChannel.Value.key]: {
-                get: () =>
-                  this.meta(key).key
+                get: () => this.meta(key).key
               },
               [StoreChannel.Value.date]: {
-                get: () =>
-                  this.meta(key).date
+                get: () => this.meta(key).date
               },
               [StoreChannel.Value.event]: {
                 value: new Observation<[StorageChannel.EventType], StorageChannel.Event<V>, void>({ limit: Infinity })
               },
-            }),
+            }) as V,
           this.factory,
-        (prop, newValue, oldValue) => {
-          if (!this.alive) return;
-          void this.add(new StoreChannel.Record<K, V>(key, { [prop]: newValue } as unknown as Partial<V>));
-          void (this.sources.get(key)![StoreChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>)
-            .emit([StorageChannel.EventType.send, prop], new StorageChannel.Event<V>(StorageChannel.EventType.send, prop, newValue, oldValue));
-        },
-        throttle(100, () => this.alive && this.links.has(key) && void this.log(key))))
+          (prop, newValue, oldValue) => {
+            if (!this.alive) return;
+            void this.add(new StoreChannel.Record<K, V>(key, { [prop]: newValue } as unknown as Partial<V>));
+            void (this.sources.get(key)![StoreChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>)
+              .emit([StorageChannel.EventType.send, prop], new StorageChannel.Event<V>(StorageChannel.EventType.send, prop, newValue, oldValue));
+          },
+          throttle(100, () => this.alive && this.links.has(key) && void this.log(key))))
           .get(key)!;
   }
 }

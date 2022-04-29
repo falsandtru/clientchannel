@@ -15,12 +15,12 @@ export namespace DAO {
   export const event = Symbol.for('clientchannel/DAO.event');
 }
 
-export function build<V extends object>(
-  source: V,
-  factory: () => V,
-  set?: <K extends Prop<V>>(prop: K, newVal: V[K], oldVal: V[K]) => void,
-  get?: <K extends Prop<V>>(prop: K, val: V[K]) => void,
-): V {
+export function build<T extends object>(
+  source: T,
+  factory: () => T,
+  set?: <P extends Prop<T>>(prop: P, newVal: T[P], oldVal: T[P]) => void,
+  get?: <P extends Prop<T>>(prop: P, val: T[P]) => void,
+): T {
   const dao = factory();
   assert(Object.values(dao).every(prop => !(prop in dao)));
   if (typeof source[DAO.key] !== 'string') throw new TypeError(`ClientChannel: DAO: Invalid key: ${source[DAO.key]}`);
