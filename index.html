@@ -45,13 +45,13 @@
   $(function () {
     const width = 400, height = 500;
     // connect to database
-    const { StoreChannel, ChannelObject } = require('clientchannel');
+    const { StoreChannel } = require('clientchannel');
     const chan = new StoreChannel('demo', {
       schema: function () {
         // define schema
         return {
           event() {
-            return this[ChannelObject.event];
+            return this[StoreChannel.Value.event];
           },
           title: '',
           content: null
