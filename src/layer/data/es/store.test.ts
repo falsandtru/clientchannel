@@ -299,29 +299,27 @@ describe('Unit: layers/data/es/store', function () {
       assert(es.meta('a').key === 'a');
       assert(es.meta('a').date > 0);
       assert(es.get('a').value === 0);
-      es.events.save
-        .once(['a', 'value', 'put'], () => {
-          assert(es.has('a') === true);
-          assert(es.meta('a').id === 1);
-          assert(es.meta('a').key === 'a');
-          assert(es.meta('a').date > 0);
-          assert(es.get('a').value === 0);
-          es.delete('a');
+      es.events.save.once(['a', 'value', 'put'], () => {
+        assert(es.has('a') === true);
+        assert(es.meta('a').id === 1);
+        assert(es.meta('a').key === 'a');
+        assert(es.meta('a').date > 0);
+        assert(es.get('a').value === 0);
+        es.delete('a');
+        assert(es.has('a') === false);
+        assert(es.meta('a').id === 1);
+        assert(es.meta('a').key === 'a');
+        assert(es.meta('a').date > 0);
+        assert(es.get('a').value === undefined);
+        es.events.save.once(['a', '', 'delete'], () => {
           assert(es.has('a') === false);
-          assert(es.meta('a').id === 1);
+          assert(es.meta('a').id === 2);
           assert(es.meta('a').key === 'a');
           assert(es.meta('a').date > 0);
           assert(es.get('a').value === undefined);
-          es.events.save
-            .once(['a', '', 'delete'], () => {
-              assert(es.has('a') === false);
-              assert(es.meta('a').id === 2);
-              assert(es.meta('a').key === 'a');
-              assert(es.meta('a').date > 0);
-              assert(es.get('a').value === undefined);
-              done();
-            });
+          done();
         });
+      });
     });
 
     it('clean', done => {
@@ -329,26 +327,24 @@ describe('Unit: layers/data/es/store', function () {
 
       es.add(new UnstoredEventRecord('a', new Value(0)));
       es.add(new UnstoredEventRecord('b', new Value(0)));
-      es.events.save
-        .once(['a', 'value', 'put'], () => {
-          es.delete('a');
-          es.events.save
-            .once(['a', '', 'delete'], () => {
-              assert(es.has('a') === false);
-              assert(es.meta('a').id === 3);
-              assert(es.get('a').value === undefined);
-              assert(es.has('b') === true);
-              assert(es.meta('b').id === 2);
-              assert(es.get('b').value === 0);
-              setTimeout(() => {
-                assert(es.has('a') === false);
-                assert(es.meta('a').id === 0);
-                assert(es.has('b') === true);
-                assert(es.meta('b').id === 2);
-                done();
-              }, 1000);
-            });
+      es.events.save.once(['a', 'value', 'put'], () => {
+        es.delete('a');
+        es.events.save.once(['a', '', 'delete'], () => {
+          assert(es.has('a') === false);
+          assert(es.meta('a').id === 3);
+          assert(es.get('a').value === undefined);
+          assert(es.has('b') === true);
+          assert(es.meta('b').id === 2);
+          assert(es.get('b').value === 0);
+          es.events.clear.once(['a'], () => {
+            assert(es.has('a') === false);
+            assert(es.meta('a').id === 0);
+            assert(es.has('b') === true);
+            assert(es.meta('b').id === 2);
+            done();
+          });
         });
+      });
     });
 
     it('snapshot', done => {

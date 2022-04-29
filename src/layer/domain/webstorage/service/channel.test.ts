@@ -6,7 +6,7 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
     interface DAO extends StorageChannel.Value {
     }
     class DAO {
-      n = 0;
+      value = 0;
     }
 
     before(() => {
@@ -27,13 +27,13 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
       assert(sessionStorage.getItem('test') === null);
       const chan = new StorageChannel('test', sessionStorage, () => new DAO());
       const link = chan.link();
-      assert(link.n === 0);
+      assert(link.value === 0);
       assert(sessionStorage.getItem('test') === null);
-      link.n = 1;
-      assert(link.n === 1);
-      assert(sessionStorage.getItem('test') === '{\"n\":1}');
+      link.value = 1;
+      assert(link.value === 1);
+      assert(sessionStorage.getItem('test') === '{\"value\":1}');
       chan.destroy();
-      assert(link.n === 1);
+      assert(link.value === 1);
       assert(sessionStorage.getItem('test') === null);
     });
 
@@ -50,29 +50,29 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
     it('update', () => {
       const chan = new StorageChannel('test', sessionStorage, () => new DAO());
       const link = chan.link();
-      assert(link.n === 0);
-      link.n = 1;
-      assert(link.n === 1);
-      assert(JSON.parse(sessionStorage.getItem('test')!).n === 1);
-      link.n = 0;
-      assert(link.n === 0);
-      assert(JSON.parse(sessionStorage.getItem('test')!).n === 0);
+      assert(link.value === 0);
+      link.value = 1;
+      assert(link.value === 1);
+      assert(JSON.parse(sessionStorage.getItem('test')!).value === 1);
+      link.value = 0;
+      assert(link.value === 0);
+      assert(JSON.parse(sessionStorage.getItem('test')!).value === 0);
       chan.destroy();
     });
 
     it('migrate', () => {
-      sessionStorage.setItem('test', JSON.stringify({ n: 0 }));
+      sessionStorage.setItem('test', JSON.stringify({ value: 0 }));
       const chan = new StorageChannel('test', sessionStorage, () => new DAO(), v => {
-        if (v.n % 2) return;
-        v.n += 1;
+        if (v.value % 2) return;
+        v.value += 1;
       });
       const link = chan.link();
-      assert(link.n === 1);
-      assert(JSON.parse(sessionStorage.getItem('test')!).n === 1);
-      sessionStorage.setItem('test', JSON.stringify({ n: 2 }));
-      storageEventStream_.emit(['session', chan.name], { newValue: '{"n": 2}' } as StorageEvent)
-      assert(link.n === 3);
-      assert(JSON.parse(sessionStorage.getItem('test')!).n === 3);
+      assert(link.value === 1);
+      assert(JSON.parse(sessionStorage.getItem('test')!).value === 1);
+      sessionStorage.setItem('test', JSON.stringify({ value: 2 }));
+      storageEventStream_.emit(['session', chan.name], { newValue: '{"value": 2}' } as StorageEvent)
+      assert(link.value === 3);
+      assert(JSON.parse(sessionStorage.getItem('test')!).value === 3);
       chan.destroy();
     });
 
