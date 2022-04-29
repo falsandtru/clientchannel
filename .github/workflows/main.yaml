@@ -62,8 +62,8 @@ jobs:
     name: Web on ${{ matrix.os }}
     needs: test
     if: |
-      github.event_name == 'create' &&
-      startsWith(github.ref, 'refs/tags/')
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/master'
     strategy:
       matrix: { os: [ubuntu-latest] }
     runs-on: ${{ matrix.os }}
@@ -92,7 +92,7 @@ jobs:
           cat package.json | json version
           OLD_VERSION=$(cat package.json | json version)
           git checkout $GITHUB_SHA package.json
-          node -e 'if (!require("semver").gt(process.argv[1], process.argv[2])) process.exit(1)' $NEW_VERSION $OLD_VERSION || exit 0
+          node -e 'if (!require("semver").gte(process.argv[1], process.argv[2])) process.exit(1)' $NEW_VERSION $OLD_VERSION || exit 0
           git fetch --depth 1 origin gh-pages:gh-pages
           git checkout --orphan gh-pages || true
           git checkout -f gh-pages
