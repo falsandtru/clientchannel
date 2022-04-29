@@ -48,7 +48,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     this.tx.rw = tx;
     void tick(() => this.tx.rw = void 0);
   }
-  public load(key: K, cb?: (error: DOMException | Error | null, key: K) => void, cancellation?: Cancellation): undefined {
+  public load(key: K, cb?: (error: DOMException | Error | null, key: K, value?: V) => boolean | void, cancellation?: Cancellation): undefined {
     if (!this.alive) return void cb?.(new Error('Session is already closed.'), key);
     return void this.listen(db => {
       if (!this.alive) return void cb?.(new Error('Session is already closed.'), key);
@@ -62,9 +62,8 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
         : tx
             .objectStore(this.name)
             .get(key);
-      void req.addEventListener('success', () => (
-        this.cache.set(key, req.result),
-        void cb?.(req.error, key)));
+      void req.addEventListener('success', () =>
+        cb?.(req.error, key, req.result) && this.cache.set(key, req.result));
       void tx.addEventListener('complete', () =>
         void cancellation?.close());
       void tx.addEventListener('error', () => (

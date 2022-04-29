@@ -4,7 +4,7 @@ import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
 import { ChannelStore } from '../channel';
 import { Ownership } from '../../../ownership/channel';
-import { Cancellee } from 'spica/cancellation';
+import { Cancellation, Cancellee } from 'spica/cancellation';
 
 const name = 'expiry';
 
@@ -101,6 +101,13 @@ export class ExpiryStore<K extends string> {
       }, timeout) as any;
     };
   })();
+  public load(key: K, cancellation?: Cancellation): undefined {
+    return this.store.load(
+      key,
+      (err, key, value) =>
+        !err && value?.expiry! > this.store.get(key)?.expiry!,
+      cancellation);
+  }
   public set(key: K, age: number): void {
     if (age === Infinity) return void this.delete(key);
     void this.schedule(age);
