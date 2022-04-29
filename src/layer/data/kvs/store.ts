@@ -48,11 +48,11 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     this.tx.rw = tx;
     void tick(() => this.tx.rw = void 0);
   }
-  public load(key: K, cb?: (error: DOMException | Error | null) => void, cancellation?: Cancellation): undefined {
-    if (!this.alive) return void cb?.(new Error('Session is already closed.'));
+  public load(key: K, cb?: (error: DOMException | Error | null, key: K) => void, cancellation?: Cancellation): undefined {
+    if (!this.alive) return void cb?.(new Error('Session is already closed.'), key);
     return void this.listen(db => {
-      if (!this.alive) return void cb?.(new Error('Session is already closed.'));
-      if (cancellation?.cancelled) return void cb?.(new Error('Request is cancelled.'));
+      if (!this.alive) return void cb?.(new Error('Session is already closed.'), key);
+      if (cancellation?.cancelled) return void cb?.(new Error('Request is cancelled.'), key);
       const tx = db.transaction(this.name, 'readonly');
       const req: IDBRequest<V> = this.index
         ? tx
@@ -64,18 +64,18 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
             .get(key);
       void req.addEventListener('success', () => (
         this.cache.set(key, req.result),
-        void cb?.(req.error)));
+        void cb?.(req.error, key)));
       void tx.addEventListener('complete', () =>
         void cancellation?.close());
       void tx.addEventListener('error', () => (
         void cancellation?.close(),
-        void cb?.(tx.error || req.error)));
+        void cb?.(tx.error || req.error, key)));
       void tx.addEventListener('abort', () => (
         void cancellation?.close(),
-        void cb?.(tx.error || req.error)));
+        void cb?.(tx.error || req.error, key)));
       void cancellation?.register(() =>
         void tx.abort());
-    }, () => void cb?.(new Error('Request has failed.')));
+    }, () => void cb?.(new Error('Request has failed.'), key));
   }
   public has(key: K): boolean {
     return this.cache.has(key);
@@ -83,10 +83,10 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
   public get(key: K): V | undefined {
     return this.cache.get(key);
   }
-  public set(key: K, value: V, cb?: (key: K, error: DOMException | Error | null) => void): V {
+  public set(key: K, value: V, cb?: (error: DOMException | Error | null, key: K, value: V) => void): V {
     return this.put(value, key, cb);
   }
-  private put(value: V, key: K, cb?: (key: K, error: DOMException | Error | null) => void): V {
+  private put(value: V, key: K, cb?: (error: DOMException | Error | null, key: K, value: V) => void): V {
     void this.cache.set(key, value);
     if (!this.alive) return value;
     void this.listen(db => {
@@ -101,15 +101,15 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
           .objectStore(this.name)
           .put(this.cache.get(key), key);
       void tx.addEventListener('complete', () =>
-        void cb?.(key, tx.error));
+        void cb?.(tx.error, key, value));
       void tx.addEventListener('error', () =>
-        void cb?.(key, tx.error));
+        void cb?.(tx.error, key, value));
       void tx.addEventListener('abort', () =>
-        void cb?.(key, tx.error));
-    }, () => void cb?.(key, new Error('Request has failed.')));
+        void cb?.(tx.error, key, value));
+    }, () => void cb?.(new Error('Request has failed.'), key, value));
     return value;
   }
-  public delete(key: K, cb?: (error: DOMException | Error | null) => void): void {
+  public delete(key: K, cb?: (error: DOMException | Error | null, key: K) => void): void {
     void this.cache.delete(key);
     if (!this.alive) return;
     void this.listen(db => {
@@ -119,12 +119,12 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
         .objectStore(this.name)
         .delete(key);
       void tx.addEventListener('complete', () =>
-        void cb?.(tx.error));
+        void cb?.(tx.error, key));
       void tx.addEventListener('error', () =>
-        void cb?.(tx.error));
+        void cb?.(tx.error, key));
       void tx.addEventListener('abort', () =>
-        void cb?.(tx.error));
-    }, () => void cb?.(new Error('Request has failed.')));
+        void cb?.(tx.error, key));
+    }, () => void cb?.(new Error('Request has failed.'), key));
   }
   public count(query: IDBValidKey | IDBKeyRange | null | undefined, index: string): Promise<number> {
     return new Promise((resolve, reject) => void this.listen(db => {

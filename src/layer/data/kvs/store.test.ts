@@ -48,13 +48,13 @@ describe('Unit: layers/data/kvs/store', function () {
     it('CRUD', done => {
       const kvs = new Store<string, number>('test', '', open('test', Store.configure()));
 
-      kvs.set('a', 0, (key, err) => {
+      kvs.set('a', 0, (err, key) => {
         assert(key === 'a');
         assert(err === null);
         kvs.load('a', (err) => {
           assert(kvs.get('a') === 0);
           assert(err === null);
-          kvs.set('a', 1, (key, err) => {
+          kvs.set('a', 1, (err, key) => {
             assert(key === 'a');
             assert(err === null);
             kvs.load('a', (err) => {
