@@ -114,7 +114,7 @@ export class AccessStore<K extends string> {
   public recent(cb?: (key: K, keys: readonly K[]) => boolean | void, timeout?: number): Promise<K[]> {
     return new Promise((resolve, reject) => {
       let done = false;
-      timeout !== void 0 && void setTimeout(() => done = !void reject(new Error('Timeout.')), timeout);
+      timeout! >= 0 && void setTimeout(() => done = !void reject(new Error('Timeout.')), timeout);
       const keys: K[] = [];
       void this.store.cursor(
         null,

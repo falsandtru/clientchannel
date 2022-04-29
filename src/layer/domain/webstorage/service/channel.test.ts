@@ -9,11 +9,7 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
       value = 0;
     }
 
-    before(() => {
-      sessionStorage.removeItem('test');
-    });
-
-    afterEach(() => {
+    beforeEach(() => {
       sessionStorage.removeItem('test');
     });
 

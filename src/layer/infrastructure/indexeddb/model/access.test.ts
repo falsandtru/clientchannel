@@ -13,21 +13,9 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
     };
     Object.freeze(config);
 
-    before(done => {
-      idbEventStream
-        .once(['test', IDBEventType.destroy], () =>
-          idbEventStream
-            .once(['test', IDBEventType.disconnect], () =>
-              done()));
-      destroy('test');
-    });
-
-    afterEach(done => {
-      idbEventStream
-        .once(['test', IDBEventType.destroy], () =>
-          idbEventStream
-            .once(['test', IDBEventType.disconnect], () =>
-              done()));
+    beforeEach(done => {
+      idbEventStream.once(['test', IDBEventType.destroy], () =>
+        idbEventStream.once(['test', IDBEventType.disconnect], () => done()));
       destroy('test');
     });
 
@@ -41,23 +29,18 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
     });
 
     it('close', done => {
-      idbEventStream
-        .once(['test', IDBEventType.disconnect], () => done())
+      idbEventStream.once(['test', IDBEventType.disconnect], () => done())
       close('test');
     });
 
     it('destroy', done => {
-      idbEventStream
-        .once(['test', IDBEventType.destroy], () =>
-          idbEventStream
-            .once(['test', IDBEventType.disconnect], () => done())
-        );
+      idbEventStream.once(['test', IDBEventType.destroy], () =>
+        idbEventStream.once(['test', IDBEventType.disconnect], () => done()));
       destroy('test');
     });
 
     it('cancel opening', done => {
-      idbEventStream
-        .once(['test', IDBEventType.disconnect], () => done());
+      idbEventStream.once(['test', IDBEventType.disconnect], () => done());
       open('test', config);
       close('test');
     });
@@ -65,8 +48,7 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
     it('cancel closing', done => {
       close('test');
       open('test', config)(() => {
-        idbEventStream
-          .once(['test', IDBEventType.disconnect], () => done());
+        idbEventStream.once(['test', IDBEventType.disconnect], () => done());
         close('test');
       });
     });
@@ -74,33 +56,27 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
     it('cannot cancel destroying', done => {
       destroy('test');
       open('test', config);
-      idbEventStream
-        .once(['test', IDBEventType.destroy], () =>
-          idbEventStream
-            .once(['test', IDBEventType.disconnect], () => done()));
+      idbEventStream.once(['test', IDBEventType.destroy], () =>
+        idbEventStream.once(['test', IDBEventType.disconnect], () => done()));
     });
 
     it('reopen after closing', done => {
-      idbEventStream
-        .once(['test', IDBEventType.disconnect], () => {
-          open('test', config)(() => {
-            idbEventStream
-              .once(['test', IDBEventType.disconnect], () => done());
-            close('test');
-          });
+      idbEventStream.once(['test', IDBEventType.disconnect], () => {
+        open('test', config)(() => {
+          idbEventStream.once(['test', IDBEventType.disconnect], () => done());
+          close('test');
         });
+      });
       close('test');
     });
 
     it('reopen after destroying', done => {
-      idbEventStream
-        .once(['test', IDBEventType.disconnect], () => {
-          open('test', config)(() => {
-            idbEventStream
-              .once(['test', IDBEventType.disconnect], () => done());
-            close('test');
-          });
+      idbEventStream.once(['test', IDBEventType.disconnect], () => {
+        open('test', config)(() => {
+          idbEventStream.once(['test', IDBEventType.disconnect], () => done());
+          close('test');
         });
+      });
       destroy('test');
     });
 
@@ -119,8 +95,7 @@ describe('Unit: layers/infrastructure/indexeddb/model/access', () => {
       open('test', config)(db => {
         db.transaction('test', 'readwrite').objectStore('test').count().onsuccess = () => {
           assert(++cnt === 3);
-          idbEventStream
-            .once(['test', IDBEventType.disconnect], () => done());
+          idbEventStream.once(['test', IDBEventType.disconnect], () => done());
           close('test');
         };
       });

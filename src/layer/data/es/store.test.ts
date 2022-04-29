@@ -23,21 +23,9 @@ describe('Unit: layers/data/es/store', function () {
         .replace(/"date":\s?\d+,\s?/, '');
     }
 
-    before(done => {
-      idbEventStream
-        .once(['test', IDBEventType.destroy], () =>
-          idbEventStream
-            .once(['test', IDBEventType.disconnect], () =>
-              done()));
-      destroy('test');
-    });
-
-    afterEach(done => {
-      idbEventStream
-        .once(['test', IDBEventType.destroy], () =>
-          idbEventStream
-            .once(['test', IDBEventType.disconnect], () =>
-              done()));
+    beforeEach(done => {
+      idbEventStream.once(['test', IDBEventType.destroy], () =>
+        idbEventStream.once(['test', IDBEventType.disconnect], () => done()));
       destroy('test');
     });
 
@@ -285,7 +273,7 @@ describe('Unit: layers/data/es/store', function () {
 
     });
 
-    it('CRUD', done => {
+    it('CRUD', async () => {
       const es = new Store<string, Value>('test', open('test', Store.configure('test')));
 
       assert(es.has('a') === false);
@@ -299,129 +287,90 @@ describe('Unit: layers/data/es/store', function () {
       assert(es.meta('a').key === 'a');
       assert(es.meta('a').date > 0);
       assert(es.get('a').value === 0);
-      es.events.save.once(['a', 'value', 'put'], () => {
-        assert(es.has('a') === true);
-        assert(es.meta('a').id === 1);
-        assert(es.meta('a').key === 'a');
-        assert(es.meta('a').date > 0);
-        assert(es.get('a').value === 0);
-        es.delete('a');
-        assert(es.has('a') === false);
-        assert(es.meta('a').id === 1);
-        assert(es.meta('a').key === 'a');
-        assert(es.meta('a').date > 0);
-        assert(es.get('a').value === undefined);
-        es.events.save.once(['a', '', 'delete'], () => {
-          assert(es.has('a') === false);
-          assert(es.meta('a').id === 2);
-          assert(es.meta('a').key === 'a');
-          assert(es.meta('a').date > 0);
-          assert(es.get('a').value === undefined);
-          done();
-        });
-      });
+      await new Promise(resolve => es.events.save.once(['a', 'value', 'put'], resolve));
+      assert(es.has('a') === true);
+      assert(es.meta('a').id === 1);
+      assert(es.meta('a').key === 'a');
+      assert(es.meta('a').date > 0);
+      assert(es.get('a').value === 0);
+      es.delete('a');
+      assert(es.has('a') === false);
+      assert(es.meta('a').id === 1);
+      assert(es.meta('a').key === 'a');
+      assert(es.meta('a').date > 0);
+      assert(es.get('a').value === undefined);
+      await new Promise(resolve => es.events.save.once(['a', '', 'delete'], resolve));
+      assert(es.has('a') === false);
+      assert(es.meta('a').id === 2);
+      assert(es.meta('a').key === 'a');
+      assert(es.meta('a').date > 0);
+      assert(es.get('a').value === undefined);
     });
 
-    it('clean', done => {
+    it('clean', async () => {
       const es = new Store<string, Value>('test', open('test', Store.configure('test')));
 
       es.add(new UnstoredEventRecord('a', new Value(0)));
       es.add(new UnstoredEventRecord('b', new Value(0)));
-      es.events.save.once(['a', 'value', 'put'], () => {
-        es.delete('a');
-        es.events.save.once(['a', '', 'delete'], () => {
-          assert(es.has('a') === false);
-          assert(es.meta('a').id === 3);
-          assert(es.get('a').value === undefined);
-          assert(es.has('b') === true);
-          assert(es.meta('b').id === 2);
-          assert(es.get('b').value === 0);
-          es.events.clear.once(['a'], () => {
-            assert(es.has('a') === false);
-            assert(es.meta('a').id === 0);
-            assert(es.has('b') === true);
-            assert(es.meta('b').id === 2);
-            done();
-          });
-        });
-      });
+      await new Promise(resolve => es.events.save.once(['a', 'value', 'put'], resolve));
+      es.delete('a');
+      await new Promise(resolve => es.events.save.once(['a', '', 'delete'], resolve));
+      assert(es.has('a') === false);
+      assert(es.meta('a').id === 3);
+      assert(es.get('a').value === undefined);
+      assert(es.has('b') === true);
+      assert(es.meta('b').id === 2);
+      assert(es.get('b').value === 0);
+      await new Promise(resolve => es.events.clear.once(['a'], resolve));
+      assert(es.has('a') === false);
+      assert(es.meta('a').id === 0);
+      assert(es.has('b') === true);
+      assert(es.meta('b').id === 2);
     });
 
-    it('snapshot', done => {
+    it('snapshot', async () => {
       const es = new Store<string, Value>('test', open('test', Store.configure('test')));
 
-      Promise.resolve()
-        .then(() =>
-          new Promise(resolve => {
-            es.add(new UnstoredEventRecord('a', new Value(1)));
-            es.events.save.once(['a', 'value', 'put'], () => resolve(undefined));
-          }))
-        .then(() =>
-          new Promise(resolve => {
-            es.add(new UnstoredEventRecord('a', new Value(2)));
-            es.events.save.once(['a', 'value', 'put'], () => resolve(undefined));
-          }))
-        .then(() =>
-          new Promise(resolve => {
-            es.add(new UnstoredEventRecord('a', new Value(3)));
-            es.events.save.once(['a', 'value', 'put'], () => resolve(undefined));
-          }))
-        .then(() =>
-          new Promise(resolve => {
-            es.add(new UnstoredEventRecord('a', new Value(4)));
-            es.events.save.once(['a', 'value', 'put'], () => resolve(undefined));
-          }))
-        .then(() =>
-          new Promise(resolve => {
-            es.add(new UnstoredEventRecord('a', new Value(5)));
-            es.events.save.once(['a', 'value', 'put'], () => resolve(undefined));
-          }))
-        .then(() =>
-          new Promise(resolve => {
-            es.add(new UnstoredEventRecord('a', new Value(6)));
-            es.events.save.once(['a', 'value', 'put'], () => resolve(undefined));
-          }))
-        .then(() =>
-          new Promise(resolve => {
-            es.add(new UnstoredEventRecord('a', new Value(7)));
-            es.events.save.once(['a', 'value', 'put'], () => resolve(undefined));
-          }))
-        .then(() =>
-          new Promise(resolve => {
-            es.add(new UnstoredEventRecord('a', new Value(8)));
-            es.events.save.once(['a', 'value', 'put'], () => resolve(undefined));
-          }))
-        .then(() =>
-          new Promise(resolve => {
-            es.add(new UnstoredEventRecord('a', new Value(9)));
-            es.events.save.once(['a', 'value', 'put'], () => resolve(undefined));
-            es.events.save.once(['a', '', 'snapshot'], ev => {
-              assert(ev.id === 10);
-              assert(ev.key === 'a');
-              assert(ev.prop === '');
-              assert(ev.type === 'snapshot');
-              assert(es.meta('a').id === 10);
-              assert(es.get('a').value === 9);
-
-              for (let i = 0; i < 9; ++i) {
-                es.add(new UnstoredEventRecord('a', new Value(i + ev.id + 1)));
-              }
-              es.events.save.once(['a', 'value', 'put'], ev => {
-                assert(ev.id === 11);
-                assert(ev.key === 'a');
-                assert(ev.prop === 'value');
-                assert(ev.type === 'put');
-                assert(es.meta('a').id === 11);
-                assert(es.get('a').value === 19);
-                done();
-              });
-            });
-          }));
+      es.add(new UnstoredEventRecord('a', new Value(1)));
+      await new Promise(resolve => es.events.save.once(['a', 'value', 'put'], resolve));
+      es.add(new UnstoredEventRecord('a', new Value(2)));
+      await new Promise(resolve => es.events.save.once(['a', 'value', 'put'], resolve));
+      es.add(new UnstoredEventRecord('a', new Value(3)));
+      await new Promise(resolve => es.events.save.once(['a', 'value', 'put'], resolve));
+      es.add(new UnstoredEventRecord('a', new Value(4)));
+      await new Promise(resolve => es.events.save.once(['a', 'value', 'put'], resolve));
+      es.add(new UnstoredEventRecord('a', new Value(5)));
+      await new Promise(resolve => es.events.save.once(['a', 'value', 'put'], resolve));
+      es.add(new UnstoredEventRecord('a', new Value(6)));
+      await new Promise(resolve => es.events.save.once(['a', 'value', 'put'], resolve));
+      es.add(new UnstoredEventRecord('a', new Value(7)));
+      await new Promise(resolve => es.events.save.once(['a', 'value', 'put'], resolve));
+      es.add(new UnstoredEventRecord('a', new Value(8)));
+      await new Promise(resolve => es.events.save.once(['a', 'value', 'put'], resolve));
+      es.add(new UnstoredEventRecord('a', new Value(9)));
+      await new Promise(resolve => es.events.save.once(['a', 'value', 'put'], resolve));
+      let ev: EventStore.Event<string, string>;
+      ev = await new Promise(resolve => es.events.save.once(['a', '', 'snapshot'], resolve));
+      assert(ev.id === 10);
+      assert(ev.key === 'a');
+      assert(ev.prop === '');
+      assert(ev.type === 'snapshot');
+      assert(es.meta('a').id === 10);
+      assert(es.get('a').value === 9);
+      for (let i = 0; i < 9; ++i) {
+        es.add(new UnstoredEventRecord('a', new Value(10 + i + 1)));
+      }
+      ev = await new Promise(resolve => es.events.save.once(['a', 'value', 'put'], resolve));
+      assert(ev.id === 11);
+      assert(ev.key === 'a');
+      assert(ev.prop === 'value');
+      assert(ev.type === 'put');
+      assert(es.get('a').value === 19);
+      assert(es.meta('a').id === 11);
+      assert(es.get('a').value === 19);
     });
 
-    it('snapshot binary', done => {
-      const es = new Store<string, Value>('test', open('test', Store.configure('test')));
-
+    it('snapshot binary', async () => {
       class Value extends EventStore.Value {
         constructor(
           public value: ArrayBuffer
@@ -430,15 +379,17 @@ describe('Unit: layers/data/es/store', function () {
         }
       }
 
+      const es = new Store<string, Value>('test', open('test', Store.configure('test')));
+
       es.add(new UnstoredEventRecord('a', new Value(new ArrayBuffer(0))));
-      es.events.save.once(['a', '', 'snapshot'], ev => {
-        assert(ev.key === 'a');
-        assert(ev.prop === '');
-        assert(ev.type === 'snapshot');
-        assert(es.meta('a').id === 2);
-        assert(es.get('a').value instanceof ArrayBuffer);
-        done();
-      });
+      await new Promise(resolve => es.events.save.once(['a', 'value', 'put'], resolve));
+      let ev: EventStore.Event<string, string>;
+      ev = await new Promise(resolve => es.events.save.once(['a', '', 'snapshot'], resolve));
+      assert(ev.key === 'a');
+      assert(ev.prop === '');
+      assert(ev.type === 'snapshot');
+      assert(es.meta('a').id === 2);
+      assert(es.get('a').value instanceof ArrayBuffer);
     });
 
   });

@@ -6,21 +6,9 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
   this.timeout(9 * 1e3);
 
   describe('spec', () => {
-    before(done => {
-      idbEventStream
-        .once(['test', IDBEventType.destroy], () =>
-          idbEventStream
-            .once(['test', IDBEventType.disconnect], () =>
-              done()));
-      destroy('test');
-    });
-
-    afterEach(done => {
-      idbEventStream
-        .once(['test', IDBEventType.destroy], () =>
-          idbEventStream
-            .once(['test', IDBEventType.disconnect], () =>
-              done()));
+    beforeEach(done => {
+      idbEventStream.once(['test', IDBEventType.destroy], () =>
+        idbEventStream.once(['test', IDBEventType.disconnect], () => done()));
       destroy('test');
     });
 
@@ -56,21 +44,19 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
 
       listen_('test', db => {
         db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { num: 1 })));
-        db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { str: '1' }))).onsuccess = () => {
-          chan.sync(['a', 'z'], 1000).then(results => {
-            assert.deepStrictEqual(results, [
-              { status: 'fulfilled', value: 'a' },
-              { status: 'fulfilled', value: 'z' },
-            ]);
-            const link = chan.link('a');
-            assert(link[StoreChannel.Value.id] === 2);
-            assert(link[StoreChannel.Value.key] === 'a');
-            assert(link[StoreChannel.Value.date] > 0);
-            assert(link.num === 1);
-            assert(link.str === '1');
-            chan.destroy();
-            done();
-          });
+        db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { str: '1' }))).onsuccess = async () => {
+          assert.deepStrictEqual(await chan.sync(['a', 'z'], 1000), [
+            { status: 'fulfilled', value: 'a' },
+            { status: 'fulfilled', value: 'z' },
+          ]);
+          const link = chan.link('a');
+          assert(link[StoreChannel.Value.id] === 2);
+          assert(link[StoreChannel.Value.key] === 'a');
+          assert(link[StoreChannel.Value.date] > 0);
+          assert(link.num === 1);
+          assert(link.str === '1');
+          chan.destroy();
+          done();
         };
       });
     });
@@ -82,18 +68,16 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
         assert(!err);
         listen_('test', db => {
           db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { num: 1 })));
-          db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { str: '1' }))).onsuccess = () => {
-            chan.load('a', err => {
-              assert(!err);
-              const link = chan.link('a');
-              assert(link[StoreChannel.Value.id] === 2);
-              assert(link[StoreChannel.Value.key] === 'a');
-              assert(link[StoreChannel.Value.date] > 0);
-              assert(link.num === 1);
-              assert(link.str === '1');
-              chan.destroy();
-              done();
-            });
+          db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { str: '1' }))).onsuccess = async () => {
+            await new Promise(resolve => chan.load('a', resolve))
+            const link = chan.link('a');
+            assert(link[StoreChannel.Value.id] === 2);
+            assert(link[StoreChannel.Value.key] === 'a');
+            assert(link[StoreChannel.Value.date] > 0);
+            assert(link.num === 1);
+            assert(link.str === '1');
+            chan.destroy();
+            done();
           };
         });
       });
@@ -103,20 +87,19 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       const chan = new StoreChannel('test', () => new Value());
       const link = chan.link('a');
 
-      link[StoreChannel.Value.event].once(['send', 'num'], ev => {
+      link[StoreChannel.Value.event].once(['send', 'num'], async ev => {
         assert.deepEqual(ev, {
           type: 'send',
           prop: 'num',
           newValue: 1,
           oldValue: 0
         });
-        chan.events.save.once(['a', 'num', 'put'], () => {
-          assert(link[StoreChannel.Value.id] === 1);
-          assert(link[StoreChannel.Value.key] === 'a');
-          assert(link[StoreChannel.Value.date] > 0);
-          chan.destroy();
-          done();
-        });
+        await new Promise(resolve => chan.events.save.once(['a', 'num', 'put'], resolve));
+        assert(link[StoreChannel.Value.id] === 1);
+        assert(link[StoreChannel.Value.key] === 'a');
+        assert(link[StoreChannel.Value.date] > 0);
+        chan.destroy();
+        done();
       });
 
       assert(link.num === 0);
@@ -134,51 +117,48 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
 
       assert(link.num === 0);
       listen_('test', db => {
-        db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { num: 1 }))).onsuccess = () => {
+        db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { num: 1 }))).onsuccess = async () => {
           chan['schema'].data.load('a');
-          link[StoreChannel.Value.event].once(['recv', 'num'], ev => {
+          link[StoreChannel.Value.event].once(['recv', 'num'], async ev => {
             assert.deepEqual(ev, {
               type: 'recv',
               prop: 'num',
               newValue: 1,
               oldValue: 0
             });
-            chan.events.load.once(['a', 'num', 'put'], () => {
-              assert(link[StoreChannel.Value.id] === 1);
-              assert(link[StoreChannel.Value.key] === 'a');
-              assert(link[StoreChannel.Value.date] > 0);
-              assert(link.num === 1);
-              chan.destroy();
-              done();
-            });
+            await new Promise(resolve => chan.events.load.once(['a', 'num', 'put'], resolve));
+            assert(link[StoreChannel.Value.id] === 1);
+            assert(link[StoreChannel.Value.key] === 'a');
+            assert(link[StoreChannel.Value.date] > 0);
+            assert(link.num === 1);
+            chan.destroy();
+            done();
           });
         };
       });
     });
 
-    it('migrate', (done) => {
+    it('migrate', async () => {
       let chan = new StoreChannel('test', () => new Value());
-      const link = chan.link('a');
+      let link = chan.link('a');
+
       link.num = 1;
-      chan.events.save.once(['a', 'num', 'put'], () => {
-        chan.close();
-        chan = new StoreChannel('test', () => new Value(), {
-          migrate: link => {
-            assert(link[StoreChannel.Value.id] === 1);
-            assert(link.num === 1);
-            link.num = 2;
-          }
-        });
-        const link = chan.link('a');
-        chan.events.load.once(['a', 'num', 'put'], () => {
-          assert(link.num === 2);
-          chan.events.save.once(['a', 'num', 'put'], () => {
-            assert(link[StoreChannel.Value.id] === 2);
-            chan.destroy();
-            done();
-          });
-        });
+      await new Promise(resolve => chan.events.save.once(['a', 'num', 'put'], resolve));
+      chan.close();
+      chan = new StoreChannel('test', () => new Value(), {
+        migrate: link => {
+          assert(link[StoreChannel.Value.id] === 1);
+          assert(link.num === 1);
+          link.num = 2;
+        }
       });
+      link = chan.link('a');
+      await new Promise(resolve => chan.events.load.once(['a', 'num', 'put'], resolve));
+      assert(link[StoreChannel.Value.id] === 1);
+      assert(link.num === 2);
+      await new Promise(resolve => chan.events.save.once(['a', 'num', 'put'], resolve));
+      assert(link[StoreChannel.Value.id] === 2);
+      chan.destroy();
     });
 
   });

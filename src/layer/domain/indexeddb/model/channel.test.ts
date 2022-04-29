@@ -5,21 +5,9 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
   this.timeout(9 * 1e3);
 
   describe('spec', () => {
-    before(done => {
-      idbEventStream
-        .once(['test', IDBEventType.destroy], () =>
-          idbEventStream
-            .once(['test', IDBEventType.disconnect], () =>
-              done()));
-      destroy('test');
-    });
-
-    afterEach(done => {
-      idbEventStream
-        .once(['test', IDBEventType.destroy], () =>
-          idbEventStream
-            .once(['test', IDBEventType.disconnect], () =>
-              done()));
+    beforeEach(done => {
+      idbEventStream.once(['test', IDBEventType.destroy], () =>
+        idbEventStream.once(['test', IDBEventType.disconnect], () => done()));
       destroy('test');
     });
 
@@ -37,84 +25,58 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
       chan.destroy();
     });
 
-    it('recent', done => {
+    it('recent', async () => {
       const chan = new ChannelStore<string, CustomSocketValue>('test', () => true, Infinity, Infinity);
 
-      chan.recent().then(keys => {
-        assert.deepStrictEqual(keys, []);
-        chan.recent().then(() => {
-          chan.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
-          chan.events.save.once(['a', 'value', ChannelStore.EventType.put], () => {
-            chan.recent().then(keys => {
-              assert.deepStrictEqual(keys, ['a']);
-              chan.recent(0).catch(() => {
-                chan.recent().then(keys => {
-                  assert.deepStrictEqual(keys, ['a']);
-                  chan.add(new ChannelStore.Record('b', new CustomSocketValue(0)));
-                  chan.events.save.once(['b', 'value', ChannelStore.EventType.put], () => {
-                    chan.recent().then(keys => {
-                      assert.deepStrictEqual(keys, ['b', 'a']);
-                      chan.destroy();
-                      done();
-                    });
-                  });
-                });
-              });
-            });
-          });
-        });
-      });
+      assert.deepStrictEqual(await chan.recent(), []);
+      await chan.recent();
+      chan.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
+      await new Promise(resolve => chan.events.save.once(['a', 'value', 'put'], resolve));
+      assert.deepStrictEqual(await chan.recent(), ['a']);
+      assert(await chan.recent(0).catch(e => e) instanceof Error);
+      assert.deepStrictEqual(await chan.recent(), ['a']);
+      chan.add(new ChannelStore.Record('b', new CustomSocketValue(0)));
+      await new Promise(resolve => chan.events.save.once(['b', 'value', 'put'], resolve));
+      assert.deepStrictEqual(await chan.recent(), ['b', 'a']);
+      chan.destroy();
     });
 
-    it('clean', done => {
+    it('clean', async () => {
       const chan = new ChannelStore<string, CustomSocketValue>('test', () => true, Infinity, Infinity);
 
       chan.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
-      chan.recent().then(keys => {
-        assert.deepStrictEqual(keys, ['a']);
-        assert(chan.has('a') === true);
-        chan.delete('a');
-        chan.add(new ChannelStore.Record('b', new CustomSocketValue(0)));
-        chan.events.save.once(['a', '', ChannelStore.EventType.delete], () => {
-          chan.recent().then(keys => {
-            assert.deepStrictEqual(keys, ['b']);
-            assert(chan.has('a') === false);
-            assert(chan.has('b') === true);
-            chan.delete('b');
-            chan.events.save.once(['b', '', ChannelStore.EventType.delete], () => {
-              chan.recent().then(keys => {
-                assert.deepStrictEqual(keys, []);
-                assert(chan.has('a') === false);
-                assert(chan.has('b') === false);
-                chan.destroy();
-                done();
-              });
-            });
-          });
-        });
-      });
+      assert.deepStrictEqual(await chan.recent(), ['a']);
+      assert(chan.has('a') === true);
+      chan.delete('a');
+      chan.add(new ChannelStore.Record('b', new CustomSocketValue(0)));
+      await new Promise(resolve => chan.events.save.once(['a', '', 'delete'], resolve));
+      assert.deepStrictEqual(await chan.recent(), ['b']);
+      assert(chan.has('a') === false);
+      assert(chan.has('b') === true);
+      chan.delete('b');
+      await new Promise(resolve => chan.events.save.once(['b', '', 'delete'], resolve));
+      assert.deepStrictEqual(await chan.recent(), []);
+      assert(chan.has('a') === false);
+      assert(chan.has('b') === false);
+      chan.destroy();
     });
 
-    it('age', done => {
+    it('age', async () => {
       const chan = new ChannelStore<string, CustomSocketValue>('test', () => true, Infinity, Infinity);
 
       chan.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
       chan.expire('b', 100);
       chan.add(new ChannelStore.Record('b', new CustomSocketValue(0)));
       chan.add(new ChannelStore.Record('c', new CustomSocketValue(0)));
-      chan.events.save.once(['b', '', ChannelStore.EventType.delete], () => {
-        chan.recent().then(keys => {
-          assert.deepStrictEqual(keys, ['c', 'a']);
-          assert(chan.has('a') === true);
-          assert(chan.has('b') === false);
-          assert(chan.has('c') === true);
-          chan.destroy();
-          done();
-        });
-      });
+      await new Promise(resolve => chan.events.save.once(['b', '', 'delete'], resolve));
+      assert.deepStrictEqual(await chan.recent(), ['c', 'a']);
+      assert(chan.has('a') === true);
+      assert(chan.has('b') === false);
+      assert(chan.has('c') === true);
+      chan.destroy();
     });
 
-    it('size', done => {
+    it('size', async () => {
       const chan = new ChannelStore<string, CustomSocketValue>('test', () => true, Infinity, 2);
 
       chan.add(new ChannelStore.Record('b', new CustomSocketValue(0)));
@@ -125,16 +87,12 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
       assert(chan.has('b') === true);
       assert(chan.has('a') === true);
       assert(chan.has('c') === true);
-      chan.events.save.once(['b', '', ChannelStore.EventType.delete], () => {
-        assert(chan.has('b') === false);
-        chan.recent().then(keys => {
-          assert.deepStrictEqual(keys, ['c', 'a']);
-          assert(chan.has('a') === true);
-          assert(chan.has('c') === true);
-          chan.destroy();
-          done();
-        });
-      });
+      await new Promise(resolve => chan.events.save.once(['b', '', 'delete'], resolve));
+      assert(chan.has('b') === false);
+      assert.deepStrictEqual(await chan.recent(), ['c', 'a']);
+      assert(chan.has('a') === true);
+      assert(chan.has('c') === true);
+      chan.destroy();
     });
 
   });

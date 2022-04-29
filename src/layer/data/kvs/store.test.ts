@@ -27,51 +27,25 @@ describe('Unit: layers/data/kvs/store', function () {
       }
     }
 
-    before(done => {
-      idbEventStream
-        .once(['test', IDBEventType.destroy], () =>
-          idbEventStream
-            .once(['test', IDBEventType.disconnect], () =>
-              done()));
+    beforeEach(done => {
+      idbEventStream.once(['test', IDBEventType.destroy], () =>
+        idbEventStream.once(['test', IDBEventType.disconnect], () => done()));
       destroy('test');
     });
 
-    afterEach(done => {
-      idbEventStream
-        .once(['test', IDBEventType.destroy], () =>
-          idbEventStream
-            .once(['test', IDBEventType.disconnect], () =>
-              done()));
-      destroy('test');
-    });
-
-    it('CRUD', done => {
+    it('CRUD', async () => {
       const kvs = new Store<string, number>('test', '', open('test', Store.configure()));
 
-      kvs.set('a', 0, (err, key) => {
-        assert(key === 'a');
-        assert(err === null);
-        kvs.load('a', (err) => {
-          assert(kvs.get('a') === 0);
-          assert(err === null);
-          kvs.set('a', 1, (err, key) => {
-            assert(key === 'a');
-            assert(err === null);
-            kvs.load('a', (err) => {
-              assert(kvs.get('a') === 1);
-              assert(err === null);
-              kvs.delete('a', (err) => {
-                assert(err === null);
-                kvs.load('a', (err) => {
-                  assert(kvs.get('a') === undefined);
-                  assert(err === null);
-                  done();
-                });
-              });
-            });
-          });
-        });
-      });
+      assert(await new Promise(resolve => kvs.set('a', 0, resolve)) === null);
+      assert(await new Promise(resolve => kvs.load('a', resolve)) === null);
+      assert(kvs.get('a') === 0);
+      assert(await new Promise(resolve => kvs.set('a', 1, resolve)) === null);
+      assert(await new Promise(resolve => kvs.load('a', resolve)) === null);
+      assert(kvs.get('a') === 1);
+      assert(await new Promise(resolve => kvs.delete('a', resolve)) === null);
+      assert(kvs.get('a') === undefined);
+      assert(await new Promise(resolve => kvs.load('a', resolve)) === null);
+      assert(kvs.get('a') === undefined);
     });
 
   });
