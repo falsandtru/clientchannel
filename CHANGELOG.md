@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.32.0
+
+- Add StoreChannelConfig.capacity option.
+
 ## 0.31.8
 
 - Refactoring.

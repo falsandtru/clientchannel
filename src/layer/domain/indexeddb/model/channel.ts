@@ -3,7 +3,6 @@ import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../'
 import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
 import { AtomicPromise } from 'spica/promise';
-import { Cache } from 'spica/cache';
 import { open, Listen, close, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { DataStore } from './channel/data';
 import { AccessStore } from './channel/access';
@@ -84,51 +83,31 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
 
     if (this.capacity === Infinity) return;
 
-    void this.events_.load.monitor([], ({ key, type }) =>
-      type === ChannelStore.EventType.delete
-        ? void this.keys_.delete(key) || void this.keys.delete(key)
-        : void this.keys_.delete(key) || void this.keys.put(key));
-    void this.events_.save.monitor([], ({ key, type }) =>
-      type === ChannelStore.EventType.delete
-        ? void this.keys_.delete(key) || void this.keys.delete(key)
-        : void this.keys_.delete(key) || void this.keys.put(key));
+    void this.events_.load.monitor([], ({ key, type }) => {
+      if (type === ChannelStore.EventType.delete) {
+        void this.keys.delete(key);
+      }
+      else {
+        void this.keys.add(key);
+        void this.schema.access.schedule(100);
+      }
+    });
+    void this.events_.save.monitor([], ({ key, type }) => {
+      if (type === ChannelStore.EventType.delete) {
+        void this.keys.delete(key);
+      }
+      else {
+        void this.keys.add(key);
+        void this.schema.access.schedule(100);
+      }
+    });
   }
   private readonly cancellation = new Cancellation();
   private readonly schema: Schema<K, V>;
   private readonly channel = new Channel<K>(this.name, this.debug);
   private readonly ownership = new Ownership<string>(this.channel);
-  private readonly keys_ = new Set<K>();
-  private readonly keys = new Cache<K>(this.capacity, {
-    disposer: (() => {
-      const queue = this.keys_;
-      let timer = 0;
-      const schedule = (): void => {
-        if (!this.alive) return;
-        if (timer === 0) return;
-        timer = 0;
-        if (!this.ownership.take('store', 10 * 1000)) return;
-        const since = Date.now();
-        let count = 0;
-        for (const key of queue) {
-          if (!this.alive) return void this.keys.clear(), void queue.clear();
-          if (!this.ownership.extend('store', 10 * 1000)) return timer = setTimeout(schedule, 10 * 1000) as any;
-          if (!this.ownership.take(`key:${key}`, 10 * 1000)) return timer = setTimeout(schedule, 10 * 1000) as any;
-          if (++count > 100 || Date.now() > since + 1 * 1000) return timer = setTimeout(schedule, 5 * 1000) as any;
-          void queue.delete(key);
-          this.has(key) || this.meta(key).date === 0
-            ? void this.delete(key)
-            : void this.clean(key);
-          assert(!this.has(key));
-        }
-      };
-      return (_: void, key: K): void => {
-        void queue.add(key);
-        if (timer > 0) return;
-        timer = setTimeout(schedule, 3 * 1000) as any;
-      };
-    })(),
-    capture: { delete: false },
-  });
+  private readonly keys = new Set<K>();
+  public lock = false;
   protected get alive(): boolean {
     return this.cancellation.alive;
   }

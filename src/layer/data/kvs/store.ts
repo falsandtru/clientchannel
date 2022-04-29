@@ -1,3 +1,4 @@
+import { Promise } from 'spica/global';
 import { Listen, Config } from '../../infrastructure/indexeddb/api';
 import { Cancellation } from 'spica/cancellation';
 import { tick } from 'spica/clock';
@@ -124,6 +125,29 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
       void tx.addEventListener('abort', () =>
         void cb?.(tx.error));
     }, () => void cb?.(new Error('Request has failed.')));
+  }
+  public count(query: IDBValidKey | IDBKeyRange | null | undefined, index: string): Promise<number> {
+    return new Promise((resolve, reject) => void this.listen(db => {
+      if (!this.alive) return void reject(new Error('Session is already closed.'));
+      const tx = db.transaction(this.name, 'readonly');
+      const req = index
+        ? tx
+          .objectStore(this.name)
+          .index(index)
+          .count(query ?? void 0)
+        : tx
+          .objectStore(this.name)
+          .count(query ?? void 0);
+      void req.addEventListener('success', () => {
+        void resolve(req.result)
+      });
+      void tx.addEventListener('complete', () =>
+        void reject(req.error));
+      void tx.addEventListener('error', () =>
+        void reject(req.error));
+      void tx.addEventListener('abort', () =>
+        void reject(req.error));
+    }, () => void reject(new Error('Request has failed.'))));
   }
   public cursor(query: IDBValidKey | IDBKeyRange | null | undefined, index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, cb: (cursor: IDBCursorWithValue | null, error: DOMException | Error | null) => void): void {
     if (!this.alive) return;

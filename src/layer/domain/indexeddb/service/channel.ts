@@ -16,7 +16,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
       age = Infinity,
       capacity = Infinity,
       debug = false,
-    }: Partial<StoreChannelConfig<K, V>> & { capacity?: number; debug?: boolean; } = {},
+    }: Partial<StoreChannelConfig<K, V>> & { debug?: boolean; } = {},
   ) {
     super(name, destroy, age, capacity, debug);
 

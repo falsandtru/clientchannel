@@ -25,6 +25,7 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
 }
 export interface StoreChannelConfig<K extends string, V extends StoreChannelObject<K>> {
   schema: () => V;
+  capacity?: number;
   age?: number;
   migrate?(link: V): void;
   destroy?(reason: unknown, event?: Event): boolean;

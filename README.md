@@ -8,11 +8,12 @@ Store and sync data between tabs via IndexedDB or LocalStorage.
 
 - Store and restore data using IndexedDB or LocalStorage.
 - Cross data binding between tabs.
-- Individual expiration per data.
+- Expiration per individual data.
+- Limitation of the number of data.
 
 ## Demos
 
-Store and sync text and canvas.
+Store and sync the text and the canvas.
 
 https://falsandtru.github.io/clientchannel/
 
@@ -26,7 +27,7 @@ https://falsandtru.github.io/clientchannel/
 
 A schema is defined by properties of objects made by the registered factory function.
 Property names having underscore(`_`) prefix or postfix will be excluded from schema.
-Property values of linked objects will be stored by update.
+Property values of linked objects will be stored by updates.
 Linked objects will be updated automatically when a linked object is updated on another thread(tab).
 
 ```ts
@@ -52,19 +53,21 @@ class Value {
 
 const chan = new StoreChannel('domain', {
   schema: () => new Value(),
-  // Delete records of update events of a linked object 3 days later since the last access.
+  // Limit the number of data.
+  capacity: 100,
+  // Delete data 3 days later since the last access.
   age: 3 * 24 * 60 * 60 * 1e3,
 });
-// Load data from IndexedDB with little delay.
+// Load the data from IndexedDB with little delay.
 const link = chan.link('path');
-// Save data to IndexedDB, and sync data between all tabs.
+// Save the data to IndexedDB, and sync data between all tabs.
 link.firstName = 'john';
 link.lastName = 'smith';
 ```
 
 ### Communication and Synchronization
 
-Linked objects provede send/recv events.
+Linked objects provede send and recv events.
 `send` event will be emitted when a linked object was updated by own thread(tab).
 `recv` event will be emitted when a linked object was updated by another thread(tab).
 

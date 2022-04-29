@@ -53,7 +53,7 @@ export class ExpiryStore<K extends string> {
     assert(Object.freeze(this));
   }
   private store = new class extends KeyValueStore<K, ExpiryRecord<K>> { }(name, ExpiryStoreSchema.key, this.listen);
-  private schedule = (() => {
+  public schedule = (() => {
     let timer = 0;
     let delay = 10 * 1000;
     let schedule = Infinity;
@@ -68,25 +68,31 @@ export class ExpiryStore<K extends string> {
         if (!this.ownership.take('store', delay)) return void this.schedule(delay *= 2);
         const since = Date.now();
         let count = 0;
-        let retry = false;
         schedule = 0;
         let timer = setInterval(() => {
           if (this.ownership.extend('store', delay)) return;
           clearInterval(timer);
           timer = 0 as any;
         }, delay / 2);
+        this.chan.lock = true;
         return void this.store.cursor(null, ExpiryStoreSchema.expiry, 'next', 'readonly', (cursor, error) => {
-          timer && clearInterval(timer);
+          this.chan.lock = false;
+          if (timer) {
+            clearInterval(timer);
+            timer = 0 as any;
+          }
           schedule = Infinity;
           if (!this.cancellation.alive) return;
+          if (this.chan.lock) return void this.schedule(delay *= 2);
           if (error) return void this.schedule(delay * 10);
-          if (!cursor) return retry && void this.schedule(delay *= 2);
+          if (!cursor) return;
           const { key, expiry }: ExpiryRecord<K> = cursor.value;
           if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
           if (!this.ownership.extend('store', delay)) return void this.schedule(delay *= 2);
           if (++count > 100 || Date.now() > since + 1 * 1000) return void this.schedule(5 * 1000);
           schedule = 0;
-          if (!this.ownership.take(`key:${key}`, delay)) return retry = true, void cursor.continue();
+          this.chan.lock = true;
+          if (!this.ownership.take(`key:${key}`, delay)) return void cursor.continue();
           this.chan.has(key) || this.chan.meta(key).date === 0
             ? void this.chan.delete(key)
             : void this.chan.clean(key);

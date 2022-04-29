@@ -99,6 +99,7 @@
         data: 0
       };
     },
+    capacity: 1000,
     age: 60 * 1e3,
     destroy: function (reason) {
       console.warn(reason);
@@ -107,7 +108,7 @@
     debug: true
   });
   for (let i = 0; i < 100; ++i) {
-    var link = chan.link('v1/' + `${Math.random() * 1000 | 0}`.padStart(3, '0'));
+    const link = chan.link('v1/' + `${Math.random() * 10000 | 0}`.padStart(4, '0'));
     link.data = 0;
   }
 </script>
