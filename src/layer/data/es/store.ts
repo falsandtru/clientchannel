@@ -14,7 +14,7 @@ namespace EventStoreSchema {
   export const id = 'id';
   export const key = 'key';
   //export const type = 'type';
-  //export const attr = 'attr';
+  //export const prop = 'prop';
   //export const value = 'value';
   //export const date = 'date';
   //export const surrogateKeyDateField = 'key+date';
@@ -68,18 +68,18 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         if (event.date <= states.dates.get(event.key)! && event.id <= states.ids.get(event.key)!) return;
         if (event instanceof LoadedEventRecord) {
           return void this.events.load
-            .emit([event.key, event.attr, event.type], new EventStore.Event(event.type, event.id, event.key, event.attr, event.date));
+            .emit([event.key, event.prop, event.type], new EventStore.Event(event.type, event.id, event.key, event.prop, event.date));
         }
         if (event instanceof SavedEventRecord) {
           return void this.events.save
-            .emit([event.key, event.attr, event.type], new EventStore.Event(event.type, event.id, event.key, event.attr, event.date));
+            .emit([event.key, event.prop, event.type], new EventStore.Event(event.type, event.id, event.key, event.prop, event.date));
         }
         return;
       });
     // Update states.
     void this.events_.memory
       .monitor([], event =>
-        void states.update(new EventStore.Event(event.type, event.id, event.key, event.attr, event.date)));
+        void states.update(new EventStore.Event(event.type, event.id, event.key, event.prop, event.date)));
     void this.events.load
       .monitor([], event =>
         void states.update(event));
@@ -177,7 +177,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
                   : es
               , [])
               .reduceRight<Map<string, LoadedEventRecord<K, V>>>((dict, e) =>
-                dict.set(e.attr, e)
+                dict.set(e.prop, e)
               , new Map())
               .values()
           ]
@@ -187,16 +187,16 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
                 void this.memory
                   .refs([e.key])
                   .filter(({ namespace: [, , id = 0] }) => id !== 0)
-                  .forEach(({ namespace: [key, attr, id] }) =>
+                  .forEach(({ namespace: [key, prop, id] }) =>
                     void this.memory
-                      .off([key!, attr!, id!]));
+                      .off([key!, prop!, id!]));
               }
               void this.memory
-                .off([e.key, e.attr, e.id]);
+                .off([e.key, e.prop, e.id]);
               void this.memory
-                .on([e.key, e.attr, e.id], () => e);
+                .on([e.key, e.prop, e.id], () => e);
               void this.events_.memory
-                .emit([e.key, e.attr, e.id], e);
+                .emit([e.key, e.prop, e.id], e);
             });
           try {
             void cb?.(req.error);
@@ -212,7 +212,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         }
         else {
           const event = new LoadedEventRecord<K, V>(cursor.value);
-          if (this.memory.refs([event.key, event.attr, event.id]).length > 0) return void proc(null, null);
+          if (this.memory.refs([event.key, event.prop, event.id]).length > 0) return void proc(null, null);
           void events.unshift(event);
           if (event.type !== EventStore.EventType.put) return void proc(null, null);
           return void cursor.continue();
@@ -267,33 +267,33 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     switch (event.type) {
       case EventStore.EventType.put:
         void this.memory
-          .off([event.key, event.attr, 0]);
+          .off([event.key, event.prop, 0]);
         void this.events_.memory
-          .off([event.key, event.attr, 0]);
+          .off([event.key, event.prop, 0]);
         break;
       case EventStore.EventType.delete:
       case EventStore.EventType.snapshot:
         void this.memory
           .refs([event.key])
           .filter(({ namespace: [, , id] }) => id === 0)
-          .forEach(({ namespace: [key, attr, id] }) => (
+          .forEach(({ namespace: [key, prop, id] }) => (
             void this.memory
-              .off([key!, attr!, id!]),
+              .off([key!, prop!, id!]),
             void this.events_.memory
-              .off([key!, attr!, id!])));
+              .off([key!, prop!, id!])));
         break;
     }
     const clean = this.memory
-      .on([event.key, event.attr, 0, ++this.counter], () => event);
+      .on([event.key, event.prop, 0, ++this.counter], () => event);
     void this.events_.memory
-      .emit([event.key, event.attr, 0], event);
+      .emit([event.key, event.prop, 0], event);
     const loss = () =>
-      void this.events.loss.emit([event.key, event.attr, event.type], new EventStore.Event(event.type, makeEventId(0), event.key, event.attr, event.date));
+      void this.events.loss.emit([event.key, event.prop, event.type], new EventStore.Event(event.type, makeEventId(0), event.key, event.prop, event.date));
     return void this.listen(db => {
       if (!this.alive) return;
       tx = this.txrw = tx || this.txrw || db.transaction(this.name, 'readwrite');
       const active = (): boolean =>
-        this.memory.reflect([event.key, event.attr, 0])
+        this.memory.reflect([event.key, event.prop, 0])
           .includes(event);
       if (!active()) return;
       const req = tx
@@ -304,11 +304,11 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         void clean();
         const savedEvent = new SavedEventRecord(makeEventId(req.result as number), event.key, event.value, event.type, event.date);
         void this.memory
-          .off([savedEvent.key, savedEvent.attr, savedEvent.id]);
+          .off([savedEvent.key, savedEvent.prop, savedEvent.id]);
         void this.memory
-          .on([savedEvent.key, savedEvent.attr, savedEvent.id], () => savedEvent);
+          .on([savedEvent.key, savedEvent.prop, savedEvent.id], () => savedEvent);
         void this.events_.memory
-          .emit([savedEvent.key, savedEvent.attr, savedEvent.id], savedEvent);
+          .emit([savedEvent.key, savedEvent.prop, savedEvent.id], savedEvent);
         const events: StoredEventRecord<K, V>[] = this.memory.reflect([savedEvent.key])
           .reduce<StoredEventRecord<K, V>[]>((es, e) =>
             e instanceof StoredEventRecord
@@ -396,9 +396,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         if (!cursor) {
           for (const event of events) {
             void this.memory
-              .off([event.key, event.attr, event.id]);
+              .off([event.key, event.prop, event.id]);
             void this.events_.memory
-              .off([event.key, event.attr, event.id]);
+              .off([event.key, event.prop, event.id]);
           }
           clear ||= events.length === 0;
           clear && this.meta(key).date === 0 && void this.events.clear.emit([key]);
@@ -465,7 +465,7 @@ export namespace EventStore {
       public readonly type: EventType,
       public readonly id: EventId,
       public readonly key: K,
-      public readonly attr: P,
+      public readonly prop: P,
       public readonly date: number,
     ) {
       this.EVENT;
@@ -534,11 +534,11 @@ export function compose<K extends string, V extends EventStore.Value>(
   function compose(target: E, source: E): E {
     switch (source.type) {
       case EventStore.EventType.put:
-        assert(source.attr !== '');
+        assert(source.prop !== '');
         return new UnstoredEventRecord<K, V>(
           source.key,
           new EventStore.Value(target.value, {
-            [source.attr]: source.value[source.attr as Prop<V>]
+            [source.prop]: source.value[source.prop as Prop<V>]
           }),
           EventStore.EventType.snapshot);
       case EventStore.EventType.snapshot:

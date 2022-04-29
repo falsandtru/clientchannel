@@ -1,14 +1,14 @@
-import { StoreChannel, StoreChannelObject, StorageChannel, StorageChannelObject, ChannelObject } from '../../index';
+import { StoreChannel, StorageChannel } from '../../index';
 
 describe('Integration: Package', function () {
   describe('usage', function () {
     it('store', () => {
-      interface Value extends StoreChannelObject<string> {
+      interface Value extends StoreChannel.Value<string> {
       }
       class Value {
         // Getter and setter names will be excluded from schema.
         get key() {
-          return this[ChannelObject.key];
+          return this[StorageChannel.Value.key];
         }
         // Properties having an invalid name will be excluded from schema.
         private separator_ = ' ';
@@ -35,11 +35,11 @@ describe('Integration: Package', function () {
     });
 
     it('communication', () => {
-      interface Value extends StorageChannelObject {
+      interface Value extends StorageChannel.Value {
       }
       class Value {
         event() {
-          return this[ChannelObject.event];
+          return this[StorageChannel.Value.event];
         }
         version = 0;
       }

@@ -1,20 +1,13 @@
 import { Observer } from 'spica/observer';
 import { Prop } from './src/layer/data/database/value';
+import { DAO } from './src/layer/domain/dao/api';
 
-export namespace ChannelObject {
-  export const meta: unique symbol;
-  export const id: unique symbol;
-  export const key: unique symbol;
-  export const date: unique symbol;
-  export const event: unique symbol;
-}
-
-export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
-  constructor(name: string, config: StoreChannelConfig<K, V>);
+export class StoreChannel<K extends string, V extends StoreChannel.Value<K>> {
+  constructor(name: string, config: StoreChannel.Config<K, V>);
   readonly events: {
-    readonly load: Observer<[K, Prop<V> | '', StoreChannelEventType], StoreChannelEvent<K, Prop<V> | ''>, void>;
-    readonly save: Observer<[K, Prop<V> | '', StoreChannelEventType], StoreChannelEvent<K, Prop<V> | ''>, void>;
-    readonly loss: Observer<[K, Prop<V> | '', StoreChannelEventType], StoreChannelEvent<K, Prop<V> | ''>, void>;
+    readonly load: Observer<[K, Prop<V> | '', StoreChannel.EventType], StoreChannel.Event<K, Prop<V> | ''>, void>;
+    readonly save: Observer<[K, Prop<V> | '', StoreChannel.EventType], StoreChannel.Event<K, Prop<V> | ''>, void>;
+    readonly loss: Observer<[K, Prop<V> | '', StoreChannel.EventType], StoreChannel.Event<K, Prop<V> | ''>, void>;
   };
   sync(keys: readonly K[], timeout?: number): Promise<PromiseSettledResult<K>[]>;
   link(key: K, age?: number): V;
@@ -24,70 +17,92 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> {
   close(): void;
   destroy(): void;
 }
-export interface StoreChannelConfig<K extends string, V extends StoreChannelObject<K>> {
-  schema: () => V;
-  capacity?: number;
-  age?: number;
-  migrate?(link: V): void;
-  destroy?(reason: unknown, event?: Event): boolean;
-}
-export interface StoreChannelObject<K extends string> {
-  readonly [ChannelObject.meta]: StoreChannelObjectMetaData<K>;
-  readonly [ChannelObject.id]: number;
-  readonly [ChannelObject.key]: K;
-  readonly [ChannelObject.date]: number;
-  readonly [ChannelObject.event]: Observer<[StorageChannelEventType, Prop<this>], StorageChannelEvent<this>, void>;
-}
-export interface StoreChannelObjectMetaData<K extends string> {
-  readonly id: number;
-  readonly key: K;
-  readonly date: number;
-}
-export interface StoreChannelEvent<K extends string, P extends string> {
-  readonly type: StoreChannelEventType;
-  readonly id: number;
-  readonly key: K;
-  readonly attr: P;
-}
-export type StoreChannelEventType =
-  | StoreChannelEventType.Put
-  | StoreChannelEventType.Delete
-  | StoreChannelEventType.Snapshot;
-export namespace StoreChannelEventType {
-  export type Put = 'put';
-  export type Delete = 'delete';
-  export type Snapshot = 'snapshot';
+export namespace StoreChannel {
+  export interface Value<K extends string> {
+    readonly [Value.meta]: ValueMetaData<K>;
+    readonly [Value.id]: number;
+    readonly [Value.key]: K;
+    readonly [Value.date]: number;
+    readonly [Value.event]: Observer<[StorageChannel.EventType, Prop<this>], StorageChannel.Event<this>, void>;
+  }
+  export namespace Value {
+    export const meta: typeof DAO.meta;
+    export const id: typeof DAO.id;
+    export const key: typeof DAO.key;
+    export const date: typeof DAO.date;
+    export const event: typeof DAO.event;
+  }
+  export interface ValueMetaData<K extends string> {
+    readonly id: number;
+    readonly key: K;
+    readonly date: number;
+  }
+  export interface Config<K extends string, V extends StoreChannel.Value<K>> {
+    schema: () => V;
+    capacity?: number;
+    age?: number;
+    migrate?(link: V): void;
+    destroy?(reason: unknown, event?: global.Event): boolean;
+  }
+  export interface Event<K extends string, P extends string> {
+    readonly type: EventType;
+    readonly id: number;
+    readonly key: K;
+    readonly prop: P;
+  }
+  export type EventType =
+    | EventType.Put
+    | EventType.Delete
+    | EventType.Snapshot;
+  export namespace EventType {
+    export type Put = 'put';
+    export type Delete = 'delete';
+    export type Snapshot = 'snapshot';
+  }
+  export const EventType: {
+    readonly put: EventType.Put;
+    readonly delete: EventType.Delete;
+    readonly snapshot: EventType.Snapshot;
+  };
 }
 
-export class StorageChannel<V extends StorageChannelObject> {
-  constructor(name: string, config: StorageChannelConfig<V>);
+export class StorageChannel<V extends StorageChannel.Value> {
+  constructor(name: string, config: StorageChannel.Config<V>);
   readonly events: {
-    readonly send: Observer<[Prop<V>], { [P in Prop<V>]: StorageChannelEvent<V, P>; }[Prop<V>], void>;
-    readonly recv: Observer<[Prop<V>], { [P in Prop<V>]: StorageChannelEvent<V, P>; }[Prop<V>], void>;
+    readonly send: Observer<[Prop<V>], { [P in Prop<V>]: StorageChannel.Event<V, P>; }[Prop<V>], void>;
+    readonly recv: Observer<[Prop<V>], { [P in Prop<V>]: StorageChannel.Event<V, P>; }[Prop<V>], void>;
   };
   link(): V;
   close(): void;
   destroy(): void;
 }
-export interface StorageChannelConfig<V extends StorageChannelObject> {
-  schema: () => V;
-  migrate?(link: V): void;
-}
-export interface StorageChannelObject {
-  readonly [ChannelObject.event]: Observer<[StorageChannelEventType, Prop<this>], StorageChannelEvent<this>, void>;
-}
-export interface StorageChannelEvent<V, P extends Prop<V> = Prop<V>> {
-  readonly type: StorageChannelEventType;
-  readonly attr: P;
-  readonly newValue: V[P];
-  readonly oldValue: V[P];
-}
-export type StorageChannelEventType =
-  | StorageChannelEventType.Send
-  | StorageChannelEventType.Recv;
-export namespace StorageChannelEventType {
-  export type Send = 'send';
-  export type Recv = 'recv';
+export namespace StorageChannel {
+  export interface Value {
+    readonly [Value.event]: Observer<[EventType, Prop<this>], Event<this>, void>;
+  }
+  export namespace Value {
+    export const key: typeof DAO.key;
+    export const event: typeof DAO.event;
+  }
+  export interface Config<V extends StorageChannel.Value> {
+    schema: () => V;
+    migrate?(link: V): void;
+  }
+  export interface Event<V, P extends Prop<V> = Prop<V>> {
+    readonly type: EventType;
+    readonly prop: P;
+    readonly newValue: V[P];
+    readonly oldValue: V[P];
+  }
+  export type EventType =
+    | EventType.Send
+    | EventType.Recv;
+  export namespace EventType {
+    export type Send = 'send';
+    export type Recv = 'recv';
+    export const send: Send;
+    export const recv: Recv;
+  }
 }
 
 export class Ownership<K extends string> {

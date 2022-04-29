@@ -1,5 +1,4 @@
 import { ObjectDefineProperties, ObjectGetOwnPropertyDescriptor, ObjectKeys, ObjectSeal } from 'spica/alias';
-import { ChannelObject } from '../../../../..';
 import { Prop } from '../../../data/database/value';
 import { isValidPropertyName, isValidPropertyValue } from '../../../data/es/event';
 
@@ -8,12 +7,12 @@ export {
   isValidPropertyValue
 };
 
-export namespace Schema {
-  export const meta: typeof ChannelObject.meta = Symbol.for('clientchannel/ChannelObject.meta') as any;
-  export const id: typeof ChannelObject.id = Symbol.for('clientchannel/ChannelObject.id') as any;
-  export const key: typeof ChannelObject.key = Symbol.for('clientchannel/ChannelObject.key') as any;
-  export const date: typeof ChannelObject.date = Symbol.for('clientchannel/ChannelObject.data') as any;
-  export const event: typeof ChannelObject.event = Symbol.for('clientchannel/ChannelObject.event') as any;
+export namespace DAO {
+  export const meta = Symbol.for('clientchannel/DAO.meta');
+  export const id = Symbol.for('clientchannel/DAO.id');
+  export const key = Symbol.for('clientchannel/DAO.key');
+  export const date = Symbol.for('clientchannel/DAO.data');
+  export const event = Symbol.for('clientchannel/DAO.event');
 }
 
 export function build<V extends object>(
@@ -24,7 +23,7 @@ export function build<V extends object>(
 ): V {
   const dao = factory();
   assert(Object.values(dao).every(prop => !(prop in dao)));
-  if (typeof source[Schema.key] !== 'string') throw new TypeError(`ClientChannel: DAO: Invalid key: ${source[Schema.key]}`);
+  if (typeof source[DAO.key] !== 'string') throw new TypeError(`ClientChannel: DAO: Invalid key: ${source[DAO.key]}`);
   const descmap: PropertyDescriptorMap = {
     ...(ObjectKeys(dao) as Prop<typeof dao>[])
       .filter(isValidPropertyName)
@@ -56,30 +55,30 @@ export function build<V extends object>(
         return map;
       }, {}),
     ...{
-      [Schema.meta]: {
+      [DAO.meta]: {
         configurable: false,
         enumerable: false,
-        get: () => source[Schema.meta],
+        get: () => source[DAO.meta],
       },
-      [Schema.id]: {
+      [DAO.id]: {
         configurable: false,
         enumerable: false,
-        get: () => source[Schema.id],
+        get: () => source[DAO.id],
       },
-      [Schema.key]: {
+      [DAO.key]: {
         configurable: false,
         enumerable: false,
-        get: () => source[Schema.key],
+        get: () => source[DAO.key],
       },
-      [Schema.date]: {
+      [DAO.date]: {
         configurable: false,
         enumerable: false,
-        get: () => source[Schema.date],
+        get: () => source[DAO.date],
       },
-      [Schema.event]: {
+      [DAO.event]: {
         configurable: false,
         enumerable: false,
-        get: () => source[Schema.event],
+        get: () => source[DAO.event],
       },
     }
   };

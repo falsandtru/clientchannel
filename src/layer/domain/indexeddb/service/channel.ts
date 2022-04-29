@@ -1,13 +1,13 @@
 import { ObjectDefineProperties, ObjectKeys } from 'spica/alias';
-import { StoreChannel as IStoreChannel, StoreChannelConfig, StoreChannelObject } from '../../../../../';
+import { StoreChannel as IStoreChannel } from '../../../../../';
 import { Prop } from '../../../data/database/value';
 import { Observation } from 'spica/observer';
 import { throttle } from 'spica/throttle';
-import { Schema, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
+import { build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { ChannelStore } from '../model/channel';
 import { StorageChannel } from '../../webstorage/api';
 
-export class StoreChannel<K extends string, V extends StoreChannelObject<K>> extends ChannelStore<K, V> implements IStoreChannel<K, V> {
+export class StoreChannel<K extends string, V extends StoreChannel.Value<K>> extends ChannelStore<K, V> implements IStoreChannel<K, V> {
   constructor(
     name: string,
     private readonly factory: () => V,
@@ -17,27 +17,27 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
       age = Infinity,
       capacity = Infinity,
       debug = false,
-    }: Partial<StoreChannelConfig<K, V>> & { debug?: boolean; } = {},
+    }: Partial<StoreChannel.Config<K, V>> & { debug?: boolean; } = {},
   ) {
     super(name, destroy, age, capacity, debug);
 
-    const attrs = <Prop<V>[]>ObjectKeys(factory())
+    const props = <Prop<V>[]>ObjectKeys(factory())
       .filter(isValidPropertyName)
       .filter(isValidPropertyValue(factory()));
 
-    const update = (key: K, attrs: Prop<V>[]): void => {
+    const update = (key: K, props: Prop<V>[]): void => {
       const source = this.sources.get(key)! as V;
       const memory = this.get(key)! as V;
       const link = this.link(key);
       assert(memory instanceof Object === false);
-      const changes = attrs
-        .filter(attr => attr in memory)
-        .map(attr => {
-          const newVal = memory[attr];
-          const oldVal = source[attr];
-          source[attr] = newVal;
+      const changes = props
+        .filter(prop => prop in memory)
+        .map(prop => {
+          const newVal = memory[prop];
+          const oldVal = source[prop];
+          source[prop] = newVal;
           return {
-            attr,
+            prop,
             newVal,
             oldVal,
           };
@@ -46,21 +46,21 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
           ![newVal].includes(oldVal));
       if (changes.length === 0) return;
       void migrate?.(link);
-      for (const { attr, oldVal } of changes) {
-        void (source[Schema.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>)
-          .emit([StorageChannel.EventType.recv, attr], new StorageChannel.Event<V>(StorageChannel.EventType.recv, attr, memory[attr], oldVal));
+      for (const { prop, oldVal } of changes) {
+        void (source[StoreChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>)
+          .emit([StorageChannel.EventType.recv, prop], new StorageChannel.Event<V>(StorageChannel.EventType.recv, prop, memory[prop], oldVal));
       }
     }
 
     void this.events_.load
-      .monitor([], ({ key, attr, type }) => {
+      .monitor([], ({ key, prop, type }) => {
         if (!this.sources.has(key)) return;
         switch (type) {
-          case ChannelStore.EventType.put:
-            return void update(key, attrs.filter(a => a === attr));
-          case ChannelStore.EventType.delete:
-          case ChannelStore.EventType.snapshot:
-            return void update(key, attrs);
+          case StoreChannel.EventType.put:
+            return void update(key, props.filter(a => a === prop));
+          case StoreChannel.EventType.delete:
+          case StoreChannel.EventType.snapshot:
+            return void update(key, props);
         }
       });
     assert(Object.freeze(this));
@@ -78,34 +78,41 @@ export class StoreChannel<K extends string, V extends StoreChannelObject<K>> ext
           ObjectDefineProperties(
             this.sources.set(key, this.get(key)).get(key)! as V,
             {
-              [Schema.meta]: {
+              [StoreChannel.Value.meta]: {
                 get: () =>
                   this.meta(key)
               },
-              [Schema.id]: {
+              [StoreChannel.Value.id]: {
                 get: () =>
                   this.meta(key).id
               },
-              [Schema.key]: {
+              [StoreChannel.Value.key]: {
                 get: () =>
                   this.meta(key).key
               },
-              [Schema.date]: {
+              [StoreChannel.Value.date]: {
                 get: () =>
                   this.meta(key).date
               },
-              [Schema.event]: {
+              [StoreChannel.Value.event]: {
                 value: new Observation<[StorageChannel.EventType], StorageChannel.Event<V>, void>({ limit: Infinity })
               },
             }),
           this.factory,
-        (attr, newValue, oldValue) => {
+        (prop, newValue, oldValue) => {
           if (!this.alive) return;
-          void this.add(new ChannelStore.Record<K, V>(key, { [attr]: newValue } as unknown as Partial<V>));
-          void (this.sources.get(key)![Schema.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>)
-            .emit([StorageChannel.EventType.send, attr], new StorageChannel.Event<V>(StorageChannel.EventType.send, attr, newValue, oldValue));
+          void this.add(new StoreChannel.Record<K, V>(key, { [prop]: newValue } as unknown as Partial<V>));
+          void (this.sources.get(key)![StoreChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>)
+            .emit([StorageChannel.EventType.send, prop], new StorageChannel.Event<V>(StorageChannel.EventType.send, prop, newValue, oldValue));
         },
         throttle(100, () => this.alive && this.links.has(key) && void this.log(key))))
           .get(key)!;
   }
+}
+export namespace StoreChannel {
+  export import Value = ChannelStore.Value;
+  export import Config = ChannelStore.Config;
+  export import Event = ChannelStore.Event;
+  export import EventType = ChannelStore.EventType;
+  export import Record = ChannelStore.Record;
 }

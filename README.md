@@ -31,14 +31,14 @@ Property values of linked objects will be stored by updates.
 Linked objects will be updated automatically when a linked object is updated on another thread(tab).
 
 ```ts
-import { StoreChannel, StoreChannelObject, ChannelObject } from 'clientchannel';
+import { StoreChannel } from 'clientchannel';
 
-interface Value extends StoreChannelObject<string> {
+interface Value extends StoreChannel.Value<string> {
 }
 class Value {
   // Getter and setter names will be excluded from schema.
   get key() {
-    return this[ChannelObject.key];
+    return this[StoreChannel.Value.key];
   }
   // Properties having an invalid name will be excluded from schema.
   private separator_ = ' ';
@@ -72,13 +72,13 @@ Linked objects provede send and recv events.
 `recv` event will be emitted when a linked object was updated by another thread(tab).
 
 ```ts
-import { StorageChannel, StorageChannelObject, ChannelObject } from 'clientchannel';
+import { StorageChannel } from 'clientchannel';
 
-interface Value extends StorageChannelObject {
+interface Value extends StorageChannel.Value {
 }
 class Value {
   event() {
-    return this[ChannelObject.event];
+    return this[StorageChannel.Value.event];
   }
   version = 0;
 }

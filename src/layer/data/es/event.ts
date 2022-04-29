@@ -1,20 +1,17 @@
 import { Number, Date } from 'spica/global';
 import { ObjectKeys } from 'spica/alias';
-import { StoreChannelEventType } from '../../../../';
 import { clone } from 'spica/assign';
+import { StoreChannel } from '../../../..';
 import { EventId, makeEventId } from './identifier';
 import { Prop, isStorable } from '../database/value';
 
+export type EventRecordType = StoreChannel.EventType
 export const EventRecordType = {
   put: 'put',
   delete: 'delete',
   snapshot: 'snapshot',
 } as const;
-export type EventRecordType = StoreChannelEventType
 export namespace EventRecordType {
-  export type Put = StoreChannelEventType.Put;
-  export type Delete = StoreChannelEventType.Delete;
-  export type Snapshot = StoreChannelEventType.Snapshot;
 }
 
 abstract class EventRecord<K extends string, V extends EventRecordValue> {
@@ -30,21 +27,21 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
     if (typeof this.key !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event key: ${this.key}`);
     if (typeof this.value !== 'object' || !this.value) throw new TypeError(`ClientChannel: EventRecord: Invalid event value: ${JSON.stringify(this.value)}`);
     if (typeof this.date !== 'number' || this.date >= 0 === false || !Number.isFinite(this.date)) throw new TypeError(`ClientChannel: EventRecord: Invalid event date: ${this.date}`);
-    this.attr = this.type === EventRecordType.put
+    this.prop = this.type === EventRecordType.put
       ? ObjectKeys(value).filter(isValidPropertyName)[0] as Prop<V>
       : '';
-    if (typeof this.attr !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event attr: ${this.key}`);
+    if (typeof this.prop !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event prop: ${this.key}`);
 
     switch (type) {
       case EventRecordType.put:
-        if (!isValidPropertyName(this.attr)) throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
-        assert(this.attr !== '');
-        this.value = value = new EventRecordValue({ [this.attr]: value[this.attr as Prop<V>] });
+        if (!isValidPropertyName(this.prop)) throw new TypeError(`ClientChannel: EventRecord: Invalid event prop with ${this.type}: ${this.prop}`);
+        assert(this.prop !== '');
+        this.value = value = new EventRecordValue({ [this.prop]: value[this.prop as Prop<V>] });
         assert(Object.freeze(this.value));
         assert(Object.freeze(this));
         return;
       case EventRecordType.snapshot:
-        if (this.attr !== '') throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
+        if (this.prop !== '') throw new TypeError(`ClientChannel: EventRecord: Invalid event prop with ${this.type}: ${this.prop}`);
         this.value = value = new EventRecordValue(value);
         assert(Object.keys(this.value).every(isValidPropertyName));
         assert(Object.keys(this.value).every(isValidPropertyValue(this.value)));
@@ -52,7 +49,7 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
         assert(Object.freeze(this));
         return;
       case EventRecordType.delete:
-        if (this.attr !== '') throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${this.type}: ${this.attr}`);
+        if (this.prop !== '') throw new TypeError(`ClientChannel: EventRecord: Invalid event prop with ${this.type}: ${this.prop}`);
         this.value = value = new EventRecordValue();
         assert.deepStrictEqual(Object.keys(this.value), []);
         assert(Object.freeze(this.value));
@@ -62,7 +59,7 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
         throw new TypeError(`ClientChannel: EventRecord: Invalid event type: ${type}`);
     }
   }
-  public readonly attr: Prop<V> | '';
+  public readonly prop: Prop<V> | '';
 }
 export class UnstoredEventRecord<K extends string, V extends EventRecordValue> extends EventRecord<K, V> {
   private readonly EVENT_RECORD!: this;

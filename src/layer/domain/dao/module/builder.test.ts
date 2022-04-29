@@ -1,8 +1,8 @@
-import { Schema, build } from './builder';
+import { DAO, build } from './builder';
 
 describe('Unit: layers/domain/dao/module/build', () => {
   describe('build', () => {
-    class DAO {
+    class Value {
       n = 0;
       m = 0;
       p_ = 0;
@@ -13,22 +13,22 @@ describe('Unit: layers/domain/dao/module/build', () => {
         this.p_ = v;
       }
       get name(): string {
-        return this[Schema.key]
+        return this[DAO.key]
       }
       set name(name) {
-        this[Schema.key] = name;
+        this[DAO.key] = name;
       }
     }
 
     function factory() {
-      return new DAO();
+      return new Value();
     }
 
     it('init', () => {
-      const source = {[Schema.key]: 'test', m: 1} as any as DAO;
+      const source = {[DAO.key]: 'test', m: 1} as any as Value;
       const dao = build(source, factory);
 
-      assert(dao[Schema.key] === 'test');
+      assert(dao[DAO.key] === 'test');
       assert(dao.name === 'test');
       assert(dao.n === 0);
       assert(dao.m === 1);
@@ -37,7 +37,7 @@ describe('Unit: layers/domain/dao/module/build', () => {
     });
 
     it('seal', () => {
-      const source = {[Schema.key]: 'test', m: 1} as any as DAO;
+      const source = {[DAO.key]: 'test', m: 1} as any as Value;
       const dao = build(source, factory);
 
       try {
@@ -51,13 +51,13 @@ describe('Unit: layers/domain/dao/module/build', () => {
     });
 
     it('id', () => {
-      const source = {[Schema.key]: 'test', m: 1} as any as DAO;
+      const source = {[DAO.key]: 'test', m: 1} as any as Value;
       const dao = build(source, factory);
 
-      assert(dao[Schema.id] === undefined);
+      assert(dao[DAO.id] === undefined);
 
       try {
-        dao[Schema.id] = 0;
+        dao[DAO.id] = 0;
         throw 0;
       }
       catch (e) {
@@ -66,7 +66,7 @@ describe('Unit: layers/domain/dao/module/build', () => {
     });
 
     it('key', () => {
-      const source = {[Schema.key]: 'test', m: 1} as any as DAO;
+      const source = {[DAO.key]: 'test', m: 1} as any as Value;
       const dao = build(source, factory);
 
       assert(dao.name === 'test');
@@ -81,7 +81,7 @@ describe('Unit: layers/domain/dao/module/build', () => {
     });
 
     it('prop', () => {
-      const source = {[Schema.key]: 'test', m: 1} as any as DAO;
+      const source = {[DAO.key]: 'test', m: 1} as any as Value;
       const dao = build(source, factory);
 
       dao.n = 2;
@@ -100,7 +100,7 @@ describe('Unit: layers/domain/dao/module/build', () => {
     });
 
     it('accessor', () => {
-      const source = {[Schema.key]: 'test', m: 1} as any as DAO;
+      const source = {[DAO.key]: 'test', m: 1} as any as Value;
       const dao = build(source, factory);
 
       dao.p_ = 6;
@@ -129,7 +129,7 @@ describe('Unit: layers/domain/dao/module/build', () => {
     });
 
     it('invalid values', () => {
-      const source = {[Schema.key]: 'test', m: 1} as any;
+      const source = {[DAO.key]: 'test', m: 1} as any;
       const dao = build(source, factory);
 
       // function

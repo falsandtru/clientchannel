@@ -1,8 +1,6 @@
-import { StoreChannelObject } from '../../../../../';
 import { StoreChannel } from './channel';
 import { listen_, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { record } from '../../../data/es/store';
-import { Schema } from '../../dao/api';
 
 describe('Unit: layers/domain/indexeddb/service/channel', function () {
   this.timeout(9 * 1e3);
@@ -26,7 +24,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       destroy('test');
     });
 
-    interface Value extends StoreChannelObject<string> {
+    interface Value extends StoreChannel.Value<string> {
     }
     class Value {
       public n: number = 0;
@@ -44,9 +42,9 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       const link = chan.link('a');
 
       assert(link === chan.link('a'));
-      assert(link[Schema.id] === 0);
-      assert(link[Schema.key] === 'a');
-      assert(link[Schema.date] === 0);
+      assert(link[StoreChannel.Value.id] === 0);
+      assert(link[StoreChannel.Value.key] === 'a');
+      assert(link[StoreChannel.Value.date] === 0);
       assert(link.n === 0);
       assert(link.s === '');
 
@@ -65,9 +63,9 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
               { status: 'fulfilled', value: 'z' },
             ]);
             const link = chan.link('a');
-            assert(link[Schema.id] === 2);
-            assert(link[Schema.key] === 'a');
-            assert(link[Schema.date] > 0);
+            assert(link[StoreChannel.Value.id] === 2);
+            assert(link[StoreChannel.Value.key] === 'a');
+            assert(link[StoreChannel.Value.date] > 0);
             assert(link.n === 1);
             assert(link.s === '1');
             chan.destroy();
@@ -88,9 +86,9 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
             chan.load('a', err => {
               assert(!err);
               const link = chan.link('a');
-              assert(link[Schema.id] === 2);
-              assert(link[Schema.key] === 'a');
-              assert(link[Schema.date] > 0);
+              assert(link[StoreChannel.Value.id] === 2);
+              assert(link[StoreChannel.Value.key] === 'a');
+              assert(link[StoreChannel.Value.date] > 0);
               assert(link.n === 1);
               assert(link.s === '1');
               chan.destroy();
@@ -105,17 +103,17 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       const chan = new StoreChannel('test', () => new Value());
       const link = chan.link('a');
 
-      link[Schema.event].once(['send', 'n'], ev => {
+      link[StoreChannel.Value.event].once(['send', 'n'], ev => {
         assert.deepEqual(ev, {
           type: 'send',
-          attr: 'n',
+          prop: 'n',
           newValue: 1,
           oldValue: 0
         });
         chan.events.save.once(['a', 'n', 'put'], () => {
-          assert(link[Schema.id] === 1);
-          assert(link[Schema.key] === 'a');
-          assert(link[Schema.date] > 0);
+          assert(link[StoreChannel.Value.id] === 1);
+          assert(link[StoreChannel.Value.key] === 'a');
+          assert(link[StoreChannel.Value.date] > 0);
           chan.destroy();
           done();
         });
@@ -123,9 +121,9 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
 
       assert(link.n === 0);
       link.n = 1;
-      assert(link[Schema.id] === 0);
-      assert(link[Schema.key] === 'a');
-      assert(link[Schema.date] > 0);
+      assert(link[StoreChannel.Value.id] === 0);
+      assert(link[StoreChannel.Value.key] === 'a');
+      assert(link[StoreChannel.Value.date] > 0);
       assert(link.n === 1);
       assert(link.s === '');
     });
@@ -138,17 +136,17 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       listen_('test', db => {
         db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { n: 1 }))).onsuccess = () => {
           chan['schema'].data.load('a');
-          link[Schema.event].once(['recv', 'n'], ev => {
+          link[StoreChannel.Value.event].once(['recv', 'n'], ev => {
             assert.deepEqual(ev, {
               type: 'recv',
-              attr: 'n',
+              prop: 'n',
               newValue: 1,
               oldValue: 0
             });
             chan.events.load.once(['a', 'n', 'put'], () => {
-              assert(link[Schema.id] === 1);
-              assert(link[Schema.key] === 'a');
-              assert(link[Schema.date] > 0);
+              assert(link[StoreChannel.Value.id] === 1);
+              assert(link[StoreChannel.Value.key] === 'a');
+              assert(link[StoreChannel.Value.date] > 0);
               assert(link.n === 1);
               chan.destroy();
               done();
@@ -166,7 +164,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
         chan.close();
         chan = new StoreChannel('test', () => new Value(), {
           migrate: link => {
-            assert(link[Schema.id] === 1);
+            assert(link[StoreChannel.Value.id] === 1);
             assert(link.n === 1);
             link.n = 2;
           }
@@ -175,7 +173,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
         chan.events.load.once(['a', 'n', 'put'], () => {
           assert(link.n === 2);
           chan.events.save.once(['a', 'n', 'put'], () => {
-            assert(link[Schema.id] === 2);
+            assert(link[StoreChannel.Value.id] === 2);
             chan.destroy();
             done();
           });

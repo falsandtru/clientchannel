@@ -3,6 +3,7 @@
 ## 0.32.0
 
 - Add StoreChannelConfig.capacity option.
+- Refine APIs.
 
 ## 0.31.8
 

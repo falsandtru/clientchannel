@@ -1,15 +1,17 @@
 import { Infinity, Promise, setTimeout } from 'spica/global';
-import { StoreChannelObject, StoreChannelObjectMetaData } from '../../../../../';
+import { StoreChannel } from '../../../../../';
 import { Prop } from '../../../data/database/value';
-import { Observation } from 'spica/observer';
+import { Observation, Observer } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
 import { AtomicPromise } from 'spica/promise';
 import { open, Listen, close, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
+import { DAO } from '../../dao/api';
 import { DataStore } from './channel/data';
 import { AccessStore } from './channel/access';
 import { ExpiryStore } from './channel/expiry';
 import { Channel, ChannelMessage } from '../../broadcast/channel';
 import { Ownership } from '../../ownership/channel';
+import { StorageChannel } from '../../webstorage/api';
 
 declare global {
   interface ChannelMessageTypeMap<K extends string> {
@@ -27,7 +29,7 @@ class SaveMessage<K extends string> extends ChannelMessage<K> {
 
 const cache = new Set<string>();
 
-export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
+export class ChannelStore<K extends string, V extends StoreChannel.Value<K>> {
   constructor(
     public readonly name: string,
     destroy: (reason: unknown, event?: Event) => boolean,
@@ -149,7 +151,7 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
     void this.ensureAliveness();
     return this.schema.data.has(key);
   }
-  public meta(key: K): StoreChannelObjectMetaData<K> {
+  public meta(key: K): ChannelStore.ValueMetaData<K> {
     void this.ensureAliveness();
     return this.schema.data.meta(key);
   }
@@ -206,12 +208,28 @@ export class ChannelStore<K extends string, V extends StoreChannelObject<K>> {
   }
 }
 export namespace ChannelStore {
+  export interface Value<K extends string> {
+    readonly [Value.meta]: ValueMetaData<K>;
+    readonly [Value.id]: number;
+    readonly [Value.key]: K;
+    readonly [Value.date]: number;
+    readonly [Value.event]: Observer<[StorageChannel.EventType, Prop<this>], StorageChannel.Event<this>, void>;
+  }
+  export namespace Value {
+    export const meta: typeof DAO.meta = DAO.meta;
+    export const id: typeof DAO.id = DAO.id;
+    export const key: typeof DAO.key = DAO.key;
+    export const date: typeof DAO.date = DAO.date;
+    export const event: typeof DAO.event = DAO.event;
+  }
+  export import ValueMetaData = StoreChannel.ValueMetaData;
+  export import Config = StoreChannel.Config;
   export import Event = DataStore.Event;
   export import EventType = DataStore.EventType;
   export import Record = DataStore.Record;
 }
 
-class Schema<K extends string, V extends StoreChannelObject<K>> {
+class Schema<K extends string, V extends StoreChannel.Value<K>> {
   constructor(
     private readonly store: ChannelStore<K, V>,
     private readonly ownership: Ownership<string>,

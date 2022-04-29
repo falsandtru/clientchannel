@@ -1,10 +1,9 @@
-import { StorageChannelObject } from '../../../../../';
 import { StorageChannel } from './channel';
 import { storageEventStream_ } from '../../../infrastructure/webstorage/api';
 
 describe('Unit: layers/domain/webstorage/service/channel', () => {
   describe('spec', () => {
-    interface DAO extends StorageChannelObject {
+    interface DAO extends StorageChannel.Value {
     }
     class DAO {
       n = 0;

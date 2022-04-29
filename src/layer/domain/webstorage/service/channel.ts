@@ -1,15 +1,15 @@
 import { ObjectKeys } from 'spica/alias';
-import { StorageChannel as IStorageChannel, StorageChannelObject, StorageChannelEvent, StorageChannelEventType } from '../../../../../';
+import { StorageChannel as IStorageChannel } from '../../../../../';
 import { Prop } from '../../../data/database/value';
-import { Observation } from 'spica/observer';
+import { Observation, Observer } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
-import { Schema, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
+import { DAO, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { localStorage, sessionStorage, storageEventStream } from '../../../infrastructure/webstorage/api';
 import { StorageLike, fakeStorage } from '../model/storage';
 
 const cache = new Set<string>();
 
-export class StorageChannel<V extends StorageChannelObject> implements IStorageChannel<V> {
+export class StorageChannel<V extends StorageChannel.Value> implements IStorageChannel<V> {
   constructor(
     public readonly name: string,
     private readonly storage: StorageLike = sessionStorage || fakeStorage,
@@ -22,18 +22,18 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
       void cache.delete(name));
     const source: V = {
       ...parse<V>(this.storage.getItem(this.name)),
-      [Schema.key]: this.name,
-      [Schema.event]: new Observation<[StorageChannelEventType, Prop<V>], StorageChannel.Event<V>, void>({ limit: Infinity }),
+      [StorageChannel.Value.key]: this.name,
+      [StorageChannel.Value.event]: new Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>({ limit: Infinity }),
     };
-    this.link_ = build<V>(source, factory, (attr, newValue, oldValue) => {
+    this.link_ = build<V>(source, factory, (prop, newValue, oldValue) => {
       if (!this.alive) return;
-      void this.storage.setItem(this.name, JSON.stringify(ObjectKeys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, attr) => {
-        acc[attr] = source[attr];
+      void this.storage.setItem(this.name, JSON.stringify(ObjectKeys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, prop) => {
+        acc[prop] = source[prop];
         return acc;
       }, {})));
-      const event = new StorageChannel.Event<V>(StorageChannel.EventType.send, attr, newValue, oldValue);
-      void this.events.send.emit([event.attr], event);
-      void (source[Schema.event] as Observation<[StorageChannelEventType, Prop<V>], StorageChannel.Event<V>, void>).emit([event.type, event.attr], event);
+      const event = new StorageChannel.Event<V>(StorageChannel.EventType.send, prop, newValue, oldValue);
+      void this.events.send.emit([event.prop], event);
+      void (source[StorageChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>).emit([event.type, event.prop], event);
     });
     void migrate?.(this.link_);
     void this.cancellation.register(
@@ -42,15 +42,15 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
         void (ObjectKeys(item) as Prop<V>[])
           .filter(isValidPropertyName)
           .filter(isValidPropertyValue(item))
-          .forEach(attr => {
-            const oldVal = source[attr];
-            const newVal = item[attr];
+          .forEach(prop => {
+            const oldVal = source[prop];
+            const newVal = item[prop];
             if ([newVal].includes(oldVal)) return;
-            source[attr] = newVal;
+            source[prop] = newVal;
             void migrate?.(this.link_);
-            const event = new StorageChannel.Event(StorageChannel.EventType.recv, attr, source[attr], oldVal);
-            void this.events.recv.emit([event.attr], event);
-            void (source[Schema.event] as Observation<[StorageChannelEventType, Prop<V>], StorageChannel.Event<V>, void>).emit([event.type, event.attr], event);
+            const event = new StorageChannel.Event(StorageChannel.EventType.recv, prop, source[prop], oldVal);
+            void this.events.recv.emit([event.prop], event);
+            void (source[StorageChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>).emit([event.type, event.prop], event);
           });
       }));
     assert(Object.freeze(this));
@@ -82,22 +82,30 @@ export class StorageChannel<V extends StorageChannelObject> implements IStorageC
   }
 }
 export namespace StorageChannel {
-  export class Event<V, P extends Prop<V> = Prop<V>> implements StorageChannelEvent<V, P> {
+  export interface Value {
+    readonly [Value.event]: Observer<[EventType, Prop<this>], Event<this>, void>;
+  }
+  export namespace Value {
+    export const key: typeof DAO.key = DAO.key;
+    export const event: typeof DAO.event = DAO.event;
+  }
+  export import Config = IStorageChannel.Config;
+  export class Event<V, P extends Prop<V> = Prop<V>> implements IStorageChannel.Event<V, P> {
     constructor(
       public readonly type: EventType,
-      public readonly attr: P,
+      public readonly prop: P,
       public readonly newValue: V[P],
       public readonly oldValue: V[P],
     ) {
       assert(typeof type === 'string');
-      assert(typeof attr === 'string');
+      assert(typeof prop === 'string');
       assert(Object.freeze(this));
     }
   }
-  export type EventType = StorageChannelEventType;
+  export type EventType = IStorageChannel.EventType;
   export namespace EventType {
-    export const send: StorageChannelEventType.Send = 'send';
-    export const recv: StorageChannelEventType.Recv = 'recv';
+    export const send: IStorageChannel.EventType.Send = 'send';
+    export const recv: IStorageChannel.EventType.Recv = 'recv';
   }
 }
 

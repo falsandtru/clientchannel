@@ -1,5 +1,3 @@
-import { StoreChannelObject, StoreChannelConfig } from '../../../';
-import { StorageChannelObject, StorageChannelConfig } from '../../../';
 import { StoreChannel as BaseStoreChannel } from '../domain/indexeddb/api';
 import { StorageChannel as BaseStorageChannel, localStorage } from '../domain/webstorage/api';
 import { Channel as BroadcastChannel } from '../domain/broadcast/channel';
@@ -7,27 +5,34 @@ import { Ownership as BaseOwnership } from '../domain/ownership/channel';
 
 export * from '../domain/indexeddb/api';
 export * from '../domain/webstorage/api';
-export { Schema as ChannelObject } from '../domain/dao/api';
 
-export class StoreChannel<K extends string, V extends StoreChannelObject<K>> extends BaseStoreChannel<K, V> {
+export class StoreChannel<K extends string, V extends StoreChannel.Value<K>> extends BaseStoreChannel<K, V> {
   constructor(
     name: string,
-    config: StoreChannelConfig<K, V>,
+    config: StoreChannel.Config<K, V>,
   ) {
     super(name, config.schema, config);
   }
 }
+export namespace StoreChannel {
+  export import Value = BaseStoreChannel.Value;
+  export import Config = BaseStoreChannel.Config;
+}
 
-export class StorageChannel<V extends StorageChannelObject> extends BaseStorageChannel<V> {
+export class StorageChannel<V extends BaseStorageChannel.Value> extends BaseStorageChannel<V> {
   constructor(
     name: string,
     {
       schema,
       migrate,
-    }: StorageChannelConfig<V>
+    }: StorageChannel.Config<V>
   ) {
     super(name, localStorage, schema, migrate);
   }
+}
+export namespace StorageChannel {
+  export import Value = BaseStorageChannel.Value;
+  export import Config = BaseStorageChannel.Config;
 }
 
 export class Ownership<K extends string> extends BaseOwnership<K> {

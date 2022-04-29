@@ -1,4 +1,4 @@
-import { StoreChannel, StorageChannel, ChannelObject, Ownership } from '../../index';
+import { StoreChannel, StorageChannel, Ownership } from '../../index';
 
 describe('Interface: Package', function () {
   describe('clientchannel', function () {
@@ -8,10 +8,6 @@ describe('Interface: Package', function () {
 
     it('StorageChannel', function () {
       assert(typeof StorageChannel === 'function');
-    });
-
-    it('ChannelObject', function () {
-      assert(typeof ChannelObject.meta === 'symbol');
     });
 
     it('Ownership', function () {

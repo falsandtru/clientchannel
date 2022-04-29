@@ -1,1 +1,1 @@
-export { Schema, build, isValidPropertyName, isValidPropertyValue } from './module/builder';
+export { DAO, build, isValidPropertyName, isValidPropertyValue } from './module/builder';
