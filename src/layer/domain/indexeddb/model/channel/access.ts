@@ -112,10 +112,10 @@ export class AccessStore<K extends string> {
     };
   })();
   public recent(cb?: (key: K, keys: readonly K[]) => boolean | void, timeout?: number): Promise<K[]> {
-    const keys: K[] = [];
-    let done = false;
-    return new Promise((resolve, reject) => (
-      timeout !== void 0 && void setTimeout(() => done = !void reject(new Error('Timeout.')), timeout),
+    return new Promise((resolve, reject) => {
+      let done = false;
+      timeout !== void 0 && void setTimeout(() => done = !void reject(new Error('Timeout.')), timeout);
+      const keys: K[] = [];
       void this.store.cursor(
         null,
         AccessStoreSchema.date,
@@ -131,7 +131,8 @@ export class AccessStore<K extends string> {
             if (cb?.(key, keys) === false) return void resolve(keys);
           }
           void cursor.continue();
-        })));
+        });
+    });
   }
   public load(key: K): void {
     return this.store.load(key);
