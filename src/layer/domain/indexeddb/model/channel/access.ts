@@ -126,9 +126,11 @@ export class AccessStore<K extends string> {
           if (done) return;
           if (error) return void reject(error);
           if (!cursor) return void resolve(keys);
-          const { key }: AccessRecord<K> = cursor.value;
-          void keys.push(key);
-          if (cb?.(key, keys) === false) return void resolve(keys);
+          const { key, alive }: AccessRecord<K> = cursor.value;
+          if (alive) {
+            void keys.push(key);
+            if (cb?.(key, keys) === false) return void resolve(keys);
+          }
           void cursor.continue();
         })));
   }
@@ -140,8 +142,8 @@ export class AccessStore<K extends string> {
       ? this.store.get(key)!.date
       : 0;
   }
-  public set(key: K): void {
-    void this.store.set(key, new AccessRecord(key));
+  public set(key: K, alive = true): void {
+    void this.store.set(key, new AccessRecord(key, alive));
   }
   public delete(key: K): void {
     void this.store.delete(key);
@@ -154,6 +156,7 @@ export class AccessStore<K extends string> {
 class AccessRecord<K extends string> {
   constructor(
     public readonly key: K,
+    public readonly alive: boolean,
   ) {
   }
   public readonly date: number = Date.now();

@@ -171,6 +171,7 @@ export class ChannelStore<K extends string, V extends StoreChannel.Value<K>> {
     void this.ensureAliveness();
     void this.ownership.take(`key:${key}`, 10 * 1000);
     void this.schema.data.delete(key);
+    void this.schema.access.set(key, false);
     void this.events.save.once([key, '', ChannelStore.EventType.delete], () =>
       void this.ownership.take(`key:${key}`, 10 * 1000));
   }
