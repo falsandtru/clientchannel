@@ -80,7 +80,6 @@ export class ChannelStore<K extends string, V extends StoreChannel.Value<K>> {
       assert(key !== void 0);
       assert(key = key!);
       assert(this.meta(key).date === 0);
-      void this.ownership.take(`key:${key}`, 10 * 1000);
       void this.schema.access.delete(key);
       void this.schema.expire.delete(key);
     });
@@ -169,15 +168,11 @@ export class ChannelStore<K extends string, V extends StoreChannel.Value<K>> {
   }
   public delete(key: K): void {
     void this.ensureAliveness();
-    void this.ownership.take(`key:${key}`, 10 * 1000);
     void this.schema.data.delete(key);
     void this.schema.access.set(key, false);
-    void this.events.save.once([key, '', ChannelStore.EventType.delete], () =>
-      void this.ownership.take(`key:${key}`, 10 * 1000));
   }
   public clean(key: K): void {
     void this.ensureAliveness();
-    void this.ownership.take(`key:${key}`, 10 * 1000);
     void this.schema.data.clean(key);
   }
   protected log(key: K): void {

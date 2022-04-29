@@ -102,7 +102,6 @@ export class AccessStore<K extends string> {
           if (++count > 100 || Date.now() > since + 1 * 1000) return void this.schedule(5 * 1000);
           schedule = 0;
           this.chan.lock = true;
-          if (!this.ownership.take(`key:${key}`, delay)) return void cursor.continue();
           this.chan.has(key) || this.chan.meta(key).date === 0
             ? void this.chan.delete(key)
             : void this.chan.clean(key);
