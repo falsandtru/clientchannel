@@ -1,4 +1,4 @@
-/*! clientchannel v0.31.8 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
+/*! clientchannel v0.32.0 https://github.com/falsandtru/clientchannel | (c) 2016, falsandtru | (Apache-2.0 AND MPL-2.0) License */
 require = function () {
     function r(e, n, t) {
         function o(i, f) {
@@ -203,13 +203,13 @@ require = function () {
             }
             exports.join = join;
         },
-        { './global': 16 }
+        { './global': 15 }
     ],
     6: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.template = exports.overwrite = exports.inherit = exports.merge = exports.extend = exports.clone = exports.assign = void 0;
+            exports.template = exports.inherit = exports.merge = exports.extend = exports.overwrite = exports.clone = exports.assign = void 0;
             const global_1 = _dereq_('./global');
             const alias_1 = _dereq_('./alias');
             const type_1 = _dereq_('./type');
@@ -230,6 +230,21 @@ require = function () {
                     return target[prop] = source[prop];
                 }
             });
+            exports.overwrite = template((prop, target, source) => {
+                switch ((0, type_1.type)(source[prop])) {
+                case 'Array':
+                    return target[prop] = source[prop];
+                case 'Object':
+                    switch ((0, type_1.type)(target[prop])) {
+                    case 'Object':
+                        return (0, exports.overwrite)(target[prop], source[prop]);
+                    default:
+                        return target[prop] = (0, exports.overwrite)(empty(source[prop]), source[prop]);
+                    }
+                default:
+                    return target[prop] = source[prop];
+                }
+            });
             exports.extend = template((prop, target, source) => {
                 switch ((0, type_1.type)(source[prop])) {
                 case 'undefined':
@@ -239,7 +254,7 @@ require = function () {
                 case 'Object':
                     switch ((0, type_1.type)(target[prop])) {
                     case 'Object':
-                        return target[prop] = (0, exports.extend)(target[prop], source[prop]);
+                        return (0, exports.extend)(target[prop], source[prop]);
                     default:
                         return target[prop] = (0, exports.extend)(empty(source[prop]), source[prop]);
                     }
@@ -261,7 +276,7 @@ require = function () {
                 case 'Object':
                     switch ((0, type_1.type)(target[prop])) {
                     case 'Object':
-                        return target[prop] = (0, exports.merge)(target[prop], source[prop]);
+                        return (0, exports.merge)(target[prop], source[prop]);
                     default:
                         return target[prop] = (0, exports.merge)(empty(source[prop]), source[prop]);
                     }
@@ -278,24 +293,9 @@ require = function () {
                 case 'Object':
                     switch ((0, type_1.type)(target[prop])) {
                     case 'Object':
-                        return target[prop] = (0, alias_1.hasOwnProperty)(target, prop) ? (0, exports.inherit)(target[prop], source[prop]) : (0, exports.inherit)((0, alias_1.ObjectCreate)(target[prop]), source[prop]);
+                        return (0, alias_1.hasOwnProperty)(target, prop) ? (0, exports.inherit)(target[prop], source[prop]) : target[prop] = (0, exports.inherit)((0, alias_1.ObjectCreate)(target[prop]), source[prop]);
                     default:
                         return target[prop] = (0, alias_1.ObjectCreate)(source[prop]);
-                    }
-                default:
-                    return target[prop] = source[prop];
-                }
-            });
-            exports.overwrite = template((prop, target, source) => {
-                switch ((0, type_1.type)(source[prop])) {
-                case 'Array':
-                    return target[prop] = source[prop];
-                case 'Object':
-                    switch ((0, type_1.type)(target[prop])) {
-                    case 'Object':
-                        return target[prop] = (0, exports.overwrite)(target[prop], source[prop]);
-                    default:
-                        return target[prop] = (0, exports.overwrite)(empty(source[prop]), source[prop]);
                     }
                 default:
                     return target[prop] = source[prop];
@@ -322,317 +322,17 @@ require = function () {
             }
             exports.template = template;
             function empty(source) {
-                switch ((0, type_1.type)(source)) {
-                case 'Array':
-                    return [];
-                case 'Object':
-                    return source instanceof global_1.Object ? {} : (0, alias_1.ObjectCreate)(null);
-                default:
-                    return source;
-                }
+                return source instanceof global_1.Object ? {} : (0, alias_1.ObjectCreate)(null);
             }
         },
         {
             './alias': 4,
             './array': 5,
-            './global': 16,
-            './type': 37
+            './global': 15,
+            './type': 33
         }
     ],
     7: [
-        function (_dereq_, module, exports) {
-            'use strict';
-            Object.defineProperty(exports, '__esModule', { value: true });
-            exports.Cache = void 0;
-            const global_1 = _dereq_('./global');
-            const clock_1 = _dereq_('./clock');
-            const invlist_1 = _dereq_('./invlist');
-            const assign_1 = _dereq_('./assign');
-            const tuple_1 = _dereq_('./tuple');
-            class Cache {
-                constructor(capacity, opts = {}) {
-                    var _a;
-                    this.settings = {
-                        capacity: 0,
-                        space: global_1.Infinity,
-                        age: global_1.Infinity,
-                        life: 10,
-                        limit: 95,
-                        capture: {
-                            delete: true,
-                            clear: true
-                        }
-                    };
-                    this.SIZE = 0;
-                    this.clock = global_1.Number.MIN_SAFE_INTEGER;
-                    this.clockR = global_1.Number.MIN_SAFE_INTEGER;
-                    this.memory = new global_1.Map();
-                    this.indexes = {
-                        LRU: new invlist_1.List(),
-                        LFU: new invlist_1.List(),
-                        OVL: new invlist_1.List()
-                    };
-                    this.stats = {
-                        LRU: (0, tuple_1.tuple)(0, 0),
-                        LFU: (0, tuple_1.tuple)(0, 0),
-                        slide() {
-                            const {LRU, LFU} = this;
-                            LRU[1] = LRU[0];
-                            LRU[0] = 0;
-                            LFU[1] = LFU[0];
-                            LFU[0] = 0;
-                        },
-                        clear() {
-                            const {LRU, LFU} = this;
-                            LRU[0] = LRU[1] = 0;
-                            LFU[0] = LFU[1] = 0;
-                        }
-                    };
-                    this.ratio = 50;
-                    if (typeof capacity === 'object') {
-                        opts = capacity;
-                        capacity = (_a = opts.capacity) !== null && _a !== void 0 ? _a : 0;
-                    }
-                    const settings = (0, assign_1.extend)(this.settings, opts, { capacity });
-                    this.capacity = settings.capacity;
-                    if (this.capacity >= 1 === false)
-                        throw new Error(`Spica: Cache: Capacity must be 1 or more.`);
-                    this.space = settings.space;
-                    this.life = this.capacity * settings.life;
-                    this.limit = settings.limit;
-                }
-                get length() {
-                    return this.indexes.LRU.length + this.indexes.LFU.length;
-                }
-                get size() {
-                    return this.SIZE;
-                }
-                evict(node, record, callback) {
-                    var _a, _b, _c;
-                    const index = node.value;
-                    callback && (callback = !!this.settings.disposer);
-                    record = callback ? record !== null && record !== void 0 ? record : this.memory.get(index.key) : record;
-                    node.delete();
-                    (_a = node.value.overlap) === null || _a === void 0 ? void 0 : _a.delete();
-                    this.memory.delete(index.key);
-                    this.SIZE -= index.size;
-                    callback && ((_c = (_b = this.settings).disposer) === null || _c === void 0 ? void 0 : _c.call(_b, record.value, index.key));
-                }
-                ensure(margin, skip) {
-                    var _a, _b, _c;
-                    if (skip) {
-                        skip.value.clock = this.clock;
-                        skip.value.expiry = global_1.Infinity;
-                    }
-                    let size = (_a = skip === null || skip === void 0 ? void 0 : skip.value.size) !== null && _a !== void 0 ? _a : 0;
-                    if (margin - size <= 0)
-                        return;
-                    const {LRU, LFU, OVL} = this.indexes;
-                    while (this.length === this.capacity || this.size + margin - size > this.space) {
-                        const lastNode = (_b = OVL.last) !== null && _b !== void 0 ? _b : LFU.last;
-                        const lastIndex = lastNode === null || lastNode === void 0 ? void 0 : lastNode.value;
-                        let target;
-                        switch (true) {
-                        case lastIndex && lastIndex.clock < this.clock - this.life:
-                        case lastIndex && lastIndex.expiry !== global_1.Infinity && lastIndex.expiry < (0, clock_1.now)():
-                            target = lastNode.list === OVL ? lastNode.value.node : lastNode;
-                            break;
-                        case LRU.length === 0:
-                            target = LFU.last !== skip ? LFU.last : LFU.last.prev;
-                            break;
-                        case LFU.length > this.capacity * this.ratio / 100:
-                            target = LFU.last !== skip ? LFU.last : LFU.length >= 2 ? LFU.last.prev : skip;
-                            if (target !== skip) {
-                                if (this.ratio > 50)
-                                    break;
-                                LRU.unshiftNode(target);
-                                LRU.head.value.node = LRU.head;
-                                LRU.head.value.overlap = OVL.unshift(LRU.head.value);
-                            }
-                        default:
-                            target = LRU.last !== skip ? LRU.last : LRU.length >= 2 ? LRU.last.prev : LFU.last;
-                        }
-                        this.evict(target, void 0, true);
-                        skip = (skip === null || skip === void 0 ? void 0 : skip.list) && skip;
-                        size = (_c = skip === null || skip === void 0 ? void 0 : skip.value.size) !== null && _c !== void 0 ? _c : 0;
-                    }
-                }
-                put(key, value, size = 1, age = this.settings.age) {
-                    var _a, _b, _c, _d;
-                    if (size >= 1 === false)
-                        throw new Error(`Spica: Cache: Size must be 1 or more.`);
-                    if (age >= 1 === false)
-                        throw new Error(`Spica: Cache: Age must be 1 or more.`);
-                    if (size > this.space || age <= 0) {
-                        (_b = (_a = this.settings).disposer) === null || _b === void 0 ? void 0 : _b.call(_a, value, key);
-                        return false;
-                    }
-                    const expiry = age === global_1.Infinity ? global_1.Infinity : (0, clock_1.now)() + age;
-                    const record = this.memory.get(key);
-                    if (record) {
-                        const node = record.index;
-                        const val = record.value;
-                        const index = node.value;
-                        this.ensure(size, node);
-                        index.clock = index.region === 'LRU' ? ++this.clockR : ++this.clock;
-                        index.expiry = expiry;
-                        this.SIZE += size - index.size;
-                        index.size = size;
-                        record.value = value;
-                        (_d = (_c = this.settings).disposer) === null || _d === void 0 ? void 0 : _d.call(_c, val, key);
-                        return true;
-                    }
-                    this.ensure(size);
-                    const {LRU} = this.indexes;
-                    this.SIZE += size;
-                    this.memory.set(key, {
-                        index: LRU.unshift({
-                            key,
-                            size,
-                            clock: ++this.clockR,
-                            expiry,
-                            region: 'LRU'
-                        }),
-                        value
-                    });
-                    return false;
-                }
-                set(key, value, size, age) {
-                    this.put(key, value, size, age);
-                    return this;
-                }
-                get(key) {
-                    const record = this.memory.get(key);
-                    if (!record)
-                        return;
-                    const node = record.index;
-                    const expiry = node.value.expiry;
-                    if (expiry !== global_1.Infinity && expiry < (0, clock_1.now)()) {
-                        this.evict(node, record, true);
-                        return;
-                    }
-                    if (this.capacity >= 10 && node === node.list.head)
-                        return record.value;
-                    this.access(node);
-                    this.slide();
-                    return record.value;
-                }
-                has(key) {
-                    const record = this.memory.get(key);
-                    if (!record)
-                        return false;
-                    const expiry = record.index.value.expiry;
-                    if (expiry !== global_1.Infinity && expiry < (0, clock_1.now)()) {
-                        this.evict(record.index, record, true);
-                        return false;
-                    }
-                    return true;
-                }
-                delete(key) {
-                    const record = this.memory.get(key);
-                    if (!record)
-                        return false;
-                    this.evict(record.index, record, this.settings.capture.delete === true);
-                    return true;
-                }
-                clear() {
-                    this.SIZE = 0;
-                    this.ratio = 50;
-                    this.stats.clear();
-                    this.indexes.LRU.clear();
-                    this.indexes.LFU.clear();
-                    this.indexes.OVL.clear();
-                    if (!this.settings.disposer || !this.settings.capture.clear)
-                        return void this.memory.clear();
-                    const memory = this.memory;
-                    this.memory = new global_1.Map();
-                    for (const [key, {value}] of memory) {
-                        this.settings.disposer(value, key);
-                    }
-                }
-                *[Symbol.iterator]() {
-                    for (const [key, {value}] of this.memory) {
-                        yield [
-                            key,
-                            value
-                        ];
-                    }
-                    return;
-                }
-                slide() {
-                    const {LRU, LFU} = this.stats;
-                    const {capacity, ratio, limit, indexes} = this;
-                    const window = capacity;
-                    LRU[0] + LFU[0] === window && this.stats.slide();
-                    if ((LRU[0] + LFU[0]) * 100 % capacity || LRU[1] + LFU[1] === 0)
-                        return;
-                    const lenR = indexes.LRU.length;
-                    const lenF = indexes.LFU.length;
-                    const lenV = indexes.OVL.length;
-                    const r = (lenF + lenV) * 1000 / (lenR + lenF) | 0;
-                    const rateR0 = rate(window, LRU[0], LRU[0] + LFU[0], LRU[1], LRU[1] + LFU[1], 0) * (1 + r);
-                    const rateF0 = rate(window, LFU[0], LRU[0] + LFU[0], LFU[1], LRU[1] + LFU[1], 0) * (1001 - r);
-                    const rateF1 = rate(window, LFU[1], LRU[1] + LFU[1], LFU[0], LRU[0] + LFU[0], 5) * (1001 - r);
-                    if (ratio > 0 && (rateR0 > rateF0 || rateF0 < rateF1 * 0.95)) {
-                        if (lenR >= capacity * (100 - ratio) / 100) {
-                            --this.ratio;
-                        }
-                    } else if (ratio < limit && rateF0 > rateR0) {
-                        if (lenF >= capacity * ratio / 100) {
-                            ++this.ratio;
-                        }
-                    }
-                }
-                access(node) {
-                    return this.accessLFU(node) || this.accessLRU(node);
-                }
-                accessLRU(node) {
-                    var _a;
-                    const index = node.value;
-                    const {LRU, LFU} = this.indexes;
-                    ++this.stats[index.region][0];
-                    if (!index.overlap && index.clock >= this.clockR - LRU.length / 3 && this.capacity > 3) {
-                        index.clock = ++this.clockR;
-                        node.moveToHead();
-                        return true;
-                    }
-                    index.clock = ++this.clock;
-                    index.region = 'LFU';
-                    (_a = index.overlap) === null || _a === void 0 ? void 0 : _a.delete();
-                    LFU.unshiftNode(node);
-                    return true;
-                }
-                accessLFU(node) {
-                    const index = node.value;
-                    const {LFU} = this.indexes;
-                    if (node.list !== LFU)
-                        return false;
-                    ++this.stats[index.region][0];
-                    index.clock = ++this.clock;
-                    node.moveToHead();
-                    return true;
-                }
-            }
-            exports.Cache = Cache;
-            function rate(window, currHits, currTotal, prevHits, prevTotal, offset) {
-                const prevRate = prevHits * 100 / prevTotal | 0;
-                const currRatio = currTotal * 100 / window - offset | 0;
-                if (currRatio <= 0)
-                    return prevRate * 100;
-                const currRate = currHits * 100 / currTotal | 0;
-                const prevRatio = 100 - currRatio;
-                return currRate * currRatio + prevRate * prevRatio;
-            }
-        },
-        {
-            './assign': 6,
-            './clock': 9,
-            './global': 16,
-            './invlist': 17,
-            './tuple': 36
-        }
-    ],
-    8: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -735,16 +435,16 @@ require = function () {
             }
         },
         {
-            './either': 13,
-            './exception': 14,
-            './function': 15,
-            './global': 16,
-            './maybe': 21,
-            './noop': 31,
-            './promise': 33
+            './either': 12,
+            './exception': 13,
+            './function': 14,
+            './global': 15,
+            './maybe': 18,
+            './noop': 28,
+            './promise': 30
         }
     ],
-    9: [
+    8: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -752,17 +452,16 @@ require = function () {
             const global_1 = _dereq_('./global');
             const alias_1 = _dereq_('./alias');
             const exception_1 = _dereq_('./exception');
-            let now_;
+            let mem;
             let count = 0;
-            function now() {
-                if (now_ === void 0) {
-                    tick(() => now_ = void 0);
-                } else {
-                    if (++count !== 100)
-                        return now_;
-                    count = 0;
+            function now(nocache = false) {
+                if (mem === void 0) {
+                    tick(() => mem = void 0);
+                } else if (!nocache && ++count !== 100) {
+                    return mem;
                 }
-                return now_ = global_1.Date.now();
+                count = 0;
+                return mem = global_1.Date.now();
             }
             exports.now = now;
             exports.clock = Promise.resolve(void 0);
@@ -795,11 +494,11 @@ require = function () {
         },
         {
             './alias': 4,
-            './exception': 14,
-            './global': 16
+            './exception': 13,
+            './global': 15
         }
     ],
-    10: [
+    9: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -811,7 +510,7 @@ require = function () {
         },
         {}
     ],
-    11: [
+    10: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -831,7 +530,7 @@ require = function () {
         },
         { './alias': 4 }
     ],
-    12: [
+    11: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -851,7 +550,7 @@ require = function () {
         },
         { './array': 5 }
     ],
-    13: [
+    12: [
         function (_dereq_, module, exports) {
             'use strict';
             var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
@@ -880,9 +579,9 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             __exportStar(_dereq_('./monad/either'), exports);
         },
-        { './monad/either': 24 }
+        { './monad/either': 21 }
     ],
-    14: [
+    13: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -894,7 +593,7 @@ require = function () {
         },
         {}
     ],
-    15: [
+    14: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -916,9 +615,9 @@ require = function () {
             }
             exports.clear = clear;
         },
-        { './noop': 31 }
+        { './noop': 28 }
     ],
-    16: [
+    15: [
         function (_dereq_, module, exports) {
             'use strict';
             const global = void 0 || typeof globalThis !== 'undefined' && globalThis || typeof self !== 'undefined' && self || Function('return this')();
@@ -927,38 +626,7 @@ require = function () {
         },
         {}
     ],
-    17: [
-        function (_dereq_, module, exports) {
-            'use strict';
-            var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
-                if (k2 === undefined)
-                    k2 = k;
-                var desc = Object.getOwnPropertyDescriptor(m, k);
-                if (!desc || ('get' in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-                    desc = {
-                        enumerable: true,
-                        get: function () {
-                            return m[k];
-                        }
-                    };
-                }
-                Object.defineProperty(o, k2, desc);
-            } : function (o, m, k, k2) {
-                if (k2 === undefined)
-                    k2 = k;
-                o[k2] = m[k];
-            });
-            var __exportStar = this && this.__exportStar || function (m, exports) {
-                for (var p in m)
-                    if (p !== 'default' && !Object.prototype.hasOwnProperty.call(exports, p))
-                        __createBinding(exports, m, p);
-            };
-            Object.defineProperty(exports, '__esModule', { value: true });
-            __exportStar(_dereq_('./list/invlist'), exports);
-        },
-        { './list/invlist': 19 }
-    ],
-    18: [
+    16: [
         function (_dereq_, module, exports) {
             'use strict';
             var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
@@ -987,189 +655,9 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             __exportStar(_dereq_('./list/ixlist'), exports);
         },
-        { './list/ixlist': 20 }
+        { './list/ixlist': 17 }
     ],
-    19: [
-        function (_dereq_, module, exports) {
-            'use strict';
-            var _a;
-            Object.defineProperty(exports, '__esModule', { value: true });
-            exports.List = void 0;
-            const undefined = void 0;
-            const LENGTH = Symbol('length');
-            class List {
-                constructor() {
-                    this[_a] = 0;
-                    this.head = undefined;
-                }
-                get length() {
-                    return this[LENGTH];
-                }
-                get tail() {
-                    var _b;
-                    return (_b = this.head) === null || _b === void 0 ? void 0 : _b.next;
-                }
-                get last() {
-                    var _b;
-                    return (_b = this.head) === null || _b === void 0 ? void 0 : _b.prev;
-                }
-                clear() {
-                    this.head = undefined;
-                    this[LENGTH] = 0;
-                }
-                unshift(value) {
-                    return this.head = this.push(value);
-                }
-                unshiftNode(node) {
-                    return this.head = this.pushNode(node);
-                }
-                unshiftRotationally(value) {
-                    const node = this.last;
-                    if (!node)
-                        return this.unshift(value);
-                    node.value = value;
-                    this.head = node;
-                    return node;
-                }
-                shift() {
-                    var _b;
-                    return (_b = this.head) === null || _b === void 0 ? void 0 : _b.delete();
-                }
-                push(value) {
-                    var _b;
-                    return new Node(value, this.head, (_b = this.head) === null || _b === void 0 ? void 0 : _b.prev, this);
-                }
-                pushNode(node) {
-                    return this.insert(node, this.head);
-                }
-                pushRotationally(value) {
-                    const node = this.head;
-                    if (!node)
-                        return this.push(value);
-                    node.value = value;
-                    this.head = node.next;
-                    return node;
-                }
-                pop() {
-                    var _b;
-                    return (_b = this.last) === null || _b === void 0 ? void 0 : _b.delete();
-                }
-                insert(node, before = this.head) {
-                    var _b, _c;
-                    if (node.list === this)
-                        return before && node.move(before), node;
-                    node.delete();
-                    ++this[LENGTH];
-                    (_b = this.head) !== null && _b !== void 0 ? _b : this.head = node;
-                    node.list = this;
-                    const next = node.next = before !== null && before !== void 0 ? before : node;
-                    const prev = node.prev = (_c = next.prev) !== null && _c !== void 0 ? _c : node;
-                    next.prev = prev.next = node;
-                    return node;
-                }
-                *[(_a = LENGTH, Symbol.iterator)]() {
-                    for (let node = this.head; node;) {
-                        yield node.value;
-                        node = node.next;
-                        if (node === this.head)
-                            return;
-                    }
-                }
-            }
-            exports.List = List;
-            class Node {
-                constructor(value, next, prev, list) {
-                    var _b, _c;
-                    if (list === void 0) {
-                        list = (_b = next === null || next === void 0 ? void 0 : next.list) !== null && _b !== void 0 ? _b : new List();
-                    }
-                    this.value = value;
-                    this.next = next;
-                    this.prev = prev;
-                    this.list = list;
-                    ++list[LENGTH];
-                    (_c = list.head) !== null && _c !== void 0 ? _c : list.head = this;
-                    next && prev ? next.prev = prev.next = this : this.next = this.prev = this;
-                }
-                delete() {
-                    if (!this.list)
-                        return this.value;
-                    --this.list[LENGTH];
-                    if (this.list.head === this) {
-                        this.list.head = this.next === this ? undefined : this.next;
-                    }
-                    if (this.next) {
-                        this.next.prev = this.prev;
-                    }
-                    if (this.prev) {
-                        this.prev.next = this.next;
-                    }
-                    this.list = undefined;
-                    this.next = this.prev = undefined;
-                    return this.value;
-                }
-                insertBefore(value) {
-                    return new Node(value, this, this.prev, this.list);
-                }
-                insertAfter(value) {
-                    return new Node(value, this.next, this, this.list);
-                }
-                move(before) {
-                    if (!before)
-                        return false;
-                    if (this === before)
-                        return false;
-                    if (before.list !== this.list)
-                        return before.list.insert(this, before), true;
-                    const a1 = this;
-                    const b1 = before;
-                    if (!b1)
-                        return false;
-                    if (a1.next === b1)
-                        return false;
-                    const b0 = b1.prev;
-                    const a0 = a1.prev;
-                    const a2 = a1.next;
-                    b0.next = a1;
-                    a1.next = b1;
-                    b1.prev = a1;
-                    a1.prev = b0;
-                    a0.next = a2;
-                    a2.prev = a0;
-                    return true;
-                }
-                moveToHead() {
-                    this.move(this.list.head);
-                    this.list.head = this;
-                }
-                moveToLast() {
-                    this.move(this.list.head);
-                }
-                swap(node) {
-                    const node1 = this;
-                    const node2 = node;
-                    if (node1 === node2)
-                        return false;
-                    const node3 = node2.next;
-                    if (node1.list !== node2.list)
-                        throw new Error(`Spica: InvList: Cannot swap nodes across lists.`);
-                    node2.move(node1);
-                    node1.move(node3);
-                    switch (this.list.head) {
-                    case node1:
-                        this.list.head = node2;
-                        break;
-                    case node2:
-                        this.list.head = node1;
-                        break;
-                    }
-                    return true;
-                }
-            }
-        },
-        {}
-    ],
-    20: [
+    17: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1465,12 +953,12 @@ require = function () {
         },
         {
             '../alias': 4,
-            '../compare': 10,
-            '../global': 16,
-            '../stack': 34
+            '../compare': 9,
+            '../global': 15,
+            '../stack': 31
         }
     ],
-    21: [
+    18: [
         function (_dereq_, module, exports) {
             'use strict';
             var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
@@ -1499,9 +987,9 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             __exportStar(_dereq_('./monad/maybe'), exports);
         },
-        { './monad/maybe': 28 }
+        { './monad/maybe': 25 }
     ],
-    22: [
+    19: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1519,11 +1007,11 @@ require = function () {
             }(Applicative = exports.Applicative || (exports.Applicative = {})));
         },
         {
-            '../curry': 12,
-            './functor': 25
+            '../curry': 11,
+            './functor': 22
         }
     ],
-    23: [
+    20: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1627,12 +1115,12 @@ require = function () {
             }
         },
         {
-            '../noop': 31,
-            '../promise': 33,
-            './monad': 29
+            '../noop': 28,
+            '../promise': 30,
+            './monad': 26
         }
     ],
-    24: [
+    21: [
         function (_dereq_, module, exports) {
             'use strict';
             var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
@@ -1692,11 +1180,11 @@ require = function () {
             exports.Right = Right;
         },
         {
-            '../noop': 31,
-            './either.impl': 23
+            '../noop': 28,
+            './either.impl': 20
         }
     ],
-    25: [
+    22: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1712,9 +1200,9 @@ require = function () {
                 Functor.fmap = fmap;
             }(Functor = exports.Functor || (exports.Functor = {})));
         },
-        { './lazy': 26 }
+        { './lazy': 23 }
     ],
-    26: [
+    23: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1733,7 +1221,7 @@ require = function () {
         },
         {}
     ],
-    27: [
+    24: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1846,12 +1334,12 @@ require = function () {
             }
         },
         {
-            '../noop': 31,
-            '../promise': 33,
-            './monadplus': 30
+            '../noop': 28,
+            '../promise': 30,
+            './monadplus': 27
         }
     ],
-    28: [
+    25: [
         function (_dereq_, module, exports) {
             'use strict';
             var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
@@ -1908,11 +1396,11 @@ require = function () {
             exports.Nothing = Monad.Maybe.mzero;
         },
         {
-            '../noop': 31,
-            './maybe.impl': 27
+            '../noop': 28,
+            './maybe.impl': 24
         }
     ],
-    29: [
+    26: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1928,9 +1416,9 @@ require = function () {
                 Monad.bind = bind;
             }(Monad = exports.Monad || (exports.Monad = {})));
         },
-        { './applicative': 22 }
+        { './applicative': 19 }
     ],
-    30: [
+    27: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1942,9 +1430,9 @@ require = function () {
             (function (MonadPlus) {
             }(MonadPlus = exports.MonadPlus || (exports.MonadPlus = {})));
         },
-        { './monad': 29 }
+        { './monad': 26 }
     ],
-    31: [
+    28: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1955,14 +1443,14 @@ require = function () {
         },
         {}
     ],
-    32: [
+    29: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.Observation = void 0;
             const global_1 = _dereq_('./global');
+            const alias_1 = _dereq_('./alias');
             const ixlist_1 = _dereq_('./ixlist');
-            const assign_1 = _dereq_('./assign');
             const function_1 = _dereq_('./function');
             const array_1 = _dereq_('./array');
             const exception_1 = _dereq_('./exception');
@@ -1984,7 +1472,7 @@ require = function () {
                         cleanup: false
                     };
                     this.relaies = new global_1.WeakSet();
-                    (0, assign_1.extend)(this.settings, opts);
+                    (0, alias_1.ObjectAssign)(this.settings, opts);
                 }
                 monitor(namespace, monitor, options = {}) {
                     if (typeof monitor !== 'function')
@@ -2180,15 +1668,15 @@ require = function () {
             }
         },
         {
+            './alias': 4,
             './array': 5,
-            './assign': 6,
-            './exception': 14,
-            './function': 15,
-            './global': 16,
-            './ixlist': 18
+            './exception': 13,
+            './function': 14,
+            './global': 15,
+            './ixlist': 16
         }
     ],
-    33: [
+    30: [
         function (_dereq_, module, exports) {
             'use strict';
             var _a, _b;
@@ -2535,11 +2023,11 @@ require = function () {
         },
         {
             './alias': 4,
-            './global': 16,
-            './noop': 31
+            './global': 15,
+            './noop': 28
         }
     ],
-    34: [
+    31: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2593,7 +2081,7 @@ require = function () {
         },
         {}
     ],
-    35: [
+    32: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2663,23 +2151,11 @@ require = function () {
             exports.debounce = debounce;
         },
         {
-            './exception': 14,
-            './global': 16
+            './exception': 13,
+            './global': 15
         }
     ],
-    36: [
-        function (_dereq_, module, exports) {
-            'use strict';
-            Object.defineProperty(exports, '__esModule', { value: true });
-            exports.tuple = void 0;
-            function tuple(...as) {
-                return as;
-            }
-            exports.tuple = tuple;
-        },
-        {}
-    ],
-    37: [
+    33: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2723,7 +2199,7 @@ require = function () {
         },
         { './alias': 4 }
     ],
-    38: [
+    34: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2767,9 +2243,9 @@ require = function () {
                 }
             }
         },
-        { './global': 16 }
+        { './global': 15 }
     ],
-    39: [
+    35: [
         function (_dereq_, module, exports) {
             'use strict';
             var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
@@ -2798,9 +2274,9 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             __exportStar(_dereq_('./layer/interface/api'), exports);
         },
-        { './layer/interface/api': 70 }
+        { './layer/interface/api': 66 }
     ],
-    40: [
+    36: [
         function (_dereq_, module, exports) {
             'use strict';
             var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
@@ -2827,32 +2303,31 @@ require = function () {
                         __createBinding(exports, m, p);
             };
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.Ownership = exports.StorageChannel = exports.StoreChannel = exports.ChannelObject = void 0;
+            exports.Ownership = exports.StorageChannel = exports.StoreChannel = void 0;
             const api_1 = _dereq_('../domain/indexeddb/api');
             const api_2 = _dereq_('../domain/webstorage/api');
             const channel_1 = _dereq_('../domain/broadcast/channel');
             const channel_2 = _dereq_('../domain/ownership/channel');
             __exportStar(_dereq_('../domain/indexeddb/api'), exports);
             __exportStar(_dereq_('../domain/webstorage/api'), exports);
-            var api_3 = _dereq_('../domain/dao/api');
-            Object.defineProperty(exports, 'ChannelObject', {
-                enumerable: true,
-                get: function () {
-                    return api_3.Schema;
-                }
-            });
             class StoreChannel extends api_1.StoreChannel {
                 constructor(name, config) {
                     super(name, config.schema, config);
                 }
             }
             exports.StoreChannel = StoreChannel;
+            (function (StoreChannel) {
+                StoreChannel.Value = api_1.StoreChannel.Value;
+            }(StoreChannel = exports.StoreChannel || (exports.StoreChannel = {})));
             class StorageChannel extends api_2.StorageChannel {
                 constructor(name, {schema, migrate}) {
                     super(name, api_2.localStorage, schema, migrate);
                 }
             }
             exports.StorageChannel = StorageChannel;
+            (function (StorageChannel) {
+                StorageChannel.Value = api_2.StorageChannel.Value;
+            }(StorageChannel = exports.StorageChannel || (exports.StorageChannel = {})));
             class Ownership extends channel_2.Ownership {
                 constructor(name) {
                     super(new channel_1.Channel(name, false));
@@ -2861,14 +2336,13 @@ require = function () {
             exports.Ownership = Ownership;
         },
         {
-            '../domain/broadcast/channel': 46,
-            '../domain/dao/api': 47,
-            '../domain/indexeddb/api': 49,
-            '../domain/ownership/channel': 55,
-            '../domain/webstorage/api': 56
+            '../domain/broadcast/channel': 42,
+            '../domain/indexeddb/api': 45,
+            '../domain/ownership/channel': 51,
+            '../domain/webstorage/api': 52
         }
     ],
-    41: [
+    37: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2884,7 +2358,7 @@ require = function () {
                     return true;
                 case 'object':
                     try {
-                        return value === null || isBinary(value) || (0, alias_1.ObjectKeys)(value).every(key => isStorable(value[key]));
+                        return value === null || isBinary(value) || (0, alias_1.ObjectValues)(value).every(value => isStorable(value));
                     } catch (_a) {
                         return false;
                     }
@@ -2894,7 +2368,7 @@ require = function () {
             }
             exports.isStorable = isStorable;
             function hasBinary(value) {
-                return !(0, type_1.isPrimitive)(value) ? isBinary(value) || (0, alias_1.ObjectKeys)(value).some(key => hasBinary(value[key])) : false;
+                return !(0, type_1.isPrimitive)(value) ? isBinary(value) || (0, alias_1.ObjectValues)(value).some(value => hasBinary(value)) : false;
             }
             exports.hasBinary = hasBinary;
             function isBinary(value) {
@@ -2903,10 +2377,10 @@ require = function () {
         },
         {
             'spica/alias': 4,
-            'spica/type': 37
+            'spica/type': 33
         }
     ],
-    42: [
+    38: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2938,23 +2412,23 @@ require = function () {
                         throw new TypeError(`ClientChannel: EventRecord: Invalid event value: ${ JSON.stringify(this.value) }`);
                     if (typeof this.date !== 'number' || this.date >= 0 === false || !global_1.Number.isFinite(this.date))
                         throw new TypeError(`ClientChannel: EventRecord: Invalid event date: ${ this.date }`);
-                    this.attr = this.type === exports.EventRecordType.put ? (0, alias_1.ObjectKeys)(value).filter(isValidPropertyName)[0] : '';
-                    if (typeof this.attr !== 'string')
-                        throw new TypeError(`ClientChannel: EventRecord: Invalid event attr: ${ this.key }`);
+                    this.prop = this.type === exports.EventRecordType.put ? (0, alias_1.ObjectKeys)(value).filter(isValidPropertyName)[0] : '';
+                    if (typeof this.prop !== 'string')
+                        throw new TypeError(`ClientChannel: EventRecord: Invalid event prop: ${ this.key }`);
                     switch (type) {
                     case exports.EventRecordType.put:
-                        if (!isValidPropertyName(this.attr))
-                            throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${ this.type }: ${ this.attr }`);
-                        this.value = value = new EventRecordValue({ [this.attr]: value[this.attr] });
+                        if (!isValidPropertyName(this.prop))
+                            throw new TypeError(`ClientChannel: EventRecord: Invalid event prop with ${ this.type }: ${ this.prop }`);
+                        this.value = value = new EventRecordValue({ [this.prop]: value[this.prop] });
                         return;
                     case exports.EventRecordType.snapshot:
-                        if (this.attr !== '')
-                            throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${ this.type }: ${ this.attr }`);
+                        if (this.prop !== '')
+                            throw new TypeError(`ClientChannel: EventRecord: Invalid event prop with ${ this.type }: ${ this.prop }`);
                         this.value = value = new EventRecordValue(value);
                         return;
                     case exports.EventRecordType.delete:
-                        if (this.attr !== '')
-                            throw new TypeError(`ClientChannel: EventRecord: Invalid event attr with ${ this.type }: ${ this.attr }`);
+                        if (this.prop !== '')
+                            throw new TypeError(`ClientChannel: EventRecord: Invalid event prop with ${ this.type }: ${ this.prop }`);
                         this.value = value = new EventRecordValue();
                         return;
                     default:
@@ -3011,14 +2485,14 @@ require = function () {
             exports.isValidPropertyValue = isValidPropertyValue;
         },
         {
-            '../database/value': 41,
-            './identifier': 43,
+            '../database/value': 37,
+            './identifier': 39,
             'spica/alias': 4,
             'spica/assign': 6,
-            'spica/global': 16
+            'spica/global': 15
         }
     ],
-    43: [
+    39: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3033,7 +2507,7 @@ require = function () {
         },
         {}
     ],
-    44: [
+    40: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3054,9 +2528,8 @@ require = function () {
                 EventStoreSchema.key = 'key';
             }(EventStoreSchema || (EventStoreSchema = {})));
             class EventStore {
-                constructor(name, attrs, listen) {
+                constructor(name, listen) {
                     this.name = name;
-                    this.attrs = attrs;
                     this.listen = listen;
                     this.alive = true;
                     this.memory = new observer_1.Observation();
@@ -3087,20 +2560,20 @@ require = function () {
                         if (event instanceof event_1.LoadedEventRecord) {
                             return void this.events.load.emit([
                                 event.key,
-                                event.attr,
+                                event.prop,
                                 event.type
-                            ], new EventStore.Event(event.type, event.id, event.key, event.attr, event.date));
+                            ], new EventStore.Event(event.type, event.id, event.key, event.prop, event.date));
                         }
                         if (event instanceof event_1.SavedEventRecord) {
                             return void this.events.save.emit([
                                 event.key,
-                                event.attr,
+                                event.prop,
                                 event.type
-                            ], new EventStore.Event(event.type, event.id, event.key, event.attr, event.date));
+                            ], new EventStore.Event(event.type, event.id, event.key, event.prop, event.date));
                         }
                         return;
                     });
-                    void this.events_.memory.monitor([], event => void states.update(new EventStore.Event(event.type, event.id, event.key, event.attr, event.date)));
+                    void this.events_.memory.monitor([], event => void states.update(new EventStore.Event(event.type, event.id, event.key, event.prop, event.date)));
                     void this.events.load.monitor([], event => void states.update(event));
                     void this.events.save.monitor([], event => void states.update(event));
                     void this.events.save.monitor([], event => {
@@ -3187,31 +2660,31 @@ require = function () {
                                 }
                             }
                             if (!cursor || new event_1.LoadedEventRecord(cursor.value).date < this.meta(key).date) {
-                                void [...events.reduceRight((es, e) => es.length === 0 || es[0].type === EventStore.EventType.put ? (0, concat_1.concat)(es, [e]) : es, []).reduceRight((dict, e) => dict.set(e.attr, e), new global_1.Map()).values()].sort((a, b) => a.date - b.date || a.id - b.id).forEach(e => {
+                                void [...events.reduceRight((es, e) => es.length === 0 || es[0].type === EventStore.EventType.put ? (0, concat_1.concat)(es, [e]) : es, []).reduceRight((dict, e) => dict.set(e.prop, e), new global_1.Map()).values()].sort((a, b) => a.date - b.date || a.id - b.id).forEach(e => {
                                     if (e.type !== EventStore.EventType.put) {
                                         void this.memory.refs([e.key]).filter(({
                                             namespace: [, , id = 0]
                                         }) => id !== 0).forEach(({
-                                            namespace: [key, attr, id]
+                                            namespace: [key, prop, id]
                                         }) => void this.memory.off([
                                             key,
-                                            attr,
+                                            prop,
                                             id
                                         ]));
                                     }
                                     void this.memory.off([
                                         e.key,
-                                        e.attr,
+                                        e.prop,
                                         e.id
                                     ]);
                                     void this.memory.on([
                                         e.key,
-                                        e.attr,
+                                        e.prop,
                                         e.id
                                     ], () => e);
                                     void this.events_.memory.emit([
                                         e.key,
-                                        e.attr,
+                                        e.prop,
                                         e.id
                                     ], e);
                                 });
@@ -3228,7 +2701,7 @@ require = function () {
                                 const event = new event_1.LoadedEventRecord(cursor.value);
                                 if (this.memory.refs([
                                         event.key,
-                                        event.attr,
+                                        event.prop,
                                         event.id
                                     ]).length > 0)
                                     return void proc(null, null);
@@ -3249,7 +2722,7 @@ require = function () {
                     return this.memory.reflect([]).reduce((keys, e) => keys.length === 0 || keys[keys.length - 1] !== e.key ? (0, concat_1.concat)(keys, [e.key]) : keys, []).sort();
                 }
                 has(key) {
-                    return compose(key, this.attrs, this.memory.reflect([key])).type !== EventStore.EventType.delete;
+                    return compose(key, this.memory.reflect([key])).type !== EventStore.EventType.delete;
                 }
                 meta(key) {
                     const events = this.memory.reflect([key]);
@@ -3260,7 +2733,7 @@ require = function () {
                     };
                 }
                 get(key) {
-                    return (0, alias_1.ObjectAssign)((0, alias_1.ObjectCreate)(null), compose(key, this.attrs, this.memory.reflect([key])).value);
+                    return (0, alias_1.ObjectAssign)((0, alias_1.ObjectCreate)(null), compose(key, this.memory.reflect([key])).value);
                 }
                 add(event, tx) {
                     if (!this.alive)
@@ -3269,12 +2742,12 @@ require = function () {
                     case EventStore.EventType.put:
                         void this.memory.off([
                             event.key,
-                            event.attr,
+                            event.prop,
                             0
                         ]);
                         void this.events_.memory.off([
                             event.key,
-                            event.attr,
+                            event.prop,
                             0
                         ]);
                         break;
@@ -3283,41 +2756,41 @@ require = function () {
                         void this.memory.refs([event.key]).filter(({
                             namespace: [, , id]
                         }) => id === 0).forEach(({
-                            namespace: [key, attr, id]
+                            namespace: [key, prop, id]
                         }) => (void this.memory.off([
                             key,
-                            attr,
+                            prop,
                             id
                         ]), void this.events_.memory.off([
                             key,
-                            attr,
+                            prop,
                             id
                         ])));
                         break;
                     }
                     const clean = this.memory.on([
                         event.key,
-                        event.attr,
+                        event.prop,
                         0,
                         ++this.counter
                     ], () => event);
                     void this.events_.memory.emit([
                         event.key,
-                        event.attr,
+                        event.prop,
                         0
                     ], event);
                     const loss = () => void this.events.loss.emit([
                         event.key,
-                        event.attr,
+                        event.prop,
                         event.type
-                    ], new EventStore.Event(event.type, (0, identifier_1.makeEventId)(0), event.key, event.attr, event.date));
+                    ], new EventStore.Event(event.type, (0, identifier_1.makeEventId)(0), event.key, event.prop, event.date));
                     return void this.listen(db => {
                         if (!this.alive)
                             return;
                         tx = this.txrw = tx || this.txrw || db.transaction(this.name, 'readwrite');
                         const active = () => this.memory.reflect([
                             event.key,
-                            event.attr,
+                            event.prop,
                             0
                         ]).includes(event);
                         if (!active())
@@ -3328,17 +2801,17 @@ require = function () {
                             const savedEvent = new event_1.SavedEventRecord((0, identifier_1.makeEventId)(req.result), event.key, event.value, event.type, event.date);
                             void this.memory.off([
                                 savedEvent.key,
-                                savedEvent.attr,
+                                savedEvent.prop,
                                 savedEvent.id
                             ]);
                             void this.memory.on([
                                 savedEvent.key,
-                                savedEvent.attr,
+                                savedEvent.prop,
                                 savedEvent.id
                             ], () => savedEvent);
                             void this.events_.memory.emit([
                                 savedEvent.key,
-                                savedEvent.attr,
+                                savedEvent.prop,
                                 savedEvent.id
                             ], savedEvent);
                             const events = this.memory.reflect([savedEvent.key]).reduce((es, e) => e instanceof event_1.StoredEventRecord ? (0, concat_1.concat)(es, [e]) : es, []);
@@ -3380,7 +2853,7 @@ require = function () {
                             if (!cursor) {
                                 if (events.length === 0)
                                     return;
-                                const composedEvent = compose(key, this.attrs, events);
+                                const composedEvent = compose(key, events);
                                 if (composedEvent instanceof event_1.StoredEventRecord)
                                     return;
                                 switch (composedEvent.type) {
@@ -3411,12 +2884,12 @@ require = function () {
                             for (const event of events) {
                                 void this.memory.off([
                                     event.key,
-                                    event.attr,
+                                    event.prop,
                                     event.id
                                 ]);
                                 void this.events_.memory.off([
                                     event.key,
-                                    event.attr,
+                                    event.prop,
                                     event.id
                                 ]);
                             }
@@ -3476,11 +2949,11 @@ require = function () {
             exports.EventStore = EventStore;
             (function (EventStore) {
                 class Event {
-                    constructor(type, id, key, attr, date) {
+                    constructor(type, id, key, prop, date) {
                         this.type = type;
                         this.id = id;
                         this.key = key;
-                        this.attr = attr;
+                        this.prop = prop;
                         this.date = date;
                         this.EVENT;
                     }
@@ -3503,7 +2976,7 @@ require = function () {
                 return record;
             }
             exports.record = record;
-            function compose(key, attrs, events) {
+            function compose(key, events) {
                 return group(events).map(events => events.reduceRight(compose, new event_1.UnstoredEventRecord(key, new EventStore.Value(), EventStore.EventType.delete, 0))).reduce(e => e);
                 function group(events) {
                     return events.map((e, i) => [
@@ -3519,7 +2992,7 @@ require = function () {
                 function compose(target, source) {
                     switch (source.type) {
                     case EventStore.EventType.put:
-                        return new event_1.UnstoredEventRecord(source.key, new EventStore.Value(target.value, { [source.attr]: source.value[source.attr] }), EventStore.EventType.snapshot);
+                        return new event_1.UnstoredEventRecord(source.key, new EventStore.Value(target.value, { [source.prop]: source.value[source.prop] }), EventStore.EventType.snapshot);
                     case EventStore.EventType.snapshot:
                         return source;
                     case EventStore.EventType.delete:
@@ -3531,23 +3004,24 @@ require = function () {
             exports.compose = compose;
         },
         {
-            '../../infrastructure/indexeddb/api': 61,
-            '../database/value': 41,
-            './event': 42,
-            './identifier': 43,
+            '../../infrastructure/indexeddb/api': 57,
+            '../database/value': 37,
+            './event': 38,
+            './identifier': 39,
             'spica/alias': 4,
-            'spica/clock': 9,
-            'spica/concat': 11,
-            'spica/exception': 14,
-            'spica/global': 16,
-            'spica/observer': 32
+            'spica/clock': 8,
+            'spica/concat': 10,
+            'spica/exception': 13,
+            'spica/global': 15,
+            'spica/observer': 29
         }
     ],
-    45: [
+    41: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.KeyValueStore = void 0;
+            const global_1 = _dereq_('spica/global');
             const clock_1 = _dereq_('spica/clock');
             const exception_1 = _dereq_('spica/exception');
             class KeyValueStore {
@@ -3591,20 +3065,20 @@ require = function () {
                 }
                 load(key, cb, cancellation) {
                     if (!this.alive)
-                        return void (cb === null || cb === void 0 ? void 0 : cb(new Error('Session is already closed.')));
+                        return void (cb === null || cb === void 0 ? void 0 : cb(new Error('Session is already closed.'), key));
                     return void this.listen(db => {
                         if (!this.alive)
-                            return void (cb === null || cb === void 0 ? void 0 : cb(new Error('Session is already closed.')));
+                            return void (cb === null || cb === void 0 ? void 0 : cb(new Error('Session is already closed.'), key));
                         if (cancellation === null || cancellation === void 0 ? void 0 : cancellation.cancelled)
-                            return void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request is cancelled.')));
+                            return void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request is cancelled.'), key));
                         const tx = db.transaction(this.name, 'readonly');
                         const req = this.index ? tx.objectStore(this.name).index(this.index).get(key) : tx.objectStore(this.name).get(key);
-                        void req.addEventListener('success', () => (this.cache.set(key, req.result), void (cb === null || cb === void 0 ? void 0 : cb(req.error))));
+                        void req.addEventListener('success', () => (cb === null || cb === void 0 ? void 0 : cb(req.error, key, req.result)) && this.cache.set(key, req.result));
                         void tx.addEventListener('complete', () => void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()));
-                        void tx.addEventListener('error', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error))));
-                        void tx.addEventListener('abort', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error))));
+                        void tx.addEventListener('error', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error, key))));
+                        void tx.addEventListener('abort', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error, key))));
                         void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.register(() => void tx.abort()));
-                    }, () => void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request has failed.'))));
+                    }, () => void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request has failed.'), key)));
                 }
                 has(key) {
                     return this.cache.has(key);
@@ -3626,10 +3100,10 @@ require = function () {
                             return;
                         const tx = this.txrw = this.txrw || db.transaction(this.name, 'readwrite');
                         this.index ? tx.objectStore(this.name).put(this.cache.get(key)) : tx.objectStore(this.name).put(this.cache.get(key), key);
-                        void tx.addEventListener('complete', () => void (cb === null || cb === void 0 ? void 0 : cb(key, tx.error)));
-                        void tx.addEventListener('error', () => void (cb === null || cb === void 0 ? void 0 : cb(key, tx.error)));
-                        void tx.addEventListener('abort', () => void (cb === null || cb === void 0 ? void 0 : cb(key, tx.error)));
-                    }, () => void (cb === null || cb === void 0 ? void 0 : cb(key, new Error('Request has failed.'))));
+                        void tx.addEventListener('complete', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key, value)));
+                        void tx.addEventListener('error', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key, value)));
+                        void tx.addEventListener('abort', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key, value)));
+                    }, () => void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request has failed.'), key, value)));
                     return value;
                 }
                 delete(key, cb) {
@@ -3641,10 +3115,24 @@ require = function () {
                             return;
                         const tx = this.txrw = this.txrw || db.transaction(this.name, 'readwrite');
                         void tx.objectStore(this.name).delete(key);
-                        void tx.addEventListener('complete', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error)));
-                        void tx.addEventListener('error', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error)));
-                        void tx.addEventListener('abort', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error)));
-                    }, () => void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request has failed.'))));
+                        void tx.addEventListener('complete', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key)));
+                        void tx.addEventListener('error', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key)));
+                        void tx.addEventListener('abort', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key)));
+                    }, () => void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request has failed.'), key)));
+                }
+                count(query, index) {
+                    return new global_1.Promise((resolve, reject) => void this.listen(db => {
+                        if (!this.alive)
+                            return void reject(new Error('Session is already closed.'));
+                        const tx = db.transaction(this.name, 'readonly');
+                        const req = index ? tx.objectStore(this.name).index(index).count(query !== null && query !== void 0 ? query : void 0) : tx.objectStore(this.name).count(query !== null && query !== void 0 ? query : void 0);
+                        void req.addEventListener('success', () => {
+                            void resolve(req.result);
+                        });
+                        void tx.addEventListener('complete', () => void reject(req.error));
+                        void tx.addEventListener('error', () => void reject(req.error));
+                        void tx.addEventListener('abort', () => void reject(req.error));
+                    }, () => void reject(new Error('Request has failed.'))));
                 }
                 cursor(query, index, direction, mode, cb) {
                     if (!this.alive)
@@ -3678,11 +3166,12 @@ require = function () {
             exports.KeyValueStore = KeyValueStore;
         },
         {
-            'spica/clock': 9,
-            'spica/exception': 14
+            'spica/clock': 8,
+            'spica/exception': 13,
+            'spica/global': 15
         }
     ],
-    46: [
+    42: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3747,16 +3236,16 @@ require = function () {
         },
         {}
     ],
-    47: [
+    43: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.isValidPropertyValue = exports.isValidPropertyName = exports.build = exports.Schema = void 0;
+            exports.isValidPropertyValue = exports.isValidPropertyName = exports.build = exports.DAO = void 0;
             var builder_1 = _dereq_('./module/builder');
-            Object.defineProperty(exports, 'Schema', {
+            Object.defineProperty(exports, 'DAO', {
                 enumerable: true,
                 get: function () {
-                    return builder_1.Schema;
+                    return builder_1.DAO;
                 }
             });
             Object.defineProperty(exports, 'build', {
@@ -3778,13 +3267,13 @@ require = function () {
                 }
             });
         },
-        { './module/builder': 48 }
+        { './module/builder': 44 }
     ],
-    48: [
+    44: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.build = exports.Schema = exports.isValidPropertyValue = exports.isValidPropertyName = void 0;
+            exports.build = exports.DAO = exports.isValidPropertyValue = exports.isValidPropertyName = void 0;
             const alias_1 = _dereq_('spica/alias');
             const event_1 = _dereq_('../../../data/es/event');
             Object.defineProperty(exports, 'isValidPropertyName', {
@@ -3799,18 +3288,18 @@ require = function () {
                     return event_1.isValidPropertyValue;
                 }
             });
-            var Schema;
-            (function (Schema) {
-                Schema.meta = Symbol.for('clientchannel/ChannelObject.meta');
-                Schema.id = Symbol.for('clientchannel/ChannelObject.id');
-                Schema.key = Symbol.for('clientchannel/ChannelObject.key');
-                Schema.date = Symbol.for('clientchannel/ChannelObject.data');
-                Schema.event = Symbol.for('clientchannel/ChannelObject.event');
-            }(Schema = exports.Schema || (exports.Schema = {})));
+            var DAO;
+            (function (DAO) {
+                DAO.meta = Symbol.for('clientchannel/DAO.meta');
+                DAO.id = Symbol.for('clientchannel/DAO.id');
+                DAO.key = Symbol.for('clientchannel/DAO.key');
+                DAO.date = Symbol.for('clientchannel/DAO.data');
+                DAO.event = Symbol.for('clientchannel/DAO.event');
+            }(DAO = exports.DAO || (exports.DAO = {})));
             function build(source, factory, set, get) {
                 const dao = factory();
-                if (typeof source[Schema.key] !== 'string')
-                    throw new TypeError(`ClientChannel: DAO: Invalid key: ${ source[Schema.key] }`);
+                if (typeof source[DAO.key] !== 'string')
+                    throw new TypeError(`ClientChannel: DAO: Invalid key: ${ source[DAO.key] }`);
                 const descmap = {
                     ...(0, alias_1.ObjectKeys)(dao).filter(event_1.isValidPropertyName).filter((0, event_1.isValidPropertyValue)(dao)).reduce((map, prop) => {
                         {
@@ -3840,30 +3329,30 @@ require = function () {
                         return map;
                     }, {}),
                     ...{
-                        [Schema.meta]: {
+                        [DAO.meta]: {
                             configurable: false,
                             enumerable: false,
-                            get: () => source[Schema.meta]
+                            get: () => source[DAO.meta]
                         },
-                        [Schema.id]: {
+                        [DAO.id]: {
                             configurable: false,
                             enumerable: false,
-                            get: () => source[Schema.id]
+                            get: () => source[DAO.id]
                         },
-                        [Schema.key]: {
+                        [DAO.key]: {
                             configurable: false,
                             enumerable: false,
-                            get: () => source[Schema.key]
+                            get: () => source[DAO.key]
                         },
-                        [Schema.date]: {
+                        [DAO.date]: {
                             configurable: false,
                             enumerable: false,
-                            get: () => source[Schema.date]
+                            get: () => source[DAO.date]
                         },
-                        [Schema.event]: {
+                        [DAO.event]: {
                             configurable: false,
                             enumerable: false,
-                            get: () => source[Schema.event]
+                            get: () => source[DAO.event]
                         }
                     }
                 };
@@ -3874,11 +3363,11 @@ require = function () {
             exports.build = build;
         },
         {
-            '../../../data/es/event': 42,
+            '../../../data/es/event': 38,
             'spica/alias': 4
         }
     ],
-    49: [
+    45: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3891,9 +3380,9 @@ require = function () {
                 }
             });
         },
-        { './service/channel': 54 }
+        { './service/channel': 50 }
     ],
-    50: [
+    46: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3902,8 +3391,8 @@ require = function () {
             const observer_1 = _dereq_('spica/observer');
             const cancellation_1 = _dereq_('spica/cancellation');
             const promise_1 = _dereq_('spica/promise');
-            const cache_1 = _dereq_('spica/cache');
             const api_1 = _dereq_('../../../infrastructure/indexeddb/api');
+            const api_2 = _dereq_('../../dao/api');
             const data_1 = _dereq_('./channel/data');
             const access_1 = _dereq_('./channel/access');
             const expiry_1 = _dereq_('./channel/expiry');
@@ -3917,7 +3406,7 @@ require = function () {
             }
             const cache = new Set();
             class ChannelStore {
-                constructor(name, attrs, destroy, age, capacity, debug = false) {
+                constructor(name, destroy, age, capacity, debug = false) {
                     this.name = name;
                     this.age = age;
                     this.capacity = capacity;
@@ -3925,43 +3414,8 @@ require = function () {
                     this.cancellation = new cancellation_1.Cancellation();
                     this.channel = new channel_1.Channel(this.name, this.debug);
                     this.ownership = new channel_2.Ownership(this.channel);
-                    this.keys_ = new Set();
-                    this.keys = new cache_1.Cache(this.capacity, {
-                        disposer: (() => {
-                            const queue = this.keys_;
-                            let timer = 0;
-                            const schedule = () => {
-                                if (!this.alive)
-                                    return;
-                                if (timer === 0)
-                                    return;
-                                timer = 0;
-                                if (!this.ownership.take('store', 10 * 1000))
-                                    return;
-                                const since = Date.now();
-                                let count = 0;
-                                for (const key of queue) {
-                                    if (!this.alive)
-                                        return void this.keys.clear(), void queue.clear();
-                                    if (!this.ownership.extend('store', 10 * 1000))
-                                        return timer = (0, global_1.setTimeout)(schedule, 10 * 1000);
-                                    if (!this.ownership.take(`key:${ key }`, 10 * 1000))
-                                        return timer = (0, global_1.setTimeout)(schedule, 10 * 1000);
-                                    if (++count > 100 || Date.now() > since + 1 * 1000)
-                                        return timer = (0, global_1.setTimeout)(schedule, 5 * 1000);
-                                    void queue.delete(key);
-                                    this.has(key) || this.meta(key).date === 0 ? void this.delete(key) : void this.clean(key);
-                                }
-                            };
-                            return (_, key) => {
-                                void queue.add(key);
-                                if (timer > 0)
-                                    return;
-                                timer = (0, global_1.setTimeout)(schedule, 3 * 1000);
-                            };
-                        })(),
-                        capture: { delete: false }
-                    });
+                    this.keys = new Set();
+                    this.lock = false;
                     this.events_ = {
                         load: new observer_1.Observation(),
                         save: new observer_1.Observation(),
@@ -3977,7 +3431,7 @@ require = function () {
                         throw new Error(`ClientChannel: Store channel "${ name }" is already open.`);
                     void cache.add(name);
                     void this.cancellation.register(() => void cache.delete(name));
-                    this.schema = new Schema(this, this.ownership, attrs, (0, api_1.open)(name, {
+                    this.schema = new Schema(this, this.ownership, this.capacity, (0, api_1.open)(name, {
                         make(db) {
                             return data_1.DataStore.configure().make(db) && access_1.AccessStore.configure().make(db) && expiry_1.ExpiryStore.configure().make(db);
                         },
@@ -3998,16 +3452,27 @@ require = function () {
                     void this.cancellation.register(this.channel.listen('save', ({key}) => void this.load(key)));
                     void this.events_.save.monitor([], ({key}) => void this.channel.post(new SaveMessage(key)));
                     void this.events_.clear.monitor([], (_, [key]) => {
-                        if (key === void 0)
-                            return;
-                        void this.ownership.take(`key:${ key }`, 10 * 1000);
                         void this.schema.access.delete(key);
                         void this.schema.expire.delete(key);
                     });
                     if (this.capacity === global_1.Infinity)
                         return;
-                    void this.events_.load.monitor([], ({key, type}) => type === ChannelStore.EventType.delete ? void this.keys_.delete(key) || void this.keys.delete(key) : void this.keys_.delete(key) || void this.keys.put(key));
-                    void this.events_.save.monitor([], ({key, type}) => type === ChannelStore.EventType.delete ? void this.keys_.delete(key) || void this.keys.delete(key) : void this.keys_.delete(key) || void this.keys.put(key));
+                    void this.events_.load.monitor([], ({key, type}) => {
+                        if (type === ChannelStore.EventType.delete) {
+                            void this.keys.delete(key);
+                        } else {
+                            void this.keys.add(key);
+                            void this.schema.access.schedule(100);
+                        }
+                    });
+                    void this.events_.save.monitor([], ({key, type}) => {
+                        if (type === ChannelStore.EventType.delete) {
+                            void this.keys.delete(key);
+                        } else {
+                            void this.keys.add(key);
+                            void this.schema.access.schedule(100);
+                        }
+                    });
                 }
                 get alive() {
                     return this.cancellation.alive;
@@ -4047,17 +3512,11 @@ require = function () {
                 }
                 delete(key) {
                     void this.ensureAliveness();
-                    void this.ownership.take(`key:${ key }`, 10 * 1000);
                     void this.schema.data.delete(key);
-                    void this.events.save.once([
-                        key,
-                        '',
-                        ChannelStore.EventType.delete
-                    ], () => void this.ownership.take(`key:${ key }`, 10 * 1000));
+                    void this.schema.access.set(key, false);
                 }
                 clean(key) {
                     void this.ensureAliveness();
-                    void this.ownership.take(`key:${ key }`, 10 * 1000);
                     void this.schema.data.clean(key);
                 }
                 log(key) {
@@ -4089,23 +3548,31 @@ require = function () {
             }
             exports.ChannelStore = ChannelStore;
             (function (ChannelStore) {
+                let Value;
+                (function (Value) {
+                    Value.meta = api_2.DAO.meta;
+                    Value.id = api_2.DAO.id;
+                    Value.key = api_2.DAO.key;
+                    Value.date = api_2.DAO.date;
+                    Value.event = api_2.DAO.event;
+                }(Value = ChannelStore.Value || (ChannelStore.Value = {})));
                 ChannelStore.Event = data_1.DataStore.Event;
                 ChannelStore.EventType = data_1.DataStore.EventType;
                 ChannelStore.Record = data_1.DataStore.Record;
             }(ChannelStore = exports.ChannelStore || (exports.ChannelStore = {})));
             class Schema {
-                constructor(store, ownership, attrs, listen) {
+                constructor(store, ownership, capacity, listen) {
                     this.store = store;
                     this.ownership = ownership;
-                    this.attrs = attrs;
+                    this.capacity = capacity;
                     this.listen = listen;
                     this.cancellation = new cancellation_1.Cancellation();
                     void this.build();
                 }
                 build() {
                     const keys = this.data ? this.data.keys() : [];
-                    this.data = new data_1.DataStore(this.attrs, this.listen);
-                    this.access = new access_1.AccessStore(this.listen);
+                    this.data = new data_1.DataStore(this.listen);
+                    this.access = new access_1.AccessStore(this.store, this.cancellation, this.ownership, this.listen, this.capacity);
                     this.expire = new expiry_1.ExpiryStore(this.store, this.cancellation, this.ownership, this.listen);
                     void this.cancellation.register(() => this.data.close());
                     void this.cancellation.register(() => this.access.close());
@@ -4129,32 +3596,108 @@ require = function () {
             }
         },
         {
-            '../../../infrastructure/indexeddb/api': 61,
-            '../../broadcast/channel': 46,
-            '../../ownership/channel': 55,
-            './channel/access': 51,
-            './channel/data': 52,
-            './channel/expiry': 53,
-            'spica/cache': 7,
-            'spica/cancellation': 8,
-            'spica/global': 16,
-            'spica/observer': 32,
-            'spica/promise': 33
+            '../../../infrastructure/indexeddb/api': 57,
+            '../../broadcast/channel': 42,
+            '../../dao/api': 43,
+            '../../ownership/channel': 51,
+            './channel/access': 47,
+            './channel/data': 48,
+            './channel/expiry': 49,
+            'spica/cancellation': 7,
+            'spica/global': 15,
+            'spica/observer': 29,
+            'spica/promise': 30
         }
     ],
-    51: [
+    47: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.AccessStore = exports.name = void 0;
             const global_1 = _dereq_('spica/global');
+            const alias_1 = _dereq_('spica/alias');
             const store_1 = _dereq_('../../../../data/kvs/store');
             exports.name = 'access';
             class AccessStore {
-                constructor(listen) {
+                constructor(chan, cancellation, ownership, listen, capacity) {
+                    this.chan = chan;
+                    this.cancellation = cancellation;
+                    this.ownership = ownership;
                     this.listen = listen;
+                    this.capacity = capacity;
                     this.store = new class extends store_1.KeyValueStore {
                     }(exports.name, 'key', this.listen);
+                    this.schedule = (() => {
+                        let timer = 0;
+                        let delay = 10 * 1000;
+                        let schedule = global_1.Infinity;
+                        return timeout => {
+                            if (this.capacity === global_1.Infinity)
+                                return;
+                            timeout = (0, alias_1.min)(timeout, 60 * 60 * 1000);
+                            if (global_1.Date.now() + timeout >= schedule)
+                                return;
+                            schedule = global_1.Date.now() + timeout;
+                            void clearTimeout(timer);
+                            timer = (0, global_1.setTimeout)(async () => {
+                                if (!this.cancellation.alive)
+                                    return;
+                                if (schedule === 0)
+                                    return;
+                                if (!this.ownership.take('store', delay))
+                                    return void this.schedule(delay *= 2);
+                                const since = global_1.Date.now();
+                                let count = 0;
+                                schedule = 0;
+                                if (this.chan.lock)
+                                    return void this.schedule(delay *= 2);
+                                schedule = global_1.Infinity;
+                                this.chan.lock = true;
+                                let timer = (0, global_1.setInterval)(() => {
+                                    if (this.ownership.extend('store', delay))
+                                        return;
+                                    (0, global_1.clearInterval)(timer);
+                                    timer = 0;
+                                }, delay / 2);
+                                const size = await this.store.count(null, 'key').catch(() => NaN);
+                                this.chan.lock = false;
+                                schedule = 0;
+                                if (size >= 0 === false)
+                                    return void (0, global_1.clearInterval)(timer) || void this.schedule(delay *= 2);
+                                if (size <= this.capacity)
+                                    return void (0, global_1.clearInterval)(timer);
+                                this.chan.lock = true;
+                                return void this.store.cursor(null, 'date', 'next', 'readonly', (cursor, error) => {
+                                    this.chan.lock = false;
+                                    if (timer) {
+                                        (0, global_1.clearInterval)(timer);
+                                        timer = 0;
+                                    }
+                                    schedule = global_1.Infinity;
+                                    if (!this.cancellation.alive)
+                                        return;
+                                    if (this.chan.lock)
+                                        return void this.schedule(delay *= 2);
+                                    if (error)
+                                        return void this.schedule(delay * 10);
+                                    if (!cursor)
+                                        return;
+                                    if (size - count <= this.capacity)
+                                        return;
+                                    const {key} = cursor.value;
+                                    if (!this.ownership.extend('store', delay))
+                                        return void this.schedule(delay *= 2);
+                                    if (++count > 100 || global_1.Date.now() > since + 1 * 1000)
+                                        return void this.schedule(5 * 1000);
+                                    schedule = 0;
+                                    this.chan.lock = true;
+                                    this.chan.has(key) || this.chan.meta(key).date === 0 ? void this.chan.delete(key) : void this.chan.clean(key);
+                                    return void cursor.continue();
+                                });
+                            }, timeout);
+                        };
+                    })();
+                    void this.schedule(10 * 1000);
                 }
                 static configure() {
                     return {
@@ -4180,30 +3723,38 @@ require = function () {
                     };
                 }
                 recent(cb, timeout) {
-                    const keys = [];
-                    let done = false;
-                    return new global_1.Promise((resolve, reject) => (timeout !== void 0 && void (0, global_1.setTimeout)(() => done = !void reject(new Error('Timeout.')), timeout), void this.store.cursor(null, 'date', 'prev', 'readonly', (cursor, error) => {
-                        if (done)
-                            return;
-                        if (error)
-                            return void reject(error);
-                        if (!cursor)
-                            return void resolve(keys);
-                        const {key} = cursor.value;
-                        void keys.push(key);
-                        if ((cb === null || cb === void 0 ? void 0 : cb(key, keys)) === false)
-                            return void resolve(keys);
-                        void cursor.continue();
-                    })));
+                    return new Promise((resolve, reject) => {
+                        let done = false;
+                        timeout !== void 0 && void (0, global_1.setTimeout)(() => done = !void reject(new Error('Timeout.')), timeout);
+                        const keys = [];
+                        void this.store.cursor(null, 'date', 'prev', 'readonly', (cursor, error) => {
+                            if (done)
+                                return;
+                            if (error)
+                                return void reject(error);
+                            if (!cursor)
+                                return void resolve(keys);
+                            const {key, alive} = cursor.value;
+                            if (alive) {
+                                void keys.push(key);
+                                if ((cb === null || cb === void 0 ? void 0 : cb(key, keys)) === false)
+                                    return void resolve(keys);
+                            }
+                            void cursor.continue();
+                        });
+                    });
                 }
-                load(key) {
-                    return this.store.load(key);
+                load(key, cancellation) {
+                    return this.store.load(key, (err, key, value) => {
+                        var _a;
+                        return !err && (value === null || value === void 0 ? void 0 : value.date) > ((_a = this.store.get(key)) === null || _a === void 0 ? void 0 : _a.date);
+                    }, cancellation);
                 }
                 get(key) {
                     return this.store.has(key) ? this.store.get(key).date : 0;
                 }
-                set(key) {
-                    void this.store.set(key, new AccessRecord(key));
+                set(key, alive = true) {
+                    void this.store.set(key, new AccessRecord(key, alive));
                 }
                 delete(key) {
                     void this.store.delete(key);
@@ -4214,18 +3765,20 @@ require = function () {
             }
             exports.AccessStore = AccessStore;
             class AccessRecord {
-                constructor(key) {
+                constructor(key, alive) {
                     this.key = key;
+                    this.alive = alive;
                     this.date = global_1.Date.now();
                 }
             }
         },
         {
-            '../../../../data/kvs/store': 45,
-            'spica/global': 16
+            '../../../../data/kvs/store': 41,
+            'spica/alias': 4,
+            'spica/global': 15
         }
     ],
-    52: [
+    48: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4236,8 +3789,8 @@ require = function () {
                 static configure() {
                     return store_1.EventStore.configure(exports.name);
                 }
-                constructor(attrs, listen) {
-                    super(exports.name, attrs, listen);
+                constructor(listen) {
+                    super(exports.name, listen);
                 }
             }
             exports.DataStore = DataStore;
@@ -4248,9 +3801,9 @@ require = function () {
                 DataStore.Value = store_1.EventStore.Value;
             }(DataStore = exports.DataStore || (exports.DataStore = {})));
         },
-        { '../../../../data/es/store': 44 }
+        { '../../../../data/es/store': 40 }
     ],
-    53: [
+    49: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4283,10 +3836,9 @@ require = function () {
                                 if (schedule === 0)
                                     return;
                                 if (!this.ownership.take('store', delay))
-                                    return this.schedule(delay *= 2);
+                                    return void this.schedule(delay *= 2);
                                 const since = global_1.Date.now();
                                 let count = 0;
-                                let retry = false;
                                 schedule = 0;
                                 let timer = (0, global_1.setInterval)(() => {
                                     if (this.ownership.extend('store', delay))
@@ -4294,15 +3846,22 @@ require = function () {
                                     (0, global_1.clearInterval)(timer);
                                     timer = 0;
                                 }, delay / 2);
+                                this.chan.lock = true;
                                 return void this.store.cursor(null, 'expiry', 'next', 'readonly', (cursor, error) => {
-                                    timer && (0, global_1.clearInterval)(timer);
+                                    this.chan.lock = false;
+                                    if (timer) {
+                                        (0, global_1.clearInterval)(timer);
+                                        timer = 0;
+                                    }
                                     schedule = global_1.Infinity;
                                     if (!this.cancellation.alive)
                                         return;
+                                    if (this.chan.lock)
+                                        return void this.schedule(delay *= 2);
                                     if (error)
                                         return void this.schedule(delay * 10);
                                     if (!cursor)
-                                        return retry && void this.schedule(delay *= 2);
+                                        return;
                                     const {key, expiry} = cursor.value;
                                     if (expiry > global_1.Date.now())
                                         return void this.schedule(expiry - global_1.Date.now());
@@ -4311,8 +3870,7 @@ require = function () {
                                     if (++count > 100 || global_1.Date.now() > since + 1 * 1000)
                                         return void this.schedule(5 * 1000);
                                     schedule = 0;
-                                    if (!this.ownership.take(`key:${ key }`, delay))
-                                        return retry = true, void cursor.continue();
+                                    this.chan.lock = true;
                                     this.chan.has(key) || this.chan.meta(key).date === 0 ? void this.chan.delete(key) : void this.chan.clean(key);
                                     return void cursor.continue();
                                 });
@@ -4344,6 +3902,12 @@ require = function () {
                         }
                     };
                 }
+                load(key, cancellation) {
+                    return this.store.load(key, (err, key, value) => {
+                        var _a;
+                        return !err && (value === null || value === void 0 ? void 0 : value.expiry) > ((_a = this.store.get(key)) === null || _a === void 0 ? void 0 : _a.expiry);
+                    }, cancellation);
+                }
                 set(key, age) {
                     if (age === global_1.Infinity)
                         return void this.delete(key);
@@ -4366,12 +3930,12 @@ require = function () {
             }
         },
         {
-            '../../../../data/kvs/store': 45,
+            '../../../../data/kvs/store': 41,
             'spica/alias': 4,
-            'spica/global': 16
+            'spica/global': 15
         }
     ],
-    54: [
+    50: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4384,45 +3948,44 @@ require = function () {
             const api_2 = _dereq_('../../webstorage/api');
             class StoreChannel extends channel_1.ChannelStore {
                 constructor(name, factory, {migrate, destroy = () => true, age = Infinity, capacity = Infinity, debug = false} = {}) {
-                    super(name, (0, alias_1.ObjectKeys)(factory()).filter(api_1.isValidPropertyName).filter((0, api_1.isValidPropertyValue)(factory())), destroy, age, capacity, debug);
+                    super(name, destroy, age, capacity, debug);
                     this.factory = factory;
                     this.links = new Map();
                     this.sources = new Map();
-                    const attrs = (0, alias_1.ObjectKeys)(factory()).filter(api_1.isValidPropertyName).filter((0, api_1.isValidPropertyValue)(factory()));
-                    void this.events_.load.monitor([], ({key, attr, type}) => {
-                        if (!this.sources.has(key))
-                            return;
+                    const props = (0, alias_1.ObjectKeys)(factory()).filter(api_1.isValidPropertyName).filter((0, api_1.isValidPropertyValue)(factory()));
+                    const update = (key, props) => {
                         const source = this.sources.get(key);
                         const memory = this.get(key);
                         const link = this.link(key);
-                        switch (type) {
-                        case channel_1.ChannelStore.EventType.put:
-                            return void update(attrs.filter(a => a === attr));
-                        case channel_1.ChannelStore.EventType.delete:
-                        case channel_1.ChannelStore.EventType.snapshot:
-                            return void update(attrs);
+                        const changes = props.filter(prop => prop in memory).map(prop => {
+                            const newVal = memory[prop];
+                            const oldVal = source[prop];
+                            source[prop] = newVal;
+                            return {
+                                prop,
+                                newVal,
+                                oldVal
+                            };
+                        }).filter(({newVal, oldVal}) => ![newVal].includes(oldVal));
+                        if (changes.length === 0)
+                            return;
+                        void (migrate === null || migrate === void 0 ? void 0 : migrate(link));
+                        for (const {prop, oldVal} of changes) {
+                            void source[StoreChannel.Value.event].emit([
+                                api_2.StorageChannel.EventType.recv,
+                                prop
+                            ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.recv, prop, memory[prop], oldVal));
                         }
-                        return;
-                        function update(attrs) {
-                            const changes = attrs.filter(attr => attr in memory).map(attr => {
-                                const newVal = memory[attr];
-                                const oldVal = source[attr];
-                                source[attr] = newVal;
-                                return {
-                                    attr,
-                                    newVal,
-                                    oldVal
-                                };
-                            }).filter(({newVal, oldVal}) => ![newVal].includes(oldVal));
-                            if (changes.length === 0)
-                                return;
-                            void (migrate === null || migrate === void 0 ? void 0 : migrate(link));
-                            for (const {attr, oldVal} of changes) {
-                                void cast(source[api_1.Schema.event]).emit([
-                                    api_2.StorageChannel.EventType.recv,
-                                    attr
-                                ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.recv, attr, memory[attr], oldVal));
-                            }
+                    };
+                    void this.events_.load.monitor([], ({key, prop, type}) => {
+                        if (!this.sources.has(key))
+                            return;
+                        switch (type) {
+                        case StoreChannel.EventType.put:
+                            return void update(key, props.filter(a => a === prop));
+                        case StoreChannel.EventType.delete:
+                        case StoreChannel.EventType.snapshot:
+                            return void update(key, props);
                         }
                     });
                 }
@@ -4431,37 +3994,40 @@ require = function () {
                     void this.expire(key, age);
                     void this.load(key, error => !error && this.alive && this.links.has(key) && void this.log(key));
                     return this.links.has(key) ? this.links.get(key) : this.links.set(key, (0, api_1.build)((0, alias_1.ObjectDefineProperties)(this.sources.set(key, this.get(key)).get(key), {
-                        [api_1.Schema.meta]: { get: () => this.meta(key) },
-                        [api_1.Schema.id]: { get: () => this.meta(key).id },
-                        [api_1.Schema.key]: { get: () => this.meta(key).key },
-                        [api_1.Schema.date]: { get: () => this.meta(key).date },
-                        [api_1.Schema.event]: { value: new observer_1.Observation({ limit: Infinity }) }
-                    }), this.factory, (attr, newValue, oldValue) => {
+                        [StoreChannel.Value.meta]: { get: () => this.meta(key) },
+                        [StoreChannel.Value.id]: { get: () => this.meta(key).id },
+                        [StoreChannel.Value.key]: { get: () => this.meta(key).key },
+                        [StoreChannel.Value.date]: { get: () => this.meta(key).date },
+                        [StoreChannel.Value.event]: { value: new observer_1.Observation({ limit: Infinity }) }
+                    }), this.factory, (prop, newValue, oldValue) => {
                         if (!this.alive)
                             return;
-                        void this.add(new channel_1.ChannelStore.Record(key, { [attr]: newValue }));
-                        void cast(this.sources.get(key)[api_1.Schema.event]).emit([
+                        void this.add(new StoreChannel.Record(key, { [prop]: newValue }));
+                        void this.sources.get(key)[StoreChannel.Value.event].emit([
                             api_2.StorageChannel.EventType.send,
-                            attr
-                        ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.send, attr, newValue, oldValue));
+                            prop
+                        ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.send, prop, newValue, oldValue));
                     }, (0, throttle_1.throttle)(100, () => this.alive && this.links.has(key) && void this.log(key)))).get(key);
                 }
             }
             exports.StoreChannel = StoreChannel;
-            function cast(o) {
-                return o;
-            }
+            (function (StoreChannel) {
+                StoreChannel.Value = channel_1.ChannelStore.Value;
+                StoreChannel.Event = channel_1.ChannelStore.Event;
+                StoreChannel.EventType = channel_1.ChannelStore.EventType;
+                StoreChannel.Record = channel_1.ChannelStore.Record;
+            }(StoreChannel = exports.StoreChannel || (exports.StoreChannel = {})));
         },
         {
-            '../../dao/api': 47,
-            '../../webstorage/api': 56,
-            '../model/channel': 50,
+            '../../dao/api': 43,
+            '../../webstorage/api': 52,
+            '../model/channel': 46,
             'spica/alias': 4,
-            'spica/observer': 32,
-            'spica/throttle': 35
+            'spica/observer': 29,
+            'spica/throttle': 32
         }
     ],
-    55: [
+    51: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4573,13 +4139,13 @@ require = function () {
             Ownership.mergin = 5 * 1000;
         },
         {
-            '../broadcast/channel': 46,
+            '../broadcast/channel': 42,
             'spica/alias': 4,
-            'spica/cancellation': 8,
-            'spica/global': 16
+            'spica/cancellation': 7,
+            'spica/global': 15
         }
     ],
-    56: [
+    52: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4606,11 +4172,11 @@ require = function () {
             });
         },
         {
-            '../../infrastructure/webstorage/api': 67,
-            './service/channel': 58
+            '../../infrastructure/webstorage/api': 63,
+            './service/channel': 54
         }
     ],
-    57: [
+    53: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4639,7 +4205,7 @@ require = function () {
         },
         {}
     ],
-    58: [
+    54: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4667,22 +4233,22 @@ require = function () {
                     void this.cancellation.register(() => void cache.delete(name));
                     const source = {
                         ...parse(this.storage.getItem(this.name)),
-                        [api_1.Schema.key]: this.name,
-                        [api_1.Schema.event]: new observer_1.Observation({ limit: Infinity })
+                        [StorageChannel.Value.key]: this.name,
+                        [StorageChannel.Value.event]: new observer_1.Observation({ limit: Infinity })
                     };
-                    this.link_ = (0, api_1.build)(source, factory, (attr, newValue, oldValue) => {
+                    this.link_ = (0, api_1.build)(source, factory, (prop, newValue, oldValue) => {
                         if (!this.alive)
                             return;
-                        void this.storage.setItem(this.name, JSON.stringify((0, alias_1.ObjectKeys)(source).filter(api_1.isValidPropertyName).filter((0, api_1.isValidPropertyValue)(source)).reduce((acc, attr) => {
-                            acc[attr] = source[attr];
+                        void this.storage.setItem(this.name, JSON.stringify((0, alias_1.ObjectKeys)(source).filter(api_1.isValidPropertyName).filter((0, api_1.isValidPropertyValue)(source)).reduce((acc, prop) => {
+                            acc[prop] = source[prop];
                             return acc;
                         }, {})));
-                        const event = new StorageChannel.Event(StorageChannel.EventType.send, attr, newValue, oldValue);
-                        void source[api_1.Schema.event].emit([
+                        const event = new StorageChannel.Event(StorageChannel.EventType.send, prop, newValue, oldValue);
+                        void this.events.send.emit([event.prop], event);
+                        void source[StorageChannel.Value.event].emit([
                             event.type,
-                            event.attr
+                            event.prop
                         ], event);
-                        void this.events.send.emit([event.attr], event);
                     });
                     void (migrate === null || migrate === void 0 ? void 0 : migrate(this.link_));
                     void this.cancellation.register(api_2.storageEventStream.on([
@@ -4690,19 +4256,19 @@ require = function () {
                         this.name
                     ], ({newValue}) => {
                         const item = parse(newValue);
-                        void (0, alias_1.ObjectKeys)(item).filter(api_1.isValidPropertyName).filter((0, api_1.isValidPropertyValue)(item)).forEach(attr => {
-                            const oldVal = source[attr];
-                            const newVal = item[attr];
+                        void (0, alias_1.ObjectKeys)(item).filter(api_1.isValidPropertyName).filter((0, api_1.isValidPropertyValue)(item)).forEach(prop => {
+                            const oldVal = source[prop];
+                            const newVal = item[prop];
                             if ([newVal].includes(oldVal))
                                 return;
-                            source[attr] = newVal;
+                            source[prop] = newVal;
                             void (migrate === null || migrate === void 0 ? void 0 : migrate(this.link_));
-                            const event = new StorageChannel.Event(StorageChannel.EventType.recv, attr, source[attr], oldVal);
-                            void source[api_1.Schema.event].emit([
+                            const event = new StorageChannel.Event(StorageChannel.EventType.recv, prop, source[prop], oldVal);
+                            void this.events.recv.emit([event.prop], event);
+                            void source[StorageChannel.Value.event].emit([
                                 event.type,
-                                event.attr
+                                event.prop
                             ], event);
-                            void this.events.recv.emit([event.attr], event);
                         });
                     }));
                 }
@@ -4728,10 +4294,15 @@ require = function () {
             }
             exports.StorageChannel = StorageChannel;
             (function (StorageChannel) {
+                let Value;
+                (function (Value) {
+                    Value.key = api_1.DAO.key;
+                    Value.event = api_1.DAO.event;
+                }(Value = StorageChannel.Value || (StorageChannel.Value = {})));
                 class Event {
-                    constructor(type, attr, newValue, oldValue) {
+                    constructor(type, prop, newValue, oldValue) {
                         this.type = type;
-                        this.attr = attr;
+                        this.prop = prop;
                         this.newValue = newValue;
                         this.oldValue = oldValue;
                     }
@@ -4752,15 +4323,15 @@ require = function () {
             }
         },
         {
-            '../../../infrastructure/webstorage/api': 67,
-            '../../dao/api': 47,
-            '../model/storage': 57,
+            '../../../infrastructure/webstorage/api': 63,
+            '../../dao/api': 43,
+            '../model/storage': 53,
             'spica/alias': 4,
-            'spica/cancellation': 8,
-            'spica/observer': 32
+            'spica/cancellation': 7,
+            'spica/observer': 29
         }
     ],
-    59: [
+    55: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4779,9 +4350,9 @@ require = function () {
                 }
             });
         },
-        { './module/storage': 60 }
+        { './module/storage': 56 }
     ],
-    60: [
+    56: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4804,9 +4375,9 @@ require = function () {
             }
             exports.verifyStorageAccess = verifyStorageAccess;
         },
-        { 'spica/uuid': 38 }
+        { 'spica/uuid': 34 }
     ],
-    61: [
+    57: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4864,12 +4435,12 @@ require = function () {
             });
         },
         {
-            './model/access': 62,
-            './model/event': 63,
-            './module/global': 66
+            './model/access': 58,
+            './model/event': 59,
+            './module/global': 62
         }
     ],
-    62: [
+    58: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4946,14 +4517,14 @@ require = function () {
             }
         },
         {
-            '../../environment/api': 59,
-            './event': 63,
-            './state': 64,
-            './transition': 65,
-            'spica/noop': 31
+            '../../environment/api': 55,
+            './event': 59,
+            './state': 60,
+            './transition': 61,
+            'spica/noop': 28
         }
     ],
-    63: [
+    59: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4969,9 +4540,9 @@ require = function () {
             }
             exports.IDBEvent = IDBEvent;
         },
-        { 'spica/observer': 32 }
+        { 'spica/observer': 29 }
     ],
-    64: [
+    60: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -5135,7 +4706,7 @@ require = function () {
         },
         {}
     ],
-    65: [
+    61: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -5329,14 +4900,14 @@ require = function () {
             }
         },
         {
-            '../../environment/api': 59,
-            '../module/global': 66,
-            './event': 63,
-            './state': 64,
-            'spica/exception': 14
+            '../../environment/api': 55,
+            '../module/global': 62,
+            './event': 59,
+            './state': 60,
+            'spica/exception': 13
         }
     ],
-    66: [
+    62: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -5346,7 +4917,7 @@ require = function () {
         },
         {}
     ],
-    67: [
+    63: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -5379,11 +4950,11 @@ require = function () {
             });
         },
         {
-            './model/event': 68,
-            './module/global': 69
+            './model/event': 64,
+            './module/global': 65
         }
     ],
-    68: [
+    64: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -5410,11 +4981,11 @@ require = function () {
             });
         },
         {
-            '../module/global': 69,
-            'spica/observer': 32
+            '../module/global': 65,
+            'spica/observer': 29
         }
     ],
-    69: [
+    65: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -5423,9 +4994,9 @@ require = function () {
             exports.localStorage = api_1.isStorageAvailable ? self.localStorage : void 0;
             exports.sessionStorage = api_1.isStorageAvailable ? self.sessionStorage : void 0;
         },
-        { '../../environment/api': 59 }
+        { '../../environment/api': 55 }
     ],
-    70: [
+    66: [
         function (_dereq_, module, exports) {
             'use strict';
             var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
@@ -5454,7 +5025,7 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             __exportStar(_dereq_('../application/api'), exports);
         },
-        { '../application/api': 40 }
+        { '../application/api': 36 }
     ],
     'clientchannel': [
         function (_dereq_, module, exports) {
@@ -5485,7 +5056,7 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             __exportStar(_dereq_('./src/export'), exports);
         },
-        { './src/export': 39 }
+        { './src/export': 35 }
     ]
 }, {}, [
     1,
