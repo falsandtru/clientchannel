@@ -112,20 +112,17 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     memory: new Observation<[K, Prop<V> | '', number], UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>, void>({ limit: Infinity }),
   } as const;
   private tx: {
-    readonly rw: IDBTransaction | undefined;
+    rw?: IDBTransaction;
     rwc: number;
   } = {
-    rw: void 0,
     rwc: 0,
   };
   private get txrw(): IDBTransaction | undefined {
-    if (++this.tx.rwc > 25) {
-      this.tx = {
-        rw: void 0,
-        rwc: 0,
-      };
-      return;
-    }
+    if (++this.tx.rwc < 25 || !this.tx.rw) return;
+    const tx = this.tx.rw;
+    this.tx.rwc = 0;
+    this.tx.rw = void 0;
+    void tx.commit();
     return this.tx.rw;
   }
   private set txrw(tx: IDBTransaction | undefined) {
@@ -133,20 +130,29 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     assert(tx.mode === 'readwrite');
     assert.deepStrictEqual([...tx.objectStoreNames], [this.name]);
     if (this.tx.rw === tx) return;
-    this.tx = {
-      rw: tx,
-      rwc: 0,
-    };
+    this.tx.rwc = 0;
+    this.tx.rw = tx;
     const clear = () => {
-      this.tx = {
-        rw: void 0,
-        rwc: 0,
-      };
+      if (this.tx.rw !== tx) return;
+      this.tx.rw = void 0;
     };
-    void tx.addEventListener('complete', clear);
-    void tx.addEventListener('error', clear);
-    void tx.addEventListener('abort', clear);
+    void this.tx.rw.addEventListener('abort', clear);
+    void this.tx.rw.addEventListener('error', clear);
+    void this.tx.rw.addEventListener('complete', clear);
     void tick(clear);
+  }
+  public transact(
+    cache: (db: IDBDatabase) => IDBTransaction | undefined,
+    success: (tx: IDBTransaction) => void,
+    failure: (reason: unknown) => void,
+    tx = this.txrw,
+  ): void {
+    return tx
+      ? void success(tx)
+      : this.listen(db => {
+          const tx = cache(db);
+          return tx && void success(this.txrw = tx);
+        }, failure);
   }
   public load(key: K, cb?: (error: DOMException | Error | null) => void, cancellation?: Cancellation): void {
     if (!this.alive) return void cb?.(new Error('Session is already closed.'));
@@ -265,7 +271,6 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   private counter = 0;
   public add(event: UnstoredEventRecord<K, V>, tx?: IDBTransaction): void {
     assert(event instanceof UnstoredEventRecord);
-    assert(event.type === EventStore.EventType.snapshot ? tx : true);
     if (!this.alive) return;
     switch (event.type) {
       case EventStore.EventType.put:
@@ -292,45 +297,50 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       .emit([event.key, event.prop, 0], event);
     const loss = () =>
       void this.events.loss.emit([event.key, event.prop, event.type], new EventStore.Event(event.type, makeEventId(0), event.key, event.prop, event.date));
-    return void this.listen(db => {
-      if (!this.alive) return;
-      tx = this.txrw = tx || this.txrw || db.transaction(this.name, 'readwrite');
-      const active = (): boolean =>
-        this.memory.reflect([event.key, event.prop, 0])
-          .includes(event);
-      if (!active()) return;
-      const req = tx
-        .objectStore(this.name)
-        .add(record(event));
-      void tx.addEventListener('complete', () => {
-        assert(req.result > 0);
-        void clean();
-        const savedEvent = new SavedEventRecord(makeEventId(req.result as number), event.key, event.value, event.type, event.date);
-        void this.memory
-          .off([savedEvent.key, savedEvent.prop, savedEvent.id]);
-        void this.memory
-          .on([savedEvent.key, savedEvent.prop, savedEvent.id], () => savedEvent);
-        void this.events_.memory
-          .emit([savedEvent.key, savedEvent.prop, savedEvent.id], savedEvent);
-        const events: StoredEventRecord<K, V>[] = this.memory.reflect([savedEvent.key])
-          .reduce<StoredEventRecord<K, V>[]>((es, e) =>
-            e instanceof StoredEventRecord
-              ? concat(es, [e])
-              : es
-          , []);
-        if (events.length >= this.snapshotCycle ||
-            events.filter(event => hasBinary(event.value)).length >= 3) {
-          void this.snapshot(savedEvent.key);
-        }
-      });
-      const fail = () => (
-        void clean(),
-        active()
-          ? void loss()
-          : void 0);
-      void tx.addEventListener('error', fail);
-      void tx.addEventListener('abort', fail);
-    }, () => void clean() || void loss());
+    return void this.transact(
+      db =>
+        this.alive
+          ? db.transaction(this.name, 'readwrite')
+          : void 0,
+      tx => {
+        const active = (): boolean =>
+          this.memory.reflect([event.key, event.prop, 0])
+            .includes(event);
+        if (!active()) return;
+        const req = tx
+          .objectStore(this.name)
+          .add(record(event));
+        void tx.addEventListener('complete', () => {
+          assert(req.result > 0);
+          void clean();
+          const savedEvent = new SavedEventRecord(makeEventId(req.result as number), event.key, event.value, event.type, event.date);
+          void this.memory
+            .off([savedEvent.key, savedEvent.prop, savedEvent.id]);
+          void this.memory
+            .on([savedEvent.key, savedEvent.prop, savedEvent.id], () => savedEvent);
+          void this.events_.memory
+            .emit([savedEvent.key, savedEvent.prop, savedEvent.id], savedEvent);
+          const events: StoredEventRecord<K, V>[] = this.memory.reflect([savedEvent.key])
+            .reduce<StoredEventRecord<K, V>[]>((es, e) =>
+              e instanceof StoredEventRecord
+                ? concat(es, [e])
+                : es
+            , []);
+          if (events.length >= this.snapshotCycle ||
+              events.filter(event => hasBinary(event.value)).length >= 3) {
+            void this.snapshot(savedEvent.key);
+          }
+        });
+        const fail = () => (
+          void clean(),
+          active()
+            ? void loss()
+            : void 0);
+        void tx.addEventListener('error', fail);
+        void tx.addEventListener('abort', fail);
+      },
+      () => void clean() || void loss(),
+      tx);
   }
   public delete(key: K): void {
     return void this.add(new UnstoredEventRecord<K, V>(key, new EventStore.Value(), EventStore.EventType.delete));

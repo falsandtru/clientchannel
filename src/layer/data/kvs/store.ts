@@ -33,11 +33,11 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     rwc: 0,
   };
   private get txrw(): IDBTransaction | undefined {
-    if (++this.tx.rwc > 25) {
-      this.tx.rwc = 0;
-      this.tx.rw = void 0;
-      return;
-    }
+    if (++this.tx.rwc < 25 || !this.tx.rw) return;
+    const tx = this.tx.rw;
+    this.tx.rwc = 0;
+    this.tx.rw = void 0;
+    void tx.commit();
     return this.tx.rw;
   }
   private set txrw(tx: IDBTransaction | undefined) {
@@ -47,7 +47,27 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     if (this.tx.rw === tx) return;
     this.tx.rwc = 0;
     this.tx.rw = tx;
-    void tick(() => this.tx.rw = void 0);
+    const clear = () => {
+      if (this.tx.rw !== tx) return;
+      this.tx.rw = void 0;
+    };
+    void this.tx.rw.addEventListener('abort', clear);
+    void this.tx.rw.addEventListener('error', clear);
+    void this.tx.rw.addEventListener('complete', clear);
+    void tick(clear);
+  }
+  public transact(
+    cache: (db: IDBDatabase) => IDBTransaction | undefined,
+    success: (tx: IDBTransaction) => void,
+    failure: (reason: unknown) => void,
+    tx = this.txrw,
+  ): void {
+    return tx
+      ? void success(tx)
+      : this.listen(db => {
+          const tx = cache(db);
+          return tx && void success(this.txrw = tx);
+        }, failure);
   }
   public load(key: K, cb?: (error: DOMException | Error | null, key: K, value?: V) => boolean | void, cancellation?: Cancellation): undefined {
     if (!this.alive) return void cb?.(new Error('Session is already closed.'), key);
@@ -89,42 +109,49 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
   private put(value: V, key: K, cb?: (error: DOMException | Error | null, key: K, value: V) => void): V {
     void this.cache.set(key, value);
     if (!this.alive) return value;
-    void this.listen(db => {
-      if (!this.alive) return;
-      if (!this.cache.has(key)) return;
-      const tx = this.txrw = this.txrw || db.transaction(this.name, 'readwrite');
-      this.index
-        ? tx
-          .objectStore(this.name)
-          .put(this.cache.get(key))
-        : tx
-          .objectStore(this.name)
-          .put(this.cache.get(key), key);
-      void tx.addEventListener('complete', () =>
-        void cb?.(tx.error, key, value));
-      void tx.addEventListener('error', () =>
-        void cb?.(tx.error, key, value));
-      void tx.addEventListener('abort', () =>
-        void cb?.(tx.error, key, value));
-    }, () => void cb?.(new Error('Request has failed.'), key, value));
+    void this.transact(
+      db =>
+        this.alive && this.cache.has(key)
+          ? db.transaction(this.name, 'readwrite')
+          : void 0,
+      tx => {
+        this.index
+          ? tx
+            .objectStore(this.name)
+            .put(this.cache.get(key))
+          : tx
+            .objectStore(this.name)
+            .put(this.cache.get(key), key);
+        void tx.addEventListener('complete', () =>
+          void cb?.(tx.error, key, value));
+        void tx.addEventListener('error', () =>
+          void cb?.(tx.error, key, value));
+        void tx.addEventListener('abort', () =>
+          void cb?.(tx.error, key, value));
+      },
+      () => void cb?.(new Error('Request has failed.'), key, value));
     return value;
   }
   public delete(key: K, cb?: (error: DOMException | Error | null, key: K) => void): void {
     void this.cache.delete(key);
     if (!this.alive) return;
-    void this.listen(db => {
-      if (!this.alive) return;
-      const tx = this.txrw = this.txrw || db.transaction(this.name, 'readwrite');
-      void tx
-        .objectStore(this.name)
-        .delete(key);
-      void tx.addEventListener('complete', () =>
-        void cb?.(tx.error, key));
-      void tx.addEventListener('error', () =>
-        void cb?.(tx.error, key));
-      void tx.addEventListener('abort', () =>
-        void cb?.(tx.error, key));
-    }, () => void cb?.(new Error('Request has failed.'), key));
+    void this.transact(
+      db =>
+        this.alive
+          ? db.transaction(this.name, 'readwrite')
+          : void 0,
+      tx => {
+        void tx
+          .objectStore(this.name)
+          .delete(key);
+        void tx.addEventListener('complete', () =>
+          void cb?.(tx.error, key));
+        void tx.addEventListener('error', () =>
+          void cb?.(tx.error, key));
+        void tx.addEventListener('abort', () =>
+          void cb?.(tx.error, key));
+      },
+      () => void cb?.(new Error('Request has failed.'), key));
   }
   public count(query: IDBValidKey | IDBKeyRange | null | undefined, index: string): Promise<number> {
     return new Promise((resolve, reject) => void this.listen(db => {
