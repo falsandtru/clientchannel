@@ -271,6 +271,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   private counter = 0;
   public add(event: UnstoredEventRecord<K, V>, tx?: IDBTransaction): void {
     assert(event instanceof UnstoredEventRecord);
+    assert(event.type === EventStore.EventType.snapshot ? tx : true);
     if (!this.alive) return;
     switch (event.type) {
       case EventStore.EventType.put:
