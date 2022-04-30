@@ -1,14 +1,14 @@
 import { Map } from 'spica/global';
 import { max, ObjectAssign, ObjectCreate } from 'spica/alias';
+import { Listen, Config, IDBKeyRange } from '../../infrastructure/indexeddb/api';
+import { EventId, makeEventId } from './identifier';
+import { EventRecordType, UnstoredEventRecord, StoredEventRecord, LoadedEventRecord, SavedEventRecord, EventRecordValue } from './event';
+import { Prop, hasBinary } from '../database/value';
 import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
 import { tick } from 'spica/clock';
 import { concat } from 'spica/concat';
 import { causeAsyncException } from 'spica/exception';
-import { Listen, Config, IDBKeyRange } from '../../infrastructure/indexeddb/api';
-import { EventId, makeEventId } from './identifier';
-import { EventRecordType, UnstoredEventRecord, StoredEventRecord, LoadedEventRecord, SavedEventRecord, EventRecordValue } from './event';
-import { Prop, hasBinary } from '../database/value';
 
 namespace EventStoreSchema {
   export const id = 'id';

@@ -1,12 +1,12 @@
 import { ObjectDefineProperties, ObjectKeys } from 'spica/alias';
 import { StoreChannel as IStoreChannel } from '../../../../../';
 import { Prop } from '../../../data/database/value';
-import { Observation } from 'spica/observer';
-import { throttle } from 'spica/throttle';
-import { equal } from 'spica/compare';
 import { build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { ChannelStore } from '../model/channel';
 import { StorageChannel } from '../../webstorage/api';
+import { Observation } from 'spica/observer';
+import { throttle } from 'spica/throttle';
+import { equal } from 'spica/compare';
 
 export class StoreChannel<K extends string, V extends StoreChannel.Value<K>> extends ChannelStore<K, V> implements IStoreChannel<K, V> {
   constructor(

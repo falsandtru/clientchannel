@@ -1,9 +1,6 @@
 import { Infinity, Promise, setTimeout } from 'spica/global';
 import { StoreChannel } from '../../../../../';
 import { Prop } from '../../../data/database/value';
-import { Observation, Observer } from 'spica/observer';
-import { Cancellation } from 'spica/cancellation';
-import { AtomicPromise } from 'spica/promise';
 import { open, Listen, close, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { DAO } from '../../dao/api';
 import { DataStore } from './channel/data';
@@ -12,6 +9,9 @@ import { ExpiryStore } from './channel/expiry';
 import { Channel, ChannelMessage } from '../../broadcast/channel';
 import { Ownership } from '../../ownership/channel';
 import { StorageChannel } from '../../webstorage/api';
+import { Observation, Observer } from 'spica/observer';
+import { Cancellation } from 'spica/cancellation';
+import { AtomicPromise } from 'spica/promise';
 
 declare global {
   interface ChannelMessageTypeMap<K extends string> {

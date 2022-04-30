@@ -1,9 +1,9 @@
 import { Number, Date } from 'spica/global';
 import { ObjectKeys } from 'spica/alias';
-import { clone } from 'spica/assign';
 import { StoreChannel } from '../../../..';
 import { EventId, makeEventId } from './identifier';
 import { Prop, isStorable } from '../database/value';
+import { clone } from 'spica/assign';
 
 export type EventRecordType = StoreChannel.EventType
 export const EventRecordType = {
