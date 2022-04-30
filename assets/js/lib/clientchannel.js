@@ -2387,9 +2387,9 @@ require = function () {
             exports.isValidPropertyValue = exports.isValidPropertyName = exports.EventRecordValue = exports.SavedEventRecord = exports.LoadedEventRecord = exports.StoredEventRecord = exports.UnstoredEventRecord = exports.EventRecordType = void 0;
             const global_1 = _dereq_('spica/global');
             const alias_1 = _dereq_('spica/alias');
-            const assign_1 = _dereq_('spica/assign');
             const identifier_1 = _dereq_('./identifier');
             const value_1 = _dereq_('../database/value');
+            const assign_1 = _dereq_('spica/assign');
             exports.EventRecordType = {
                 put: 'put',
                 delete: 'delete',
@@ -2514,14 +2514,14 @@ require = function () {
             exports.compose = exports.record = exports.EventStore = void 0;
             const global_1 = _dereq_('spica/global');
             const alias_1 = _dereq_('spica/alias');
-            const observer_1 = _dereq_('spica/observer');
-            const clock_1 = _dereq_('spica/clock');
-            const concat_1 = _dereq_('spica/concat');
-            const exception_1 = _dereq_('spica/exception');
             const api_1 = _dereq_('../../infrastructure/indexeddb/api');
             const identifier_1 = _dereq_('./identifier');
             const event_1 = _dereq_('./event');
             const value_1 = _dereq_('../database/value');
+            const observer_1 = _dereq_('spica/observer');
+            const clock_1 = _dereq_('spica/clock');
+            const concat_1 = _dereq_('spica/concat');
+            const exception_1 = _dereq_('spica/exception');
             var EventStoreSchema;
             (function (EventStoreSchema) {
                 EventStoreSchema.id = 'id';
@@ -3401,9 +3401,6 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.ChannelStore = void 0;
             const global_1 = _dereq_('spica/global');
-            const observer_1 = _dereq_('spica/observer');
-            const cancellation_1 = _dereq_('spica/cancellation');
-            const promise_1 = _dereq_('spica/promise');
             const api_1 = _dereq_('../../../infrastructure/indexeddb/api');
             const api_2 = _dereq_('../../dao/api');
             const data_1 = _dereq_('./channel/data');
@@ -3411,6 +3408,9 @@ require = function () {
             const expiry_1 = _dereq_('./channel/expiry');
             const channel_1 = _dereq_('../../broadcast/channel');
             const channel_2 = _dereq_('../../ownership/channel');
+            const observer_1 = _dereq_('spica/observer');
+            const cancellation_1 = _dereq_('spica/cancellation');
+            const promise_1 = _dereq_('spica/promise');
             class SaveMessage extends channel_1.ChannelMessage {
                 constructor(key) {
                     super(key, 'save');
@@ -3456,7 +3456,7 @@ require = function () {
                     }));
                     void this.cancellation.register(api_1.idbEventStream.on([
                         name,
-                        'disconnect'
+                        'destroy'
                     ], () => void this.schema.rebuild()));
                     void this.cancellation.register(() => void this.schema.close());
                     void this.cancellation.register(() => void this.ownership.close());
@@ -3951,22 +3951,23 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.StoreChannel = void 0;
             const alias_1 = _dereq_('spica/alias');
-            const observer_1 = _dereq_('spica/observer');
-            const throttle_1 = _dereq_('spica/throttle');
             const api_1 = _dereq_('../../dao/api');
             const channel_1 = _dereq_('../model/channel');
             const api_2 = _dereq_('../../webstorage/api');
+            const observer_1 = _dereq_('spica/observer');
+            const throttle_1 = _dereq_('spica/throttle');
+            const compare_1 = _dereq_('spica/compare');
             class StoreChannel extends channel_1.ChannelStore {
                 constructor(name, factory, {migrate, destroy = () => true, age = Infinity, capacity = Infinity, debug = false} = {}) {
                     super(name, destroy, age, capacity, debug);
                     this.factory = factory;
-                    this.links = new Map();
                     this.sources = new Map();
+                    this.links = new Map();
                     const props = (0, alias_1.ObjectKeys)(factory()).filter(api_1.isValidPropertyName).filter((0, api_1.isValidPropertyValue)(factory()));
                     const update = (key, props) => {
                         const source = this.sources.get(key);
                         const memory = this.get(key);
-                        const link = this.link(key);
+                        const link = this.link_(key);
                         const changes = props.filter(prop => prop in memory).map(prop => {
                             const newVal = memory[prop];
                             const oldVal = source[prop];
@@ -3976,7 +3977,7 @@ require = function () {
                                 newVal,
                                 oldVal
                             };
-                        }).filter(({newVal, oldVal}) => ![newVal].includes(oldVal));
+                        }).filter(({newVal, oldVal}) => !(0, compare_1.equal)(newVal, oldVal));
                         if (changes.length === 0)
                             return;
                         void (migrate === null || migrate === void 0 ? void 0 : migrate(link));
@@ -3999,10 +4000,7 @@ require = function () {
                         }
                     });
                 }
-                link(key, age) {
-                    void this.ensureAliveness();
-                    void this.expire(key, age);
-                    void this.load(key, error => !error && this.alive && this.links.has(key) && void this.log(key));
+                link_(key) {
                     return this.links.has(key) ? this.links.get(key) : this.links.set(key, (0, api_1.build)((0, alias_1.ObjectDefineProperties)(this.sources.set(key, this.get(key)).get(key), {
                         [StoreChannel.Value.meta]: { get: () => this.meta(key) },
                         [StoreChannel.Value.id]: { get: () => this.meta(key).id },
@@ -4019,6 +4017,12 @@ require = function () {
                         ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.send, prop, newValue, oldValue));
                     }, (0, throttle_1.throttle)(100, () => this.alive && this.links.has(key) && void this.log(key)))).get(key);
                 }
+                link(key, age) {
+                    void this.ensureAliveness();
+                    void this.expire(key, age);
+                    void this.load(key, error => !error && this.alive && this.links.has(key) && void this.log(key));
+                    return this.link_(key);
+                }
             }
             exports.StoreChannel = StoreChannel;
             (function (StoreChannel) {
@@ -4033,6 +4037,7 @@ require = function () {
             '../../webstorage/api': 52,
             '../model/channel': 46,
             'spica/alias': 4,
+            'spica/compare': 9,
             'spica/observer': 29,
             'spica/throttle': 32
         }
@@ -4223,6 +4228,7 @@ require = function () {
             const alias_1 = _dereq_('spica/alias');
             const observer_1 = _dereq_('spica/observer');
             const cancellation_1 = _dereq_('spica/cancellation');
+            const compare_1 = _dereq_('spica/compare');
             const api_1 = _dereq_('../../dao/api');
             const api_2 = _dereq_('../../../infrastructure/webstorage/api');
             const storage_1 = _dereq_('../model/storage');
@@ -4269,7 +4275,7 @@ require = function () {
                         void (0, alias_1.ObjectKeys)(item).filter(api_1.isValidPropertyName).filter((0, api_1.isValidPropertyValue)(item)).forEach(prop => {
                             const oldVal = source[prop];
                             const newVal = item[prop];
-                            if ([newVal].includes(oldVal))
+                            if ((0, compare_1.equal)(newVal, oldVal))
                                 return;
                             source[prop] = newVal;
                             void (migrate === null || migrate === void 0 ? void 0 : migrate(this.link_));
@@ -4338,6 +4344,7 @@ require = function () {
             '../model/storage': 53,
             'spica/alias': 4,
             'spica/cancellation': 7,
+            'spica/compare': 9,
             'spica/observer': 29
         }
     ],
@@ -4969,8 +4976,8 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.storageEventStream = exports.storageEventStream_ = void 0;
-            const observer_1 = _dereq_('spica/observer');
             const global_1 = _dereq_('../module/global');
+            const observer_1 = _dereq_('spica/observer');
             exports.storageEventStream_ = new observer_1.Observation({ limit: Infinity });
             exports.storageEventStream = exports.storageEventStream_;
             void self.addEventListener('storage', event => {
