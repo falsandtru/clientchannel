@@ -3456,7 +3456,7 @@ require = function () {
                     }));
                     void this.cancellation.register(api_1.idbEventStream.on([
                         name,
-                        'destroy'
+                        'disconnect'
                     ], () => void this.schema.rebuild()));
                     void this.cancellation.register(() => void this.schema.close());
                     void this.cancellation.register(() => void this.ownership.close());
@@ -3468,17 +3468,18 @@ require = function () {
                     void this.events_.load.monitor([], ({key, type}) => {
                         if (type === ChannelStore.EventType.delete) {
                             void this.keys.delete(key);
-                        } else {
+                        } else if (!this.keys.has(key)) {
                             void this.keys.add(key);
-                            void this.schema.access.schedule(100);
+                            void this.schema.access.load(key);
                         }
                     });
                     void this.events_.save.monitor([], ({key, type}) => {
                         if (type === ChannelStore.EventType.delete) {
                             void this.keys.delete(key);
-                        } else {
+                        } else if (!this.keys.has(key)) {
                             void this.keys.add(key);
-                            void this.schema.access.schedule(100);
+                            void this.schema.access.load(key);
+                            this.keys.size > this.capacity && void this.schema.access.schedule(100);
                         }
                     });
                 }
@@ -3532,7 +3533,7 @@ require = function () {
                     if (!this.has(key))
                         return;
                     void this.schema.access.set(key);
-                    void this.schema.expire.set(key, (_a = this.ages.get(key)) !== null && _a !== void 0 ? _a : this.age);
+                    void this.schema.expiry.set(key, (_a = this.ages.get(key)) !== null && _a !== void 0 ? _a : this.age);
                 }
                 expire(key, age = this.age) {
                     void this.ensureAliveness();
@@ -3580,20 +3581,20 @@ require = function () {
                 build() {
                     const keys = this.data ? this.data.keys() : [];
                     this.access = new access_1.AccessStore(this.store, this.cancellation, this.ownership, this.listen, this.capacity);
-                    this.expire = new expiry_1.ExpiryStore(this.store, this.cancellation, this.ownership, this.listen);
+                    this.expiry = new expiry_1.ExpiryStore(this.store, this.cancellation, this.ownership, this.listen);
                     this.data = new data_1.DataStore(this.listen, {
                         stores: [
                             this.access.name,
-                            this.expire.name
+                            this.expiry.name
                         ],
                         delete: (key, tx) => {
                             void tx.objectStore(this.access.name).delete(key);
-                            void tx.objectStore(this.expire.name).delete(key);
+                            void tx.objectStore(this.expiry.name).delete(key);
                         }
                     });
                     void this.cancellation.register(() => this.data.close());
                     void this.cancellation.register(() => this.access.close());
-                    void this.cancellation.register(() => this.expire.close());
+                    void this.cancellation.register(() => this.expiry.close());
                     void this.cancellation.register(this.store.events_.load.relay(this.data.events.load));
                     void this.cancellation.register(this.store.events_.save.relay(this.data.events.save));
                     void this.cancellation.register(this.store.events.load.relay(this.data.events.load));
@@ -3767,14 +3768,8 @@ require = function () {
                         return !err && (value === null || value === void 0 ? void 0 : value.date) > ((_a = this.store.get(key)) === null || _a === void 0 ? void 0 : _a.date);
                     }, cancellation);
                 }
-                get(key) {
-                    return this.store.has(key) ? this.store.get(key).date : 0;
-                }
                 set(key, alive = true) {
                     void this.store.set(key, new AccessRecord(key, alive));
-                }
-                delete(key) {
-                    void this.store.delete(key);
                 }
                 close() {
                     void this.store.close();
@@ -3928,12 +3923,9 @@ require = function () {
                 }
                 set(key, age) {
                     if (age === global_1.Infinity)
-                        return void this.delete(key);
+                        return void this.store.delete(key);
                     void this.schedule(age);
                     void this.store.set(key, new ExpiryRecord(key, global_1.Date.now() + age));
-                }
-                delete(key) {
-                    void this.store.delete(key);
                 }
                 close() {
                     void this.store.close();
