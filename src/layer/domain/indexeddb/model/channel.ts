@@ -169,7 +169,7 @@ export class ChannelStore<K extends string, V extends StoreChannel.Value<K>> {
   protected log(key: K): void {
     if (!this.has(key)) return;
     void this.schema.access.set(key);
-    void this.schema.expire.set(key, this.ages.get(key) ?? this.age);
+    void this.schema.expiry.set(key, this.ages.get(key) ?? this.age);
   }
   private readonly ages = new Map<K, number>();
   public expire(key: K, age: number = this.age): void {
@@ -231,18 +231,18 @@ class Schema<K extends string, V extends StoreChannel.Value<K>> {
     const keys = this.data ? this.data.keys() : [];
 
     this.access = new AccessStore<K>(this.store, this.cancellation, this.ownership, this.listen, this.capacity);
-    this.expire = new ExpiryStore<K>(this.store, this.cancellation, this.ownership, this.listen);
+    this.expiry = new ExpiryStore<K>(this.store, this.cancellation, this.ownership, this.listen);
     this.data = new DataStore<K, V>(this.listen, {
-      stores: [this.access.name, this.expire.name],
+      stores: [this.access.name, this.expiry.name],
       delete: (key, tx) => {
         void tx.objectStore(this.access.name).delete(key);
-        void tx.objectStore(this.expire.name).delete(key);
+        void tx.objectStore(this.expiry.name).delete(key);
       },
     });
 
     void this.cancellation.register(() => this.data.close());
     void this.cancellation.register(() => this.access.close());
-    void this.cancellation.register(() => this.expire.close());
+    void this.cancellation.register(() => this.expiry.close());
 
     void this.cancellation.register(this.store.events_.load.relay(this.data.events.load));
     void this.cancellation.register(this.store.events_.save.relay(this.data.events.save));
@@ -259,7 +259,7 @@ class Schema<K extends string, V extends StoreChannel.Value<K>> {
   }
   public data!: DataStore<K, V>;
   public access!: AccessStore<K>;
-  public expire!: ExpiryStore<K>;
+  public expiry!: ExpiryStore<K>;
   public close(): void {
     void this.cancellation.cancel();
   }
