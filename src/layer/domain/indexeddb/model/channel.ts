@@ -60,7 +60,7 @@ export class ChannelStore<K extends string, V extends StoreChannel.Value<K>> {
             && destroy(reason, ev);
       },
     }));
-    void this.cancellation.register(idbEventStream.on([name, IDBEventType.destroy], () =>
+    void this.cancellation.register(idbEventStream.on([name, IDBEventType.disconnect], () =>
       void this.schema.rebuild()));
     void this.cancellation.register(() =>
       void this.schema.close());
