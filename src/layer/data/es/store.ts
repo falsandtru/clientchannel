@@ -413,7 +413,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           clear ||= events.length === 0;
           if (clear && this.meta(key).date === 0) {
             this.relation?.delete(key, tx);
-            void this.events.clear.emit([key]);
+            assert(this.events.clear.reflect([key]));
           }
           return void tx.commit();
         }
