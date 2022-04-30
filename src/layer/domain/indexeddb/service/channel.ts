@@ -3,6 +3,7 @@ import { StoreChannel as IStoreChannel } from '../../../../../';
 import { Prop } from '../../../data/database/value';
 import { Observation } from 'spica/observer';
 import { throttle } from 'spica/throttle';
+import { equal } from 'spica/compare';
 import { build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { ChannelStore } from '../model/channel';
 import { StorageChannel } from '../../webstorage/api';
@@ -43,7 +44,7 @@ export class StoreChannel<K extends string, V extends StoreChannel.Value<K>> ext
           };
         })
         .filter(({ newVal, oldVal }) =>
-          ![newVal].includes(oldVal));
+          !equal(newVal, oldVal));
       if (changes.length === 0) return;
       void migrate?.(link);
       for (const { prop, oldVal } of changes) {

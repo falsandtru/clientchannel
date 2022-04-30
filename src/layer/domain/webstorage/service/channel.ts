@@ -3,6 +3,7 @@ import { StorageChannel as IStorageChannel } from '../../../../../';
 import { Prop } from '../../../data/database/value';
 import { Observation, Observer } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
+import { equal } from 'spica/compare';
 import { DAO, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
 import { localStorage, sessionStorage, storageEventStream } from '../../../infrastructure/webstorage/api';
 import { StorageLike, fakeStorage } from '../model/storage';
@@ -45,7 +46,7 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
           .forEach(prop => {
             const oldVal = source[prop];
             const newVal = item[prop];
-            if ([newVal].includes(oldVal)) return;
+            if (equal(newVal, oldVal)) return;
             source[prop] = newVal;
             void migrate?.(this.link_);
             const event = new StorageChannel.Event(StorageChannel.EventType.recv, prop, source[prop], oldVal);
