@@ -33,8 +33,6 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
       chan.add(new ChannelStore.Record('a', new CustomSocketValue(0)));
       await new Promise(resolve => chan.events.save.once(['a', 'value', 'put'], resolve));
       assert.deepStrictEqual(await chan.recent(), ['a']);
-      assert(await chan.recent(0).catch(e => e) instanceof Error);
-      assert.deepStrictEqual(await chan.recent(), ['a']);
       chan.add(new ChannelStore.Record('b', new CustomSocketValue(0)));
       await new Promise(resolve => chan.events.save.once(['b', 'value', 'put'], resolve));
       assert.deepStrictEqual(await chan.recent(), ['b', 'a']);
