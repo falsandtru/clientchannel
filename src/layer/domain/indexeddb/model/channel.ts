@@ -82,18 +82,19 @@ export class ChannelStore<K extends string, V extends StoreChannel.Value<K>> {
       if (type === ChannelStore.EventType.delete) {
         void this.keys.delete(key);
       }
-      else {
+      else if (!this.keys.has(key)) {
         void this.keys.add(key);
-        void this.schema.access.schedule(100);
+        void this.schema.access.load(key);
       }
     });
     void this.events_.save.monitor([], ({ key, type }) => {
       if (type === ChannelStore.EventType.delete) {
         void this.keys.delete(key);
       }
-      else {
+      else if (!this.keys.has(key)) {
         void this.keys.add(key);
-        void this.schema.access.schedule(100);
+        void this.schema.access.load(key);
+        this.keys.size > this.capacity && void this.schema.access.schedule(100);
       }
     });
   }

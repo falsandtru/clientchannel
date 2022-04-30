@@ -112,12 +112,9 @@ export class ExpiryStore<K extends string> {
       cancellation);
   }
   public set(key: K, age: number): void {
-    if (age === Infinity) return void this.delete(key);
+    if (age === Infinity) return void this.store.delete(key);
     void this.schedule(age);
     void this.store.set(key, new ExpiryRecord(key, Date.now() + age));
-  }
-  public delete(key: K): void {
-    void this.store.delete(key);
   }
   public close(): void {
     void this.store.close();

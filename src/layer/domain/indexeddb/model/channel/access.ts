@@ -141,16 +141,8 @@ export class AccessStore<K extends string> {
         !err && value?.date! > this.store.get(key)?.date!,
       cancellation);
   }
-  public get(key: K): number {
-    return this.store.has(key)
-      ? this.store.get(key)!.date
-      : 0;
-  }
   public set(key: K, alive = true): void {
     void this.store.set(key, new AccessRecord(key, alive));
-  }
-  public delete(key: K): void {
-    void this.store.delete(key);
   }
   public close(): void {
     void this.store.close();
