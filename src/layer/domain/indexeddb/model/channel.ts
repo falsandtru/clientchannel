@@ -60,7 +60,9 @@ export class ChannelStore<K extends string, V extends StoreChannel.Value<K>> {
             && destroy(reason, ev);
       },
     }));
-    void this.cancellation.register(idbEventStream.on([name, IDBEventType.disconnect], () =>
+    // NOTE: Deleting databases on devtools won't trigger the `destroy` event
+    // but `indexedDB.deleteDatabase()` triggers the event as expected.
+    void this.cancellation.register(idbEventStream.on([name, IDBEventType.destroy], () =>
       void this.schema.rebuild()));
     void this.cancellation.register(() =>
       void this.schema.close());
