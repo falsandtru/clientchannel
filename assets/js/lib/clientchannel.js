@@ -2528,9 +2528,10 @@ require = function () {
                 EventStoreSchema.key = 'key';
             }(EventStoreSchema || (EventStoreSchema = {})));
             class EventStore {
-                constructor(name, listen) {
+                constructor(name, listen, relation) {
                     this.name = name;
                     this.listen = listen;
+                    this.relation = relation;
                     this.alive = true;
                     this.memory = new observer_1.Observation();
                     this.events = {
@@ -2540,10 +2541,7 @@ require = function () {
                         clear: new observer_1.Observation()
                     };
                     this.events_ = { memory: new observer_1.Observation({ limit: Infinity }) };
-                    this.tx = {
-                        rw: void 0,
-                        rwc: 0
-                    };
+                    this.tx = { rwc: 0 };
                     this.counter = 0;
                     this.snapshotCycle = 9;
                     const states = {
@@ -2608,32 +2606,34 @@ require = function () {
                     };
                 }
                 get txrw() {
-                    if (++this.tx.rwc > 25) {
-                        this.tx = {
-                            rw: void 0,
-                            rwc: 0
-                        };
+                    if (++this.tx.rwc < 25 || !this.tx.rw)
                         return;
-                    }
+                    const tx = this.tx.rw;
+                    this.tx.rwc = 0;
+                    this.tx.rw = void 0;
+                    void tx.commit();
                     return this.tx.rw;
                 }
                 set txrw(tx) {
-                    if (!tx || this.tx.rw === tx)
+                    if (this.tx.rw === tx)
                         return;
-                    this.tx = {
-                        rw: tx,
-                        rwc: 0
-                    };
+                    this.tx.rwc = 0;
+                    this.tx.rw = tx;
                     const clear = () => {
-                        this.tx = {
-                            rw: void 0,
-                            rwc: 0
-                        };
+                        if (this.tx.rw !== tx)
+                            return;
+                        this.tx.rw = void 0;
                     };
-                    void tx.addEventListener('complete', clear);
-                    void tx.addEventListener('error', clear);
-                    void tx.addEventListener('abort', clear);
+                    void this.tx.rw.addEventListener('abort', clear);
+                    void this.tx.rw.addEventListener('error', clear);
+                    void this.tx.rw.addEventListener('complete', clear);
                     void (0, clock_1.tick)(clear);
+                }
+                transact(cache, success, failure, tx = this.txrw) {
+                    return tx ? void success(tx) : this.listen(db => {
+                        const tx = cache(db);
+                        return tx && void success(this.txrw = tx);
+                    }, failure);
                 }
                 load(key, cb, cancellation) {
                     if (!this.alive)
@@ -2650,15 +2650,6 @@ require = function () {
                             var _a, _b;
                             if (error)
                                 return;
-                            if (cursor) {
-                                try {
-                                    new event_1.LoadedEventRecord(cursor.value);
-                                } catch (reason) {
-                                    void this.delete(key);
-                                    void (0, exception_1.causeAsyncException)(reason);
-                                    return void cursor.continue();
-                                }
-                            }
                             if (!cursor || new event_1.LoadedEventRecord(cursor.value).date < this.meta(key).date) {
                                 void [...events.reduceRight((es, e) => es.length === 0 || es[0].type === EventStore.EventType.put ? (0, concat_1.concat)(es, [e]) : es, []).reduceRight((dict, e) => dict.set(e.prop, e), new global_1.Map()).values()].sort((a, b) => a.date - b.date || a.id - b.id).forEach(e => {
                                     if (e.type !== EventStore.EventType.put) {
@@ -2698,6 +2689,13 @@ require = function () {
                                 }
                                 return;
                             } else {
+                                try {
+                                    new event_1.LoadedEventRecord(cursor.value);
+                                } catch (reason) {
+                                    void this.delete(key);
+                                    void (0, exception_1.causeAsyncException)(reason);
+                                    return void cursor.continue();
+                                }
                                 const event = new event_1.LoadedEventRecord(cursor.value);
                                 if (this.memory.refs([
                                         event.key,
@@ -2784,10 +2782,7 @@ require = function () {
                         event.prop,
                         event.type
                     ], new EventStore.Event(event.type, (0, identifier_1.makeEventId)(0), event.key, event.prop, event.date));
-                    return void this.listen(db => {
-                        if (!this.alive)
-                            return;
-                        tx = this.txrw = tx || this.txrw || db.transaction(this.name, 'readwrite');
+                    return void this.transact(db => this.alive ? db.transaction(this.name, 'readwrite') : void 0, tx => {
                         const active = () => this.memory.reflect([
                             event.key,
                             event.prop,
@@ -2815,14 +2810,14 @@ require = function () {
                                 savedEvent.id
                             ], savedEvent);
                             const events = this.memory.reflect([savedEvent.key]).reduce((es, e) => e instanceof event_1.StoredEventRecord ? (0, concat_1.concat)(es, [e]) : es, []);
-                            if (events.length >= this.snapshotCycle || (0, value_1.hasBinary)(event.value)) {
+                            if (events.length >= this.snapshotCycle || events.filter(event => (0, value_1.hasBinary)(event.value)).length >= 3) {
                                 void this.snapshot(savedEvent.key);
                             }
                         });
                         const fail = () => (void clean(), active() ? void loss() : void 0);
                         void tx.addEventListener('error', fail);
                         void tx.addEventListener('abort', fail);
-                    }, () => void clean() || void loss());
+                    }, () => void clean() || void loss(), tx);
                 }
                 delete(key) {
                     return void this.add(new event_1.UnstoredEventRecord(key, new EventStore.Value(), EventStore.EventType.delete));
@@ -2841,15 +2836,6 @@ require = function () {
                         const events = [];
                         void req.addEventListener('success', () => {
                             const cursor = req.result;
-                            if (cursor) {
-                                try {
-                                    const event = new event_1.LoadedEventRecord(cursor.value);
-                                    void events.unshift(event);
-                                } catch (reason) {
-                                    void cursor.delete();
-                                    void (0, exception_1.causeAsyncException)(reason);
-                                }
-                            }
                             if (!cursor) {
                                 if (events.length === 0)
                                     return;
@@ -2864,18 +2850,27 @@ require = function () {
                                 }
                                 throw new TypeError(`ClientChannel: EventStore: Invalid event type: ${ composedEvent.type }`);
                             } else {
+                                try {
+                                    const event = new event_1.LoadedEventRecord(cursor.value);
+                                    void events.unshift(event);
+                                } catch (reason) {
+                                    void cursor.delete();
+                                    void (0, exception_1.causeAsyncException)(reason);
+                                }
                                 return void cursor.continue();
                             }
                         });
                     });
                 }
                 clean(key) {
+                    var _a, _b;
                     if (!this.alive)
                         return;
                     const events = [];
                     let deletion = false;
                     let clear = false;
-                    return void this.cursor(api_1.IDBKeyRange.only(key), EventStoreSchema.key, 'prev', 'readwrite', (cursor, error) => {
+                    return void this.cursor(api_1.IDBKeyRange.only(key), EventStoreSchema.key, 'prev', 'readwrite', (_b = (_a = this.relation) === null || _a === void 0 ? void 0 : _a.stores) !== null && _b !== void 0 ? _b : [], (error, cursor, tx) => {
+                        var _a;
                         if (!this.alive)
                             return;
                         if (error)
@@ -2894,8 +2889,10 @@ require = function () {
                                 ]);
                             }
                             clear || (clear = events.length === 0);
-                            clear && this.meta(key).date === 0 && void this.events.clear.emit([key]);
-                            return;
+                            if (clear && this.meta(key).date === 0) {
+                                (_a = this.relation) === null || _a === void 0 ? void 0 : _a.delete(key, tx);
+                            }
+                            return void tx.commit();
                         } else {
                             try {
                                 const event = new event_1.LoadedEventRecord(cursor.value);
@@ -2923,24 +2920,32 @@ require = function () {
                         }
                     });
                 }
-                cursor(query, index, direction, mode, cb) {
+                cursor(query, index, direction, mode, stores, cb) {
                     if (!this.alive)
-                        return void cb(null, new Error('Session is already closed.'));
+                        return void cb(new Error('Session is already closed.'), null, null);
                     return void this.listen(db => {
                         if (!this.alive)
-                            return void cb(null, new Error('Session is already closed.'));
-                        const tx = db.transaction(this.name, mode);
+                            return void cb(new Error('Session is already closed.'), null, null);
+                        const tx = db.transaction([
+                            this.name,
+                            ...stores
+                        ], mode);
                         const req = index ? tx.objectStore(this.name).index(index).openCursor(query, direction) : tx.objectStore(this.name).openCursor(query, direction);
                         void req.addEventListener('success', () => {
                             const cursor = req.result;
                             if (!cursor)
-                                return;
-                            void cb(cursor, req.error);
+                                return void cb(req.error, cursor, tx);
+                            try {
+                                void cb(req.error, cursor, tx);
+                            } catch (reason) {
+                                void cursor.delete();
+                                void (0, exception_1.causeAsyncException)(reason);
+                            }
                         });
-                        void tx.addEventListener('complete', () => void cb(null, tx.error || req.error));
-                        void tx.addEventListener('error', () => void cb(null, tx.error || req.error));
-                        void tx.addEventListener('abort ', () => void cb(null, tx.error || req.error));
-                    }, () => void cb(null, new Error('Request has failed.')));
+                        void tx.addEventListener('complete', () => (tx.error || req.error) && void cb(tx.error || req.error, null, null));
+                        void tx.addEventListener('error', () => void cb(tx.error || req.error, null, null));
+                        void tx.addEventListener('abort ', () => void cb(tx.error || req.error, null, null));
+                    }, () => void cb(new Error('Request has failed.'), null, null));
                 }
                 close() {
                     this.alive = false;
@@ -3047,21 +3052,34 @@ require = function () {
                     };
                 }
                 get txrw() {
-                    if (++this.tx.rwc > 25) {
-                        this.tx.rwc = 0;
-                        this.tx.rw = void 0;
+                    if (++this.tx.rwc < 25 || !this.tx.rw)
                         return;
-                    }
+                    const tx = this.tx.rw;
+                    this.tx.rwc = 0;
+                    this.tx.rw = void 0;
+                    void tx.commit();
                     return this.tx.rw;
                 }
                 set txrw(tx) {
-                    if (!tx)
-                        return;
-                    if (this.tx.rw && this.tx.rw === tx)
+                    if (this.tx.rw === tx)
                         return;
                     this.tx.rwc = 0;
                     this.tx.rw = tx;
-                    void (0, clock_1.tick)(() => this.tx.rw = void 0);
+                    const clear = () => {
+                        if (this.tx.rw !== tx)
+                            return;
+                        this.tx.rw = void 0;
+                    };
+                    void this.tx.rw.addEventListener('abort', clear);
+                    void this.tx.rw.addEventListener('error', clear);
+                    void this.tx.rw.addEventListener('complete', clear);
+                    void (0, clock_1.tick)(clear);
+                }
+                transact(cache, success, failure, tx = this.txrw) {
+                    return tx ? void success(tx) : this.listen(db => {
+                        const tx = cache(db);
+                        return tx && void success(this.txrw = tx);
+                    }, failure);
                 }
                 load(key, cb, cancellation) {
                     if (!this.alive)
@@ -3093,12 +3111,7 @@ require = function () {
                     void this.cache.set(key, value);
                     if (!this.alive)
                         return value;
-                    void this.listen(db => {
-                        if (!this.alive)
-                            return;
-                        if (!this.cache.has(key))
-                            return;
-                        const tx = this.txrw = this.txrw || db.transaction(this.name, 'readwrite');
+                    void this.transact(db => this.alive && this.cache.has(key) ? db.transaction(this.name, 'readwrite') : void 0, tx => {
                         this.index ? tx.objectStore(this.name).put(this.cache.get(key)) : tx.objectStore(this.name).put(this.cache.get(key), key);
                         void tx.addEventListener('complete', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key, value)));
                         void tx.addEventListener('error', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key, value)));
@@ -3110,10 +3123,7 @@ require = function () {
                     void this.cache.delete(key);
                     if (!this.alive)
                         return;
-                    void this.listen(db => {
-                        if (!this.alive)
-                            return;
-                        const tx = this.txrw = this.txrw || db.transaction(this.name, 'readwrite');
+                    void this.transact(db => this.alive ? db.transaction(this.name, 'readwrite') : void 0, tx => {
                         void tx.objectStore(this.name).delete(key);
                         void tx.addEventListener('complete', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key)));
                         void tx.addEventListener('error', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key)));
@@ -3134,30 +3144,33 @@ require = function () {
                         void tx.addEventListener('abort', () => void reject(req.error));
                     }, () => void reject(new Error('Request has failed.'))));
                 }
-                cursor(query, index, direction, mode, cb) {
+                cursor(query, index, direction, mode, stores, cb) {
                     if (!this.alive)
                         return;
                     void this.listen(db => {
                         if (!this.alive)
                             return;
-                        const tx = db.transaction(this.name, mode);
+                        const tx = db.transaction([
+                            this.name,
+                            ...stores
+                        ], mode);
                         const req = index ? tx.objectStore(this.name).index(index).openCursor(query, direction) : tx.objectStore(this.name).openCursor(query, direction);
                         void req.addEventListener('success', () => {
                             const cursor = req.result;
                             if (!cursor)
-                                return;
+                                return void cb(tx.error || req.error, cursor, tx);
                             try {
                                 void this.cache.set(cursor.primaryKey, { ...cursor.value });
-                                void cb(cursor, req.error);
+                                void cb(tx.error || req.error, cursor, tx);
                             } catch (reason) {
-                                void this.delete(cursor.primaryKey);
+                                void cursor.delete();
                                 void (0, exception_1.causeAsyncException)(reason);
                             }
                         });
-                        void tx.addEventListener('complete', () => void cb(null, req.error));
-                        void tx.addEventListener('error', () => void cb(null, req.error));
-                        void tx.addEventListener('abort', () => void cb(null, req.error));
-                    }, () => void cb(null, new Error('Request has failed.')));
+                        void tx.addEventListener('complete', () => (tx.error || req.error) && void cb(tx.error || req.error, null, null));
+                        void tx.addEventListener('error', () => void cb(tx.error || req.error, null, null));
+                        void tx.addEventListener('abort', () => void cb(tx.error || req.error, null, null));
+                    }, () => void cb(new Error('Request has failed.'), null, null));
                 }
                 close() {
                     this.alive = false;
@@ -3418,8 +3431,7 @@ require = function () {
                     this.lock = false;
                     this.events_ = {
                         load: new observer_1.Observation(),
-                        save: new observer_1.Observation(),
-                        clear: new observer_1.Observation()
+                        save: new observer_1.Observation()
                     };
                     this.events = {
                         load: new observer_1.Observation({ limit: global_1.Infinity }),
@@ -3451,10 +3463,6 @@ require = function () {
                     void this.cancellation.register(() => void this.channel.close());
                     void this.cancellation.register(this.channel.listen('save', ({key}) => void this.load(key)));
                     void this.events_.save.monitor([], ({key}) => void this.channel.post(new SaveMessage(key)));
-                    void this.events_.clear.monitor([], (_, [key]) => {
-                        void this.schema.access.delete(key);
-                        void this.schema.expire.delete(key);
-                    });
                     if (this.capacity === global_1.Infinity)
                         return;
                     void this.events_.load.monitor([], ({key, type}) => {
@@ -3571,15 +3579,23 @@ require = function () {
                 }
                 build() {
                     const keys = this.data ? this.data.keys() : [];
-                    this.data = new data_1.DataStore(this.listen);
                     this.access = new access_1.AccessStore(this.store, this.cancellation, this.ownership, this.listen, this.capacity);
                     this.expire = new expiry_1.ExpiryStore(this.store, this.cancellation, this.ownership, this.listen);
+                    this.data = new data_1.DataStore(this.listen, {
+                        stores: [
+                            this.access.name,
+                            this.expire.name
+                        ],
+                        delete: (key, tx) => {
+                            void tx.objectStore(this.access.name).delete(key);
+                            void tx.objectStore(this.expire.name).delete(key);
+                        }
+                    });
                     void this.cancellation.register(() => this.data.close());
                     void this.cancellation.register(() => this.access.close());
                     void this.cancellation.register(() => this.expire.close());
                     void this.cancellation.register(this.store.events_.load.relay(this.data.events.load));
                     void this.cancellation.register(this.store.events_.save.relay(this.data.events.save));
-                    void this.cancellation.register(this.store.events_.clear.relay(this.data.events.clear));
                     void this.cancellation.register(this.store.events.load.relay(this.data.events.load));
                     void this.cancellation.register(this.store.events.save.relay(this.data.events.save));
                     void this.cancellation.register(this.store.events.loss.relay(this.data.events.loss));
@@ -3625,6 +3641,7 @@ require = function () {
                     this.ownership = ownership;
                     this.listen = listen;
                     this.capacity = capacity;
+                    this.name = exports.name;
                     this.store = new class extends store_1.KeyValueStore {
                     }(exports.name, 'key', this.listen);
                     this.schedule = (() => {
@@ -3667,7 +3684,7 @@ require = function () {
                                 if (size <= this.capacity)
                                     return void (0, global_1.clearInterval)(timer);
                                 this.chan.lock = true;
-                                return void this.store.cursor(null, 'date', 'next', 'readonly', (cursor, error) => {
+                                return void this.store.cursor(null, 'date', 'next', 'readonly', [], (error, cursor) => {
                                     this.chan.lock = false;
                                     if (timer) {
                                         (0, global_1.clearInterval)(timer);
@@ -3687,7 +3704,7 @@ require = function () {
                                     const {key} = cursor.value;
                                     if (!this.ownership.extend('store', delay))
                                         return void this.schedule(delay *= 2);
-                                    if (++count > 100 || global_1.Date.now() > since + 1 * 1000)
+                                    if (++count > 50 || global_1.Date.now() > since + 1 * 1000)
                                         return void this.schedule(5 * 1000);
                                     schedule = 0;
                                     this.chan.lock = true;
@@ -3725,9 +3742,9 @@ require = function () {
                 recent(cb, timeout) {
                     return new Promise((resolve, reject) => {
                         let done = false;
-                        timeout !== void 0 && void (0, global_1.setTimeout)(() => done = !void reject(new Error('Timeout.')), timeout);
+                        timeout >= 0 && void (0, global_1.setTimeout)(() => done = !void reject(new Error('Timeout.')), timeout);
                         const keys = [];
-                        void this.store.cursor(null, 'date', 'prev', 'readonly', (cursor, error) => {
+                        void this.store.cursor(null, 'date', 'prev', 'readonly', [], (error, cursor) => {
                             if (done)
                                 return;
                             if (error)
@@ -3789,8 +3806,8 @@ require = function () {
                 static configure() {
                     return store_1.EventStore.configure(exports.name);
                 }
-                constructor(listen) {
-                    super(exports.name, listen);
+                constructor(listen, relation) {
+                    super(exports.name, listen, relation);
                 }
             }
             exports.DataStore = DataStore;
@@ -3818,6 +3835,7 @@ require = function () {
                     this.cancellation = cancellation;
                     this.ownership = ownership;
                     this.listen = listen;
+                    this.name = name;
                     this.store = new class extends store_1.KeyValueStore {
                     }(name, 'key', this.listen);
                     this.schedule = (() => {
@@ -3847,7 +3865,7 @@ require = function () {
                                     timer = 0;
                                 }, delay / 2);
                                 this.chan.lock = true;
-                                return void this.store.cursor(null, 'expiry', 'next', 'readonly', (cursor, error) => {
+                                return void this.store.cursor(null, 'expiry', 'next', 'readonly', [], (error, cursor) => {
                                     this.chan.lock = false;
                                     if (timer) {
                                         (0, global_1.clearInterval)(timer);
@@ -3867,7 +3885,7 @@ require = function () {
                                         return void this.schedule(expiry - global_1.Date.now());
                                     if (!this.ownership.extend('store', delay))
                                         return void this.schedule(delay *= 2);
-                                    if (++count > 100 || global_1.Date.now() > since + 1 * 1000)
+                                    if (++count > 50 || global_1.Date.now() > since + 1 * 1000)
                                         return void this.schedule(5 * 1000);
                                     schedule = 0;
                                     this.chan.lock = true;
