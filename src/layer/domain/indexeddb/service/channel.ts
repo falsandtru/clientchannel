@@ -29,7 +29,7 @@ export class StoreChannel<K extends string, V extends StoreChannel.Value<K>> ext
     const update = (key: K, props: Prop<V>[]): void => {
       const source = this.sources.get(key)! as V;
       const memory = this.get(key)! as V;
-      const link = this.link(key);
+      const link = this.link_(key);
       assert(memory instanceof Object === false);
       const changes = props
         .filter(prop => prop in memory)
@@ -66,13 +66,9 @@ export class StoreChannel<K extends string, V extends StoreChannel.Value<K>> ext
       });
     assert(Object.freeze(this));
   }
-  private readonly links = new Map<K, V>();
   private readonly sources = new Map<K, Partial<V>>();
-  public link(key: K, age?: number): V {
-    void this.ensureAliveness();
-    void this.expire(key, age);
-    void this.load(key, error =>
-      !error && this.alive && this.links.has(key) && void this.log(key));
+  private readonly links = new Map<K, V>();
+  private link_(key: K): V {
     return this.links.has(key)
       ? this.links.get(key)!
       : this.links.set(key, build(
@@ -104,6 +100,13 @@ export class StoreChannel<K extends string, V extends StoreChannel.Value<K>> ext
           },
           throttle(100, () => this.alive && this.links.has(key) && void this.log(key))))
           .get(key)!;
+  }
+  public link(key: K, age?: number): V {
+    void this.ensureAliveness();
+    void this.expire(key, age);
+    void this.load(key, error =>
+      !error && this.alive && this.links.has(key) && void this.log(key));
+    return this.link_(key);
   }
 }
 export namespace StoreChannel {
