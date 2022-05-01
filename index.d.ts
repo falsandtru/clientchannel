@@ -1,13 +1,13 @@
-import { Observer } from 'spica/observer';
 import { Prop } from './src/layer/data/database/value';
 import { DAO } from './src/layer/domain/dao/api';
+import { Observer } from './observer';
 
 export class StoreChannel<K extends string, V extends StoreChannel.Value<K>> {
   constructor(name: string, config: StoreChannel.Config<K, V>);
   readonly events: {
-    readonly load: Observer<[K, Prop<V> | '', StoreChannel.EventType], StoreChannel.Event<K, Prop<V> | ''>, void>;
-    readonly save: Observer<[K, Prop<V> | '', StoreChannel.EventType], StoreChannel.Event<K, Prop<V> | ''>, void>;
-    readonly loss: Observer<[K, Prop<V> | '', StoreChannel.EventType], StoreChannel.Event<K, Prop<V> | ''>, void>;
+    readonly load: Observer<{ [P in Prop<V>]: [[K, P, StoreChannel.EventType], StoreChannel.Event<K, P>, void]; }[Prop<V>] | [[K, '', StoreChannel.EventType], StoreChannel.Event<K, ''>, void]>;
+    readonly save: Observer<{ [P in Prop<V>]: [[K, P, StoreChannel.EventType], StoreChannel.Event<K, P>, void]; }[Prop<V>] | [[K, '', StoreChannel.EventType], StoreChannel.Event<K, ''>, void]>;
+    readonly loss: Observer<{ [P in Prop<V>]: [[K, P, StoreChannel.EventType], StoreChannel.Event<K, P>, void]; }[Prop<V>] | [[K, '', StoreChannel.EventType], StoreChannel.Event<K, ''>, void]>;
   };
   sync(keys: readonly K[], timeout?: number): Promise<PromiseSettledResult<K>[]>;
   link(key: K, age?: number): V;
@@ -23,7 +23,7 @@ export namespace StoreChannel {
     readonly [Value.id]: number;
     readonly [Value.key]: K;
     readonly [Value.date]: number;
-    readonly [Value.event]: Observer<[StorageChannel.EventType, Prop<this>], StorageChannel.Event<this>, void>;
+    readonly [Value.event]: Observer<{ [P in Prop<this>]: [[StorageChannel.EventType, P], StorageChannel.Event<this>, void]; }[Prop<this>]>;
   }
   export namespace Value {
     export const meta: typeof DAO.meta;
@@ -69,8 +69,8 @@ export namespace StoreChannel {
 export class StorageChannel<V extends StorageChannel.Value> {
   constructor(name: string, config: StorageChannel.Config<V>);
   readonly events: {
-    readonly send: Observer<[Prop<V>], { [P in Prop<V>]: StorageChannel.Event<V, P>; }[Prop<V>], void>;
-    readonly recv: Observer<[Prop<V>], { [P in Prop<V>]: StorageChannel.Event<V, P>; }[Prop<V>], void>;
+    readonly send: Observer<{ [P in Prop<V>]: [[P], StorageChannel.Event<V, P>, void]; }[Prop<V>]>;
+    readonly recv: Observer<{ [P in Prop<V>]: [[P], StorageChannel.Event<V, P>, void]; }[Prop<V>]>;
   };
   link(): V;
   close(): void;
@@ -78,7 +78,7 @@ export class StorageChannel<V extends StorageChannel.Value> {
 }
 export namespace StorageChannel {
   export interface Value {
-    readonly [Value.event]: Observer<[EventType, Prop<this>], Event<this>, void>;
+    readonly [Value.event]: Observer<{ [P in Prop<this>]: [[EventType, P], Event<this, P>, void]; }[Prop<this>]>;
   }
   export namespace Value {
     export const key: typeof DAO.key;

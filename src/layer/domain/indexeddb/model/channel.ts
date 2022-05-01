@@ -1,5 +1,6 @@
 import { Infinity, Promise, setTimeout } from 'spica/global';
 import { StoreChannel } from '../../../../../';
+import { Observer } from '../../../../../observer';
 import { Prop } from '../../../data/database/value';
 import { open, Listen, close, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { DAO } from '../../dao/api';
@@ -9,7 +10,7 @@ import { ExpiryStore } from './channel/expiry';
 import { Channel, ChannelMessage } from '../../broadcast/channel';
 import { Ownership } from '../../ownership/channel';
 import { StorageChannel } from '../../webstorage/api';
-import { Observation, Observer } from 'spica/observer';
+import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
 import { AtomicPromise } from 'spica/promise';
 
@@ -114,9 +115,12 @@ export class ChannelStore<K extends string, V extends StoreChannel.Value<K>> {
     save: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>(),
   } as const;
   public readonly events = {
-    load: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>({ limit: Infinity }),
-    save: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>({ limit: Infinity }),
-    loss: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>({ limit: Infinity }),
+    load: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>({ limit: Infinity }) as
+      Observer<{ [P in Prop<V>]: [[K, P, StoreChannel.EventType], StoreChannel.Event<K, P>, void]; }[Prop<V>] | [[K, '', StoreChannel.EventType], StoreChannel.Event<K, ''>, void]>,
+    save: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>({ limit: Infinity }) as
+      Observer<{ [P in Prop<V>]: [[K, P, StoreChannel.EventType], StoreChannel.Event<K, P>, void]; }[Prop<V>] | [[K, '', StoreChannel.EventType], StoreChannel.Event<K, ''>, void]>,
+    loss: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>({ limit: Infinity }) as
+      Observer<{ [P in Prop<V>]: [[K, P, StoreChannel.EventType], StoreChannel.Event<K, P>, void]; }[Prop<V>] | [[K, '', StoreChannel.EventType], StoreChannel.Event<K, ''>, void]>,
   } as const;
   protected ensureAliveness(): void {
     if (!this.alive) throw new Error(`ClientChannel: Store channel "${this.name}" is already closed.`);
@@ -203,7 +207,7 @@ export namespace ChannelStore {
     readonly [Value.id]: number;
     readonly [Value.key]: K;
     readonly [Value.date]: number;
-    readonly [Value.event]: Observer<[StorageChannel.EventType, Prop<this>], StorageChannel.Event<this>, void>;
+    readonly [Value.event]: Observer<{ [P in Prop<this>]: [[StorageChannel.EventType, P], StorageChannel.Event<this, P>, void]; }[Prop<this>]>;
   }
   export namespace Value {
     export const meta: typeof DAO.meta = DAO.meta;
@@ -249,8 +253,11 @@ class Schema<K extends string, V extends StoreChannel.Value<K>> {
 
     void this.cancellation.register(this.store.events_.load.relay(this.data.events.load));
     void this.cancellation.register(this.store.events_.save.relay(this.data.events.save));
+    // @ts-expect-error
     void this.cancellation.register(this.store.events.load.relay(this.data.events.load));
+    // @ts-expect-error
     void this.cancellation.register(this.store.events.save.relay(this.data.events.save));
+    // @ts-expect-error
     void this.cancellation.register(this.store.events.loss.relay(this.data.events.loss));
 
     void this.store.sync(keys);

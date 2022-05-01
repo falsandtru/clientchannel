@@ -1,7 +1,8 @@
 import { ObjectKeys } from 'spica/alias';
 import { StorageChannel as IStorageChannel } from '../../../../../';
+import { Observer } from '../../../../../observer';
 import { Prop } from '../../../data/database/value';
-import { Observation, Observer } from 'spica/observer';
+import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
 import { equal } from 'spica/compare';
 import { DAO, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
@@ -84,7 +85,7 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
 }
 export namespace StorageChannel {
   export interface Value {
-    readonly [Value.event]: Observer<[EventType, Prop<this>], Event<this>, void>;
+    readonly [Value.event]: Observer<{ [P in Prop<this>]: [[EventType, P], Event<this, P>, void]; }[Prop<this>]>;
   }
   export namespace Value {
     export const key: typeof DAO.key = DAO.key;
