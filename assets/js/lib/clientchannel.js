@@ -2247,6 +2247,12 @@ require = function () {
     ],
     35: [
         function (_dereq_, module, exports) {
+            arguments[4][1][0].apply(exports, arguments);
+        },
+        { 'dup': 1 }
+    ],
+    36: [
+        function (_dereq_, module, exports) {
             'use strict';
             var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
                 if (k2 === undefined)
@@ -2274,9 +2280,9 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             __exportStar(_dereq_('./layer/interface/api'), exports);
         },
-        { './layer/interface/api': 66 }
+        { './layer/interface/api': 67 }
     ],
-    36: [
+    37: [
         function (_dereq_, module, exports) {
             'use strict';
             var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
@@ -2336,13 +2342,13 @@ require = function () {
             exports.Ownership = Ownership;
         },
         {
-            '../domain/broadcast/channel': 42,
-            '../domain/indexeddb/api': 45,
-            '../domain/ownership/channel': 51,
-            '../domain/webstorage/api': 52
+            '../domain/broadcast/channel': 43,
+            '../domain/indexeddb/api': 46,
+            '../domain/ownership/channel': 52,
+            '../domain/webstorage/api': 53
         }
     ],
-    37: [
+    38: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2380,7 +2386,7 @@ require = function () {
             'spica/type': 33
         }
     ],
-    38: [
+    39: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2485,14 +2491,14 @@ require = function () {
             exports.isValidPropertyValue = isValidPropertyValue;
         },
         {
-            '../database/value': 37,
-            './identifier': 39,
+            '../database/value': 38,
+            './identifier': 40,
             'spica/alias': 4,
             'spica/assign': 6,
             'spica/global': 15
         }
     ],
-    39: [
+    40: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2507,7 +2513,7 @@ require = function () {
         },
         {}
     ],
-    40: [
+    41: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3009,10 +3015,10 @@ require = function () {
             exports.compose = compose;
         },
         {
-            '../../infrastructure/indexeddb/api': 57,
-            '../database/value': 37,
-            './event': 38,
-            './identifier': 39,
+            '../../infrastructure/indexeddb/api': 58,
+            '../database/value': 38,
+            './event': 39,
+            './identifier': 40,
             'spica/alias': 4,
             'spica/clock': 8,
             'spica/concat': 10,
@@ -3021,7 +3027,7 @@ require = function () {
             'spica/observer': 29
         }
     ],
-    41: [
+    42: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3184,7 +3190,7 @@ require = function () {
             'spica/global': 15
         }
     ],
-    42: [
+    43: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3249,7 +3255,7 @@ require = function () {
         },
         {}
     ],
-    43: [
+    44: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3280,9 +3286,9 @@ require = function () {
                 }
             });
         },
-        { './module/builder': 44 }
+        { './module/builder': 45 }
     ],
-    44: [
+    45: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3376,11 +3382,11 @@ require = function () {
             exports.build = build;
         },
         {
-            '../../../data/es/event': 38,
+            '../../../data/es/event': 39,
             'spica/alias': 4
         }
     ],
-    45: [
+    46: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3393,9 +3399,9 @@ require = function () {
                 }
             });
         },
-        { './service/channel': 50 }
+        { './service/channel': 51 }
     ],
-    46: [
+    47: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3613,20 +3619,20 @@ require = function () {
             }
         },
         {
-            '../../../infrastructure/indexeddb/api': 57,
-            '../../broadcast/channel': 42,
-            '../../dao/api': 43,
-            '../../ownership/channel': 51,
-            './channel/access': 47,
-            './channel/data': 48,
-            './channel/expiry': 49,
+            '../../../infrastructure/indexeddb/api': 58,
+            '../../broadcast/channel': 43,
+            '../../dao/api': 44,
+            '../../ownership/channel': 52,
+            './channel/access': 48,
+            './channel/data': 49,
+            './channel/expiry': 50,
             'spica/cancellation': 7,
             'spica/global': 15,
             'spica/observer': 29,
             'spica/promise': 30
         }
     ],
-    47: [
+    48: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3785,12 +3791,12 @@ require = function () {
             }
         },
         {
-            '../../../../data/kvs/store': 41,
+            '../../../../data/kvs/store': 42,
             'spica/alias': 4,
             'spica/global': 15
         }
     ],
-    48: [
+    49: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3813,9 +3819,9 @@ require = function () {
                 DataStore.Value = store_1.EventStore.Value;
             }(DataStore = exports.DataStore || (exports.DataStore = {})));
         },
-        { '../../../../data/es/store': 40 }
+        { '../../../../data/es/store': 41 }
     ],
-    49: [
+    50: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3940,12 +3946,12 @@ require = function () {
             }
         },
         {
-            '../../../../data/kvs/store': 41,
+            '../../../../data/kvs/store': 42,
             'spica/alias': 4,
             'spica/global': 15
         }
     ],
-    50: [
+    51: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4033,16 +4039,16 @@ require = function () {
             }(StoreChannel = exports.StoreChannel || (exports.StoreChannel = {})));
         },
         {
-            '../../dao/api': 43,
-            '../../webstorage/api': 52,
-            '../model/channel': 46,
+            '../../dao/api': 44,
+            '../../webstorage/api': 53,
+            '../model/channel': 47,
             'spica/alias': 4,
             'spica/compare': 9,
             'spica/observer': 29,
             'spica/throttle': 32
         }
     ],
-    51: [
+    52: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4154,13 +4160,13 @@ require = function () {
             Ownership.mergin = 5 * 1000;
         },
         {
-            '../broadcast/channel': 42,
+            '../broadcast/channel': 43,
             'spica/alias': 4,
             'spica/cancellation': 7,
             'spica/global': 15
         }
     ],
-    52: [
+    53: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4187,11 +4193,11 @@ require = function () {
             });
         },
         {
-            '../../infrastructure/webstorage/api': 63,
-            './service/channel': 54
+            '../../infrastructure/webstorage/api': 64,
+            './service/channel': 55
         }
     ],
-    53: [
+    54: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4220,7 +4226,7 @@ require = function () {
         },
         {}
     ],
-    54: [
+    55: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4339,16 +4345,16 @@ require = function () {
             }
         },
         {
-            '../../../infrastructure/webstorage/api': 63,
-            '../../dao/api': 43,
-            '../model/storage': 53,
+            '../../../infrastructure/webstorage/api': 64,
+            '../../dao/api': 44,
+            '../model/storage': 54,
             'spica/alias': 4,
             'spica/cancellation': 7,
             'spica/compare': 9,
             'spica/observer': 29
         }
     ],
-    55: [
+    56: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4367,9 +4373,9 @@ require = function () {
                 }
             });
         },
-        { './module/storage': 56 }
+        { './module/storage': 57 }
     ],
-    56: [
+    57: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4394,7 +4400,7 @@ require = function () {
         },
         { 'spica/uuid': 34 }
     ],
-    57: [
+    58: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4452,12 +4458,12 @@ require = function () {
             });
         },
         {
-            './model/access': 58,
-            './model/event': 59,
-            './module/global': 62
+            './model/access': 59,
+            './model/event': 60,
+            './module/global': 63
         }
     ],
-    58: [
+    59: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4534,14 +4540,14 @@ require = function () {
             }
         },
         {
-            '../../environment/api': 55,
-            './event': 59,
-            './state': 60,
-            './transition': 61,
+            '../../environment/api': 56,
+            './event': 60,
+            './state': 61,
+            './transition': 62,
             'spica/noop': 28
         }
     ],
-    59: [
+    60: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4559,7 +4565,7 @@ require = function () {
         },
         { 'spica/observer': 29 }
     ],
-    60: [
+    61: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4723,7 +4729,7 @@ require = function () {
         },
         {}
     ],
-    61: [
+    62: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4917,14 +4923,14 @@ require = function () {
             }
         },
         {
-            '../../environment/api': 55,
-            '../module/global': 62,
-            './event': 59,
-            './state': 60,
+            '../../environment/api': 56,
+            '../module/global': 63,
+            './event': 60,
+            './state': 61,
             'spica/exception': 13
         }
     ],
-    62: [
+    63: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4934,7 +4940,7 @@ require = function () {
         },
         {}
     ],
-    63: [
+    64: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4967,11 +4973,11 @@ require = function () {
             });
         },
         {
-            './model/event': 64,
-            './module/global': 65
+            './model/event': 65,
+            './module/global': 66
         }
     ],
-    64: [
+    65: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4998,11 +5004,11 @@ require = function () {
             });
         },
         {
-            '../module/global': 65,
+            '../module/global': 66,
             'spica/observer': 29
         }
     ],
-    65: [
+    66: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -5011,9 +5017,9 @@ require = function () {
             exports.localStorage = api_1.isStorageAvailable ? self.localStorage : void 0;
             exports.sessionStorage = api_1.isStorageAvailable ? self.sessionStorage : void 0;
         },
-        { '../../environment/api': 55 }
+        { '../../environment/api': 56 }
     ],
-    66: [
+    67: [
         function (_dereq_, module, exports) {
             'use strict';
             var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
@@ -5042,7 +5048,7 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             __exportStar(_dereq_('../application/api'), exports);
         },
-        { '../application/api': 36 }
+        { '../application/api': 37 }
     ],
     'clientchannel': [
         function (_dereq_, module, exports) {
@@ -5073,13 +5079,14 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             __exportStar(_dereq_('./src/export'), exports);
         },
-        { './src/export': 35 }
+        { './src/export': 36 }
     ]
 }, {}, [
     1,
     2,
     3,
-    'clientchannel'
+    'clientchannel',
+    35
 ]);
 (function (root, factory) {
     if (typeof define === 'function' && define.amd) {
