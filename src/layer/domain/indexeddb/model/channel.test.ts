@@ -11,7 +11,7 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
       destroy('test');
     });
 
-    interface CustomSocketValue extends ChannelStore.Value<string> { }
+    interface CustomSocketValue extends ChannelStore.Value { }
     class CustomSocketValue {
       constructor(
         public value: number

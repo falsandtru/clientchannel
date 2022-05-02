@@ -12,7 +12,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       destroy('test');
     });
 
-    interface Value extends StoreChannel.Value<string> {
+    interface Value extends StoreChannel.Value {
     }
     class Value {
       public num = 0;

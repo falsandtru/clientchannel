@@ -33,7 +33,7 @@ Linked objects will be updated automatically when a linked object is updated on 
 ```ts
 import { StoreChannel } from 'clientchannel';
 
-interface Value extends StoreChannel.Value<string> {
+interface Value extends StoreChannel.Value {
 }
 class Value {
   // Getter and setter names will be excluded from schema.

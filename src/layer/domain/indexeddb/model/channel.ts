@@ -30,7 +30,7 @@ class SaveMessage<K extends string> extends ChannelMessage<K> {
 
 const cache = new Set<string>();
 
-export class ChannelStore<K extends string, V extends StoreChannel.Value<K>> {
+export class ChannelStore<K extends string, V extends ChannelStore.Value<K>> {
   constructor(
     public readonly name: string,
     destroy: (reason: unknown, event?: Event) => boolean,
@@ -202,7 +202,7 @@ export class ChannelStore<K extends string, V extends StoreChannel.Value<K>> {
   }
 }
 export namespace ChannelStore {
-  export interface Value<K extends string> {
+  export interface Value<K extends string = string> {
     readonly [Value.meta]: ValueMetaData<K>;
     readonly [Value.id]: number;
     readonly [Value.key]: K;
@@ -223,7 +223,7 @@ export namespace ChannelStore {
   export import Record = DataStore.Record;
 }
 
-class Schema<K extends string, V extends StoreChannel.Value<K>> {
+class Schema<K extends string, V extends ChannelStore.Value<K>> {
   constructor(
     private readonly store: ChannelStore<K, V>,
     private readonly ownership: Ownership<string>,

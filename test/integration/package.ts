@@ -3,7 +3,7 @@ import { StoreChannel, StorageChannel } from '../../index';
 describe('Integration: Package', function () {
   describe('usage', function () {
     it('store', () => {
-      interface Value extends StoreChannel.Value<string> {
+      interface Value extends StoreChannel.Value {
       }
       class Value {
         // Getter and setter names will be excluded from schema.

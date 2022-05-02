@@ -18,7 +18,7 @@ export class StoreChannel<K extends string, V extends StoreChannel.Value<K>> {
   destroy(): void;
 }
 export namespace StoreChannel {
-  export interface Value<K extends string> {
+  export interface Value<K extends string = string> {
     readonly [Value.meta]: ValueMetaData<K>;
     readonly [Value.id]: number;
     readonly [Value.key]: K;
