@@ -8,27 +8,32 @@ describe('Integration: Package', function () {
       class Value {
         // Getter and setter names will be excluded from schema.
         get key() {
-          return this[StorageChannel.Value.key];
+          return this[StoreChannel.Value.key];
+        }
+        // Properties having an invalid value will be excluded from schema.
+        event() {
+          return this[StoreChannel.Value.event];
         }
         // Properties having an invalid name will be excluded from schema.
         private separator_ = ' ';
         // Only properties having a valid name and a storable value consist schema.
         firstName = '';
         lastName = '';
-        // Properties having an invalid value will be excluded from schema.
-        name() {
+        get name() {
           return this.firstName + this.separator_ + this.lastName;
         }
       }
 
       const chan = new StoreChannel('domain', {
         schema: () => new Value(),
-        // Delete records of update events of a linked object 3 days later since the last access.
+        // Limit the number of stored objects.
+        capacity: 100,
+        // Delete stored objects 3 days later since the last access.
         age: 3 * 24 * 60 * 60 * 1e3,
       });
-      // Load data from IndexedDB with little delay.
+      // Load an object from IndexedDB.
       const link = chan.link('path');
-      // Save data to IndexedDB, and sync data between all tabs.
+      // Save changes of property values to IndexedDB, and sync them between all tabs.
       link.firstName = 'john';
       link.lastName = 'smith';
       chan.destroy();

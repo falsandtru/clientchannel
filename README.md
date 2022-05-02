@@ -40,27 +40,30 @@ class Value {
   get key() {
     return this[StoreChannel.Value.key];
   }
+  // Properties having an invalid value will be excluded from schema.
+  event() {
+    return this[StoreChannel.Value.event];
+  }
   // Properties having an invalid name will be excluded from schema.
   private separator_ = ' ';
   // Only properties having a valid name and a storable value consist schema.
   firstName = '';
   lastName = '';
-  // Properties having an invalid value will be excluded from schema.
-  name() {
+  get name() {
     return this.firstName + this.separator_ + this.lastName;
   }
 }
 
 const chan = new StoreChannel('domain', {
   schema: () => new Value(),
-  // Limit the number of data.
+  // Limit the number of stored objects.
   capacity: 100,
-  // Delete data 3 days later since the last access.
+  // Delete stored objects 3 days later since the last access.
   age: 3 * 24 * 60 * 60 * 1e3,
 });
-// Load the data from IndexedDB with little delay.
+// Load an object from IndexedDB.
 const link = chan.link('path');
-// Save the data to IndexedDB, and sync it between all tabs.
+// Save changes of property values to IndexedDB, and sync them between all tabs.
 link.firstName = 'john';
 link.lastName = 'smith';
 ```
