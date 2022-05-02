@@ -2,14 +2,14 @@
 
 ![CI](https://github.com/falsandtru/clientChannel/workflows/CI/badge.svg)
 
-Store and sync data between tabs via IndexedDB or LocalStorage.
+Store and sync objects between tabs via IndexedDB or LocalStorage.
 
 ## Features
 
-- Store and restore data using IndexedDB or LocalStorage.
+- Store and restore objects using IndexedDB or LocalStorage.
 - Cross data binding between tabs.
-- Expiration per individual data.
-- Limitation of the number of data.
+- Expiration per individual objects.
+- Limitation of the number of objects.
 
 ## Demos
 
@@ -25,9 +25,9 @@ https://falsandtru.github.io/clientchannel/
 
 ### Persist data
 
-A schema is defined by properties of objects made by the registered factory function.
-Property names having underscore(`_`) or dollar(`$`) prefix or postfix will be excluded from schema.
-Property values of linked objects will be stored by updates.
+A schema is defined by properties of objects made by the given factory function.
+Property names having the underscore(`_`) or dollar(`$`) prefix or postfix will be excluded from schema.
+Property values of linked objects will be stored when updating.
 Linked objects will be updated automatically when a linked object is updated on another thread(tab).
 
 ```ts
@@ -60,7 +60,7 @@ const chan = new StoreChannel('domain', {
 });
 // Load the data from IndexedDB with little delay.
 const link = chan.link('path');
-// Save the data to IndexedDB, and sync data between all tabs.
+// Save the data to IndexedDB, and sync it between all tabs.
 link.firstName = 'john';
 link.lastName = 'smith';
 ```
