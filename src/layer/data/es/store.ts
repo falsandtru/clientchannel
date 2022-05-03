@@ -188,11 +188,14 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             .forEach(e => {
               if (e.type !== EventStore.EventType.put) {
                 void this.memory
-                  .refs([e.key])
-                  .filter(({ namespace: [, , id = 0] }) => id !== 0)
-                  .forEach(({ namespace: [key, prop, id] }) =>
+                  .reflect([e.key])
+                  .reduce<(Prop<V> | '')[]>((log, { id, key, prop }) => {
+                    if (id === 0 || log.includes(prop)) return log;
+                    log.push(prop);
                     void this.memory
-                      .off([key!, prop!, id!]));
+                      .off([key, prop, id]);
+                    return log;
+                  }, []);
               }
               void this.memory
                 .off([e.key, e.prop, e.id]);
@@ -285,13 +288,16 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       case EventStore.EventType.delete:
       case EventStore.EventType.snapshot:
         void this.memory
-          .refs([event.key])
-          .filter(({ namespace: [, , id] }) => id === 0)
-          .forEach(({ namespace: [key, prop, id] }) => (
+          .reflect([event.key])
+          .reduce<(Prop<V> | '')[]>((log, { id, key, prop }) => {
+            if (id > 0 || log.includes(prop)) return log;
+            log.push(prop);
             void this.memory
-              .off([key!, prop!, id!]),
+              .off([key, prop, id]);
             void this.events_.memory
-              .off([key!, prop!, id!])));
+              .off([key, prop, id]);
+            return log;
+          }, []);
         break;
     }
     const clean = this.memory
@@ -367,22 +373,22 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           const cursor = req.result;
           if (!cursor) {
             if (events.length === 0) return;
-            const composedEvent = compose(key, events);
-            if (composedEvent instanceof StoredEventRecord) return;
-            switch (composedEvent.type) {
+            const event = compose(key, events);
+            if (event instanceof StoredEventRecord) return;
+            switch (event.type) {
               case EventStore.EventType.snapshot:
                 // Snapshot's date must not be later than unsaved event's date.
                 return void this.add(
                   new UnstoredEventRecord(
-                    composedEvent.key,
-                    composedEvent.value,
-                    composedEvent.type,
+                    event.key,
+                    event.value,
+                    event.type,
                     events.reduce((date, e) => e.date > date ? e.date : date, 0)),
                   tx);
               case EventStore.EventType.delete:
                 return;
             }
-            throw new TypeError(`ClientChannel: EventStore: Invalid event type: ${composedEvent.type}`);
+            throw new TypeError(`ClientChannel: EventStore: Invalid event type: ${event.type}`);
           }
           else {
             try {
@@ -403,7 +409,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     if (!this.alive) return;
     const events: StoredEventRecord<K, V>[] = [];
     let deletion = false;
-    let clear = false;
+    let clear: boolean;
     return void this.cursor(
       IDBKeyRange.only(key), EventStoreSchema.key, 'prev', 'readwrite', this.relation?.stores ?? [],
       (error, cursor, tx) => {
@@ -417,8 +423,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             void this.events_.memory
               .off([event.key, event.prop, event.id]);
           }
-          clear ||= events.length === 0;
-          if (clear && this.meta(key).date === 0) {
+          if (clear && this.memory.reflect([key]).every(({ id }) => id > 0)) {
             this.relation?.delete(key, tx);
             assert(this.events.clear.reflect([key]));
           }
@@ -429,15 +434,17 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             const event = new LoadedEventRecord<K, V>(cursor.value);
             switch (event.type) {
               case EventStore.EventType.put:
+                clear ??= false;
                 if (deletion) break;
                 return void cursor.continue();
               case EventStore.EventType.snapshot:
+                clear ??= false;
                 if (deletion) break;
                 deletion = true;
                 return void cursor.continue();
               case EventStore.EventType.delete:
+                clear ??= true;
                 deletion = true;
-                clear = true;
                 break;
             }
             void events.unshift(event);
