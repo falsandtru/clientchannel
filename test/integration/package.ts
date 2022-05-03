@@ -37,7 +37,7 @@ describe('Integration: Package', function () {
         };
       }
 
-      // For settings, updates, backups, etc...
+      // Appropriate for settings, updates, backups, etc...
       const chan = new StoreChannel<Schemas>('settings', {
         schemas: {
           'theme/v1': () => new ThemeSchema(),
@@ -45,8 +45,8 @@ describe('Integration: Package', function () {
         },
         // Limit the number of stored objects.
         capacity: 1000,
-        // Delete stored objects 14 days later since the last access.
-        age: 14 * 24 * 60 * 60 * 1e3,
+        // Delete stored objects 365 days later since the last access.
+        age: 365 * 24 * 60 * 60 * 1e3,
       });
 
       // Load an object from IndexedDB.
