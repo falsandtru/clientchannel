@@ -66,7 +66,9 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
       ? void success(tx)
       : this.listen(db => {
           const tx = cache(db);
-          return tx && void success(this.txrw = tx);
+          return tx
+            ? void success(this.txrw = tx)
+            : void failure(new Error('Session is already closed.'));
         }, failure);
   }
   public load(key: K, cb?: (error: DOMException | Error | null, key: K, value?: V) => boolean | void, cancellation?: Cancellation): undefined {

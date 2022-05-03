@@ -151,7 +151,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       ? void success(tx)
       : this.listen(db => {
           const tx = cache(db);
-          return tx && void success(this.txrw = tx);
+          return tx
+            ? void success(this.txrw = tx)
+            : void failure(new Error('Session is already closed.'));
         }, failure);
   }
   public load(key: K, cb?: (error: DOMException | Error | null) => void, cancellation?: Cancellation): void {
@@ -349,49 +351,53 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   private readonly snapshotCycle: number = 9;
   private snapshot(key: K): void {
     if (!this.alive) return;
-    return void this.listen(db => {
-      if (!this.alive) return;
-      if (!this.has(key) || this.meta(key).id === 0) return;
-      const tx = this.txrw = this.txrw || db.transaction(this.name, 'readwrite');
-      const store = tx.objectStore(this.name);
-      const req = store
-        .index(EventStoreSchema.key)
-        .openCursor(key, 'prev');
-      const events: StoredEventRecord<K, V>[] = [];
-      void req.addEventListener('success', (): void => {
-        const cursor = req.result;
-        if (!cursor) {
-          if (events.length === 0) return;
-          const composedEvent = compose(key, events);
-          if (composedEvent instanceof StoredEventRecord) return;
-          switch (composedEvent.type) {
-            case EventStore.EventType.snapshot:
-              // Snapshot's date must not be later than unsaved event's date.
-              return void this.add(
-                new UnstoredEventRecord(
-                  composedEvent.key,
-                  composedEvent.value,
-                  composedEvent.type,
-                  events.reduce((date, e) => e.date > date ? e.date : date, 0)),
-                tx);
-            case EventStore.EventType.delete:
-              return;
+    return void this.transact(
+      db =>
+        this.alive
+          ? db.transaction(this.name, 'readwrite')
+          : void 0,
+      tx => {
+        if (!this.has(key) || this.meta(key).id === 0) return;
+        const store = tx.objectStore(this.name);
+        const req = store
+          .index(EventStoreSchema.key)
+          .openCursor(key, 'prev');
+        const events: StoredEventRecord<K, V>[] = [];
+        void req.addEventListener('success', (): void => {
+          const cursor = req.result;
+          if (!cursor) {
+            if (events.length === 0) return;
+            const composedEvent = compose(key, events);
+            if (composedEvent instanceof StoredEventRecord) return;
+            switch (composedEvent.type) {
+              case EventStore.EventType.snapshot:
+                // Snapshot's date must not be later than unsaved event's date.
+                return void this.add(
+                  new UnstoredEventRecord(
+                    composedEvent.key,
+                    composedEvent.value,
+                    composedEvent.type,
+                    events.reduce((date, e) => e.date > date ? e.date : date, 0)),
+                  tx);
+              case EventStore.EventType.delete:
+                return;
+            }
+            throw new TypeError(`ClientChannel: EventStore: Invalid event type: ${composedEvent.type}`);
           }
-          throw new TypeError(`ClientChannel: EventStore: Invalid event type: ${composedEvent.type}`);
-        }
-        else {
-          try {
-            const event = new LoadedEventRecord<K, V>(cursor.value);
-            void events.unshift(event);
+          else {
+            try {
+              const event = new LoadedEventRecord<K, V>(cursor.value);
+              void events.unshift(event);
+            }
+            catch (reason) {
+              void cursor.delete();
+              void causeAsyncException(reason);
+            }
+            return void cursor.continue();
           }
-          catch (reason) {
-            void cursor.delete();
-            void causeAsyncException(reason);
-          }
-          return void cursor.continue();
-        }
-      });
-    });
+        });
+      },
+      () => void 0);
   }
   public clean(key: K): void {
     if (!this.alive) return;
