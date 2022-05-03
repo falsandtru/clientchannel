@@ -3997,9 +3997,10 @@ require = function () {
                         switch (type) {
                         case StoreChannel.EventType.put:
                             return void update(key, props.filter(a => a === prop));
-                        case StoreChannel.EventType.delete:
                         case StoreChannel.EventType.snapshot:
                             return void update(key, props);
+                        case StoreChannel.EventType.delete:
+                            return;
                         }
                     });
                 }
