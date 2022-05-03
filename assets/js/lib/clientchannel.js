@@ -2318,7 +2318,7 @@ require = function () {
             __exportStar(_dereq_('../domain/webstorage/api'), exports);
             class StoreChannel extends api_1.StoreChannel {
                 constructor(name, config) {
-                    super(name, config.schema, config);
+                    super(name, config.schemas, config);
                 }
             }
             exports.StoreChannel = StoreChannel;
@@ -2355,14 +2355,12 @@ require = function () {
             exports.hasBinary = exports.isValidPropertyValue = exports.isValidPropertyName = exports.isValidProperty = void 0;
             const alias_1 = _dereq_('spica/alias');
             const type_1 = _dereq_('spica/type');
-            const RegValidValueNameFormat = /^[a-zA-Z][0-9a-zA-Z_]*$/;
-            const RegInvalidValueNameFormat = /^[0-9A-Z_]+$/;
             function isValidProperty([name, value]) {
                 return isValidPropertyName(name) && isValidPropertyValue(value);
             }
             exports.isValidProperty = isValidProperty;
-            function isValidPropertyName(prop) {
-                return prop.length > 0 && !prop.startsWith('_') && !prop.endsWith('_') && !RegInvalidValueNameFormat.test(prop) && RegValidValueNameFormat.test(prop);
+            function isValidPropertyName(name) {
+                return /^(?=[a-z])[0-9a-zA-Z_]*[0-9a-zA-Z]$/.test(name);
             }
             exports.isValidPropertyName = isValidPropertyName;
             function isValidPropertyValue(value) {
@@ -3325,33 +3323,33 @@ require = function () {
                 DAO.date = Symbol.for('clientchannel/DAO.data');
                 DAO.event = Symbol.for('clientchannel/DAO.event');
             }(DAO = exports.DAO || (exports.DAO = {})));
-            function build(source, factory, set, get) {
-                const dao = factory();
+            function build(source, target, set, get) {
                 if (typeof source[DAO.key] !== 'string')
                     throw new TypeError(`ClientChannel: DAO: Invalid key: ${ source[DAO.key] }`);
                 const descmap = {
-                    ...(0, alias_1.ObjectEntries)(dao).filter(value_1.isValidProperty).reduce((map, [prop, value]) => {
+                    ...(0, alias_1.ObjectEntries)(target).filter(value_1.isValidProperty).reduce((map, [prop, iniValue]) => {
+                        var _a;
                         {
-                            const desc = (0, alias_1.ObjectGetOwnPropertyDescriptor)(dao, prop);
-                            if (desc && (desc.get || desc.set))
+                            const desc = (_a = (0, alias_1.ObjectGetOwnPropertyDescriptor)(target, prop)) !== null && _a !== void 0 ? _a : {};
+                            if (desc.get || desc.set)
                                 return map;
                         }
-                        if (source[prop] === void 0) {
-                            source[prop] = value;
+                        if (!(prop in source)) {
+                            source[prop] = iniValue;
                         }
                         map[prop] = {
                             enumerable: true,
                             get() {
-                                const val = source[prop] === void 0 ? value : source[prop];
-                                void (get === null || get === void 0 ? void 0 : get(prop, val));
-                                return val;
+                                const value = source[prop];
+                                void (get === null || get === void 0 ? void 0 : get(prop, value));
+                                return value;
                             },
-                            set(newVal) {
-                                if (!(0, value_1.isValidPropertyValue)(newVal))
-                                    throw new TypeError(`ClientChannel: DAO: Invalid value: ${ JSON.stringify(newVal) }`);
-                                const oldVal = source[prop];
-                                source[prop] = newVal === void 0 ? value : newVal;
-                                void (set === null || set === void 0 ? void 0 : set(prop, newVal, oldVal));
+                            set(newValue) {
+                                if (!(0, value_1.isValidPropertyValue)(newValue))
+                                    throw new TypeError(`ClientChannel: DAO: Invalid value: ${ JSON.stringify(newValue) }`);
+                                const oldValue = source[prop];
+                                source[prop] = newValue;
+                                void (set === null || set === void 0 ? void 0 : set(prop, newValue, oldValue));
                             }
                         };
                         return map;
@@ -3384,9 +3382,9 @@ require = function () {
                         }
                     }
                 };
-                void (0, alias_1.ObjectDefineProperties)(dao, descmap);
-                void (0, alias_1.ObjectSeal)(dao);
-                return dao;
+                void (0, alias_1.ObjectDefineProperties)(target, descmap);
+                void (0, alias_1.ObjectSeal)(target);
+                return target;
             }
             exports.build = build;
         },
@@ -3458,7 +3456,7 @@ require = function () {
                         throw new Error(`ClientChannel: Store channel "${ name }" is already open.`);
                     void cache.add(name);
                     void this.cancellation.register(() => void cache.delete(name));
-                    this.schema = new Schema(this, this.ownership, this.capacity, (0, api_1.open)(name, {
+                    this.stores = new Stores(this, this.ownership, this.capacity, (0, api_1.open)(name, {
                         make(db) {
                             return data_1.DataStore.configure().make(db) && access_1.AccessStore.configure().make(db) && expiry_1.ExpiryStore.configure().make(db);
                         },
@@ -3472,8 +3470,8 @@ require = function () {
                     void this.cancellation.register(api_1.idbEventStream.on([
                         name,
                         'destroy'
-                    ], () => void this.schema.rebuild()));
-                    void this.cancellation.register(() => void this.schema.close());
+                    ], () => void this.stores.rebuild()));
+                    void this.cancellation.register(() => void this.stores.close());
                     void this.cancellation.register(() => void this.ownership.close());
                     void this.cancellation.register(() => void this.channel.close());
                     void this.cancellation.register(this.channel.listen('save', ({key}) => void this.load(key)));
@@ -3485,7 +3483,7 @@ require = function () {
                             void this.keys.delete(key);
                         } else if (!this.keys.has(key)) {
                             void this.keys.add(key);
-                            void this.schema.access.load(key);
+                            void this.stores.access.load(key);
                         }
                     });
                     void this.events_.save.monitor([], ({key, type}) => {
@@ -3493,8 +3491,8 @@ require = function () {
                             void this.keys.delete(key);
                         } else if (!this.keys.has(key)) {
                             void this.keys.add(key);
-                            void this.schema.access.load(key);
-                            this.keys.size > this.capacity && void this.schema.access.schedule(100);
+                            void this.stores.access.load(key);
+                            this.keys.size > this.capacity && void this.stores.access.schedule(100);
                         }
                     });
                 }
@@ -3513,42 +3511,42 @@ require = function () {
                 }
                 load(key, cb, cancellation) {
                     void this.ensureAliveness();
-                    return this.schema.data.load(key, cb, cancellation);
+                    return this.stores.data.load(key, cb, cancellation);
                 }
                 has(key) {
                     void this.ensureAliveness();
-                    return this.schema.data.has(key);
+                    return this.stores.data.has(key);
                 }
                 meta(key) {
                     void this.ensureAliveness();
-                    return this.schema.data.meta(key);
+                    return this.stores.data.meta(key);
                 }
                 get(key) {
                     void this.ensureAliveness();
                     void this.log(key);
-                    return this.schema.data.get(key);
+                    return this.stores.data.get(key);
                 }
                 add(record) {
                     void this.ensureAliveness();
                     const key = record.key;
-                    void this.schema.data.add(record);
+                    void this.stores.data.add(record);
                     void this.log(key);
                 }
                 delete(key) {
                     void this.ensureAliveness();
-                    void this.schema.data.delete(key);
-                    void this.schema.access.set(key, false);
+                    void this.stores.data.delete(key);
+                    void this.stores.access.set(key, false);
                 }
                 clean(key) {
                     void this.ensureAliveness();
-                    void this.schema.data.clean(key);
+                    void this.stores.data.clean(key);
                 }
                 log(key) {
                     var _a;
                     if (!this.has(key))
                         return;
-                    void this.schema.access.set(key);
-                    void this.schema.expiry.set(key, (_a = this.ages.get(key)) !== null && _a !== void 0 ? _a : this.age);
+                    void this.stores.access.set(key);
+                    void this.stores.expiry.set(key, (_a = this.ages.get(key)) !== null && _a !== void 0 ? _a : this.age);
                 }
                 expire(key, age = this.age) {
                     void this.ensureAliveness();
@@ -3558,7 +3556,7 @@ require = function () {
                     if (typeof cb === 'number')
                         return this.recent(void 0, cb);
                     void this.ensureAliveness();
-                    return this.schema.access.recent(cb, timeout);
+                    return this.stores.access.recent(cb, timeout);
                 }
                 close() {
                     void this.cancellation.cancel();
@@ -3584,7 +3582,7 @@ require = function () {
                 ChannelStore.EventType = data_1.DataStore.EventType;
                 ChannelStore.Record = data_1.DataStore.Record;
             }(ChannelStore = exports.ChannelStore || (exports.ChannelStore = {})));
-            class Schema {
+            class Stores {
                 constructor(store, ownership, capacity, listen) {
                     this.store = store;
                     this.ownership = ownership;
@@ -3973,34 +3971,34 @@ require = function () {
             const throttle_1 = _dereq_('spica/throttle');
             const compare_1 = _dereq_('spica/compare');
             class StoreChannel extends channel_1.ChannelStore {
-                constructor(name, factory, {migrate, destroy = () => true, age = Infinity, capacity = Infinity, debug = false} = {}) {
+                constructor(name, schemas, {migrate, destroy = () => true, age = Infinity, capacity = Infinity, debug = false} = {}) {
                     super(name, destroy, age, capacity, debug);
-                    this.factory = factory;
+                    this.schemas = schemas;
                     this.sources = new Map();
                     this.links = new Map();
-                    const props = (0, alias_1.ObjectEntries)(factory()).filter(api_1.isValidProperty).map(([prop]) => prop);
-                    const update = (key, props) => {
+                    const update = (key, prop) => {
                         const source = this.sources.get(key);
                         const memory = this.get(key);
                         const link = this.link_(key);
-                        const changes = props.filter(prop => prop in memory).map(prop => {
-                            const newVal = memory[prop];
-                            const oldVal = source[prop];
-                            source[prop] = newVal;
+                        const props = prop === '' ? (0, alias_1.ObjectKeys)(memory) : prop in memory ? [prop] : [];
+                        const changes = props.map(prop => {
+                            const newValue = memory[prop];
+                            const oldValue = source[prop];
+                            source[prop] = newValue;
                             return {
                                 prop,
-                                newVal,
-                                oldVal
+                                newValue,
+                                oldValue
                             };
-                        }).filter(({newVal, oldVal}) => !(0, compare_1.equal)(newVal, oldVal));
+                        }).filter(({newValue, oldValue}) => !(0, compare_1.equal)(newValue, oldValue));
                         if (changes.length === 0)
                             return;
                         void (migrate === null || migrate === void 0 ? void 0 : migrate(link));
-                        for (const {prop, oldVal} of changes) {
+                        for (const {prop, oldValue} of changes) {
                             void source[StoreChannel.Value.event].emit([
                                 api_2.StorageChannel.EventType.recv,
                                 prop
-                            ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.recv, prop, memory[prop], oldVal));
+                            ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.recv, prop, memory[prop], oldValue));
                         }
                     };
                     void this.events_.load.monitor([], ({key, prop, type}) => {
@@ -4008,25 +4006,27 @@ require = function () {
                             return;
                         switch (type) {
                         case StoreChannel.EventType.put:
-                            return void update(key, props.filter(a => a === prop));
                         case StoreChannel.EventType.snapshot:
-                            return void update(key, props);
+                            return void update(key, prop);
                         case StoreChannel.EventType.delete:
                             return;
                         }
                     });
                 }
                 link_(key) {
+                    var _a;
                     return this.links.has(key) ? this.links.get(key) : this.links.set(key, (0, api_1.build)((0, alias_1.ObjectDefineProperties)(this.sources.set(key, this.get(key)).get(key), {
                         [StoreChannel.Value.meta]: { get: () => this.meta(key) },
                         [StoreChannel.Value.id]: { get: () => this.meta(key).id },
                         [StoreChannel.Value.key]: { get: () => this.meta(key).key },
                         [StoreChannel.Value.date]: { get: () => this.meta(key).date },
                         [StoreChannel.Value.event]: { value: new observer_1.Observation({ limit: Infinity }) }
-                    }), this.factory, (prop, newValue, oldValue) => {
+                    }), '' in this.schemas ? ((_a = this.schemas[key]) !== null && _a !== void 0 ? _a : this.schemas[''])(key) : this.schemas[key](key), (prop, newValue, oldValue) => {
                         if (!this.alive)
                             return;
                         void this.add(new StoreChannel.Record(key, { [prop]: newValue }));
+                        if ((0, compare_1.equal)(newValue, oldValue))
+                            return;
                         void this.sources.get(key)[StoreChannel.Value.event].emit([
                             api_2.StorageChannel.EventType.send,
                             prop
@@ -4250,7 +4250,7 @@ require = function () {
             const compare_1 = _dereq_('spica/compare');
             const cache = new Set();
             class StorageChannel {
-                constructor(name, storage = api_2.sessionStorage || storage_1.fakeStorage, factory, migrate) {
+                constructor(name, storage = api_2.sessionStorage || storage_1.fakeStorage, schema, migrate) {
                     this.name = name;
                     this.storage = storage;
                     this.cancellation = new cancellation_1.Cancellation();
@@ -4268,7 +4268,7 @@ require = function () {
                         [StorageChannel.Value.key]: this.name,
                         [StorageChannel.Value.event]: new observer_1.Observation({ limit: Infinity })
                     };
-                    this.link_ = (0, api_1.build)(source, factory, (prop, newValue, oldValue) => {
+                    this.link_ = (0, api_1.build)(source, schema(), (prop, newValue, oldValue) => {
                         if (!this.alive)
                             return;
                         void this.storage.setItem(this.name, JSON.stringify((0, alias_1.ObjectFromEntries)((0, alias_1.ObjectEntries)(source).filter(api_1.isValidProperty))));
@@ -4286,13 +4286,13 @@ require = function () {
                     ], ({newValue}) => {
                         const item = parse(newValue);
                         void (0, alias_1.ObjectEntries)(item).filter(api_1.isValidProperty).forEach(([prop]) => {
-                            const oldVal = source[prop];
-                            const newVal = item[prop];
-                            if ((0, compare_1.equal)(newVal, oldVal))
+                            const oldValue = source[prop];
+                            const newValue = item[prop];
+                            if ((0, compare_1.equal)(newValue, oldValue))
                                 return;
-                            source[prop] = newVal;
+                            source[prop] = newValue;
                             void (migrate === null || migrate === void 0 ? void 0 : migrate(this.link_));
-                            const event = new StorageChannel.Event(StorageChannel.EventType.recv, prop, source[prop], oldVal);
+                            const event = new StorageChannel.Event(StorageChannel.EventType.recv, prop, source[prop], oldValue);
                             void this.events.recv.emit([event.prop], event);
                             void source[StorageChannel.Value.event].emit([
                                 event.type,
