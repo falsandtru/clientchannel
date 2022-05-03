@@ -96,8 +96,8 @@ export namespace StorageChannel {
     constructor(
       public readonly type: EventType,
       public readonly prop: P,
-      public readonly newValue: V[P] | undefined,
-      public readonly oldValue: V[P] | undefined,
+      public readonly newValue: V[P],
+      public readonly oldValue: V[P],
     ) {
       assert(typeof type === 'string');
       assert(typeof prop === 'string');

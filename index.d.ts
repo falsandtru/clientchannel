@@ -91,8 +91,8 @@ export namespace StorageChannel {
   export interface Event<V, P extends Prop<V> = Prop<V>> {
     readonly type: EventType;
     readonly prop: P;
-    readonly newValue: V[P] | undefined;
-    readonly oldValue: V[P] | undefined;
+    readonly newValue: V[P];
+    readonly oldValue: V[P];
   }
   export type EventType =
     | EventType.Send
