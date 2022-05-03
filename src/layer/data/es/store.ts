@@ -417,16 +417,16 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         if (!this.alive) return;
         if (error) return;
         if (!cursor) {
-          if (tx) return this.relation?.delete(key, tx);
+          if (tx && clear && this.memory.reflect([key]).every(({ id }) => id > 0)) {
+            return this.relation?.delete(key, tx);
+          }
           for (const event of events) {
             void this.memory
               .off([event.key, event.prop, event.id]);
             void this.events_.memory
               .off([event.key, event.prop, event.id]);
           }
-          if (clear && this.memory.reflect([key]).every(({ id }) => id > 0)) {
-            assert(this.events.clear.reflect([key]));
-          }
+          assert(this.events.clear.reflect([key]));
           return;
         }
         else {
