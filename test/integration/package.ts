@@ -15,27 +15,27 @@ describe('Integration: Package', function () {
           return this[StoreChannel.Value.event];
         }
         // Properties having an invalid name will be excluded from schema.
-        private separator_ = ' ';
+        protected prop_ = '';
+        protected $prop = '';
         // Only properties having a valid name and a storable value consist schema.
-        firstName = '';
-        lastName = '';
-        get name() {
-          return this.firstName + this.separator_ + this.lastName;
-        }
+        input: Record<string, string> = {};
       }
 
-      const chan = new StoreChannel('domain', {
+      const chan = new StoreChannel('backup/input', {
         schema: () => new Value(),
         // Limit the number of stored objects.
-        capacity: 100,
-        // Delete stored objects 3 days later since the last access.
-        age: 3 * 24 * 60 * 60 * 1e3,
+        capacity: 1000,
+        // Delete stored objects 14 days later since the last access.
+        age: 14 * 24 * 60 * 60 * 1e3,
       });
       // Load an object from IndexedDB.
-      const link = chan.link('path');
+      const link = chan.link('contact/v1');
       // Save changes of property values to IndexedDB, and sync them between all tabs.
-      link.firstName = 'john';
-      link.lastName = 'smith';
+      link.input = {
+        email: 'user@host',
+        subject: 'summary',
+        message: 'body',
+      };
       chan.destroy();
     });
 
@@ -49,7 +49,7 @@ describe('Integration: Package', function () {
         version = 0;
       }
 
-      const chan = new StorageChannel('version', {
+      const chan = new StorageChannel('config/version', {
         schema: () => new Value(),
       });
       const link = chan.link();
@@ -61,7 +61,7 @@ describe('Integration: Package', function () {
           case newValue > VERSION:
             return location.reload();
           default:
-            return link.version = VERSION;
+            return;
         }
       });
       link.version = VERSION;
