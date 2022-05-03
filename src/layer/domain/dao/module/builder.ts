@@ -1,11 +1,7 @@
-import { ObjectDefineProperties, ObjectGetOwnPropertyDescriptor, ObjectKeys, ObjectSeal } from 'spica/alias';
-import { Prop } from '../../../data/database/value';
-import { isValidPropertyName, isValidPropertyValue } from '../../../data/es/event';
+import { ObjectDefineProperties, ObjectEntries, ObjectGetOwnPropertyDescriptor, ObjectSeal } from 'spica/alias';
+import { Prop, isValidProperty, isValidPropertyValue } from '../../../data/database/value';
 
-export {
-  isValidPropertyName,
-  isValidPropertyValue
-};
+export { Prop, isValidProperty, isValidPropertyName, isValidPropertyValue } from '../../../data/database/value';
 
 export namespace DAO {
   export const meta = Symbol.for('clientchannel/DAO.meta');
@@ -25,30 +21,28 @@ export function build<T extends object>(
   assert(Object.values(dao).every(prop => !(prop in dao)));
   if (typeof source[DAO.key] !== 'string') throw new TypeError(`ClientChannel: DAO: Invalid key: ${source[DAO.key]}`);
   const descmap: PropertyDescriptorMap = {
-    ...(ObjectKeys(dao) as Prop<typeof dao>[])
-      .filter(isValidPropertyName)
-      .filter(isValidPropertyValue(dao))
-      .reduce<PropertyDescriptorMap>((map, prop) => {
+    ...(ObjectEntries(dao) as [Prop<T>, T[Prop<T>]][])
+      .filter(isValidProperty)
+      .reduce<PropertyDescriptorMap>((map, [prop, value]) => {
         assert(dao.hasOwnProperty(prop));
         {
           const desc = ObjectGetOwnPropertyDescriptor(dao, prop);
           if (desc && (desc.get || desc.set)) return map;
         }
-        const iniVal = dao[prop];
         if (source[prop] === void 0) {
-          source[prop] = iniVal;
+          source[prop] = value;
         }
         map[prop] = {
           enumerable: true,
           get() {
-            const val = source[prop] === void 0 ? iniVal : source[prop];
+            const val = source[prop] === void 0 ? value : source[prop];
             void get?.(prop, val);
             return val;
           },
           set(newVal) {
-            if (!isValidPropertyValue({ [prop]: newVal })(prop)) throw new TypeError(`ClientChannel: DAO: Invalid value: ${JSON.stringify(newVal)}`);
+            if (!isValidPropertyValue(newVal)) throw new TypeError(`ClientChannel: DAO: Invalid value: ${JSON.stringify(newVal)}`);
             const oldVal = source[prop];
-            source[prop] = newVal === void 0 ? iniVal : newVal;
+            source[prop] = newVal === void 0 ? value : newVal;
             void set?.(prop, newVal, oldVal);
           },
         };

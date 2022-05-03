@@ -2,7 +2,7 @@ import { Number, Date } from 'spica/global';
 import { ObjectKeys } from 'spica/alias';
 import { StoreChannel } from '../../../..';
 import { EventId, makeEventId } from './identifier';
-import { Prop, isStorable } from '../database/value';
+import { Prop, isValidProperty, isValidPropertyName } from '../database/value';
 import { clone } from 'spica/assign';
 
 export type EventRecordType = StoreChannel.EventType
@@ -43,8 +43,7 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
       case EventRecordType.snapshot:
         if (this.prop !== '') throw new TypeError(`ClientChannel: EventRecord: Invalid event prop with ${this.type}: ${this.prop}`);
         this.value = value = new EventRecordValue(value);
-        assert(Object.keys(this.value).every(isValidPropertyName));
-        assert(Object.keys(this.value).every(isValidPropertyValue(this.value)));
+        assert(Object.entries(this.value).every(isValidProperty));
         assert(Object.freeze(this.value));
         assert(Object.freeze(this));
         return;
@@ -120,22 +119,6 @@ export class SavedEventRecord<K extends string, V extends EventRecordValue> exte
 export class EventRecordValue {
   constructor(...sources: object[]) {
     void clone(this, ...sources);
-    assert(Object.keys(this).every(isValidPropertyName));
-    assert(Object.keys(this).every(isValidPropertyValue(this)));
+    assert(Object.entries(this).every(isValidProperty));
   }
-}
-
-const RegValidValueNameFormat = /^[a-zA-Z][0-9a-zA-Z_]*$/;
-const RegInvalidValueNameFormat = /^[0-9A-Z_]+$/;
-
-export function isValidPropertyName(prop: string): boolean {
-  return prop.length > 0
-      && !prop.startsWith('_')
-      && !prop.endsWith('_')
-      && !RegInvalidValueNameFormat.test(prop)
-      && RegValidValueNameFormat.test(prop);
-}
-
-export function isValidPropertyValue(dao: object): (prop: string) => boolean {
-  return (prop: string) => isStorable(dao[prop]);
 }

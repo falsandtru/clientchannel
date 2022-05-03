@@ -1,7 +1,7 @@
-import { ObjectDefineProperties, ObjectKeys } from 'spica/alias';
+import { ObjectDefineProperties, ObjectEntries } from 'spica/alias';
 import { StoreChannel as IStoreChannel } from '../../../../../';
 import { Prop } from '../../../data/database/value';
-import { build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
+import { isValidProperty, build } from '../../dao/api';
 import { ChannelStore } from '../model/channel';
 import { StorageChannel } from '../../webstorage/api';
 import { Observation } from 'spica/observer';
@@ -22,9 +22,9 @@ export class StoreChannel<K extends string, V extends StoreChannel.Value<K>> ext
   ) {
     super(name, destroy, age, capacity, debug);
 
-    const props = <Prop<V>[]>ObjectKeys(factory())
-      .filter(isValidPropertyName)
-      .filter(isValidPropertyValue(factory()));
+    const props = (ObjectEntries(factory()) as [Prop<V>, V[Prop<V>]][])
+      .filter(isValidProperty)
+      .map(([prop]) => prop);
 
     const update = (key: K, props: Prop<V>[]): void => {
       const source = this.sources.get(key)! as V;

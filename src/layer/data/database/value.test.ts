@@ -1,36 +1,70 @@
-import { isStorable, hasBinary } from './value';
+import { isValidPropertyName, isValidPropertyValue, hasBinary } from './value';
 import { extend } from 'spica/assign';
 
 describe('Unit: layers/data/database/value', () => {
-  describe('isStorable', () => {
+  describe('isValidPropertyName', () => {
+    it('empty', () => {
+      assert(!isValidPropertyName(''));
+    });
+
+    it('prefix', () => {
+      assert(!isValidPropertyName('_v'));
+      assert(!isValidPropertyName('$v'));
+    });
+
+    it('postfix', () => {
+      assert(!isValidPropertyName('v_'));
+      assert(!isValidPropertyName('v$'));
+    });
+
+    it('symbol', () => {
+      assert(!isValidPropertyName('_'));
+      assert(!isValidPropertyName('$'));
+    });
+
+    it('constant', () => {
+      assert(!isValidPropertyName('V'));
+      assert(!isValidPropertyName('VAL'));
+    });
+
+    it('valid', () => {
+      assert(isValidPropertyName('v'));
+      assert(isValidPropertyName('value'));
+      assert(isValidPropertyName('Value'));
+      assert(isValidPropertyName('vAlUe'));
+    });
+
+  });
+
+  describe('isValidPropertyValue', () => {
     it('undefined', () => {
-      assert(isStorable(undefined as any) === true);
+      assert(isValidPropertyValue(undefined as any) === true);
     });
 
     it('boolean', () => {
-      assert(isStorable(false) === true);
+      assert(isValidPropertyValue(false) === true);
     });
 
     it('number', () => {
-      assert(isStorable(0) === true);
+      assert(isValidPropertyValue(0) === true);
     });
 
     it('string', () => {
-      assert(isStorable('') === true);
+      assert(isValidPropertyValue('') === true);
     });
 
     it('object', () => {
-      assert(isStorable([]) === true);
-      assert(isStorable(null as any) === true);
-      assert(isStorable({}) === true);
-      assert(isStorable(new Date()) === true);
+      assert(isValidPropertyValue([]) === true);
+      assert(isValidPropertyValue(null as any) === true);
+      assert(isValidPropertyValue({}) === true);
+      assert(isValidPropertyValue(new Date()) === true);
       const a: any[] = [];
       a.push(a);
-      assert(isStorable(a) === false);
+      assert(isValidPropertyValue(a) === false);
     });
 
     it('function', () => {
-      assert(isStorable(() => 0) === false);
+      assert(isValidPropertyValue(() => 0) === false);
     });
 
   });

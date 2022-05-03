@@ -1,13 +1,12 @@
-import { ObjectKeys } from 'spica/alias';
+import { ObjectEntries, ObjectFromEntries } from 'spica/alias';
 import { StorageChannel as IStorageChannel } from '../../../../../';
 import { Observer } from '../../../../../observer';
-import { Prop } from '../../../data/database/value';
+import { DAO, Prop, isValidProperty, build } from '../../dao/api';
+import { localStorage, sessionStorage, storageEventStream } from '../../../infrastructure/webstorage/api';
+import { StorageLike, fakeStorage } from '../model/storage';
 import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
 import { equal } from 'spica/compare';
-import { DAO, build, isValidPropertyName, isValidPropertyValue } from '../../dao/api';
-import { localStorage, sessionStorage, storageEventStream } from '../../../infrastructure/webstorage/api';
-import { StorageLike, fakeStorage } from '../model/storage';
 
 const cache = new Set<string>();
 
@@ -29,10 +28,7 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
     };
     this.link_ = build<V>(source, factory, (prop, newValue, oldValue) => {
       if (!this.alive) return;
-      void this.storage.setItem(this.name, JSON.stringify(ObjectKeys(source).filter(isValidPropertyName).filter(isValidPropertyValue(source)).reduce((acc, prop) => {
-        acc[prop] = source[prop];
-        return acc;
-      }, {})));
+      void this.storage.setItem(this.name, JSON.stringify(ObjectFromEntries(ObjectEntries(source).filter(isValidProperty))));
       const event = new StorageChannel.Event<V>(StorageChannel.EventType.send, prop, newValue, oldValue);
       void this.events.send.emit([event.prop], event);
       void (source[StorageChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>).emit([event.type, event.prop], event);
@@ -41,10 +37,9 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
     void this.cancellation.register(
       storageEventStream.on([this.mode, this.name], ({ newValue }: StorageEvent): void => {
         const item = parse<V>(newValue);
-        void (ObjectKeys(item) as Prop<V>[])
-          .filter(isValidPropertyName)
-          .filter(isValidPropertyValue(item))
-          .forEach(prop => {
+        void (ObjectEntries(item) as [Prop<V>, V[Prop<V>]][])
+          .filter(isValidProperty)
+          .forEach(([prop]) => {
             const oldVal = source[prop];
             const newVal = item[prop];
             if (equal(newVal, oldVal)) return;

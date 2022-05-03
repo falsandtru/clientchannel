@@ -1,5 +1,4 @@
-import { Prop } from './src/layer/data/database/value';
-import { DAO } from './src/layer/domain/dao/api';
+import { DAO, Prop } from './src/layer/domain/dao/api';
 import { Observer } from './observer';
 
 export class StoreChannel<K extends string, V extends StoreChannel.Value<K>> {
