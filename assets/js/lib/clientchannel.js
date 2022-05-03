@@ -2657,15 +2657,17 @@ require = function () {
                             if (!cursor || new event_1.LoadedEventRecord(cursor.value).date < this.meta(key).date) {
                                 void [...events.reduceRight((es, e) => es.length === 0 || es[0].type === EventStore.EventType.put ? (0, concat_1.concat)(es, [e]) : es, []).reduceRight((dict, e) => dict.set(e.prop, e), new global_1.Map()).values()].sort((a, b) => a.date - b.date || a.id - b.id).forEach(e => {
                                     if (e.type !== EventStore.EventType.put) {
-                                        void this.memory.refs([e.key]).filter(({
-                                            namespace: [, , id = 0]
-                                        }) => id !== 0).forEach(({
-                                            namespace: [key, prop, id]
-                                        }) => void this.memory.off([
-                                            key,
-                                            prop,
-                                            id
-                                        ]));
+                                        void this.memory.reflect([e.key]).reduce((log, {id, key, prop}) => {
+                                            if (id === 0 || log.includes(prop))
+                                                return log;
+                                            log.push(prop);
+                                            void this.memory.off([
+                                                key,
+                                                prop,
+                                                id
+                                            ]);
+                                            return log;
+                                        }, []);
                                     }
                                     void this.memory.off([
                                         e.key,
@@ -2755,19 +2757,22 @@ require = function () {
                         break;
                     case EventStore.EventType.delete:
                     case EventStore.EventType.snapshot:
-                        void this.memory.refs([event.key]).filter(({
-                            namespace: [, , id]
-                        }) => id === 0).forEach(({
-                            namespace: [key, prop, id]
-                        }) => (void this.memory.off([
-                            key,
-                            prop,
-                            id
-                        ]), void this.events_.memory.off([
-                            key,
-                            prop,
-                            id
-                        ])));
+                        void this.memory.reflect([event.key]).reduce((log, {id, key, prop}) => {
+                            if (id > 0 || log.includes(prop))
+                                return log;
+                            log.push(prop);
+                            void this.memory.off([
+                                key,
+                                prop,
+                                id
+                            ]);
+                            void this.events_.memory.off([
+                                key,
+                                prop,
+                                id
+                            ]);
+                            return log;
+                        }, []);
                         break;
                     }
                     const clean = this.memory.on([
@@ -2821,6 +2826,7 @@ require = function () {
                         const fail = () => (void clean(), active() ? void loss() : void 0);
                         void tx.addEventListener('error', fail);
                         void tx.addEventListener('abort', fail);
+                        void tx.commit();
                     }, () => void clean() || void loss(), tx);
                 }
                 delete(key) {
@@ -2840,16 +2846,16 @@ require = function () {
                             if (!cursor) {
                                 if (events.length === 0)
                                     return;
-                                const composedEvent = compose(key, events);
-                                if (composedEvent instanceof event_1.StoredEventRecord)
+                                const event = compose(key, events);
+                                if (event instanceof event_1.StoredEventRecord)
                                     return;
-                                switch (composedEvent.type) {
+                                switch (event.type) {
                                 case EventStore.EventType.snapshot:
-                                    return void this.add(new event_1.UnstoredEventRecord(composedEvent.key, composedEvent.value, composedEvent.type, events.reduce((date, e) => e.date > date ? e.date : date, 0)), tx);
+                                    return void this.add(new event_1.UnstoredEventRecord(event.key, event.value, event.type, events.reduce((date, e) => e.date > date ? e.date : date, 0)), tx);
                                 case EventStore.EventType.delete:
-                                    return;
+                                    return void tx.commit();
                                 }
-                                throw new TypeError(`ClientChannel: EventStore: Invalid event type: ${ composedEvent.type }`);
+                                throw new TypeError(`ClientChannel: EventStore: Invalid event type: ${ event.type }`);
                             } else {
                                 try {
                                     const event = new event_1.LoadedEventRecord(cursor.value);
@@ -2869,7 +2875,7 @@ require = function () {
                         return;
                     const events = [];
                     let deletion = false;
-                    let clear = false;
+                    let clear;
                     return void this.cursor(api_1.IDBKeyRange.only(key), EventStoreSchema.key, 'prev', 'readwrite', (_b = (_a = this.relation) === null || _a === void 0 ? void 0 : _a.stores) !== null && _b !== void 0 ? _b : [], (error, cursor, tx) => {
                         var _a;
                         if (!this.alive)
@@ -2877,6 +2883,8 @@ require = function () {
                         if (error)
                             return;
                         if (!cursor) {
+                            if (tx)
+                                return (_a = this.relation) === null || _a === void 0 ? void 0 : _a.delete(key, tx);
                             for (const event of events) {
                                 void this.memory.off([
                                     event.key,
@@ -2889,27 +2897,27 @@ require = function () {
                                     event.id
                                 ]);
                             }
-                            clear || (clear = events.length === 0);
-                            if (clear && this.meta(key).date === 0) {
-                                (_a = this.relation) === null || _a === void 0 ? void 0 : _a.delete(key, tx);
+                            if (clear && this.memory.reflect([key]).every(({id}) => id > 0)) {
                             }
-                            return void tx.commit();
+                            return;
                         } else {
                             try {
                                 const event = new event_1.LoadedEventRecord(cursor.value);
                                 switch (event.type) {
                                 case EventStore.EventType.put:
+                                    clear !== null && clear !== void 0 ? clear : clear = false;
                                     if (deletion)
                                         break;
                                     return void cursor.continue();
                                 case EventStore.EventType.snapshot:
+                                    clear !== null && clear !== void 0 ? clear : clear = false;
                                     if (deletion)
                                         break;
                                     deletion = true;
                                     return void cursor.continue();
                                 case EventStore.EventType.delete:
+                                    clear !== null && clear !== void 0 ? clear : clear = true;
                                     deletion = true;
-                                    clear = true;
                                     break;
                                 }
                                 void events.unshift(event);
@@ -2935,7 +2943,7 @@ require = function () {
                         void req.addEventListener('success', () => {
                             const cursor = req.result;
                             if (!cursor)
-                                return void cb(req.error, cursor, tx);
+                                return void cb(tx.error || req.error, null, tx), void tx.commit();
                             try {
                                 void cb(req.error, cursor, tx);
                             } catch (reason) {
@@ -2943,7 +2951,7 @@ require = function () {
                                 void (0, exception_1.causeAsyncException)(reason);
                             }
                         });
-                        void tx.addEventListener('complete', () => (tx.error || req.error) && void cb(tx.error || req.error, null, null));
+                        void tx.addEventListener('complete', () => void cb(tx.error || req.error, null, null));
                         void tx.addEventListener('error', () => void cb(tx.error || req.error, null, null));
                         void tx.addEventListener('abort ', () => void cb(tx.error || req.error, null, null));
                     }, () => void cb(new Error('Request has failed.'), null, null));
@@ -3092,7 +3100,7 @@ require = function () {
                             return void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request is cancelled.'), key));
                         const tx = db.transaction(this.name, 'readonly');
                         const req = this.index ? tx.objectStore(this.name).index(this.index).get(key) : tx.objectStore(this.name).get(key);
-                        void req.addEventListener('success', () => (cb === null || cb === void 0 ? void 0 : cb(req.error, key, req.result)) && this.cache.set(key, req.result));
+                        void req.addEventListener('success', () => (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error, key, req.result)) && this.cache.set(key, req.result));
                         void tx.addEventListener('complete', () => void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()));
                         void tx.addEventListener('error', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error, key))));
                         void tx.addEventListener('abort', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error, key))));
@@ -3159,7 +3167,7 @@ require = function () {
                         void req.addEventListener('success', () => {
                             const cursor = req.result;
                             if (!cursor)
-                                return void cb(tx.error || req.error, cursor, tx);
+                                return void cb(tx.error || req.error, null, tx), void tx.commit();
                             try {
                                 void this.cache.set(cursor.primaryKey, { ...cursor.value });
                                 void cb(tx.error || req.error, cursor, tx);
@@ -3168,7 +3176,7 @@ require = function () {
                                 void (0, exception_1.causeAsyncException)(reason);
                             }
                         });
-                        void tx.addEventListener('complete', () => (tx.error || req.error) && void cb(tx.error || req.error, null, null));
+                        void tx.addEventListener('complete', () => void cb(tx.error || req.error, null, null));
                         void tx.addEventListener('error', () => void cb(tx.error || req.error, null, null));
                         void tx.addEventListener('abort', () => void cb(tx.error || req.error, null, null));
                     }, () => void cb(new Error('Request has failed.'), null, null));
@@ -3698,7 +3706,7 @@ require = function () {
                                 if (size <= this.capacity)
                                     return void (0, global_1.clearInterval)(timer);
                                 this.chan.lock = true;
-                                return void this.store.cursor(null, 'date', 'next', 'readonly', [], (error, cursor) => {
+                                return void this.store.cursor(null, 'date', 'next', 'readonly', [], (error, cursor, tx) => {
                                     this.chan.lock = false;
                                     if (timer) {
                                         (0, global_1.clearInterval)(timer);
@@ -3707,12 +3715,14 @@ require = function () {
                                     schedule = global_1.Infinity;
                                     if (!this.cancellation.alive)
                                         return;
-                                    if (this.chan.lock)
-                                        return void this.schedule(delay *= 2);
                                     if (error)
                                         return void this.schedule(delay * 10);
+                                    if (!cursor && !tx)
+                                        return;
                                     if (!cursor)
                                         return;
+                                    if (this.chan.lock)
+                                        return void this.schedule(delay *= 2);
                                     if (size - count <= this.capacity)
                                         return;
                                     const {key} = cursor.value;
@@ -3873,7 +3883,7 @@ require = function () {
                                     timer = 0;
                                 }, delay / 2);
                                 this.chan.lock = true;
-                                return void this.store.cursor(null, 'expiry', 'next', 'readonly', [], (error, cursor) => {
+                                return void this.store.cursor(null, 'expiry', 'next', 'readonly', [], (error, cursor, tx) => {
                                     this.chan.lock = false;
                                     if (timer) {
                                         (0, global_1.clearInterval)(timer);
@@ -3882,12 +3892,14 @@ require = function () {
                                     schedule = global_1.Infinity;
                                     if (!this.cancellation.alive)
                                         return;
-                                    if (this.chan.lock)
-                                        return void this.schedule(delay *= 2);
                                     if (error)
                                         return void this.schedule(delay * 10);
+                                    if (!cursor && !tx)
+                                        return;
                                     if (!cursor)
                                         return;
+                                    if (this.chan.lock)
+                                        return void this.schedule(delay *= 2);
                                     const {key, expiry} = cursor.value;
                                     if (expiry > global_1.Date.now())
                                         return void this.schedule(expiry - global_1.Date.now());

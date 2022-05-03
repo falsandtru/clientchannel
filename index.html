@@ -47,15 +47,15 @@
     // connect to database
     const { StoreChannel } = require('clientchannel');
     const chan = new StoreChannel('demo', {
-      schema: function () {
+      schemas: {
         // define schema
-        return {
+        'canvas': () => ({
           event() {
             return this[StoreChannel.Value.event];
           },
           title: '',
           content: null
-        };
+        }),
       },
       destroy: function (reason) {
         console.warn(reason);
@@ -94,10 +94,10 @@
 <script>
   const { StoreChannel } = require('clientchannel');
   const chan = new StoreChannel('random', {
-    schema: function () {
-      return {
+    schemas: {
+      '': () => ({
         data: 0
-      };
+      }),
     },
     capacity: 1000,
     age: 60 * 1e3,
