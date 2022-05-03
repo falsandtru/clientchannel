@@ -2883,8 +2883,9 @@ require = function () {
                         if (error)
                             return;
                         if (!cursor) {
-                            if (tx)
+                            if (tx && clear && this.memory.reflect([key]).every(({id}) => id > 0)) {
                                 return (_a = this.relation) === null || _a === void 0 ? void 0 : _a.delete(key, tx);
+                            }
                             for (const event of events) {
                                 void this.memory.off([
                                     event.key,
@@ -2896,8 +2897,6 @@ require = function () {
                                     event.prop,
                                     event.id
                                 ]);
-                            }
-                            if (clear && this.memory.reflect([key]).every(({id}) => id > 0)) {
                             }
                             return;
                         } else {
