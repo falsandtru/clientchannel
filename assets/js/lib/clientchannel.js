@@ -2352,10 +2352,20 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.hasBinary = exports.isStorable = void 0;
+            exports.hasBinary = exports.isValidPropertyValue = exports.isValidPropertyName = exports.isValidProperty = void 0;
             const alias_1 = _dereq_('spica/alias');
             const type_1 = _dereq_('spica/type');
-            function isStorable(value) {
+            const RegValidValueNameFormat = /^[a-zA-Z][0-9a-zA-Z_]*$/;
+            const RegInvalidValueNameFormat = /^[0-9A-Z_]+$/;
+            function isValidProperty([name, value]) {
+                return isValidPropertyName(name) && isValidPropertyValue(value);
+            }
+            exports.isValidProperty = isValidProperty;
+            function isValidPropertyName(prop) {
+                return prop.length > 0 && !prop.startsWith('_') && !prop.endsWith('_') && !RegInvalidValueNameFormat.test(prop) && RegValidValueNameFormat.test(prop);
+            }
+            exports.isValidPropertyName = isValidPropertyName;
+            function isValidPropertyValue(value) {
                 switch (typeof value) {
                 case 'undefined':
                 case 'boolean':
@@ -2364,7 +2374,7 @@ require = function () {
                     return true;
                 case 'object':
                     try {
-                        return value === null || isBinary(value) || (0, alias_1.ObjectValues)(value).every(value => isStorable(value));
+                        return value === null || isBinary(value) || (0, alias_1.ObjectEntries)(value).every(isValidProperty);
                     } catch (_a) {
                         return false;
                     }
@@ -2372,9 +2382,9 @@ require = function () {
                     return false;
                 }
             }
-            exports.isStorable = isStorable;
+            exports.isValidPropertyValue = isValidPropertyValue;
             function hasBinary(value) {
-                return !(0, type_1.isPrimitive)(value) ? isBinary(value) || (0, alias_1.ObjectValues)(value).some(value => hasBinary(value)) : false;
+                return !(0, type_1.isPrimitive)(value) ? isBinary(value) || (0, alias_1.ObjectValues)(value).some(hasBinary) : false;
             }
             exports.hasBinary = hasBinary;
             function isBinary(value) {
@@ -2390,7 +2400,7 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.isValidPropertyValue = exports.isValidPropertyName = exports.EventRecordValue = exports.SavedEventRecord = exports.LoadedEventRecord = exports.StoredEventRecord = exports.UnstoredEventRecord = exports.EventRecordType = void 0;
+            exports.EventRecordValue = exports.SavedEventRecord = exports.LoadedEventRecord = exports.StoredEventRecord = exports.UnstoredEventRecord = exports.EventRecordType = void 0;
             const global_1 = _dereq_('spica/global');
             const alias_1 = _dereq_('spica/alias');
             const identifier_1 = _dereq_('./identifier');
@@ -2418,12 +2428,12 @@ require = function () {
                         throw new TypeError(`ClientChannel: EventRecord: Invalid event value: ${ JSON.stringify(this.value) }`);
                     if (typeof this.date !== 'number' || this.date >= 0 === false || !global_1.Number.isFinite(this.date))
                         throw new TypeError(`ClientChannel: EventRecord: Invalid event date: ${ this.date }`);
-                    this.prop = this.type === exports.EventRecordType.put ? (0, alias_1.ObjectKeys)(value).filter(isValidPropertyName)[0] : '';
+                    this.prop = this.type === exports.EventRecordType.put ? (0, alias_1.ObjectKeys)(value).filter(value_1.isValidPropertyName)[0] : '';
                     if (typeof this.prop !== 'string')
                         throw new TypeError(`ClientChannel: EventRecord: Invalid event prop: ${ this.key }`);
                     switch (type) {
                     case exports.EventRecordType.put:
-                        if (!isValidPropertyName(this.prop))
+                        if (!(0, value_1.isValidPropertyName)(this.prop))
                             throw new TypeError(`ClientChannel: EventRecord: Invalid event prop with ${ this.type }: ${ this.prop }`);
                         this.value = value = new EventRecordValue({ [this.prop]: value[this.prop] });
                         return;
@@ -2479,16 +2489,6 @@ require = function () {
                 }
             }
             exports.EventRecordValue = EventRecordValue;
-            const RegValidValueNameFormat = /^[a-zA-Z][0-9a-zA-Z_]*$/;
-            const RegInvalidValueNameFormat = /^[0-9A-Z_]+$/;
-            function isValidPropertyName(prop) {
-                return prop.length > 0 && !prop.startsWith('_') && !prop.endsWith('_') && !RegInvalidValueNameFormat.test(prop) && RegValidValueNameFormat.test(prop);
-            }
-            exports.isValidPropertyName = isValidPropertyName;
-            function isValidPropertyValue(dao) {
-                return prop => (0, value_1.isStorable)(dao[prop]);
-            }
-            exports.isValidPropertyValue = isValidPropertyValue;
         },
         {
             '../database/value': 38,
@@ -3256,7 +3256,7 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.isValidPropertyValue = exports.isValidPropertyName = exports.build = exports.DAO = void 0;
+            exports.build = exports.isValidPropertyValue = exports.isValidPropertyName = exports.isValidProperty = exports.DAO = void 0;
             var builder_1 = _dereq_('./module/builder');
             Object.defineProperty(exports, 'DAO', {
                 enumerable: true,
@@ -3264,10 +3264,10 @@ require = function () {
                     return builder_1.DAO;
                 }
             });
-            Object.defineProperty(exports, 'build', {
+            Object.defineProperty(exports, 'isValidProperty', {
                 enumerable: true,
                 get: function () {
-                    return builder_1.build;
+                    return builder_1.isValidProperty;
                 }
             });
             Object.defineProperty(exports, 'isValidPropertyName', {
@@ -3282,6 +3282,12 @@ require = function () {
                     return builder_1.isValidPropertyValue;
                 }
             });
+            Object.defineProperty(exports, 'build', {
+                enumerable: true,
+                get: function () {
+                    return builder_1.build;
+                }
+            });
         },
         { './module/builder': 45 }
     ],
@@ -3289,19 +3295,26 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.build = exports.DAO = exports.isValidPropertyValue = exports.isValidPropertyName = void 0;
+            exports.build = exports.DAO = exports.isValidPropertyValue = exports.isValidPropertyName = exports.isValidProperty = void 0;
             const alias_1 = _dereq_('spica/alias');
-            const event_1 = _dereq_('../../../data/es/event');
+            const value_1 = _dereq_('../../../data/database/value');
+            var value_2 = _dereq_('../../../data/database/value');
+            Object.defineProperty(exports, 'isValidProperty', {
+                enumerable: true,
+                get: function () {
+                    return value_2.isValidProperty;
+                }
+            });
             Object.defineProperty(exports, 'isValidPropertyName', {
                 enumerable: true,
                 get: function () {
-                    return event_1.isValidPropertyName;
+                    return value_2.isValidPropertyName;
                 }
             });
             Object.defineProperty(exports, 'isValidPropertyValue', {
                 enumerable: true,
                 get: function () {
-                    return event_1.isValidPropertyValue;
+                    return value_2.isValidPropertyValue;
                 }
             });
             var DAO;
@@ -3317,28 +3330,27 @@ require = function () {
                 if (typeof source[DAO.key] !== 'string')
                     throw new TypeError(`ClientChannel: DAO: Invalid key: ${ source[DAO.key] }`);
                 const descmap = {
-                    ...(0, alias_1.ObjectKeys)(dao).filter(event_1.isValidPropertyName).filter((0, event_1.isValidPropertyValue)(dao)).reduce((map, prop) => {
+                    ...(0, alias_1.ObjectEntries)(dao).filter(value_1.isValidProperty).reduce((map, [prop, value]) => {
                         {
                             const desc = (0, alias_1.ObjectGetOwnPropertyDescriptor)(dao, prop);
                             if (desc && (desc.get || desc.set))
                                 return map;
                         }
-                        const iniVal = dao[prop];
                         if (source[prop] === void 0) {
-                            source[prop] = iniVal;
+                            source[prop] = value;
                         }
                         map[prop] = {
                             enumerable: true,
                             get() {
-                                const val = source[prop] === void 0 ? iniVal : source[prop];
+                                const val = source[prop] === void 0 ? value : source[prop];
                                 void (get === null || get === void 0 ? void 0 : get(prop, val));
                                 return val;
                             },
                             set(newVal) {
-                                if (!(0, event_1.isValidPropertyValue)({ [prop]: newVal })(prop))
+                                if (!(0, value_1.isValidPropertyValue)(newVal))
                                     throw new TypeError(`ClientChannel: DAO: Invalid value: ${ JSON.stringify(newVal) }`);
                                 const oldVal = source[prop];
-                                source[prop] = newVal === void 0 ? iniVal : newVal;
+                                source[prop] = newVal === void 0 ? value : newVal;
                                 void (set === null || set === void 0 ? void 0 : set(prop, newVal, oldVal));
                             }
                         };
@@ -3379,7 +3391,7 @@ require = function () {
             exports.build = build;
         },
         {
-            '../../../data/es/event': 39,
+            '../../../data/database/value': 38,
             'spica/alias': 4
         }
     ],
@@ -3966,7 +3978,7 @@ require = function () {
                     this.factory = factory;
                     this.sources = new Map();
                     this.links = new Map();
-                    const props = (0, alias_1.ObjectKeys)(factory()).filter(api_1.isValidPropertyName).filter((0, api_1.isValidPropertyValue)(factory()));
+                    const props = (0, alias_1.ObjectEntries)(factory()).filter(api_1.isValidProperty).map(([prop]) => prop);
                     const update = (key, props) => {
                         const source = this.sources.get(key);
                         const memory = this.get(key);
@@ -4230,12 +4242,12 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.StorageChannel = void 0;
             const alias_1 = _dereq_('spica/alias');
-            const observer_1 = _dereq_('spica/observer');
-            const cancellation_1 = _dereq_('spica/cancellation');
-            const compare_1 = _dereq_('spica/compare');
             const api_1 = _dereq_('../../dao/api');
             const api_2 = _dereq_('../../../infrastructure/webstorage/api');
             const storage_1 = _dereq_('../model/storage');
+            const observer_1 = _dereq_('spica/observer');
+            const cancellation_1 = _dereq_('spica/cancellation');
+            const compare_1 = _dereq_('spica/compare');
             const cache = new Set();
             class StorageChannel {
                 constructor(name, storage = api_2.sessionStorage || storage_1.fakeStorage, factory, migrate) {
@@ -4259,10 +4271,7 @@ require = function () {
                     this.link_ = (0, api_1.build)(source, factory, (prop, newValue, oldValue) => {
                         if (!this.alive)
                             return;
-                        void this.storage.setItem(this.name, JSON.stringify((0, alias_1.ObjectKeys)(source).filter(api_1.isValidPropertyName).filter((0, api_1.isValidPropertyValue)(source)).reduce((acc, prop) => {
-                            acc[prop] = source[prop];
-                            return acc;
-                        }, {})));
+                        void this.storage.setItem(this.name, JSON.stringify((0, alias_1.ObjectFromEntries)((0, alias_1.ObjectEntries)(source).filter(api_1.isValidProperty))));
                         const event = new StorageChannel.Event(StorageChannel.EventType.send, prop, newValue, oldValue);
                         void this.events.send.emit([event.prop], event);
                         void source[StorageChannel.Value.event].emit([
@@ -4276,7 +4285,7 @@ require = function () {
                         this.name
                     ], ({newValue}) => {
                         const item = parse(newValue);
-                        void (0, alias_1.ObjectKeys)(item).filter(api_1.isValidPropertyName).filter((0, api_1.isValidPropertyValue)(item)).forEach(prop => {
+                        void (0, alias_1.ObjectEntries)(item).filter(api_1.isValidProperty).forEach(([prop]) => {
                             const oldVal = source[prop];
                             const newVal = item[prop];
                             if ((0, compare_1.equal)(newVal, oldVal))
