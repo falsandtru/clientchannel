@@ -78,7 +78,7 @@ export class ExpiryStore<K extends string> {
         this.chan.lock = true;
         return void this.store.cursor(
           null, ExpiryStoreSchema.expiry, 'next', 'readonly', [],
-          (error, cursor) => {
+          (error, cursor, tx) => {
             this.chan.lock = false;
             if (timer) {
               clearInterval(timer);
@@ -86,9 +86,10 @@ export class ExpiryStore<K extends string> {
             }
             schedule = Infinity;
             if (!this.cancellation.alive) return;
-            if (this.chan.lock) return void this.schedule(delay *= 2);
             if (error) return void this.schedule(delay * 10);
+            if (!cursor && !tx) return;
             if (!cursor) return;
+            if (this.chan.lock) return void this.schedule(delay *= 2);
             const { key, expiry }: ExpiryRecord<K> = cursor.value;
             if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
             if (!this.ownership.extend('store', delay)) return void this.schedule(delay *= 2);

@@ -347,6 +347,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             : void 0);
         void tx.addEventListener('error', fail);
         void tx.addEventListener('abort', fail);
+        void tx.commit();
       },
       () => void clean() || void loss(),
       tx);
@@ -386,7 +387,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
                     events.reduce((date, e) => e.date > date ? e.date : date, 0)),
                   tx);
               case EventStore.EventType.delete:
-                return;
+                return void tx.commit();
             }
             throw new TypeError(`ClientChannel: EventStore: Invalid event type: ${event.type}`);
           }
@@ -415,8 +416,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       (error, cursor, tx) => {
         if (!this.alive) return;
         if (error) return;
-        assert(tx = tx!);
         if (!cursor) {
+          if (tx) return this.relation?.delete(key, tx);
           for (const event of events) {
             void this.memory
               .off([event.key, event.prop, event.id]);
@@ -424,10 +425,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
               .off([event.key, event.prop, event.id]);
           }
           if (clear && this.memory.reflect([key]).every(({ id }) => id > 0)) {
-            this.relation?.delete(key, tx);
             assert(this.events.clear.reflect([key]));
           }
-          return void tx.commit();
+          return;
         }
         else {
           try {
@@ -477,7 +477,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           .openCursor(query, direction);
       void req.addEventListener('success', () => {
         const cursor = req.result;
-        if (!cursor) return void cb(req.error, cursor, tx);
+        if (!cursor) return void cb(tx.error || req.error, null, tx), void tx.commit();
         try {
           void cb(req.error, cursor, tx);
         }
@@ -487,7 +487,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         }
       });
       void tx.addEventListener('complete', () =>
-        (tx.error || req.error) && void cb(tx.error || req.error, null, null));
+        void cb(tx.error || req.error, null, null));
       void tx.addEventListener('error', () =>
         void cb(tx.error || req.error, null, null));
       void tx.addEventListener('abort ', () =>

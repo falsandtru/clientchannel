@@ -86,7 +86,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
             .objectStore(this.name)
             .get(key);
       void req.addEventListener('success', () =>
-        cb?.(req.error, key, req.result) && this.cache.set(key, req.result));
+        cb?.(tx.error || req.error, key, req.result) && this.cache.set(key, req.result));
       void tx.addEventListener('complete', () =>
         void cancellation?.close());
       void tx.addEventListener('error', () => (
@@ -197,7 +197,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
           .openCursor(query, direction);
       void req.addEventListener('success', () => {
         const cursor = req.result;
-        if (!cursor) return void cb(tx.error || req.error, cursor, tx);
+        if (!cursor) return void cb(tx.error || req.error, null, tx), void tx.commit();
         try {
           void this.cache.set(cursor.primaryKey as K, { ...cursor.value });
           void cb(tx.error || req.error, cursor, tx);
@@ -208,7 +208,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
         }
       });
       void tx.addEventListener('complete', () =>
-        (tx.error || req.error) && void cb(tx.error || req.error, null, null));
+        void cb(tx.error || req.error, null, null));
       void tx.addEventListener('error', () =>
         void cb(tx.error || req.error, null, null));
       void tx.addEventListener('abort', () =>
