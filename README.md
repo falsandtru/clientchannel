@@ -91,7 +91,7 @@ const chan = new StorageChannel('config/version', {
 });
 const link = chan.link();
 const VERSION = 1;
-link.event().on(['recv', 'version'], ({ newValue }) => {
+link.event().on(['recv', 'version'], ({ newValue = 0 }) => {
   switch (true) {
     case newValue === VERSION:
       return;
