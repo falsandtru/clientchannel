@@ -14,7 +14,7 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
   constructor(
     public readonly name: string,
     private readonly storage: StorageLike = sessionStorage || fakeStorage,
-    factory: () => V,
+    schema: () => V,
     migrate?: (link: V) => void,
   ) {
     if (cache.has(name)) throw new Error(`ClientChannel: Storage channel "${name}" is already open.`);
@@ -26,7 +26,7 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
       [StorageChannel.Value.key]: this.name,
       [StorageChannel.Value.event]: new Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>({ limit: Infinity }),
     };
-    this.link_ = build<V>(source, factory, (prop, newValue, oldValue) => {
+    this.link_ = build<V>(source, schema(), (prop, newValue, oldValue) => {
       if (!this.alive) return;
       void this.storage.setItem(this.name, JSON.stringify(ObjectFromEntries(ObjectEntries(source).filter(isValidProperty))));
       const event = new StorageChannel.Event<V>(StorageChannel.EventType.send, prop, newValue, oldValue);
@@ -40,12 +40,12 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
         void (ObjectEntries(item) as [Prop<V>, V[Prop<V>]][])
           .filter(isValidProperty)
           .forEach(([prop]) => {
-            const oldVal = source[prop];
-            const newVal = item[prop];
-            if (equal(newVal, oldVal)) return;
-            source[prop] = newVal;
+            const oldValue = source[prop];
+            const newValue = item[prop];
+            if (equal(newValue, oldValue)) return;
+            source[prop] = newValue;
             void migrate?.(this.link_);
-            const event = new StorageChannel.Event(StorageChannel.EventType.recv, prop, source[prop], oldVal);
+            const event = new StorageChannel.Event(StorageChannel.EventType.recv, prop, source[prop], oldValue);
             void this.events.recv.emit([event.prop], event);
             void (source[StorageChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>).emit([event.type, event.prop], event);
           });

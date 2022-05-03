@@ -1,80 +1,76 @@
-import { ObjectDefineProperties, ObjectEntries } from 'spica/alias';
+import { ObjectDefineProperties, ObjectKeys } from 'spica/alias';
 import { StoreChannel as IStoreChannel } from '../../../../../';
 import { Prop } from '../../../data/database/value';
-import { isValidProperty, build } from '../../dao/api';
+import { build } from '../../dao/api';
 import { ChannelStore } from '../model/channel';
 import { StorageChannel } from '../../webstorage/api';
 import { Observation } from 'spica/observer';
 import { throttle } from 'spica/throttle';
 import { equal } from 'spica/compare';
 
-export class StoreChannel<K extends string, V extends StoreChannel.Value<K>> extends ChannelStore<K, V> implements IStoreChannel<K, V> {
+export class StoreChannel<M extends object, K extends keyof M & string = keyof M & string> extends ChannelStore<K, StoreChannel.Value<K>, M> implements IStoreChannel<M, K> {
   constructor(
     name: string,
-    private readonly factory: () => V,
+    private readonly schemas: { [K in keyof M & string]: (key: K) => M[K]; },
     {
       migrate,
       destroy = () => true,
       age = Infinity,
       capacity = Infinity,
       debug = false,
-    }: Partial<StoreChannel.Config<K, V>> & { debug?: boolean; } = {},
+    }: Partial<StoreChannel.Config<M>> & { debug?: boolean; } = {},
   ) {
     super(name, destroy, age, capacity, debug);
 
-    const props = (ObjectEntries(factory()) as [Prop<V>, V[Prop<V>]][])
-      .filter(isValidProperty)
-      .map(([prop]) => prop);
-
-    const update = (key: K, props: Prop<V>[]): void => {
-      const source = this.sources.get(key)! as V;
-      const memory = this.get(key)! as V;
+    const update = (key: K, prop: Prop<M[K]> | ''): void => {
+      const source = this.sources.get(key)! as M[K];
+      const memory = this.get(key)! as M[K];
       const link = this.link_(key);
       assert(memory instanceof Object === false);
+      const props = prop === ''
+        ? ObjectKeys(memory) as Prop<M[K]>[]
+        : prop in memory ? [prop] : [];
       const changes = props
-        .filter(prop => prop in memory)
         .map(prop => {
-          const newVal = memory[prop];
-          const oldVal = source[prop];
-          source[prop] = newVal;
+          const newValue = memory[prop];
+          const oldValue = source[prop];
+          source[prop] = newValue;
           return {
             prop,
-            newVal,
-            oldVal,
+            newValue,
+            oldValue,
           };
         })
-        .filter(({ newVal, oldVal }) =>
-          !equal(newVal, oldVal));
+        .filter(({ newValue, oldValue }) =>
+          !equal(newValue, oldValue));
       if (changes.length === 0) return;
       void migrate?.(link);
-      for (const { prop, oldVal } of changes) {
-        void (source[StoreChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>)
-          .emit([StorageChannel.EventType.recv, prop], new StorageChannel.Event<V>(StorageChannel.EventType.recv, prop, memory[prop], oldVal));
+      for (const { prop, oldValue } of changes) {
+        void (source[StoreChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<M[K]>], StorageChannel.Event<M[K]>, void>)
+          .emit([StorageChannel.EventType.recv, prop], new StorageChannel.Event<M[K]>(StorageChannel.EventType.recv, prop, memory[prop], oldValue));
       }
-    }
+    };
 
     void this.events_.load
       .monitor([], ({ key, prop, type }) => {
         if (!this.sources.has(key)) return;
         switch (type) {
           case StoreChannel.EventType.put:
-            return void update(key, props.filter(a => a === prop));
           case StoreChannel.EventType.snapshot:
-            return void update(key, props);
+            return void update(key, prop);
           case StoreChannel.EventType.delete:
             return;
         }
       });
-    assert(Object.freeze(this));
   }
-  private readonly sources = new Map<K, Partial<V>>();
-  private readonly links = new Map<K, V>();
-  private link_(key: K): V {
+  private readonly sources = new Map<K, Partial<M[K]>>();
+  private readonly links = new Map<K, M[K]>();
+  private link_<L extends K>(key: L): M[L] {
     return this.links.has(key)
-      ? this.links.get(key)!
-      : this.links.set(key, build(
+      ? this.links.get(key) as M[L]
+      : this.links.set(key, build<M[L]>(
           ObjectDefineProperties(
-            this.sources.set(key, this.get(key)).get(key)!,
+            this.sources.set(key, this.get(key) as Partial<M[L]>).get(key) as M[L] & object,
             {
               [StoreChannel.Value.meta]: {
                 get: () => this.meta(key)
@@ -89,20 +85,23 @@ export class StoreChannel<K extends string, V extends StoreChannel.Value<K>> ext
                 get: () => this.meta(key).date
               },
               [StoreChannel.Value.event]: {
-                value: new Observation<[StorageChannel.EventType], StorageChannel.Event<V>, void>({ limit: Infinity })
+                value: new Observation<[StorageChannel.EventType, Prop<M[L]>], StorageChannel.Event<M[L]>, void>({ limit: Infinity })
               },
-            }) as V,
-          this.factory,
+            }),
+          '' in this.schemas
+            ? (this.schemas[key] ?? this.schemas[''])(key) as M[L] & object
+            : this.schemas[key](key) as M[L] & object,
           (prop, newValue, oldValue) => {
             if (!this.alive) return;
-            void this.add(new StoreChannel.Record<K, V>(key, { [prop]: newValue } as unknown as Partial<V>));
-            void (this.sources.get(key)![StoreChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>)
-              .emit([StorageChannel.EventType.send, prop], new StorageChannel.Event<V>(StorageChannel.EventType.send, prop, newValue, oldValue));
+            void this.add(new StoreChannel.Record<L, StoreChannel.Value<L>>(key, { [prop]: newValue }));
+            if (equal(newValue, oldValue)) return;
+            void (this.sources.get(key)![StoreChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<M[L]>], StorageChannel.Event<M[L]>, void>)
+              .emit([StorageChannel.EventType.send, prop], new StorageChannel.Event<M[L]>(StorageChannel.EventType.send, prop, newValue, oldValue));
           },
           throttle(100, () => this.alive && this.links.has(key) && void this.log(key))))
-          .get(key)!;
+          .get(key) as M[L];
   }
-  public link(key: K, age?: number): V {
+  public link<L extends K>(key: L, age?: number): M[L] {
     void this.ensureAliveness();
     void this.expire(key, age);
     void this.load(key, error =>

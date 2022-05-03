@@ -12,6 +12,9 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       destroy('test');
     });
 
+    interface KeyMap {
+      [key: string]: Value;
+    }
     interface Value extends StoreChannel.Value {
     }
     class Value {
@@ -20,13 +23,13 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     }
 
     it('resource', () => {
-      const chan = new StoreChannel('test', () => new Value());
-      assert.throws(() => new StoreChannel('test', () => new Value()));
+      const chan = new StoreChannel<KeyMap>('test', { '': () => new Value() });
+      assert.throws(() => new StoreChannel<KeyMap>('test', { '': () => new Value() }));
       chan.destroy();
     });
 
     it('link', () => {
-      const chan = new StoreChannel('test', () => new Value());
+      const chan = new StoreChannel<KeyMap>('test', { '': () => new Value() });
       const link = chan.link('a');
 
       assert(link === chan.link('a'));
@@ -40,7 +43,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     });
 
     it('sync', done => {
-      const chan = new StoreChannel('test', () => new Value());
+      const chan = new StoreChannel<KeyMap>('test', { '': () => new Value() });
 
       listen_('test', db => {
         db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { num: 1 })));
@@ -62,7 +65,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     });
 
     it('load', done => {
-      const chan = new StoreChannel('test', () => new Value());
+      const chan = new StoreChannel<KeyMap>('test', { '': () => new Value() });
 
       chan.load('z', err => {
         assert(!err);
@@ -84,7 +87,7 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     });
 
     it('send', done => {
-      const chan = new StoreChannel('test', () => new Value());
+      const chan = new StoreChannel<KeyMap>('test', { '': () => new Value() });
       const link = chan.link('a');
 
       link[StoreChannel.Value.event].once(['send', 'num'], async ev => {
@@ -112,13 +115,13 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     });
 
     it('recv', done => {
-      const chan = new StoreChannel('test', () => new Value());
+      const chan = new StoreChannel<KeyMap>('test', { '': () => new Value() });
       const link = chan.link('a');
 
       assert(link.num === 0);
       listen_('test', db => {
         db.transaction('data', 'readwrite').objectStore('data').put(record(new StoreChannel.Record('a', { num: 1 }))).onsuccess = async () => {
-          chan['schema'].data.load('a');
+          chan['stores'].data.load('a');
           link[StoreChannel.Value.event].once(['recv', 'num'], async ev => {
             assert.deepEqual(ev, {
               type: 'recv',
@@ -139,13 +142,13 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
     });
 
     it('migrate', async () => {
-      let chan = new StoreChannel('test', () => new Value());
+      let chan = new StoreChannel<KeyMap>('test', { '': () => new Value() });
       let link = chan.link('a');
 
       link.num = 1;
       await new Promise(resolve => chan.events.save.once(['a', 'num', 'put'], resolve));
       chan.close();
-      chan = new StoreChannel('test', () => new Value(), {
+      chan = new StoreChannel('test', { '': () => new Value() }, {
         migrate: link => {
           assert(link[StoreChannel.Value.id] === 1);
           assert(link.num === 1);

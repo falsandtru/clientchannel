@@ -11,39 +11,38 @@ export namespace DAO {
   export const event = Symbol.for('clientchannel/DAO.event');
 }
 
-export function build<T extends object>(
-  source: T,
-  factory: () => T,
-  set?: <P extends Prop<T>>(prop: P, newVal: T[P], oldVal: T[P]) => void,
+export function build<T>(
+  source: T & object,
+  target: T & object,
+  set?: <P extends Prop<T>>(prop: P, newValue: T[P], oldValue: T[P]) => void,
   get?: <P extends Prop<T>>(prop: P, val: T[P]) => void,
 ): T {
-  const dao = factory();
-  assert(Object.values(dao).every(prop => !(prop in dao)));
+  assert(Object.values(target).every(prop => !(prop in target)));
   if (typeof source[DAO.key] !== 'string') throw new TypeError(`ClientChannel: DAO: Invalid key: ${source[DAO.key]}`);
   const descmap: PropertyDescriptorMap = {
-    ...(ObjectEntries(dao) as [Prop<T>, T[Prop<T>]][])
+    ...(ObjectEntries(target) as [Prop<T>, T[Prop<T>]][])
       .filter(isValidProperty)
-      .reduce<PropertyDescriptorMap>((map, [prop, value]) => {
-        assert(dao.hasOwnProperty(prop));
+      .reduce<PropertyDescriptorMap>((map, [prop, iniValue]) => {
+        assert(target.hasOwnProperty(prop));
         {
-          const desc = ObjectGetOwnPropertyDescriptor(dao, prop);
-          if (desc && (desc.get || desc.set)) return map;
+          const desc = ObjectGetOwnPropertyDescriptor(target, prop) ?? {};
+          if (desc.get || desc.set) return map;
         }
-        if (source[prop] === void 0) {
-          source[prop] = value;
+        if (!(prop in source)) {
+          source[prop] = iniValue as typeof source[typeof prop];
         }
         map[prop] = {
           enumerable: true,
           get() {
-            const val = source[prop] === void 0 ? value : source[prop];
-            void get?.(prop, val);
-            return val;
+            const value = source[prop];
+            void get?.(prop, value);
+            return value;
           },
-          set(newVal) {
-            if (!isValidPropertyValue(newVal)) throw new TypeError(`ClientChannel: DAO: Invalid value: ${JSON.stringify(newVal)}`);
-            const oldVal = source[prop];
-            source[prop] = newVal === void 0 ? value : newVal;
-            void set?.(prop, newVal, oldVal);
+          set(newValue) {
+            if (!isValidPropertyValue(newValue)) throw new TypeError(`ClientChannel: DAO: Invalid value: ${JSON.stringify(newValue)}`);
+            const oldValue = source[prop];
+            source[prop] = newValue;
+            void set?.(prop, newValue, oldValue);
           },
         };
         return map;
@@ -76,7 +75,7 @@ export function build<T extends object>(
       },
     }
   };
-  void ObjectDefineProperties(dao, descmap);
-  void ObjectSeal(dao);
-  return dao;
+  void ObjectDefineProperties(target, descmap);
+  void ObjectSeal(target);
+  return target;
 }

@@ -1,15 +1,15 @@
 import { DAO, Prop } from './src/layer/domain/dao/api';
 import { Observer } from './observer';
 
-export class StoreChannel<K extends string, V extends StoreChannel.Value<K>> {
-  constructor(name: string, config: StoreChannel.Config<K, V>);
+export class StoreChannel<M extends object, K extends keyof M & string = keyof M & string, V extends M[K] = M[K]> {
+  constructor(name: string, config: StoreChannel.Config<M>);
   readonly events: {
-    readonly load: Observer<{ [P in Prop<V>]: [[K, P, StoreChannel.EventType], StoreChannel.Event<K, P>, void]; }[Prop<V>] | [[K, '', StoreChannel.EventType], StoreChannel.Event<K, ''>, void]>;
-    readonly save: Observer<{ [P in Prop<V>]: [[K, P, StoreChannel.EventType], StoreChannel.Event<K, P>, void]; }[Prop<V>] | [[K, '', StoreChannel.EventType], StoreChannel.Event<K, ''>, void]>;
-    readonly loss: Observer<{ [P in Prop<V>]: [[K, P, StoreChannel.EventType], StoreChannel.Event<K, P>, void]; }[Prop<V>] | [[K, '', StoreChannel.EventType], StoreChannel.Event<K, ''>, void]>;
+    readonly load: Observer<{ [L in K]: { [P in Prop<M[L]>]: [[L, P, StoreChannel.EventType], StoreChannel.Event<L, P>, void]; }[Prop<M[L]>] | [[L, '', StoreChannel.EventType], StoreChannel.Event<L, ''>, void]; }[K]>;
+    readonly save: Observer<{ [L in K]: { [P in Prop<M[L]>]: [[L, P, StoreChannel.EventType], StoreChannel.Event<L, P>, void]; }[Prop<M[L]>] | [[L, '', StoreChannel.EventType], StoreChannel.Event<L, ''>, void]; }[K]>;
+    readonly loss: Observer<{ [L in K]: { [P in Prop<M[L]>]: [[L, P, StoreChannel.EventType], StoreChannel.Event<L, P>, void]; }[Prop<M[L]>] | [[L, '', StoreChannel.EventType], StoreChannel.Event<L, ''>, void]; }[K]>;
   };
   sync(keys: readonly K[], timeout?: number): Promise<PromiseSettledResult<K>[]>;
-  link(key: K, age?: number): V;
+  link<L extends K>(key: L, age?: number): M[L];
   delete(key: K): void;
   recent(timeout?: number): Promise<K[]>;
   recent(cb?: (key: K, keys: readonly K[]) => boolean | void, timeout?: number): Promise<K[]>;
@@ -36,11 +36,11 @@ export namespace StoreChannel {
     readonly key: K;
     readonly date: number;
   }
-  export interface Config<K extends string, V extends StoreChannel.Value<K>> {
-    schema: () => V;
+  export interface Config<M extends object> {
+    schemas: { [K in keyof M & string]: (key: K) => M[K]; };
     capacity?: number;
     age?: number;
-    migrate?(link: V): void;
+    migrate?(link: M[keyof M & string]): void;
     destroy?(reason: unknown, event?: global.Event): boolean;
   }
   export interface Event<K extends string, P extends string> {

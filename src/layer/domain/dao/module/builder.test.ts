@@ -25,24 +25,25 @@ describe('Unit: layers/domain/dao/module/build', () => {
     }
 
     it('init', () => {
-      const source = {[DAO.key]: 'test', m: 1} as any as Value;
-      const dao = build(source, factory);
+      const source = { [DAO.key]: 'test', m: 1 } as any as Value;
+      const object = build(source, factory());
 
-      assert(dao[DAO.key] === 'test');
-      assert(dao.name === 'test');
-      assert(dao.n === 0);
-      assert(dao.m === 1);
-      assert(dao.p_ === 0);
-      assert(dao.p === 0);
+      assert(object instanceof Value);
+      assert(object[DAO.key] === 'test');
+      assert(object.name === 'test');
+      assert(object.n === 0);
+      assert(object.m === 1);
+      assert(object.p_ === 0);
+      assert(object.p === 0);
     });
 
     it('seal', () => {
       const source = {[DAO.key]: 'test', m: 1} as any as Value;
-      const dao = build(source, factory);
+      const target = build(source, factory());
 
       try {
         // @ts-expect-error
-        delete dao.n;
+        delete target.n;
         throw 0;
       }
       catch (e) {
@@ -51,93 +52,103 @@ describe('Unit: layers/domain/dao/module/build', () => {
     });
 
     it('id', () => {
-      const source = {[DAO.key]: 'test', m: 1} as any as Value;
-      const dao = build(source, factory);
+      const source = { [DAO.key]: 'test', m: 1 } as any as Value;
+      const object = build(source, factory());
 
-      assert(dao[DAO.id] === undefined);
+      assert(object[DAO.id] === undefined);
+      source[DAO.id] = 1;
+      assert(object[DAO.id] === 1);
 
       try {
-        dao[DAO.id] = 0;
+        object[DAO.id] = 0;
         throw 0;
       }
       catch (e) {
         assert(e instanceof Error);
       }
+
+      assert(object[DAO.id] === 1);
     });
 
     it('key', () => {
-      const source = {[DAO.key]: 'test', m: 1} as any as Value;
-      const dao = build(source, factory);
+      const source = { [DAO.key]: 'test', m: 1 } as any as Value;
+      const object = build(source, factory());
 
-      assert(dao.name === 'test');
+      assert(object.name === 'test');
 
       try {
-        dao.name = '';
+        object.name = '';
         throw 0;
       }
       catch (e) {
         assert(e instanceof Error);
       }
+
+      assert(object.name === 'test');
     });
 
     it('prop', () => {
-      const source = {[DAO.key]: 'test', m: 1} as any as Value;
-      const dao = build(source, factory);
+      const source = { [DAO.key]: 'test', m: 1 } as any as Value;
+      const object = build(source, factory());
 
-      dao.n = 2;
-      dao.m = 3;
-      assert(dao.n === 2);
-      assert(dao.m === 3);
+      object.n = 2;
+      object.m = 3;
+      assert(object.n === 2);
+      assert(object.m === 3);
       assert(source.n === 2);
       assert(source.m === 3);
 
       source.n = 4;
       source.m = 5;
-      assert(dao.n === 4);
-      assert(dao.m === 5);
+      assert(object.n === 4);
+      assert(object.m === 5);
       assert(source.n === 4);
       assert(source.m === 5);
     });
 
     it('accessor', () => {
-      const source = {[DAO.key]: 'test', m: 1} as any as Value;
-      const dao = build(source, factory);
+      const source = { [DAO.key]: 'test', m: 1 } as any as Value;
+      const object = build(source, factory());
 
-      dao.p_ = 6;
-      assert(dao.p_ === 6);
-      assert(dao.p === 6);
+      object.p_ = 6;
+      assert(object.p_ === 6);
+      assert(object.p === 6);
       assert(source.p_ === undefined);
       assert(source.p === undefined);
 
       source.p_ = 7;
-      assert(dao.p_ === 6);
-      assert(dao.p === 6);
+      assert(object.p_ === 6);
+      assert(object.p === 6);
       assert(source.p_ === 7);
       assert(source.p === undefined);
 
-      dao.p = 8;
-      assert(dao.p === 8);
-      assert(dao.p_ === 8);
+      object.p = 8;
+      assert(object.p === 8);
+      assert(object.p_ === 8);
       assert(source.p_ === 7);
       assert(source.p === undefined);
 
       source.p = 9;
-      assert(dao.p === 8);
-      assert(dao.p_ === 8);
+      assert(object.p === 8);
+      assert(object.p_ === 8);
       assert(source.p_ === 7);
       assert(source.p === 9);
     });
 
     it('invalid values', () => {
-      const source = {[DAO.key]: 'test', m: 1} as any;
-      const dao = build(source, factory);
+      const source = { [DAO.key]: 'test', m: 1 } as any;
+      const object = build(source, factory());
 
       // function
-      assert.throws(() => dao.m = Date as any);
+      assert.throws(() => object.m = Function as any);
+      assert(source.m === 1);
+      assert(object.m === 1);
       // circular reference
       const a: any[] = [];
       a.push(a);
-      assert.throws(() => dao.m = a as any);
+      assert.throws(() => object.m = a as any);
+      assert(source.m === 1);
+      assert(object.m === 1);
     });
 
   });

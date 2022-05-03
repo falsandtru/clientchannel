@@ -25,12 +25,12 @@ describe('Unit: layers/data/database/value', () => {
     it('constant', () => {
       assert(!isValidPropertyName('V'));
       assert(!isValidPropertyName('VAL'));
+      assert(!isValidPropertyName('Value'));
     });
 
     it('valid', () => {
       assert(isValidPropertyName('v'));
       assert(isValidPropertyName('value'));
-      assert(isValidPropertyName('Value'));
       assert(isValidPropertyName('vAlUe'));
     });
 

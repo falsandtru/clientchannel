@@ -6,12 +6,12 @@ import { Ownership as BaseOwnership } from '../domain/ownership/channel';
 export * from '../domain/indexeddb/api';
 export * from '../domain/webstorage/api';
 
-export class StoreChannel<K extends string, V extends StoreChannel.Value<K>> extends BaseStoreChannel<K, V> {
+export class StoreChannel<M extends object> extends BaseStoreChannel<M> {
   constructor(
     name: string,
-    config: StoreChannel.Config<K, V>,
+    config: StoreChannel.Config<M>,
   ) {
-    super(name, config.schema, config);
+    super(name, config.schemas, config);
   }
 }
 export namespace StoreChannel {

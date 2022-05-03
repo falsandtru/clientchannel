@@ -5,19 +5,12 @@ export type Prop<O, K extends keyof O = keyof O> = K extends PropName<keyof O & 
 type PropName<K> = K extends string ? K extends '' | `${'_' | '$'}${string}` | `${string}${'_' | '$'}` ? never : K : never;
 type PropValue<V> = V extends bigint | symbol | ((..._: unknown[]) => void) ? never : V;
 
-const RegValidValueNameFormat = /^[a-zA-Z][0-9a-zA-Z_]*$/;
-const RegInvalidValueNameFormat = /^[0-9A-Z_]+$/;
-
 export function isValidProperty([name, value]: [string, unknown]): boolean {
   return isValidPropertyName(name)
       && isValidPropertyValue(value);
 }
-export function isValidPropertyName(prop: string): boolean {
-  return prop.length > 0
-      && !prop.startsWith('_')
-      && !prop.endsWith('_')
-      && !RegInvalidValueNameFormat.test(prop)
-      && RegValidValueNameFormat.test(prop);
+export function isValidPropertyName(name: string): boolean {
+  return /^(?=[a-z])[0-9a-zA-Z_]*[0-9a-zA-Z]$/.test(name);
 }
 export function isValidPropertyValue(value: unknown): boolean {
   switch (typeof value) {

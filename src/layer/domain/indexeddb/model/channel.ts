@@ -29,7 +29,7 @@ class SaveMessage<K extends string> extends ChannelMessage<K> {
 
 const cache = new Set<string>();
 
-export class ChannelStore<K extends string, V extends ChannelStore.Value<K>> {
+export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Value<K>, M extends object = Record<K, V>> {
   constructor(
     public readonly name: string,
     destroy: (reason: unknown, event?: Event) => boolean,
@@ -42,7 +42,7 @@ export class ChannelStore<K extends string, V extends ChannelStore.Value<K>> {
     void this.cancellation.register(() =>
       void cache.delete(name));
 
-    this.schema = new Schema<K, V>(this, this.ownership, this.capacity, open(name, {
+    this.stores = new Stores<K, V>(this, this.ownership, this.capacity, open(name, {
       make(db) {
         return DataStore.configure().make(db)
             && AccessStore.configure().make(db)
@@ -63,9 +63,9 @@ export class ChannelStore<K extends string, V extends ChannelStore.Value<K>> {
     // NOTE: Deleting databases on devtools won't trigger the `destroy` event
     // but `indexedDB.deleteDatabase()` triggers the event as expected.
     void this.cancellation.register(idbEventStream.on([name, IDBEventType.destroy], () =>
-      void this.schema.rebuild()));
+      void this.stores.rebuild()));
     void this.cancellation.register(() =>
-      void this.schema.close());
+      void this.stores.close());
 
     void this.cancellation.register(() =>
       void this.ownership.close());
@@ -86,7 +86,7 @@ export class ChannelStore<K extends string, V extends ChannelStore.Value<K>> {
       }
       else if (!this.keys.has(key)) {
         void this.keys.add(key);
-        void this.schema.access.load(key);
+        void this.stores.access.load(key);
       }
     });
     void this.events_.save.monitor([], ({ key, type }) => {
@@ -95,13 +95,13 @@ export class ChannelStore<K extends string, V extends ChannelStore.Value<K>> {
       }
       else if (!this.keys.has(key)) {
         void this.keys.add(key);
-        void this.schema.access.load(key);
-        this.keys.size > this.capacity && void this.schema.access.schedule(100);
+        void this.stores.access.load(key);
+        this.keys.size > this.capacity && void this.stores.access.schedule(100);
       }
     });
   }
   private readonly cancellation = new Cancellation();
-  private readonly schema: Schema<K, V>;
+  private readonly stores: Stores<K, V>;
   private readonly channel = new Channel<K>(this.name, this.debug);
   private readonly ownership = new Ownership<string>(this.channel);
   private readonly keys = new Set<K>();
@@ -114,12 +114,12 @@ export class ChannelStore<K extends string, V extends ChannelStore.Value<K>> {
     save: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>(),
   } as const;
   public readonly events = {
-    load: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>({ limit: Infinity }) as
-      Observer<{ [P in Prop<V>]: [[K, P, StoreChannel.EventType], StoreChannel.Event<K, P>, void]; }[Prop<V>] | [[K, '', StoreChannel.EventType], StoreChannel.Event<K, ''>, void]>,
-    save: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>({ limit: Infinity }) as
-      Observer<{ [P in Prop<V>]: [[K, P, StoreChannel.EventType], StoreChannel.Event<K, P>, void]; }[Prop<V>] | [[K, '', StoreChannel.EventType], StoreChannel.Event<K, ''>, void]>,
-    loss: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>({ limit: Infinity }) as
-      Observer<{ [P in Prop<V>]: [[K, P, StoreChannel.EventType], StoreChannel.Event<K, P>, void]; }[Prop<V>] | [[K, '', StoreChannel.EventType], StoreChannel.Event<K, ''>, void]>,
+    load: new Observation<[K, Prop<M[K]> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<M[K]> | ''>, void>({ limit: Infinity }) as
+      Observer<{ [L in K]: { [P in Prop<M[L]>]: [[L, P, StoreChannel.EventType], StoreChannel.Event<L, P>, void]; }[Prop<M[L]>] | [[L, '', StoreChannel.EventType], StoreChannel.Event<L, ''>, void]; }[K]>,
+    save: new Observation<[K, Prop<M[K]> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<M[K]> | ''>, void>({ limit: Infinity }) as
+      Observer<{ [L in K]: { [P in Prop<M[L]>]: [[L, P, StoreChannel.EventType], StoreChannel.Event<L, P>, void]; }[Prop<M[L]>] | [[L, '', StoreChannel.EventType], StoreChannel.Event<L, ''>, void]; }[K]>,
+    loss: new Observation<[K, Prop<M[K]> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<M[K]> | ''>, void>({ limit: Infinity }) as
+      Observer<{ [L in K]: { [P in Prop<M[L]>]: [[L, P, StoreChannel.EventType], StoreChannel.Event<L, P>, void]; }[Prop<M[L]>] | [[L, '', StoreChannel.EventType], StoreChannel.Event<L, ''>, void]; }[K]>,
   } as const;
   protected ensureAliveness(): void {
     if (!this.alive) throw new Error(`ClientChannel: Store channel "${this.name}" is already closed.`);
@@ -141,41 +141,41 @@ export class ChannelStore<K extends string, V extends ChannelStore.Value<K>> {
   }
   public load(key: K, cb?: (error: DOMException | Error | null) => void, cancellation?: Cancellation): void {
     void this.ensureAliveness();
-    return this.schema.data.load(key, cb, cancellation);
+    return this.stores.data.load(key, cb, cancellation);
   }
   public has(key: K): boolean {
     void this.ensureAliveness();
-    return this.schema.data.has(key);
+    return this.stores.data.has(key);
   }
   public meta(key: K): ChannelStore.ValueMetaData<K> {
     void this.ensureAliveness();
-    return this.schema.data.meta(key);
+    return this.stores.data.meta(key);
   }
   public get(key: K): Partial<V> {
     void this.ensureAliveness();
     void this.log(key);
-    return this.schema.data.get(key);
+    return this.stores.data.get(key);
   }
   public add(record: DataStore.Record<K, V>): void {
     assert(record.type === DataStore.EventType.put);
     void this.ensureAliveness();
     const key = record.key;
-    void this.schema.data.add(record);
+    void this.stores.data.add(record);
     void this.log(key);
   }
   public delete(key: K): void {
     void this.ensureAliveness();
-    void this.schema.data.delete(key);
-    void this.schema.access.set(key, false);
+    void this.stores.data.delete(key);
+    void this.stores.access.set(key, false);
   }
   public clean(key: K): void {
     void this.ensureAliveness();
-    void this.schema.data.clean(key);
+    void this.stores.data.clean(key);
   }
   protected log(key: K): void {
     if (!this.has(key)) return;
-    void this.schema.access.set(key);
-    void this.schema.expiry.set(key, this.ages.get(key) ?? this.age);
+    void this.stores.access.set(key);
+    void this.stores.expiry.set(key, this.ages.get(key) ?? this.age);
   }
   private readonly ages = new Map<K, number>();
   public expire(key: K, age: number = this.age): void {
@@ -188,7 +188,7 @@ export class ChannelStore<K extends string, V extends ChannelStore.Value<K>> {
   public recent(cb?: number | ((key: K, keys: readonly K[]) => boolean | void), timeout?: number): Promise<K[]> {
     if (typeof cb === 'number') return this.recent(void 0, cb);
     void this.ensureAliveness();
-    return this.schema.access.recent(cb, timeout);
+    return this.stores.access.recent(cb, timeout);
   }
   public close(): void {
     void this.cancellation.cancel();
@@ -222,7 +222,7 @@ export namespace ChannelStore {
   export import Record = DataStore.Record;
 }
 
-class Schema<K extends string, V extends ChannelStore.Value<K>> {
+class Stores<K extends string, V extends ChannelStore.Value<K>> {
   constructor(
     private readonly store: ChannelStore<K, V>,
     private readonly ownership: Ownership<string>,
