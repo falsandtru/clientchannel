@@ -2638,7 +2638,7 @@ require = function () {
                 transact(cache, success, failure, tx = this.txrw) {
                     return tx ? void success(tx) : this.listen(db => {
                         const tx = cache(db);
-                        return tx && void success(this.txrw = tx);
+                        return tx ? void success(this.txrw = tx) : void failure(new Error('Session is already closed.'));
                     }, failure);
                 }
                 load(key, cb, cancellation) {
@@ -2831,12 +2831,9 @@ require = function () {
                 snapshot(key) {
                     if (!this.alive)
                         return;
-                    return void this.listen(db => {
-                        if (!this.alive)
-                            return;
+                    return void this.transact(db => this.alive ? db.transaction(this.name, 'readwrite') : void 0, tx => {
                         if (!this.has(key) || this.meta(key).id === 0)
                             return;
-                        const tx = this.txrw = this.txrw || db.transaction(this.name, 'readwrite');
                         const store = tx.objectStore(this.name);
                         const req = store.index(EventStoreSchema.key).openCursor(key, 'prev');
                         const events = [];
@@ -2866,7 +2863,7 @@ require = function () {
                                 return void cursor.continue();
                             }
                         });
-                    });
+                    }, () => void 0);
                 }
                 clean(key) {
                     var _a, _b;
@@ -3084,7 +3081,7 @@ require = function () {
                 transact(cache, success, failure, tx = this.txrw) {
                     return tx ? void success(tx) : this.listen(db => {
                         const tx = cache(db);
-                        return tx && void success(this.txrw = tx);
+                        return tx ? void success(this.txrw = tx) : void failure(new Error('Session is already closed.'));
                     }, failure);
                 }
                 load(key, cb, cancellation) {
