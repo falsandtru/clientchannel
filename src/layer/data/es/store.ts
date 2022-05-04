@@ -100,12 +100,12 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       });
     const clean = (event: EventStore.Event<K, Prop<V> | ''>) => {
       for (const ev of this.memory.reflect([event.key])) {
-        0 < ev.id && ev.id < event.id && void this.memory.off([ev.key, ev.prop, ev.id]);
+        0 < ev.id && ev.id < event.id && void this.memory.off([ev.key, ev.prop, true, ev.id]);
       }
     };
   }
   private alive = true;
-  private readonly memory = new Observation<[K, Prop<V> | '', number] | [K, Prop<V> | '', number, number], void, UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>>();
+  private readonly memory = new Observation<[K, Prop<V> | '', boolean, number], void, UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>>({ limit: 1, cleanup: true });
   public readonly events = {
     load: new Observation<[K, Prop<V> | '', EventStore.EventType], EventStore.Event<K, Prop<V> | ''>, void>(),
     save: new Observation<[K, Prop<V> | '', EventStore.EventType], EventStore.Event<K, Prop<V> | ''>, void>(),
@@ -113,7 +113,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     clear: new Observation<[K], undefined, void>(),
   } as const;
   private readonly events_ = {
-    memory: new Observation<[K, Prop<V> | '', number], UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>, void>({ limit: Infinity }),
+    memory: new Observation<[K, Prop<V> | '', number], UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>, void>({ limit: 1 }),
   } as const;
   private tx: {
     rw?: IDBTransaction;
@@ -195,9 +195,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           // Remove overridable events.
           for (const [, event] of new Map(events.map(ev => [ev.prop, ev]))) {
             void this.memory
-              .off([event.key, event.prop, event.id]);
+              .off([event.key, event.prop, event.id > 0, event.id]);
             void this.memory
-              .on([event.key, event.prop, event.id], () => event);
+              .on([event.key, event.prop, event.id > 0, event.id], () => event);
             void this.events_.memory
               .emit([event.key, event.prop, event.id], event);
           }
@@ -258,11 +258,11 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     assert(event.type === EventStore.EventType.snapshot ? tx : true);
     if (!this.alive) return;
     const revert = this.memory
-      .on([event.key, event.prop, 0, ++this.counter], () => event);
+      .on([event.key, event.prop, false, ++this.counter], () => event);
     void this.events_.memory
       .emit([event.key, event.prop, 0], event);
     const active = (): boolean =>
-      this.memory.reflect([event.key, event.prop, 0])
+      this.memory.reflect([event.key, event.prop, false])
         .includes(event);
     const loss = () =>
       void this.events.loss.emit([event.key, event.prop, event.type], new EventStore.Event(event.type, makeEventId(0), event.key, event.prop, event.date));
@@ -282,9 +282,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           void revert();
           const event = new SavedEventRecord(makeEventId(req.result as number), ev.key, ev.value, ev.type, ev.date);
           void this.memory
-            .off([event.key, event.prop, event.id]);
+            .off([event.key, event.prop, true, event.id]);
           void this.memory
-            .on([event.key, event.prop, event.id], () => event);
+            .on([event.key, event.prop, true, event.id], () => event);
           void this.events_.memory
             .emit([event.key, event.prop, event.id], event);
           const events = this.memory.reflect([event.key])
@@ -409,15 +409,11 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         else if (events.length > 0) {
           for (const event of events) {
             void this.memory
-              .off([event.key, event.prop, event.id]);
-            void this.events_.memory
-              .off([event.key, event.prop, event.id]);
+              .off([event.key, event.prop, true, event.id]);
           }
           for (const event of this.memory.reflect([key]).filter(ev => 0 < ev.id && ev.id < events[events.length - 1].id)) {
             void this.memory
-              .off([event.key, event.prop, event.id]);
-            void this.events_.memory
-              .off([event.key, event.prop, event.id]);
+              .off([event.key, event.prop, true, event.id]);
           }
           assert(this.events.clear.reflect([key]));
           return;
