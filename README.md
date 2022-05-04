@@ -91,8 +91,8 @@ editor.mode = 'vim';
 ### Communication and Synchronization
 
 Linked objects provede send and recv events.
-`send` event will be emitted when a linked object was updated by own thread(tab).
-`recv` event will be emitted when a linked object was updated by another thread(tab).
+`send` event will be emitted when a linked object is changed by own thread(tab).
+`recv` event will be emitted when a linked object is changed by another thread(tab).
 
 ```ts
 import { StorageChannel } from 'clientchannel';
