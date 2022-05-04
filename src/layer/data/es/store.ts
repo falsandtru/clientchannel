@@ -56,20 +56,11 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       delete(key: K, tx: IDBTransaction): void;
     },
   ) {
-    const states = {
-      ids: new Map<K, EventId>(),
-      dates: new Map<K, number>(),
-      update(event: EventStore.Event<K, Prop<V> | ''>): void {
-        void this.ids.set(event.key, makeEventId(max(event.id, this.ids.get(event.key) || 0)));
-        assert(event.date >= 0);
-        void this.dates.set(event.key, max(event.date, this.dates.get(event.key) || 0));
-      },
-    };
-
     // Dispatch events.
     void this.events_.memory
       .monitor([], event => {
-        if (event.date <= states.dates.get(event.key)! && event.id <= states.ids.get(event.key)!) return;
+        if (event.id <= states.ids.get(event.key)! && event.date <= states.dates.get(event.key)!) return;
+        void states.update(event.id, event.key, event.date);
         if (event instanceof LoadedEventRecord) {
           return void this.events.load
             .emit([event.key, event.prop, event.type], new EventStore.Event(event.type, event.id, event.key, event.prop, event.date));
@@ -80,25 +71,39 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         }
         return;
       });
-    // Update states.
-    void this.events_.memory
-      .monitor([], event =>
-        void states.update(new EventStore.Event(event.type, event.id, event.key, event.prop, event.date)));
-    void this.events.load
-      .monitor([], event =>
-        void states.update(event));
-    void this.events.save
-      .monitor([], event =>
-        void states.update(event));
+    const states = {
+      ids: new Map<K, EventId>(),
+      dates: new Map<K, number>(),
+      update(id: number, key: K, date: number): void {
+        void this.dates.set(key, max(date, this.dates.get(key) || 0))
+        void this.ids.set(key, makeEventId(max(id, this.ids.get(key) || 0)));
+      },
+    };
+
     // Clean events.
+    void this.events.load
+      .monitor([], event => {
+        switch (event.type) {
+          case EventStore.EventType.delete:
+          case EventStore.EventType.snapshot:
+            void clean(event);
+        }
+      });
     void this.events.save
       .monitor([], event => {
         switch (event.type) {
           case EventStore.EventType.delete:
           case EventStore.EventType.snapshot:
             void this.clean(event.key);
+            void clean(event);
         }
       });
+    const clean = (event: EventStore.Event<K, Prop<V> | ''>) => {
+      assert(event.id > 0);
+      for (const ev of this.memory.reflect([event.key])) {
+        ev.id < event.id && void this.memory.off([ev.key, ev.prop, ev.id]);
+      }
+    };
   }
   private alive = true;
   private readonly memory = new Observation<[K, Prop<V> | '', number] | [K, Prop<V> | '', number, number], void, UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>>();
@@ -167,8 +172,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         .objectStore(this.name)
         .index(EventStoreSchema.key)
         .openCursor(key, 'prev');
-      const proc = (cursor: IDBCursorWithValue | null, error: DOMException | Error | null): void => {
-        if (error) return;
+      void req.addEventListener('success', () => {
+        const cursor = req.result;
         let event: LoadedEventRecord<K, V>;
         if (cursor) {
           try {
@@ -179,64 +184,36 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             void cursor.delete();
             return void cursor.continue();
           }
-        }
-        if (cursor && event!.date > this.meta(key).date) {
+          if (event!.id < this.meta(key).id) return;
           assert(event = event!);
-          if (this.memory.refs([event.key, event.prop, event.id]).length > 0) return void proc(null, null);
           void events.unshift(event);
-          if (event.type !== EventStore.EventType.put) return void proc(null, null);
+          if (event.type !== EventStore.EventType.put) return;
           return void cursor.continue();
         }
         else {
-          // Register latest events.
-          void [
-            ...events
-              // Remove overridable events.
-              .reduceRight<LoadedEventRecord<K, V>[]>((es, ev) =>
-                es.length === 0 || es[0].type === EventStore.EventType.put
-                  ? concat(es, [ev])
-                  : es
-              , [])
-              .reduceRight<Map<string, LoadedEventRecord<K, V>>>((dict, ev) =>
-                dict.set(ev.prop, ev)
-              , new Map())
-              .values()
-          ]
-            .sort((a, b) => a.date - b.date || a.id - b.id)
-            .forEach(ev => {
-              if (ev.type !== EventStore.EventType.put) {
-                void this.memory
-                  .reflect([ev.key])
-                  .reduce<(Prop<V> | '')[]>((log, { id, key, prop }) => {
-                    if (id === 0 || log.includes(prop)) return log;
-                    log.push(prop);
-                    void this.memory
-                      .off([key, prop, id]);
-                    return log;
-                  }, []);
-              }
-              void this.memory
-                .off([ev.key, ev.prop, ev.id]);
-              void this.memory
-                .on([ev.key, ev.prop, ev.id], () => ev);
-              void this.events_.memory
-                .emit([ev.key, ev.prop, ev.id], ev);
-            });
+          events[0]?.type !== EventStore.EventType.put && events.shift();
+          assert(events.every(ev => ev.type === EventStore.EventType.put));
+          // Remove overridable events.
+          for (const [, event] of new Map(events.map(ev => [ev.prop, ev]))) {
+            void this.memory
+              .off([event.key, event.prop, event.id]);
+            void this.memory
+              .on([event.key, event.prop, event.id], () => event);
+            void this.events_.memory
+              .emit([event.key, event.prop, event.id], event);
+          }
           try {
             void cb?.(req.error);
           }
           catch (reason) {
             void causeAsyncException(reason);
           }
-          if (events.length >= this.snapshotCycle ||
-              events[events.length - 1]?.type !== EventStore.EventType.snapshot && events[events.length - 1]?.date < Date.now() - 3 * 24 * 3600 * 1000) {
+          if (events.length >= this.snapshotCycle) {
             void this.snapshot(key);
           }
           return;
         }
-      };
-      void req.addEventListener('success', () =>
-        void proc(req.result, req.error));
+      });
       void tx.addEventListener('complete', () =>
         void cancellation?.close());
       void tx.addEventListener('error', () => (
@@ -281,32 +258,13 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     assert(event instanceof UnstoredEventRecord);
     assert(event.type === EventStore.EventType.snapshot ? tx : true);
     if (!this.alive) return;
-    switch (event.type) {
-      case EventStore.EventType.put:
-        void this.memory
-          .off([event.key, event.prop, 0]);
-        void this.events_.memory
-          .off([event.key, event.prop, 0]);
-        break;
-      case EventStore.EventType.delete:
-      case EventStore.EventType.snapshot:
-        void this.memory
-          .reflect([event.key])
-          .reduce<(Prop<V> | '')[]>((log, { id, key, prop }) => {
-            if (id > 0 || log.includes(prop)) return log;
-            log.push(prop);
-            void this.memory
-              .off([key, prop, id]);
-            void this.events_.memory
-              .off([key, prop, id]);
-            return log;
-          }, []);
-        break;
-    }
-    const clean = this.memory
+    const revert = this.memory
       .on([event.key, event.prop, 0, ++this.counter], () => event);
     void this.events_.memory
       .emit([event.key, event.prop, 0], event);
+    const active = (): boolean =>
+      this.memory.reflect([event.key, event.prop, 0])
+        .includes(event);
     const loss = () =>
       void this.events.loss.emit([event.key, event.prop, event.type], new EventStore.Event(event.type, makeEventId(0), event.key, event.prop, event.date));
     return void this.transact(
@@ -315,44 +273,35 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           ? db.transaction(this.name, 'readwrite')
           : void 0,
       tx => {
-        const active = (): boolean =>
-          this.memory.reflect([event.key, event.prop, 0])
-            .includes(event);
         if (!active()) return;
         const req = tx
           .objectStore(this.name)
           .add(record(event));
+        const ev = event;
         void tx.addEventListener('complete', () => {
           assert(req.result > 0);
-          void clean();
-          const savedEvent = new SavedEventRecord(makeEventId(req.result as number), event.key, event.value, event.type, event.date);
+          void revert();
+          const event = new SavedEventRecord(makeEventId(req.result as number), ev.key, ev.value, ev.type, ev.date);
           void this.memory
-            .off([savedEvent.key, savedEvent.prop, savedEvent.id]);
+            .off([event.key, event.prop, event.id]);
           void this.memory
-            .on([savedEvent.key, savedEvent.prop, savedEvent.id], () => savedEvent);
+            .on([event.key, event.prop, event.id], () => event);
           void this.events_.memory
-            .emit([savedEvent.key, savedEvent.prop, savedEvent.id], savedEvent);
-          const events: StoredEventRecord<K, V>[] = this.memory.reflect([savedEvent.key])
-            .reduce<StoredEventRecord<K, V>[]>((es, ev) =>
-              ev instanceof StoredEventRecord
-                ? concat(es, [ev])
-                : es
-            , []);
+            .emit([event.key, event.prop, event.id], event);
+          const events = this.memory.reflect([event.key])
+            .filter(ev => ev.id > 0);
           if (events.length >= this.snapshotCycle ||
               events.filter(event => hasBinary(event.value)).length >= 3) {
-            void this.snapshot(savedEvent.key);
+            void this.snapshot(event.key);
           }
         });
-        const fail = () => (
-          void clean(),
-          active()
-            ? void loss()
-            : void 0);
+        const fail = () =>
+          void revert() || active() && void loss();
         void tx.addEventListener('error', fail);
         void tx.addEventListener('abort', fail);
         void tx.commit();
       },
-      () => void clean() || void loss(),
+      () => void revert() || active() && void loss(),
       tx);
   }
   public delete(key: K): void {
@@ -389,7 +338,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           else {
             if (events.length === 0) return;
             const event = compose(key, events);
-            if (event instanceof StoredEventRecord) return;
+            if (event.id > 0) return;
             switch (event.type) {
               case EventStore.EventType.snapshot:
                 // Snapshot's date must not be later than unsaved event's date.
@@ -453,13 +402,19 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           return void cursor.continue();
         }
         else if(tx) {
-          if (clear && this.memory.reflect([key]).every(({ id }) => id > 0)) {
+          if (clear && this.memory.reflect([key]).every(ev => ev.id > 0)) {
             this.relation?.delete(key, tx);
           }
           return;
         }
-        else {
+        else if (events.length > 0) {
           for (const event of events) {
+            void this.memory
+              .off([event.key, event.prop, event.id]);
+            void this.events_.memory
+              .off([event.key, event.prop, event.id]);
+          }
+          for (const event of this.memory.reflect([key]).filter(ev => 0 < ev.id && ev.id < events[events.length - 1].id)) {
             void this.memory
               .off([event.key, event.prop, event.id]);
             void this.events_.memory
