@@ -1,4 +1,4 @@
-import { Map } from 'spica/global';
+import { Map, indexedDB } from 'spica/global';
 import { max, ObjectAssign, ObjectCreate } from 'spica/alias';
 import { Listen, Config, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { EventId, makeEventId } from './identifier';
@@ -533,7 +533,7 @@ export function compose<K extends string, V extends EventStore.Value>(
       .sort(([a, ai], [b, bi]) => void 0
         || indexedDB.cmp(a.key, b.key)
         || b.date - a.date
-        || b.id * a.id > 0 && b.id - a.id
+        || b.id > 0 && a.id > 0 && b.id - a.id
         || bi - ai)
       .reduceRight<E[][]>(([head, ...tail], [event]) => {
         const prev = head[0];
