@@ -173,44 +173,41 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         .openCursor(key, 'prev');
       void req.addEventListener('success', () => {
         const cursor = req.result;
+        if (!cursor) return;
         let event: LoadedEventRecord<K, V>;
-        if (cursor) {
-          try {
-            event = new LoadedEventRecord<K, V>(cursor.value);
-          }
-          catch (reason) {
-            void causeAsyncException(reason);
-            void cursor.delete();
-            return void cursor.continue();
-          }
-          if (event!.id < this.meta(key).id) return;
-          assert(event = event!);
-          void events.unshift(event);
-          if (event.type !== EventStore.EventType.put) return;
+        try {
+          event = new LoadedEventRecord<K, V>(cursor.value);
+        }
+        catch (reason) {
+          void causeAsyncException(reason);
+          void cursor.delete();
           return void cursor.continue();
         }
-        else {
-          events[0]?.type !== EventStore.EventType.put && events.shift();
-          assert(events.every(ev => ev.type === EventStore.EventType.put));
-          // Remove overridable events.
-          for (const [, event] of new Map(events.map(ev => [ev.prop, ev]))) {
-            void this.memory
-              .off([event.key, event.prop, event.id > 0, event.id]);
-            void this.memory
-              .on([event.key, event.prop, event.id > 0, event.id], () => event);
-            void this.events_.memory
-              .emit([event.key, event.prop, event.id], event);
-          }
-          try {
-            void cb?.(req.error);
-          }
-          catch (reason) {
-            void causeAsyncException(reason);
-          }
-          if (events.length >= this.snapshotCycle) {
-            void this.snapshot(key);
-          }
-          return;
+        if (event!.id < this.meta(key).id) return;
+        assert(event = event!);
+        void events.unshift(event);
+        if (event.type !== EventStore.EventType.put) return;
+        void cursor.continue();
+      });
+      void tx.addEventListener('complete', () => {
+        assert(events.every(ev => ev.type === EventStore.EventType.put));
+        // Remove overridable events.
+        for (const [, event] of new Map(events.map(ev => [ev.prop, ev]))) {
+          void this.memory
+            .off([event.key, event.prop, event.id > 0, event.id]);
+          void this.memory
+            .on([event.key, event.prop, event.id > 0, event.id], () => event);
+          void this.events_.memory
+            .emit([event.key, event.prop, event.id], event);
+        }
+        try {
+          void cb?.(req.error);
+        }
+        catch (reason) {
+          void causeAsyncException(reason);
+        }
+        if (events.length >= this.snapshotCycle) {
+          void this.snapshot(key);
         }
       });
       void tx.addEventListener('complete', () =>
