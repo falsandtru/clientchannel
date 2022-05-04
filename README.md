@@ -126,11 +126,7 @@ link.version = VERSION;
 
 ## Browsers
 
-Requires es6 and modern DOM API support.
-
 - Chrome
 - Firefox
 - Edge (Chromium edition only)
 - Safari
-
-Polyfill: https://cdn.polyfill.io
