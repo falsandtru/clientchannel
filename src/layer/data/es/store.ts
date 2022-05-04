@@ -192,21 +192,21 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           void [
             ...events
               // Remove overridable events.
-              .reduceRight<LoadedEventRecord<K, V>[]>((es, e) =>
+              .reduceRight<LoadedEventRecord<K, V>[]>((es, ev) =>
                 es.length === 0 || es[0].type === EventStore.EventType.put
-                  ? concat(es, [e])
+                  ? concat(es, [ev])
                   : es
               , [])
-              .reduceRight<Map<string, LoadedEventRecord<K, V>>>((dict, e) =>
-                dict.set(e.prop, e)
+              .reduceRight<Map<string, LoadedEventRecord<K, V>>>((dict, ev) =>
+                dict.set(ev.prop, ev)
               , new Map())
               .values()
           ]
             .sort((a, b) => a.date - b.date || a.id - b.id)
-            .forEach(e => {
-              if (e.type !== EventStore.EventType.put) {
+            .forEach(ev => {
+              if (ev.type !== EventStore.EventType.put) {
                 void this.memory
-                  .reflect([e.key])
+                  .reflect([ev.key])
                   .reduce<(Prop<V> | '')[]>((log, { id, key, prop }) => {
                     if (id === 0 || log.includes(prop)) return log;
                     log.push(prop);
@@ -216,11 +216,11 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
                   }, []);
               }
               void this.memory
-                .off([e.key, e.prop, e.id]);
+                .off([ev.key, ev.prop, ev.id]);
               void this.memory
-                .on([e.key, e.prop, e.id], () => e);
+                .on([ev.key, ev.prop, ev.id], () => ev);
               void this.events_.memory
-                .emit([e.key, e.prop, e.id], e);
+                .emit([ev.key, ev.prop, ev.id], ev);
             });
           try {
             void cb?.(req.error);
@@ -251,9 +251,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   }
   public keys(): K[] {
     return this.memory.reflect([])
-      .reduce<K[]>((keys, e) =>
-        keys.length === 0 || keys[keys.length - 1] !== e.key
-          ? concat(keys, [e.key])
+      .reduce<K[]>((keys, ev) =>
+        keys.length === 0 || keys[keys.length - 1] !== ev.key
+          ? concat(keys, [ev.key])
           : keys
       , [])
       .sort();
@@ -265,11 +265,11 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     const events = this.memory.reflect([key]);
     return {
       key: key,
-      id: events.reduce((id, e) => (
-        e.id > id ? e.id : id
+      id: events.reduce((id, ev) => (
+        ev.id > id ? ev.id : id
       ), 0),
-      date: events.reduce((date, e) => (
-        e.date > date ? e.date : date
+      date: events.reduce((date, ev) => (
+        ev.date > date ? ev.date : date
       ), 0),
     };
   }
@@ -333,9 +333,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           void this.events_.memory
             .emit([savedEvent.key, savedEvent.prop, savedEvent.id], savedEvent);
           const events: StoredEventRecord<K, V>[] = this.memory.reflect([savedEvent.key])
-            .reduce<StoredEventRecord<K, V>[]>((es, e) =>
-              e instanceof StoredEventRecord
-                ? concat(es, [e])
+            .reduce<StoredEventRecord<K, V>[]>((es, ev) =>
+              ev instanceof StoredEventRecord
+                ? concat(es, [ev])
                 : es
             , []);
           if (events.length >= this.snapshotCycle ||
@@ -398,7 +398,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
                     event.key,
                     event.value,
                     event.type,
-                    events.reduce((date, e) => e.date > date ? e.date : date, 0)),
+                    events.reduce((date, ev) => ev.date > date ? ev.date : date, 0)),
                   tx);
               case EventStore.EventType.delete:
                 return void tx.commit();
@@ -571,11 +571,11 @@ export function compose<K extends string, V extends EventStore.Value>(
     .map(events =>
       events
         .reduceRight(compose, new UnstoredEventRecord<K, V>(key, new EventStore.Value(), EventStore.EventType.delete, 0)))
-    .reduce(e => e);
+    .reduce(ev => ev);
 
   function group(events: E[]): E[][] {
     return events
-      .map<[E, number]>((e, i) => [e, i])
+      .map<[E, number]>((ev, i) => [ev, i])
       .sort(([a, ai], [b, bi]) => void 0
         || indexedDB.cmp(a.key, b.key)
         || b.date - a.date
