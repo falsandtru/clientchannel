@@ -89,6 +89,7 @@ export class AccessStore<K extends string> {
         return void this.store.cursor(
           null, AccessStoreSchema.date, 'next', 'readonly', [],
           (error, cursor, tx) => {
+            if (!cursor && !tx) return;
             this.chan.lock = false;
             if (timer) {
               clearInterval(timer);
@@ -97,7 +98,6 @@ export class AccessStore<K extends string> {
             schedule = Infinity;
             if (!this.cancellation.alive) return;
             if (error) return void this.schedule(delay * 10);
-            if (!cursor && !tx) return;
             if (!cursor) return;
             if (this.chan.lock) return void this.schedule(delay *= 2);
             if (size - count <= this.capacity) return;

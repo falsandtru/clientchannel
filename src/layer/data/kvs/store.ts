@@ -197,14 +197,21 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
           .openCursor(query, direction);
       void req.addEventListener('success', () => {
         const cursor = req.result;
-        if (!cursor) return void cb(tx.error || req.error, null, tx), void tx.commit();
-        try {
-          void this.cache.set(cursor.primaryKey as K, { ...cursor.value });
-          void cb(tx.error || req.error, cursor, tx);
+        if (cursor) {
+          try {
+            void this.cache.set(cursor.primaryKey as K, { ...cursor.value });
+            void cb(tx.error || req.error, cursor, tx);
+          }
+          catch (reason) {
+            void cursor.delete();
+            void causeAsyncException(reason);
+          }
+          return;
         }
-        catch (reason) {
-          void cursor.delete();
-          void causeAsyncException(reason);
+        else {
+          void cb(tx.error || req.error, null, tx);
+          mode === 'readwrite' && void tx.commit();
+          return;
         }
       });
       void tx.addEventListener('complete', () =>
