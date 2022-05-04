@@ -99,9 +99,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         }
       });
     const clean = (event: EventStore.Event<K, Prop<V> | ''>) => {
-      assert(event.id > 0);
       for (const ev of this.memory.reflect([event.key])) {
-        ev.id < event.id && void this.memory.off([ev.key, ev.prop, ev.id]);
+        0 < ev.id && ev.id < event.id && void this.memory.off([ev.key, ev.prop, ev.id]);
       }
     };
   }
