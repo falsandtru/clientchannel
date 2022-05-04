@@ -180,7 +180,6 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         void cursor.continue();
       });
       void tx.addEventListener('complete', () => {
-        assert(events.every(ev => ev.type === EventStore.EventType.put));
         // Remove overridable events.
         for (const [, event] of new Map(events.map(ev => [ev.prop, ev]))) {
           void this.memory
