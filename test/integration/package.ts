@@ -3,22 +3,22 @@ import { StoreChannel, StorageChannel } from '../../index';
 describe('Integration: Package', function () {
   describe('usage', function () {
     it('store', async () => {
-      interface Schemas {
-        'theme/v1': ThemeSchema;
-        'editor/v1': EditorSchema;
+      interface SettingsSchemas {
+        'theme/v1': ThemeSettings;
+        'editor/v1': EditorSettings;
       }
 
-      interface ThemeSchema extends StoreChannel.Value {
+      interface ThemeSettings extends StoreChannel.Value {
       }
-      class ThemeSchema {
+      class ThemeSettings {
         // Only properties having a valid name and a storable value consist schema.
         // /^(?=[a-z])[0-9a-zA-Z_]*[0-9a-zA-Z]$/
         name = 'default';
       }
 
-      interface EditorSchema extends StoreChannel.Value {
+      interface EditorSettings extends StoreChannel.Value {
       }
-      class EditorSchema {
+      class EditorSettings {
         // Getter and setter names will be excluded from schema.
         get key() {
           return this[StoreChannel.Value.key];
@@ -38,10 +38,10 @@ describe('Integration: Package', function () {
       }
 
       // Appropriate for settings, updates, backups, etc...
-      const chan = new StoreChannel<Schemas>('settings', {
+      const chan = new StoreChannel<SettingsSchemas>('settings', {
         schemas: {
-          'theme/v1': () => new ThemeSchema(),
-          'editor/v1': () => new EditorSchema(),
+          'theme/v1': () => new ThemeSettings(),
+          'editor/v1': () => new EditorSettings(),
         },
         // Limit the number of stored objects.
         capacity: 1000,
