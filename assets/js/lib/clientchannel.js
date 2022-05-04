@@ -2548,17 +2548,10 @@ require = function () {
                     this.tx = { rwc: 0 };
                     this.counter = 0;
                     this.snapshotCycle = 9;
-                    const states = {
-                        ids: new global_1.Map(),
-                        dates: new global_1.Map(),
-                        update(event) {
-                            void this.ids.set(event.key, (0, identifier_1.makeEventId)((0, alias_1.max)(event.id, this.ids.get(event.key) || 0)));
-                            void this.dates.set(event.key, (0, alias_1.max)(event.date, this.dates.get(event.key) || 0));
-                        }
-                    };
                     void this.events_.memory.monitor([], event => {
-                        if (event.date <= states.dates.get(event.key) && event.id <= states.ids.get(event.key))
+                        if (event.id <= states.ids.get(event.key) && event.date <= states.dates.get(event.key))
                             return;
+                        void states.update(event.id, event.key, event.date);
                         if (event instanceof event_1.LoadedEventRecord) {
                             return void this.events.load.emit([
                                 event.key,
@@ -2575,16 +2568,38 @@ require = function () {
                         }
                         return;
                     });
-                    void this.events_.memory.monitor([], event => void states.update(new EventStore.Event(event.type, event.id, event.key, event.prop, event.date)));
-                    void this.events.load.monitor([], event => void states.update(event));
-                    void this.events.save.monitor([], event => void states.update(event));
+                    const states = {
+                        ids: new global_1.Map(),
+                        dates: new global_1.Map(),
+                        update(id, key, date) {
+                            void this.dates.set(key, (0, alias_1.max)(date, this.dates.get(key) || 0));
+                            void this.ids.set(key, (0, identifier_1.makeEventId)((0, alias_1.max)(id, this.ids.get(key) || 0)));
+                        }
+                    };
+                    void this.events.load.monitor([], event => {
+                        switch (event.type) {
+                        case EventStore.EventType.delete:
+                        case EventStore.EventType.snapshot:
+                            void clean(event);
+                        }
+                    });
                     void this.events.save.monitor([], event => {
                         switch (event.type) {
                         case EventStore.EventType.delete:
                         case EventStore.EventType.snapshot:
                             void this.clean(event.key);
+                            void clean(event);
                         }
                     });
+                    const clean = event => {
+                        for (const ev of this.memory.reflect([event.key])) {
+                            ev.id < event.id && void this.memory.off([
+                                ev.key,
+                                ev.prop,
+                                ev.id
+                            ]);
+                        }
+                    };
                 }
                 static configure(name) {
                     return {
@@ -2650,72 +2665,57 @@ require = function () {
                             return void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request is cancelled.')));
                         const tx = db.transaction(this.name, 'readonly');
                         const req = tx.objectStore(this.name).index(EventStoreSchema.key).openCursor(key, 'prev');
-                        const proc = (cursor, error) => {
-                            var _a, _b;
-                            if (error)
-                                return;
-                            if (!cursor || new event_1.LoadedEventRecord(cursor.value).date < this.meta(key).date) {
-                                void [...events.reduceRight((es, e) => es.length === 0 || es[0].type === EventStore.EventType.put ? (0, concat_1.concat)(es, [e]) : es, []).reduceRight((dict, e) => dict.set(e.prop, e), new global_1.Map()).values()].sort((a, b) => a.date - b.date || a.id - b.id).forEach(e => {
-                                    if (e.type !== EventStore.EventType.put) {
-                                        void this.memory.reflect([e.key]).reduce((log, {id, key, prop}) => {
-                                            if (id === 0 || log.includes(prop))
-                                                return log;
-                                            log.push(prop);
-                                            void this.memory.off([
-                                                key,
-                                                prop,
-                                                id
-                                            ]);
-                                            return log;
-                                        }, []);
-                                    }
+                        void req.addEventListener('success', () => {
+                            var _a;
+                            const cursor = req.result;
+                            let event;
+                            if (cursor) {
+                                try {
+                                    event = new event_1.LoadedEventRecord(cursor.value);
+                                } catch (reason) {
+                                    void (0, exception_1.causeAsyncException)(reason);
+                                    void cursor.delete();
+                                    return void cursor.continue();
+                                }
+                                if (event.id < this.meta(key).id)
+                                    return;
+                                void events.unshift(event);
+                                if (event.type !== EventStore.EventType.put)
+                                    return;
+                                return void cursor.continue();
+                            } else {
+                                ((_a = events[0]) === null || _a === void 0 ? void 0 : _a.type) !== EventStore.EventType.put && events.shift();
+                                for (const [, event] of new global_1.Map(events.map(ev => [
+                                        ev.prop,
+                                        ev
+                                    ]))) {
                                     void this.memory.off([
-                                        e.key,
-                                        e.prop,
-                                        e.id
+                                        event.key,
+                                        event.prop,
+                                        event.id
                                     ]);
                                     void this.memory.on([
-                                        e.key,
-                                        e.prop,
-                                        e.id
-                                    ], () => e);
+                                        event.key,
+                                        event.prop,
+                                        event.id
+                                    ], () => event);
                                     void this.events_.memory.emit([
-                                        e.key,
-                                        e.prop,
-                                        e.id
-                                    ], e);
-                                });
+                                        event.key,
+                                        event.prop,
+                                        event.id
+                                    ], event);
+                                }
                                 try {
                                     void (cb === null || cb === void 0 ? void 0 : cb(req.error));
                                 } catch (reason) {
                                     void (0, exception_1.causeAsyncException)(reason);
                                 }
-                                if (events.length >= this.snapshotCycle || ((_a = events[events.length - 1]) === null || _a === void 0 ? void 0 : _a.type) !== EventStore.EventType.snapshot && ((_b = events[events.length - 1]) === null || _b === void 0 ? void 0 : _b.date) < Date.now() - 3 * 24 * 3600 * 1000) {
+                                if (events.length >= this.snapshotCycle) {
                                     void this.snapshot(key);
                                 }
                                 return;
-                            } else {
-                                try {
-                                    new event_1.LoadedEventRecord(cursor.value);
-                                } catch (reason) {
-                                    void this.delete(key);
-                                    void (0, exception_1.causeAsyncException)(reason);
-                                    return void cursor.continue();
-                                }
-                                const event = new event_1.LoadedEventRecord(cursor.value);
-                                if (this.memory.refs([
-                                        event.key,
-                                        event.prop,
-                                        event.id
-                                    ]).length > 0)
-                                    return void proc(null, null);
-                                void events.unshift(event);
-                                if (event.type !== EventStore.EventType.put)
-                                    return void proc(null, null);
-                                return void cursor.continue();
                             }
-                        };
-                        void req.addEventListener('success', () => void proc(req.result, req.error));
+                        });
                         void tx.addEventListener('complete', () => void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()));
                         void tx.addEventListener('error', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error))));
                         void tx.addEventListener('abort', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error))));
@@ -2723,7 +2723,7 @@ require = function () {
                     }, () => void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request has failed.'))));
                 }
                 keys() {
-                    return this.memory.reflect([]).reduce((keys, e) => keys.length === 0 || keys[keys.length - 1] !== e.key ? (0, concat_1.concat)(keys, [e.key]) : keys, []).sort();
+                    return this.memory.reflect([]).reduce((keys, ev) => keys.length === 0 || keys[keys.length - 1] !== ev.key ? (0, concat_1.concat)(keys, [ev.key]) : keys, []).sort();
                 }
                 has(key) {
                     return compose(key, this.memory.reflect([key])).type !== EventStore.EventType.delete;
@@ -2732,8 +2732,8 @@ require = function () {
                     const events = this.memory.reflect([key]);
                     return {
                         key: key,
-                        id: events.reduce((id, e) => e.id > id ? e.id : id, 0),
-                        date: events.reduce((date, e) => e.date > date ? e.date : date, 0)
+                        id: events.reduce((id, ev) => ev.id > id ? ev.id : id, 0),
+                        date: events.reduce((date, ev) => ev.date > date ? ev.date : date, 0)
                     };
                 }
                 get(key) {
@@ -2742,40 +2742,7 @@ require = function () {
                 add(event, tx) {
                     if (!this.alive)
                         return;
-                    switch (event.type) {
-                    case EventStore.EventType.put:
-                        void this.memory.off([
-                            event.key,
-                            event.prop,
-                            0
-                        ]);
-                        void this.events_.memory.off([
-                            event.key,
-                            event.prop,
-                            0
-                        ]);
-                        break;
-                    case EventStore.EventType.delete:
-                    case EventStore.EventType.snapshot:
-                        void this.memory.reflect([event.key]).reduce((log, {id, key, prop}) => {
-                            if (id > 0 || log.includes(prop))
-                                return log;
-                            log.push(prop);
-                            void this.memory.off([
-                                key,
-                                prop,
-                                id
-                            ]);
-                            void this.events_.memory.off([
-                                key,
-                                prop,
-                                id
-                            ]);
-                            return log;
-                        }, []);
-                        break;
-                    }
-                    const clean = this.memory.on([
+                    const revert = this.memory.on([
                         event.key,
                         event.prop,
                         0,
@@ -2786,48 +2753,49 @@ require = function () {
                         event.prop,
                         0
                     ], event);
+                    const active = () => this.memory.reflect([
+                        event.key,
+                        event.prop,
+                        0
+                    ]).includes(event);
                     const loss = () => void this.events.loss.emit([
                         event.key,
                         event.prop,
                         event.type
                     ], new EventStore.Event(event.type, (0, identifier_1.makeEventId)(0), event.key, event.prop, event.date));
                     return void this.transact(db => this.alive ? db.transaction(this.name, 'readwrite') : void 0, tx => {
-                        const active = () => this.memory.reflect([
-                            event.key,
-                            event.prop,
-                            0
-                        ]).includes(event);
                         if (!active())
                             return;
                         const req = tx.objectStore(this.name).add(record(event));
+                        const ev = event;
                         void tx.addEventListener('complete', () => {
-                            void clean();
-                            const savedEvent = new event_1.SavedEventRecord((0, identifier_1.makeEventId)(req.result), event.key, event.value, event.type, event.date);
+                            void revert();
+                            const event = new event_1.SavedEventRecord((0, identifier_1.makeEventId)(req.result), ev.key, ev.value, ev.type, ev.date);
                             void this.memory.off([
-                                savedEvent.key,
-                                savedEvent.prop,
-                                savedEvent.id
+                                event.key,
+                                event.prop,
+                                event.id
                             ]);
                             void this.memory.on([
-                                savedEvent.key,
-                                savedEvent.prop,
-                                savedEvent.id
-                            ], () => savedEvent);
+                                event.key,
+                                event.prop,
+                                event.id
+                            ], () => event);
                             void this.events_.memory.emit([
-                                savedEvent.key,
-                                savedEvent.prop,
-                                savedEvent.id
-                            ], savedEvent);
-                            const events = this.memory.reflect([savedEvent.key]).reduce((es, e) => e instanceof event_1.StoredEventRecord ? (0, concat_1.concat)(es, [e]) : es, []);
+                                event.key,
+                                event.prop,
+                                event.id
+                            ], event);
+                            const events = this.memory.reflect([event.key]).filter(ev => ev.id > 0);
                             if (events.length >= this.snapshotCycle || events.filter(event => (0, value_1.hasBinary)(event.value)).length >= 3) {
-                                void this.snapshot(savedEvent.key);
+                                void this.snapshot(event.key);
                             }
                         });
-                        const fail = () => (void clean(), active() ? void loss() : void 0);
+                        const fail = () => void revert() || active() && void loss();
                         void tx.addEventListener('error', fail);
                         void tx.addEventListener('abort', fail);
                         void tx.commit();
-                    }, () => void clean() || void loss(), tx);
+                    }, () => void revert() || active() && void loss(), tx);
                 }
                 delete(key) {
                     return void this.add(new event_1.UnstoredEventRecord(key, new EventStore.Value(), EventStore.EventType.delete));
@@ -2843,28 +2811,30 @@ require = function () {
                         const events = [];
                         void req.addEventListener('success', () => {
                             const cursor = req.result;
-                            if (!cursor) {
-                                if (events.length === 0)
-                                    return;
-                                const event = compose(key, events);
-                                if (event instanceof event_1.StoredEventRecord)
-                                    return;
-                                switch (event.type) {
-                                case EventStore.EventType.snapshot:
-                                    return void this.add(new event_1.UnstoredEventRecord(event.key, event.value, event.type, events.reduce((date, e) => e.date > date ? e.date : date, 0)), tx);
-                                case EventStore.EventType.delete:
-                                    return void tx.commit();
-                                }
-                                throw new TypeError(`ClientChannel: EventStore: Invalid event type: ${ event.type }`);
-                            } else {
+                            if (cursor) {
                                 try {
                                     const event = new event_1.LoadedEventRecord(cursor.value);
                                     void events.unshift(event);
                                 } catch (reason) {
-                                    void cursor.delete();
                                     void (0, exception_1.causeAsyncException)(reason);
+                                    void cursor.delete();
                                 }
                                 return void cursor.continue();
+                            } else {
+                                if (events.length === 0)
+                                    return;
+                                const event = compose(key, events);
+                                if (event.id > 0)
+                                    return;
+                                switch (event.type) {
+                                case EventStore.EventType.snapshot:
+                                    return void this.add(new event_1.UnstoredEventRecord(event.key, event.value, event.type, events.reduce((date, ev) => ev.date > date ? ev.date : date, 0)), tx);
+                                case EventStore.EventType.delete:
+                                    return void tx.commit();
+                                case EventStore.EventType.put:
+                                default:
+                                    throw new TypeError(`ClientChannel: EventStore: Invalid event type: ${ event.type }`);
+                                }
                             }
                         });
                     }, () => void 0);
@@ -2882,10 +2852,40 @@ require = function () {
                             return;
                         if (error)
                             return;
-                        if (!cursor) {
-                            if (tx && clear && this.memory.reflect([key]).every(({id}) => id > 0)) {
-                                return (_a = this.relation) === null || _a === void 0 ? void 0 : _a.delete(key, tx);
+                        if (cursor) {
+                            let event;
+                            try {
+                                event = new event_1.LoadedEventRecord(cursor.value);
+                            } catch (reason) {
+                                void (0, exception_1.causeAsyncException)(reason);
+                                void cursor.delete();
                             }
+                            switch (event.type) {
+                            case EventStore.EventType.put:
+                                clear !== null && clear !== void 0 ? clear : clear = false;
+                                if (deletion)
+                                    break;
+                                return void cursor.continue();
+                            case EventStore.EventType.snapshot:
+                                clear !== null && clear !== void 0 ? clear : clear = false;
+                                if (deletion)
+                                    break;
+                                deletion = true;
+                                return void cursor.continue();
+                            case EventStore.EventType.delete:
+                                clear !== null && clear !== void 0 ? clear : clear = true;
+                                deletion = true;
+                                break;
+                            }
+                            void events.unshift(event);
+                            void cursor.delete();
+                            return void cursor.continue();
+                        } else if (tx) {
+                            if (clear && this.memory.reflect([key]).every(ev => ev.id > 0)) {
+                                (_a = this.relation) === null || _a === void 0 ? void 0 : _a.delete(key, tx);
+                            }
+                            return;
+                        } else if (events.length > 0) {
                             for (const event of events) {
                                 void this.memory.off([
                                     event.key,
@@ -2898,33 +2898,19 @@ require = function () {
                                     event.id
                                 ]);
                             }
-                            return;
-                        } else {
-                            try {
-                                const event = new event_1.LoadedEventRecord(cursor.value);
-                                switch (event.type) {
-                                case EventStore.EventType.put:
-                                    clear !== null && clear !== void 0 ? clear : clear = false;
-                                    if (deletion)
-                                        break;
-                                    return void cursor.continue();
-                                case EventStore.EventType.snapshot:
-                                    clear !== null && clear !== void 0 ? clear : clear = false;
-                                    if (deletion)
-                                        break;
-                                    deletion = true;
-                                    return void cursor.continue();
-                                case EventStore.EventType.delete:
-                                    clear !== null && clear !== void 0 ? clear : clear = true;
-                                    deletion = true;
-                                    break;
-                                }
-                                void events.unshift(event);
-                            } catch (reason) {
-                                void (0, exception_1.causeAsyncException)(reason);
+                            for (const event of this.memory.reflect([key]).filter(ev => 0 < ev.id && ev.id < events[events.length - 1].id)) {
+                                void this.memory.off([
+                                    event.key,
+                                    event.prop,
+                                    event.id
+                                ]);
+                                void this.events_.memory.off([
+                                    event.key,
+                                    event.prop,
+                                    event.id
+                                ]);
                             }
-                            void cursor.delete();
-                            return void cursor.continue();
+                            return;
                         }
                     });
                 }
@@ -2941,13 +2927,18 @@ require = function () {
                         const req = index ? tx.objectStore(this.name).index(index).openCursor(query, direction) : tx.objectStore(this.name).openCursor(query, direction);
                         void req.addEventListener('success', () => {
                             const cursor = req.result;
-                            if (!cursor)
-                                return void cb(tx.error || req.error, null, tx), void tx.commit();
-                            try {
-                                void cb(req.error, cursor, tx);
-                            } catch (reason) {
-                                void cursor.delete();
-                                void (0, exception_1.causeAsyncException)(reason);
+                            if (cursor) {
+                                try {
+                                    void cb(req.error, cursor, tx);
+                                } catch (reason) {
+                                    void cursor.delete();
+                                    void (0, exception_1.causeAsyncException)(reason);
+                                }
+                                return;
+                            } else {
+                                void cb(tx.error || req.error, null, tx);
+                                mode === 'readwrite' && void tx.commit();
+                                return;
                             }
                         });
                         void tx.addEventListener('complete', () => void cb(tx.error || req.error, null, null));
@@ -2990,10 +2981,10 @@ require = function () {
             }
             exports.record = record;
             function compose(key, events) {
-                return group(events).map(events => events.reduceRight(compose, new event_1.UnstoredEventRecord(key, new EventStore.Value(), EventStore.EventType.delete, 0))).reduce(e => e);
+                return group(events).map(events => events.reduceRight(compose, new event_1.UnstoredEventRecord(key, new EventStore.Value(), EventStore.EventType.delete, 0))).reduce(ev => ev);
                 function group(events) {
-                    return events.map((e, i) => [
-                        e,
+                    return events.map((ev, i) => [
+                        ev,
                         i
                     ]).sort(([a, ai], [b, bi]) => void 0 || indexedDB.cmp(a.key, b.key) || b.date - a.date || b.id * a.id > 0 && b.id - a.id || bi - ai).reduceRight(([head, ...tail], [event]) => {
                         const prev = head[0];
@@ -3165,14 +3156,19 @@ require = function () {
                         const req = index ? tx.objectStore(this.name).index(index).openCursor(query, direction) : tx.objectStore(this.name).openCursor(query, direction);
                         void req.addEventListener('success', () => {
                             const cursor = req.result;
-                            if (!cursor)
-                                return void cb(tx.error || req.error, null, tx), void tx.commit();
-                            try {
-                                void this.cache.set(cursor.primaryKey, { ...cursor.value });
-                                void cb(tx.error || req.error, cursor, tx);
-                            } catch (reason) {
-                                void cursor.delete();
-                                void (0, exception_1.causeAsyncException)(reason);
+                            if (cursor) {
+                                try {
+                                    void this.cache.set(cursor.primaryKey, { ...cursor.value });
+                                    void cb(tx.error || req.error, cursor, tx);
+                                } catch (reason) {
+                                    void cursor.delete();
+                                    void (0, exception_1.causeAsyncException)(reason);
+                                }
+                                return;
+                            } else {
+                                void cb(tx.error || req.error, null, tx);
+                                mode === 'readwrite' && void tx.commit();
+                                return;
                             }
                         });
                         void tx.addEventListener('complete', () => void cb(tx.error || req.error, null, null));
@@ -3706,6 +3702,8 @@ require = function () {
                                     return void (0, global_1.clearInterval)(timer);
                                 this.chan.lock = true;
                                 return void this.store.cursor(null, 'date', 'next', 'readonly', [], (error, cursor, tx) => {
+                                    if (!cursor && !tx)
+                                        return;
                                     this.chan.lock = false;
                                     if (timer) {
                                         (0, global_1.clearInterval)(timer);
@@ -3716,8 +3714,6 @@ require = function () {
                                         return;
                                     if (error)
                                         return void this.schedule(delay * 10);
-                                    if (!cursor && !tx)
-                                        return;
                                     if (!cursor)
                                         return;
                                     if (this.chan.lock)
@@ -3883,6 +3879,8 @@ require = function () {
                                 }, delay / 2);
                                 this.chan.lock = true;
                                 return void this.store.cursor(null, 'expiry', 'next', 'readonly', [], (error, cursor, tx) => {
+                                    if (!cursor && !tx)
+                                        return;
                                     this.chan.lock = false;
                                     if (timer) {
                                         (0, global_1.clearInterval)(timer);
@@ -3893,8 +3891,6 @@ require = function () {
                                         return;
                                     if (error)
                                         return void this.schedule(delay * 10);
-                                    if (!cursor && !tx)
-                                        return;
                                     if (!cursor)
                                         return;
                                     if (this.chan.lock)
