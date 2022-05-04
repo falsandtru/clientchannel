@@ -2541,44 +2541,38 @@ require = function () {
                         limit: 1,
                         cleanup: true
                     });
+                    this.status = {
+                        store: this,
+                        ids: new global_1.Map(),
+                        dates: new global_1.Map(),
+                        update(event) {
+                            void this.dates.set(event.key, (0, alias_1.max)(event.date, this.dates.get(event.key) || 0));
+                            void this.ids.set(event.key, (0, identifier_1.makeEventId)((0, alias_1.max)(event.id, this.ids.get(event.key) || 0)));
+                            if (event instanceof event_1.LoadedEventRecord) {
+                                return void this.store.events.load.emit([
+                                    event.key,
+                                    event.prop,
+                                    event.type
+                                ], new EventStore.Event(event.type, event.id, event.key, event.prop, event.date));
+                            }
+                            if (event instanceof event_1.SavedEventRecord) {
+                                return void this.store.events.save.emit([
+                                    event.key,
+                                    event.prop,
+                                    event.type
+                                ], new EventStore.Event(event.type, event.id, event.key, event.prop, event.date));
+                            }
+                        }
+                    };
                     this.events = {
                         load: new observer_1.Observation(),
                         save: new observer_1.Observation(),
                         loss: new observer_1.Observation(),
                         clear: new observer_1.Observation()
                     };
-                    this.events_ = { memory: new observer_1.Observation({ limit: 1 }) };
                     this.tx = { rwc: 0 };
                     this.counter = 0;
                     this.snapshotCycle = 9;
-                    void this.events_.memory.monitor([], event => {
-                        if (event.id <= states.ids.get(event.key) && event.date <= states.dates.get(event.key))
-                            return;
-                        void states.update(event.id, event.key, event.date);
-                        if (event instanceof event_1.LoadedEventRecord) {
-                            return void this.events.load.emit([
-                                event.key,
-                                event.prop,
-                                event.type
-                            ], new EventStore.Event(event.type, event.id, event.key, event.prop, event.date));
-                        }
-                        if (event instanceof event_1.SavedEventRecord) {
-                            return void this.events.save.emit([
-                                event.key,
-                                event.prop,
-                                event.type
-                            ], new EventStore.Event(event.type, event.id, event.key, event.prop, event.date));
-                        }
-                        return;
-                    });
-                    const states = {
-                        ids: new global_1.Map(),
-                        dates: new global_1.Map(),
-                        update(id, key, date) {
-                            void this.dates.set(key, (0, alias_1.max)(date, this.dates.get(key) || 0));
-                            void this.ids.set(key, (0, identifier_1.makeEventId)((0, alias_1.max)(id, this.ids.get(key) || 0)));
-                        }
-                    };
                     void this.events.load.monitor([], event => {
                         switch (event.type) {
                         case EventStore.EventType.delete:
@@ -2670,56 +2664,50 @@ require = function () {
                         const tx = db.transaction(this.name, 'readonly');
                         const req = tx.objectStore(this.name).index(EventStoreSchema.key).openCursor(key, 'prev');
                         void req.addEventListener('success', () => {
-                            var _a;
                             const cursor = req.result;
-                            let event;
-                            if (cursor) {
-                                try {
-                                    event = new event_1.LoadedEventRecord(cursor.value);
-                                } catch (reason) {
-                                    void (0, exception_1.causeAsyncException)(reason);
-                                    void cursor.delete();
-                                    return void cursor.continue();
-                                }
-                                if (event.id < this.meta(key).id)
-                                    return;
-                                void events.unshift(event);
-                                if (event.type !== EventStore.EventType.put)
-                                    return;
-                                return void cursor.continue();
-                            } else {
-                                ((_a = events[0]) === null || _a === void 0 ? void 0 : _a.type) !== EventStore.EventType.put && events.shift();
-                                for (const [, event] of new global_1.Map(events.map(ev => [
-                                        ev.prop,
-                                        ev
-                                    ]))) {
-                                    void this.memory.off([
-                                        event.key,
-                                        event.prop,
-                                        event.id > 0,
-                                        event.id
-                                    ]);
-                                    void this.memory.on([
-                                        event.key,
-                                        event.prop,
-                                        event.id > 0,
-                                        event.id
-                                    ], () => event);
-                                    void this.events_.memory.emit([
-                                        event.key,
-                                        event.prop,
-                                        event.id
-                                    ], event);
-                                }
-                                try {
-                                    void (cb === null || cb === void 0 ? void 0 : cb(req.error));
-                                } catch (reason) {
-                                    void (0, exception_1.causeAsyncException)(reason);
-                                }
-                                if (events.length >= this.snapshotCycle) {
-                                    void this.snapshot(key);
-                                }
+                            if (!cursor)
                                 return;
+                            let event;
+                            try {
+                                event = new event_1.LoadedEventRecord(cursor.value);
+                            } catch (reason) {
+                                void (0, exception_1.causeAsyncException)(reason);
+                                void cursor.delete();
+                                return void cursor.continue();
+                            }
+                            if (event.id < this.meta(key).id)
+                                return;
+                            void events.unshift(event);
+                            if (event.type !== EventStore.EventType.put)
+                                return;
+                            void cursor.continue();
+                        });
+                        void tx.addEventListener('complete', () => {
+                            for (const [, event] of new global_1.Map(events.map(ev => [
+                                    ev.prop,
+                                    ev
+                                ]))) {
+                                void this.memory.off([
+                                    event.key,
+                                    event.prop,
+                                    event.id > 0,
+                                    event.id
+                                ]);
+                                void this.memory.on([
+                                    event.key,
+                                    event.prop,
+                                    event.id > 0,
+                                    event.id
+                                ], () => event);
+                                void this.status.update(event);
+                            }
+                            try {
+                                void (cb === null || cb === void 0 ? void 0 : cb(req.error));
+                            } catch (reason) {
+                                void (0, exception_1.causeAsyncException)(reason);
+                            }
+                            if (events.length >= this.snapshotCycle) {
+                                void this.snapshot(key);
                             }
                         });
                         void tx.addEventListener('complete', () => void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()));
@@ -2754,11 +2742,7 @@ require = function () {
                         false,
                         ++this.counter
                     ], () => event);
-                    void this.events_.memory.emit([
-                        event.key,
-                        event.prop,
-                        0
-                    ], event);
+                    void this.status.update(event);
                     const active = () => this.memory.reflect([
                         event.key,
                         event.prop,
@@ -2789,11 +2773,7 @@ require = function () {
                                 true,
                                 event.id
                             ], () => event);
-                            void this.events_.memory.emit([
-                                event.key,
-                                event.prop,
-                                event.id
-                            ], event);
+                            void this.status.update(event);
                             const events = this.memory.reflect([event.key]).filter(ev => ev.id > 0);
                             if (events.length >= this.snapshotCycle || events.filter(event => (0, value_1.hasBinary)(event.value)).length >= 3) {
                                 void this.snapshot(event.key);
