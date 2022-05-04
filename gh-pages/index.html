@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noarchive">
 
-<title>ClientChannel - Communicate between other tabs via IndexedDB and LocalStorage</title>
+<title>ClientChannel - Store and sync objects between tabs via IndexedDB or LocalStorage.</title>
 
 <!-- Bootstrap -->
 <!-- Latest compiled and minified CSS -->
@@ -23,7 +23,7 @@
 <!-- ----- HEADER ------------------------------------------------------------- -->
 <header id="header" class="row">
 <h1>ClientChannel</h1>
-<h3>Store and sync values by communication between tabs via IndexedDB and LocalStorage.</h3>
+<h3>Store and sync objects between tabs via IndexedDB or LocalStorage.</h3>
 <p><a href="https://github.com/falsandtru/clientchannel">https://github.com/falsandtru/clientchannel</a></p>
 </header>
 
@@ -60,7 +60,7 @@
       destroy: function (reason) {
         console.warn(reason);
         return true;
-      }
+      },
     });
     // create data binding object
     const canvas = chan.link('canvas');
