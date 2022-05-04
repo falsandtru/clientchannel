@@ -2537,14 +2537,17 @@ require = function () {
                     this.listen = listen;
                     this.relation = relation;
                     this.alive = true;
-                    this.memory = new observer_1.Observation();
+                    this.memory = new observer_1.Observation({
+                        limit: 1,
+                        cleanup: true
+                    });
                     this.events = {
                         load: new observer_1.Observation(),
                         save: new observer_1.Observation(),
                         loss: new observer_1.Observation(),
                         clear: new observer_1.Observation()
                     };
-                    this.events_ = { memory: new observer_1.Observation({ limit: Infinity }) };
+                    this.events_ = { memory: new observer_1.Observation({ limit: 1 }) };
                     this.tx = { rwc: 0 };
                     this.counter = 0;
                     this.snapshotCycle = 9;
@@ -2593,9 +2596,10 @@ require = function () {
                     });
                     const clean = event => {
                         for (const ev of this.memory.reflect([event.key])) {
-                            ev.id < event.id && void this.memory.off([
+                            0 < ev.id && ev.id < event.id && void this.memory.off([
                                 ev.key,
                                 ev.prop,
+                                true,
                                 ev.id
                             ]);
                         }
@@ -2692,11 +2696,13 @@ require = function () {
                                     void this.memory.off([
                                         event.key,
                                         event.prop,
+                                        event.id > 0,
                                         event.id
                                     ]);
                                     void this.memory.on([
                                         event.key,
                                         event.prop,
+                                        event.id > 0,
                                         event.id
                                     ], () => event);
                                     void this.events_.memory.emit([
@@ -2745,7 +2751,7 @@ require = function () {
                     const revert = this.memory.on([
                         event.key,
                         event.prop,
-                        0,
+                        false,
                         ++this.counter
                     ], () => event);
                     void this.events_.memory.emit([
@@ -2756,7 +2762,7 @@ require = function () {
                     const active = () => this.memory.reflect([
                         event.key,
                         event.prop,
-                        0
+                        false
                     ]).includes(event);
                     const loss = () => void this.events.loss.emit([
                         event.key,
@@ -2774,11 +2780,13 @@ require = function () {
                             void this.memory.off([
                                 event.key,
                                 event.prop,
+                                true,
                                 event.id
                             ]);
                             void this.memory.on([
                                 event.key,
                                 event.prop,
+                                true,
                                 event.id
                             ], () => event);
                             void this.events_.memory.emit([
@@ -2890,11 +2898,7 @@ require = function () {
                                 void this.memory.off([
                                     event.key,
                                     event.prop,
-                                    event.id
-                                ]);
-                                void this.events_.memory.off([
-                                    event.key,
-                                    event.prop,
+                                    true,
                                     event.id
                                 ]);
                             }
@@ -2902,11 +2906,7 @@ require = function () {
                                 void this.memory.off([
                                     event.key,
                                     event.prop,
-                                    event.id
-                                ]);
-                                void this.events_.memory.off([
-                                    event.key,
-                                    event.prop,
+                                    true,
                                     event.id
                                 ]);
                             }
@@ -2986,7 +2986,7 @@ require = function () {
                     return events.map((ev, i) => [
                         ev,
                         i
-                    ]).sort(([a, ai], [b, bi]) => void 0 || indexedDB.cmp(a.key, b.key) || b.date - a.date || b.id * a.id > 0 && b.id - a.id || bi - ai).reduceRight(([head, ...tail], [event]) => {
+                    ]).sort(([a, ai], [b, bi]) => void 0 || global_1.indexedDB.cmp(a.key, b.key) || b.date - a.date || b.id > 0 && a.id > 0 && b.id - a.id || bi - ai).reduceRight(([head, ...tail], [event]) => {
                         const prev = head[0];
                         if (!prev)
                             return [[event]];
