@@ -94,7 +94,7 @@ export class ExpiryStore<K extends string> {
             if (++count > 100) return void this.schedule(delay);
             const { key, expiry }: ExpiryRecord<K> = cursor.value;
             if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
-            if (!this.ownership.extend('store', delay)) return void this.schedule(delay *= 2);
+            if (!this.ownership.take('store', delay)) return void this.schedule(delay *= 2);
             this.chan.has(key) || this.chan.meta(key).date === 0
               ? this.chan.delete(key)
               : this.chan.clean(key);

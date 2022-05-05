@@ -101,7 +101,7 @@ export class AccessStore<K extends string> {
             if (size - count <= this.capacity) return;
             if (++count > 100) return void this.schedule(delay);
             const { key }: AccessRecord<K> = cursor.value;
-            if (!this.ownership.extend('store', delay)) return void this.schedule(delay *= 2);
+            if (!this.ownership.take('store', delay)) return void this.schedule(delay *= 2);
             this.chan.has(key) || this.chan.meta(key).date === 0
               ? this.chan.delete(key)
               : this.chan.clean(key);
