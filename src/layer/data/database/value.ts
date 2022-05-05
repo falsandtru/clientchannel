@@ -33,13 +33,6 @@ export function isValidPropertyValue(value: unknown): boolean {
   }
 }
 
-export function hasBinary(value: IDBValidValue): boolean {
-  return !isPrimitive(value)
-    ? isBinary(value) ||
-      ObjectValues(value).some(hasBinary)
-    : false;
-}
-
 function isBinary(value: IDBValidValue): boolean {
   return value instanceof Int8Array
       || value instanceof Int16Array
@@ -50,4 +43,10 @@ function isBinary(value: IDBValidValue): boolean {
       || value instanceof Uint32Array
       || value instanceof ArrayBuffer
       || value instanceof Blob;
+}
+
+export function hasBinary(value: IDBValidValue): boolean {
+  return !isPrimitive(value)
+    ? isBinary(value) || ObjectValues(value).some(hasBinary)
+    : false;
 }

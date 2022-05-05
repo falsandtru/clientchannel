@@ -108,6 +108,11 @@ export class StoreChannel<M extends object, K extends keyof M & string = keyof M
       !error && this.alive && this.links.has(key) && void this.log(key));
     return this.link_(key);
   }
+  public override delete(key: K): void {
+    void this.ensureAliveness();
+    void this.links.delete(key);
+    void super.delete(key);
+  }
 }
 export namespace StoreChannel {
   export import Value = ChannelStore.Value;
