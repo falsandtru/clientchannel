@@ -1,4 +1,4 @@
-import { Infinity, Date, setTimeout, setInterval, clearInterval } from 'spica/global';
+import { Infinity, Math, Date, setTimeout, clearTimeout, setInterval, clearInterval } from 'spica/global';
 import { min } from 'spica/alias';
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
@@ -55,35 +55,37 @@ export class ExpiryStore<K extends string> {
   public readonly name = name;
   private store = new class extends KeyValueStore<K, ExpiryRecord<K>> { }(name, ExpiryStoreSchema.key, this.listen);
   public schedule = (() => {
-    let timer = 0;
+    let timer: ReturnType<typeof setTimeout> | 0 = 0;
     let delay = 10 * 1000;
     let schedule = Infinity;
     return (timeout: number): void => {
       timeout = min(timeout, 60 * 60 * 1000);
       if (Date.now() + timeout >= schedule) return;
       schedule = Date.now() + timeout;
-      clearTimeout(timer);
+      clearTimeout(timer as 0);
       timer = setTimeout(() => {
         if (!this.cancellation.alive) return;
         if (schedule === 0) return;
+        schedule = Infinity;
         if (!this.ownership.take('store', delay)) return void this.schedule(delay *= 2);
-        schedule = 0;
-        let timer = setInterval(() => {
+        if (this.chan.lock) return void this.schedule(delay *= Math.random() * 2 | 0);
+        let timer: ReturnType<typeof setTimeout> | 0 = setInterval(() => {
           if (this.ownership.extend('store', delay)) return;
-          clearInterval(timer);
-          timer = 0 as any;
+          clearInterval(timer as 0);
+          timer = 0;
         }, delay / 2);
+        schedule = 0;
         this.chan.lock = true;
         return void this.store.cursor(
           null, ExpiryStoreSchema.expiry, 'next', 'readonly', [],
           (error, cursor, tx) => {
             if (!cursor && !tx) return;
             this.chan.lock = false;
+            schedule = Infinity;
             if (timer) {
               clearInterval(timer);
-              timer = 0 as any;
+              timer = 0;
             }
-            schedule = Infinity;
             if (!this.cancellation.alive) return;
             if (error) return void this.schedule(delay * 10);
             if (!cursor) return;
@@ -91,15 +93,15 @@ export class ExpiryStore<K extends string> {
             const { key, expiry }: ExpiryRecord<K> = cursor.value;
             if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
             if (!this.ownership.extend('store', delay)) return void this.schedule(delay *= 2);
-            schedule = 0;
-            this.chan.lock = true;
             this.chan.has(key) || this.chan.meta(key).date === 0
               ? this.chan.delete(key)
               : this.chan.clean(key);
             assert(!this.chan.has(key));
+            schedule = 0;
+            this.chan.lock = true;
             return void cursor.continue();
           });
-      }, timeout) as any;
+      }, timeout);
     };
   })();
   public load(key: K, cancellation?: Cancellation): undefined {

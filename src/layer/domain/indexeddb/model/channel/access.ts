@@ -1,4 +1,4 @@
-import { Infinity, Date, setTimeout, setInterval, clearInterval } from 'spica/global';
+import { Infinity, Math, Date, setTimeout, clearTimeout, setInterval, clearInterval } from 'spica/global';
 import { min } from 'spica/alias';
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
@@ -56,7 +56,7 @@ export class AccessStore<K extends string> {
   public readonly name = name;
   private store = new class extends KeyValueStore<K, AccessRecord<K>> { }(name, AccessStoreSchema.key, this.listen);
   public schedule = (() => {
-    let timer = 0;
+    let timer: ReturnType<typeof setTimeout> | 0 = 0;
     let delay = 10 * 1000;
     let schedule = Infinity;
     return (timeout: number) => {
@@ -64,37 +64,36 @@ export class AccessStore<K extends string> {
       timeout = min(timeout, 60 * 60 * 1000);
       if (Date.now() + timeout >= schedule) return;
       schedule = Date.now() + timeout;
-      clearTimeout(timer);
+      clearTimeout(timer as 0);
       timer = setTimeout(async () => {
         if (!this.cancellation.alive) return;
         if (schedule === 0) return;
-        if (!this.ownership.take('store', delay)) return void this.schedule(delay *= 2);
-        schedule = 0;
-        if (this.chan.lock) return void this.schedule(delay *= 2);
         schedule = Infinity;
-        this.chan.lock = true;
-        let timer = setInterval(() => {
+        if (!this.ownership.take('store', delay)) return void this.schedule(delay *= 2);
+        if (this.chan.lock) return void this.schedule(delay *= Math.random() * 2 | 0);
+        let timer: ReturnType<typeof setTimeout> | 0 = setInterval(() => {
           if (this.ownership.extend('store', delay)) return;
-          clearInterval(timer);
-          timer = 0 as any;
+          clearInterval(timer as 0);
+          timer = 0;
         }, delay / 2);
+        this.chan.lock = true;
         const size = await this.store.count(null, AccessStoreSchema.key).catch(() => NaN);
         this.chan.lock = false;
-        schedule = 0;
         if (size >= 0 === false) return void clearInterval(timer) || void this.schedule(delay *= 2);
         if (size <= this.capacity) return void clearInterval(timer);
         let count = 0;
+        schedule = 0;
         this.chan.lock = true;
         return void this.store.cursor(
           null, AccessStoreSchema.date, 'next', 'readonly', [],
           (error, cursor, tx) => {
             if (!cursor && !tx) return;
             this.chan.lock = false;
+            schedule = Infinity;
             if (timer) {
               clearInterval(timer);
-              timer = 0 as any;
+              timer = 0;
             }
-            schedule = Infinity;
             if (!this.cancellation.alive) return;
             if (error) return void this.schedule(delay * 10);
             if (!cursor) return;
@@ -102,15 +101,15 @@ export class AccessStore<K extends string> {
             if (size - count++ <= this.capacity) return;
             const { key }: AccessRecord<K> = cursor.value;
             if (!this.ownership.extend('store', delay)) return void this.schedule(delay *= 2);
-            schedule = 0;
-            this.chan.lock = true;
             this.chan.has(key) || this.chan.meta(key).date === 0
               ? this.chan.delete(key)
               : this.chan.clean(key);
             assert(!this.chan.has(key));
+            schedule = 0;
+            this.chan.lock = true;
             return void cursor.continue();
           });
-      }, timeout) as any;
+      }, timeout);
     };
   })();
   public recent(cb?: (key: K, keys: readonly K[]) => boolean | void, timeout?: number): Promise<K[]> {
