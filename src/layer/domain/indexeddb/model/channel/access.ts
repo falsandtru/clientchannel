@@ -98,7 +98,8 @@ export class AccessStore<K extends string> {
             if (error) return void this.schedule(delay * 10);
             if (!cursor) return;
             if (this.chan.lock) return void this.schedule(delay);
-            if (size - count++ <= this.capacity) return;
+            if (size - count <= this.capacity) return;
+            if (++count > 100) return void this.schedule(delay);
             const { key }: AccessRecord<K> = cursor.value;
             if (!this.ownership.extend('store', delay)) return void this.schedule(delay *= 2);
             this.chan.has(key) || this.chan.meta(key).date === 0

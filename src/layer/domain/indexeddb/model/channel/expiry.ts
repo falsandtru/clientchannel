@@ -74,6 +74,7 @@ export class ExpiryStore<K extends string> {
           clearInterval(timer as 0);
           timer = 0;
         }, delay / 2);
+        let count = 0;
         schedule = 0;
         this.chan.lock = true;
         return void this.store.cursor(
@@ -90,6 +91,7 @@ export class ExpiryStore<K extends string> {
             if (error) return void this.schedule(delay * 10);
             if (!cursor) return;
             if (this.chan.lock) return void this.schedule(delay);
+            if (++count > 100) return void this.schedule(delay);
             const { key, expiry }: ExpiryRecord<K> = cursor.value;
             if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
             if (!this.ownership.extend('store', delay)) return void this.schedule(delay *= 2);
