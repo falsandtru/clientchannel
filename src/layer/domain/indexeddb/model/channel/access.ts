@@ -1,4 +1,4 @@
-import { Infinity, Math, Date, setTimeout, clearTimeout, setInterval, clearInterval } from 'spica/global';
+import { Infinity, Date, setTimeout, clearTimeout, setInterval, clearInterval } from 'spica/global';
 import { min } from 'spica/alias';
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
@@ -70,7 +70,7 @@ export class AccessStore<K extends string> {
         if (schedule === 0) return;
         schedule = Infinity;
         if (!this.ownership.take('store', delay)) return void this.schedule(delay *= 2);
-        if (this.chan.lock) return void this.schedule(delay *= Math.random() * 2 | 0);
+        if (this.chan.lock) return void this.schedule(delay);
         let timer: ReturnType<typeof setTimeout> | 0 = setInterval(() => {
           if (this.ownership.extend('store', delay)) return;
           clearInterval(timer as 0);
@@ -97,7 +97,7 @@ export class AccessStore<K extends string> {
             if (!this.cancellation.isAlive) return;
             if (error) return void this.schedule(delay * 10);
             if (!cursor) return;
-            if (this.chan.lock) return void this.schedule(delay *= 2);
+            if (this.chan.lock) return void this.schedule(delay);
             if (size - count++ <= this.capacity) return;
             const { key }: AccessRecord<K> = cursor.value;
             if (!this.ownership.extend('store', delay)) return void this.schedule(delay *= 2);
