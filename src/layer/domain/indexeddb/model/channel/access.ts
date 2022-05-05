@@ -83,7 +83,6 @@ export class AccessStore<K extends string> {
         schedule = 0;
         if (size >= 0 === false) return void clearInterval(timer) || void this.schedule(delay *= 2);
         if (size <= this.capacity) return void clearInterval(timer);
-        const since = Date.now();
         let count = 0;
         this.chan.lock = true;
         return void this.store.cursor(
@@ -103,7 +102,6 @@ export class AccessStore<K extends string> {
             if (size - count++ <= this.capacity) return;
             const { key }: AccessRecord<K> = cursor.value;
             if (!this.ownership.extend('store', delay)) return void this.schedule(delay *= 2);
-            if (Date.now() > since + 1 * 1000) return void this.schedule(5 * 1000);
             schedule = 0;
             this.chan.lock = true;
             this.chan.has(key) || this.chan.meta(key).date === 0
