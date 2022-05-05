@@ -213,7 +213,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   public keys(): K[] {
     return this.memory.reflect([])
       .reduce<K[]>((keys, ev) =>
-        keys.length === 0 || keys[keys.length - 1] !== ev.key
+        keys.at(-1) !== ev.key
           ? concat(keys, [ev.key])
           : keys
       , [])
@@ -318,7 +318,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           }
           else {
             if (events.length <= 1) return;
-            if (events[events.length - 1].type === EventStore.EventType.snapshot) return;
+            if (events.at(-1)!.type === EventStore.EventType.snapshot) return;
             const event = compose(key, events);
             if (event.id > 0) return;
             switch (event.type) {
@@ -394,7 +394,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             this.memory
               .off([event.key, event.prop, true, event.id]);
           }
-          for (const event of this.memory.reflect([key]).filter(ev => 0 < ev.id && ev.id < events[events.length - 1].id)) {
+          for (const event of this.memory.reflect([key]).filter(ev => 0 < ev.id && ev.id < events.at(-1)!.id)) {
             this.memory
               .off([event.key, event.prop, true, event.id]);
           }
