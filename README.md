@@ -26,9 +26,9 @@ https://falsandtru.github.io/clientchannel/
 ### Persist data
 
 A schema is defined by properties of objects made by the given factory function.
-Property names having the underscore(`_`) or dollar(`$`) prefix or postfix will be excluded from schema.
-Property values of linked objects will be stored when updating.
-Linked objects will be updated automatically when a linked object is updated on another thread(tab).
+Property names having the underscore(`_`) or dollar(`$`) prefix or postfix are excluded from schema.
+Property values of linked objects are stored when updating.
+**Linked objects are automatically updated when a linked object is updated on another thread(tab).**
 
 ```ts
 import { StoreChannel } from 'clientchannel';
@@ -49,15 +49,15 @@ class ThemeSettings {
 interface EditorSettings extends StoreChannel.Value {
 }
 class EditorSettings {
-  // Getter and setter names will be excluded from schema.
+  // Getter and setter names are excluded from schema.
   get key() {
     return this[StoreChannel.Value.key];
   }
-  // Properties having an invalid value will be excluded from schema.
+  // Properties having an invalid value are excluded from schema.
   event() {
     return this[StoreChannel.Value.event];
   }
-  // Properties having an invalid name will be excluded from schema.
+  // Properties having an invalid name are excluded from schema.
   protected prop_ = '';
   protected $prop = '';
   revision = 0;
@@ -91,8 +91,8 @@ editor.mode = 'vim';
 ### Communication and Synchronization
 
 Linked objects provede send and recv events.
-`send` event will be emitted when a linked object is changed by own thread(tab).
-`recv` event will be emitted when a linked object is changed by another thread(tab).
+`send` event is emitted when a linked object is changed by own thread(tab).
+`recv` event is emitted when a linked object is changed by another thread(tab).
 
 ```ts
 import { StorageChannel } from 'clientchannel';
