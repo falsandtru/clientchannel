@@ -203,7 +203,7 @@ require = function () {
             }
             exports.join = join;
         },
-        { './global': 15 }
+        { './global': 16 }
     ],
     6: [
         function (_dereq_, module, exports) {
@@ -328,37 +328,45 @@ require = function () {
         {
             './alias': 4,
             './array': 5,
-            './global': 15,
+            './global': 16,
             './type': 33
         }
     ],
     7: [
         function (_dereq_, module, exports) {
             'use strict';
+            var _a, _b;
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.Cancellation = void 0;
-            const global_1 = _dereq_('./global');
-            const function_1 = _dereq_('./function');
-            const noop_1 = _dereq_('./noop');
             const promise_1 = _dereq_('./promise');
+            const future_1 = _dereq_('./future');
             const exception_1 = _dereq_('./exception');
             const maybe_1 = _dereq_('./maybe');
             const either_1 = _dereq_('./either');
+            const function_1 = _dereq_('./function');
             const internal = Symbol.for('spica/cancellation::internal');
-            class Cancellation extends promise_1.AtomicPromise {
+            class Cancellation {
                 constructor(cancellees = []) {
-                    super(res => resolve = res);
-                    var resolve;
-                    this[internal] = new Internal(resolve);
+                    this[_a] = 'Cancellation';
+                    this[_b] = new Internal();
                     for (const cancellee of cancellees) {
                         cancellee.register(this.cancel);
                     }
                 }
-                get alive() {
-                    return this[internal].alive;
+                get [(_a = Symbol.toStringTag, _b = internal, promise_1.internal)]() {
+                    return this[internal].promise[promise_1.internal];
                 }
-                get cancelled() {
-                    return this[internal].cancelled;
+                get isAlive() {
+                    return this[internal].reason.length === 0;
+                }
+                get isCancelled() {
+                    return this[internal].reason.length === 1;
+                }
+                get isClosed() {
+                    return this[internal].reason.length === 2;
+                }
+                get isFinished() {
+                    return this[internal].reason.length !== 0;
                 }
                 get register() {
                     return listener => this[internal].register(listener);
@@ -369,34 +377,51 @@ require = function () {
                 get close() {
                     return reason => this[internal].close(reason);
                 }
+                get then() {
+                    return this[internal].promise.then;
+                }
+                get catch() {
+                    return this[internal].promise.catch;
+                }
+                get finally() {
+                    return this[internal].promise.finally;
+                }
                 get promise() {
-                    return val => this[internal].promise(val);
+                    return val => this.isCancelled ? promise_1.AtomicPromise.reject(this[internal].reason[0]) : promise_1.AtomicPromise.resolve(val);
                 }
                 get maybe() {
-                    return val => this[internal].maybe(val);
+                    return val => (0, maybe_1.Just)(val).bind(val => this.isCancelled ? maybe_1.Nothing : (0, maybe_1.Just)(val));
                 }
                 get either() {
-                    return val => this[internal].either(val);
+                    return val => (0, either_1.Right)(val).bind(val => this.isCancelled ? (0, either_1.Left)(this[internal].reason[0]) : (0, either_1.Right)(val));
                 }
             }
             exports.Cancellation = Cancellation;
             class Internal {
-                constructor(resolve) {
-                    this.resolve = resolve;
-                    this.alive = true;
-                    this.available = true;
-                    this.listeners = new global_1.Set();
+                constructor() {
+                    this.isFinished = false;
+                    this.reason = [];
+                    this.listeners = [];
                 }
-                get cancelled() {
-                    return 'reason' in this;
+                get promise() {
+                    if (!this.future) {
+                        this.future = new future_1.AtomicFuture();
+                        switch (this.reason.length) {
+                        case 1:
+                            return this.future.bind(this.reason[0]);
+                        case 2:
+                            return this.future.bind(promise_1.AtomicPromise.reject(this.reason[1]));
+                        }
+                    }
+                    return this.future;
                 }
                 register(listener) {
-                    if (!this.alive) {
-                        this.cancelled && handler(this.reason);
-                        return noop_1.noop;
+                    if (this.isFinished) {
+                        this.reason.length === 1 && handler(this.reason[0]);
+                        return function_1.noop;
                     }
-                    this.listeners.add(handler);
-                    return (0, function_1.singleton)(() => void this.listeners.delete(handler));
+                    const i = this.listeners.push(handler) - 1;
+                    return () => this.listeners[i] = void 0;
                     function handler(reason) {
                         try {
                             listener(reason);
@@ -406,31 +431,26 @@ require = function () {
                     }
                 }
                 cancel(reason) {
-                    if (!this.available)
+                    var _c, _d;
+                    if (this.reason.length !== 0)
                         return;
-                    this.available = false;
-                    this.reason = reason;
-                    for (const listener of this.listeners) {
-                        listener(reason);
+                    this.reason = [reason];
+                    for (let i = 0, {listeners} = this; i < listeners.length; ++i) {
+                        (_c = listeners[i]) === null || _c === void 0 ? void 0 : _c.call(listeners, reason);
                     }
-                    this.resolve(this.reason);
-                    this.alive = false;
+                    (_d = this.future) === null || _d === void 0 ? void 0 : _d.bind(reason);
+                    this.isFinished = true;
                 }
                 close(reason) {
-                    if (!this.available)
+                    var _c;
+                    if (this.reason.length !== 0)
                         return;
-                    this.available = false;
-                    this.resolve(promise_1.AtomicPromise.reject(reason));
-                    this.alive = false;
-                }
-                promise(val) {
-                    return this.cancelled ? promise_1.AtomicPromise.reject(this.reason) : promise_1.AtomicPromise.resolve(val);
-                }
-                maybe(val) {
-                    return (0, maybe_1.Just)(val).bind(val => this.cancelled ? maybe_1.Nothing : (0, maybe_1.Just)(val));
-                }
-                either(val) {
-                    return (0, either_1.Right)(val).bind(val => this.cancelled ? (0, either_1.Left)(this.reason) : (0, either_1.Right)(val));
+                    this.reason = [
+                        ,
+                        reason
+                    ];
+                    (_c = this.future) === null || _c === void 0 ? void 0 : _c.bind(promise_1.AtomicPromise.reject(reason));
+                    this.isFinished = true;
                 }
             }
         },
@@ -438,9 +458,8 @@ require = function () {
             './either': 12,
             './exception': 13,
             './function': 14,
-            './global': 15,
-            './maybe': 18,
-            './noop': 28,
+            './future': 15,
+            './maybe': 19,
             './promise': 30
         }
     ],
@@ -483,7 +502,7 @@ require = function () {
                 ];
                 for (let i = 0; i < count; ++i) {
                     try {
-                        jobs[i]();
+                        (void 0, jobs[i])();
                         jobs[i] = void 0;
                     } catch (reason) {
                         (0, exception_1.causeAsyncException)(reason);
@@ -495,7 +514,7 @@ require = function () {
         {
             './alias': 4,
             './exception': 13,
-            './global': 15
+            './global': 16
         }
     ],
     9: [
@@ -519,10 +538,10 @@ require = function () {
             function concat(target, source) {
                 if ((0, alias_1.isArray)(source)) {
                     for (let i = 0; i < source.length; ++i) {
-                        void target.push(source[i]);
+                        target.push(source[i]);
                     }
                 } else {
-                    void target.push(...source);
+                    target.push(...source);
                 }
                 return target;
             }
@@ -579,34 +598,33 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             __exportStar(_dereq_('./monad/either'), exports);
         },
-        { './monad/either': 21 }
+        { './monad/either': 22 }
     ],
     13: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.causeAsyncException = void 0;
+            const global_1 = _dereq_('./global');
             function causeAsyncException(reason) {
-                void Promise.reject(reason);
+                global_1.Promise.reject(reason);
             }
             exports.causeAsyncException = causeAsyncException;
         },
-        {}
+        { './global': 16 }
     ],
     14: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.clear = exports.singleton = void 0;
-            const noop_1 = _dereq_('./noop');
+            exports.noop = exports.id = exports.clear = exports.singleton = void 0;
             function singleton(f) {
                 let result;
                 return function (...as) {
-                    if (f === noop_1.noop)
-                        return result;
-                    result = f.call(this, ...as);
-                    f = noop_1.noop;
-                    return result;
+                    if (result)
+                        return result[0];
+                    result = [f.call(this, ...as)];
+                    return result[0];
                 };
             }
             exports.singleton = singleton;
@@ -614,10 +632,89 @@ require = function () {
                 return (...as) => void f(...as);
             }
             exports.clear = clear;
+            function id(a) {
+                return a;
+            }
+            exports.id = id;
+            function noop() {
+            }
+            exports.noop = noop;
         },
-        { './noop': 28 }
+        {}
     ],
     15: [
+        function (_dereq_, module, exports) {
+            'use strict';
+            var _a, _b, _c, _d;
+            Object.defineProperty(exports, '__esModule', { value: true });
+            exports.AtomicFuture = exports.Future = void 0;
+            const global_1 = _dereq_('./global');
+            const promise_1 = _dereq_('./promise');
+            class Future {
+                constructor(strict = true) {
+                    this[_a] = 'Promise';
+                    this[_b] = new promise_1.Internal();
+                    this.bind = value => {
+                        const core = this[promise_1.internal];
+                        if (!core.isPending && !strict)
+                            return this;
+                        if (!core.isPending)
+                            throw new Error(`Spica: Future: Cannot rebind a value.`);
+                        core.resolve(value);
+                        return this;
+                    };
+                }
+                static get [Symbol.species]() {
+                    return global_1.Promise;
+                }
+                then(onfulfilled, onrejected) {
+                    return new global_1.Promise((resolve, reject) => this[promise_1.internal].then(resolve, reject, onfulfilled, onrejected));
+                }
+                catch(onrejected) {
+                    return this.then(void 0, onrejected);
+                }
+                finally(onfinally) {
+                    return this.then(onfinally, onfinally).then(() => this);
+                }
+            }
+            exports.Future = Future;
+            _a = Symbol.toStringTag, _b = promise_1.internal;
+            class AtomicFuture {
+                constructor(strict = true) {
+                    this[_c] = 'Promise';
+                    this[_d] = new promise_1.Internal();
+                    this.bind = value => {
+                        const core = this[promise_1.internal];
+                        if (!core.isPending && !strict)
+                            return this;
+                        if (!core.isPending)
+                            throw new Error(`Spica: AtomicFuture: Cannot rebind a value.`);
+                        core.resolve(value);
+                        return this;
+                    };
+                }
+                static get [Symbol.species]() {
+                    return promise_1.AtomicPromise;
+                }
+                then(onfulfilled, onrejected) {
+                    return new promise_1.AtomicPromise((resolve, reject) => this[promise_1.internal].then(resolve, reject, onfulfilled, onrejected));
+                }
+                catch(onrejected) {
+                    return this.then(void 0, onrejected);
+                }
+                finally(onfinally) {
+                    return this.then(onfinally, onfinally).then(() => this);
+                }
+            }
+            exports.AtomicFuture = AtomicFuture;
+            _c = Symbol.toStringTag, _d = promise_1.internal;
+        },
+        {
+            './global': 16,
+            './promise': 30
+        }
+    ],
+    16: [
         function (_dereq_, module, exports) {
             'use strict';
             const global = void 0 || typeof globalThis !== 'undefined' && globalThis || typeof self !== 'undefined' && self || Function('return this')();
@@ -626,7 +723,7 @@ require = function () {
         },
         {}
     ],
-    16: [
+    17: [
         function (_dereq_, module, exports) {
             'use strict';
             var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
@@ -655,9 +752,9 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             __exportStar(_dereq_('./list/ixlist'), exports);
         },
-        { './list/ixlist': 17 }
+        { './list/ixlist': 18 }
     ],
-    17: [
+    18: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -954,11 +1051,11 @@ require = function () {
         {
             '../alias': 4,
             '../compare': 9,
-            '../global': 15,
+            '../global': 16,
             '../stack': 31
         }
     ],
-    18: [
+    19: [
         function (_dereq_, module, exports) {
             'use strict';
             var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
@@ -987,9 +1084,9 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             __exportStar(_dereq_('./monad/maybe'), exports);
         },
-        { './monad/maybe': 25 }
+        { './monad/maybe': 26 }
     ],
-    19: [
+    20: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1008,17 +1105,17 @@ require = function () {
         },
         {
             '../curry': 11,
-            './functor': 22
+            './functor': 23
         }
     ],
-    20: [
+    21: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.Right = exports.Left = exports.Either = void 0;
             const monad_1 = _dereq_('./monad');
             const promise_1 = _dereq_('../promise');
-            const noop_1 = _dereq_('../noop');
+            const function_1 = _dereq_('../function');
             class Either extends monad_1.Monad {
                 constructor(thunk) {
                     super(thunk);
@@ -1060,7 +1157,7 @@ require = function () {
                         } = iter.next(val);
                         if (done)
                             return m;
-                        const r = m.extract(noop_1.noop, a => [a]);
+                        const r = m.extract(function_1.noop, a => [a]);
                         if (!r)
                             return m;
                         val = r[0];
@@ -1115,12 +1212,12 @@ require = function () {
             }
         },
         {
-            '../noop': 28,
+            '../function': 14,
             '../promise': 30,
-            './monad': 26
+            './monad': 27
         }
     ],
-    21: [
+    22: [
         function (_dereq_, module, exports) {
             'use strict';
             var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
@@ -1163,10 +1260,10 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.Right = exports.Left = exports.Either = void 0;
             const Monad = __importStar(_dereq_('./either.impl'));
-            const noop_1 = _dereq_('../noop');
+            const function_1 = _dereq_('../function');
             class Either extends Monad.Either {
                 constructor() {
-                    super(noop_1.noop);
+                    super(function_1.noop);
                 }
             }
             exports.Either = Either;
@@ -1180,11 +1277,11 @@ require = function () {
             exports.Right = Right;
         },
         {
-            '../noop': 28,
-            './either.impl': 20
+            '../function': 14,
+            './either.impl': 21
         }
     ],
-    22: [
+    23: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1200,9 +1297,9 @@ require = function () {
                 Functor.fmap = fmap;
             }(Functor = exports.Functor || (exports.Functor = {})));
         },
-        { './lazy': 23 }
+        { './lazy': 24 }
     ],
-    23: [
+    24: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1221,14 +1318,14 @@ require = function () {
         },
         {}
     ],
-    24: [
+    25: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.Nothing = exports.Just = exports.Maybe = void 0;
             const monadplus_1 = _dereq_('./monadplus');
             const promise_1 = _dereq_('../promise');
-            const noop_1 = _dereq_('../noop');
+            const function_1 = _dereq_('../function');
             class Maybe extends monadplus_1.MonadPlus {
                 constructor(thunk) {
                     super(thunk);
@@ -1273,7 +1370,7 @@ require = function () {
                         } = iter.next(val);
                         if (done)
                             return m;
-                        const r = m.extract(noop_1.noop, a => [a]);
+                        const r = m.extract(function_1.noop, a => [a]);
                         if (!r)
                             return m;
                         val = r[0];
@@ -1317,7 +1414,7 @@ require = function () {
                 }
                 extract(nothing) {
                     if (!nothing)
-                        throw void 0;
+                        throw new Error(`Spica: Maybe: Nothig value is extracted.`);
                     return nothing();
                 }
             }
@@ -1334,12 +1431,12 @@ require = function () {
             }
         },
         {
-            '../noop': 28,
+            '../function': 14,
             '../promise': 30,
-            './monadplus': 27
+            './monadplus': 28
         }
     ],
-    25: [
+    26: [
         function (_dereq_, module, exports) {
             'use strict';
             var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
@@ -1382,10 +1479,10 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.Nothing = exports.Just = exports.Maybe = void 0;
             const Monad = __importStar(_dereq_('./maybe.impl'));
-            const noop_1 = _dereq_('../noop');
+            const function_1 = _dereq_('../function');
             class Maybe extends Monad.Maybe {
                 constructor() {
-                    super(noop_1.noop);
+                    super(function_1.noop);
                 }
             }
             exports.Maybe = Maybe;
@@ -1396,11 +1493,11 @@ require = function () {
             exports.Nothing = Monad.Maybe.mzero;
         },
         {
-            '../noop': 28,
-            './maybe.impl': 24
+            '../function': 14,
+            './maybe.impl': 25
         }
     ],
-    26: [
+    27: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1416,9 +1513,9 @@ require = function () {
                 Monad.bind = bind;
             }(Monad = exports.Monad || (exports.Monad = {})));
         },
-        { './applicative': 19 }
+        { './applicative': 20 }
     ],
-    27: [
+    28: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -1430,18 +1527,7 @@ require = function () {
             (function (MonadPlus) {
             }(MonadPlus = exports.MonadPlus || (exports.MonadPlus = {})));
         },
-        { './monad': 26 }
-    ],
-    28: [
-        function (_dereq_, module, exports) {
-            'use strict';
-            Object.defineProperty(exports, '__esModule', { value: true });
-            exports.noop = void 0;
-            function noop() {
-            }
-            exports.noop = noop;
-        },
-        {}
+        { './monad': 27 }
     ],
     29: [
         function (_dereq_, module, exports) {
@@ -1672,8 +1758,8 @@ require = function () {
             './array': 5,
             './exception': 13,
             './function': 14,
-            './global': 15,
-            './ixlist': 16
+            './global': 16,
+            './ixlist': 17
         }
     ],
     30: [
@@ -1681,19 +1767,19 @@ require = function () {
             'use strict';
             var _a, _b;
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.never = exports.isPromiseLike = exports.Internal = exports.AtomicPromise = void 0;
+            exports.never = exports.isPromiseLike = exports.Internal = exports.AtomicPromise = exports.internal = void 0;
             const global_1 = _dereq_('./global');
             const alias_1 = _dereq_('./alias');
-            const noop_1 = _dereq_('./noop');
-            const internal = Symbol.for('spica/promise::internal');
+            const function_1 = _dereq_('./function');
+            exports.internal = Symbol.for('spica/promise::internal');
             class AtomicPromise {
                 constructor(executor) {
                     this[_a] = 'Promise';
                     this[_b] = new Internal();
                     try {
-                        executor(value => void this[internal].resolve(value), reason => void this[internal].reject(reason));
+                        executor(value => void this[exports.internal].resolve(value), reason => void this[exports.internal].reject(reason));
                     } catch (reason) {
-                        this[internal].reject(reason);
+                        this[exports.internal].reject(reason);
                     }
                 }
                 static get [Symbol.species]() {
@@ -1713,7 +1799,7 @@ require = function () {
                                 continue;
                             }
                             if (isAtomicPromiseLike(value)) {
-                                const {status} = value[internal];
+                                const {status} = value[exports.internal];
                                 switch (status.state) {
                                 case 2:
                                     results[i] = status.value;
@@ -1744,7 +1830,7 @@ require = function () {
                                 return resolve(value);
                             }
                             if (isAtomicPromiseLike(value)) {
-                                const {status} = value[internal];
+                                const {status} = value[exports.internal];
                                 switch (status.state) {
                                 case 2:
                                     return resolve(status.value);
@@ -1782,7 +1868,7 @@ require = function () {
                                 continue;
                             }
                             if (isAtomicPromiseLike(value)) {
-                                const {status} = value[internal];
+                                const {status} = value[exports.internal];
                                 switch (status.state) {
                                 case 2:
                                     results[i] = {
@@ -1831,7 +1917,7 @@ require = function () {
                                 return resolve(value);
                             }
                             if (isAtomicPromiseLike(value)) {
-                                const {status} = value[internal];
+                                const {status} = value[exports.internal];
                                 switch (status.state) {
                                 case 2:
                                     return resolve(status.value);
@@ -1860,7 +1946,7 @@ require = function () {
                     return new AtomicPromise((_, reject) => reject(reason));
                 }
                 then(onfulfilled, onrejected) {
-                    return new AtomicPromise((resolve, reject) => this[internal].then(resolve, reject, onfulfilled, onrejected));
+                    return new AtomicPromise((resolve, reject) => this[exports.internal].then(resolve, reject, onfulfilled, onrejected));
                 }
                 catch(onrejected) {
                     return this.then(void 0, onrejected);
@@ -1870,7 +1956,7 @@ require = function () {
                 }
             }
             exports.AtomicPromise = AtomicPromise;
-            _a = Symbol.toStringTag, _b = internal;
+            _a = Symbol.toStringTag, _b = exports.internal;
             class Internal {
                 constructor() {
                     this.status = { state: 0 };
@@ -1891,7 +1977,7 @@ require = function () {
                         return this.resume();
                     }
                     if (isAtomicPromiseLike(value)) {
-                        const core = value[internal];
+                        const core = value[exports.internal];
                         switch (core.status.state) {
                         case 2:
                         case 3:
@@ -2001,14 +2087,14 @@ require = function () {
             }
             exports.isPromiseLike = isPromiseLike;
             function isAtomicPromiseLike(value) {
-                return internal in value;
+                return exports.internal in value;
             }
             exports.never = new class Never extends Promise {
                 static get [Symbol.species]() {
                     return Never;
                 }
                 constructor() {
-                    super(noop_1.noop);
+                    super(function_1.noop);
                 }
                 then() {
                     return this;
@@ -2023,8 +2109,8 @@ require = function () {
         },
         {
             './alias': 4,
-            './global': 15,
-            './noop': 28
+            './function': 14,
+            './global': 16
         }
     ],
     31: [
@@ -2129,7 +2215,7 @@ require = function () {
                         return;
                     timer = (0, global_1.setTimeout)(() => {
                         timer = 0;
-                        void (0, global_1.setTimeout)(async () => {
+                        (0, global_1.setTimeout)(async () => {
                             if (timer !== 0)
                                 return;
                             if (!callable)
@@ -2143,7 +2229,7 @@ require = function () {
                                 (0, exception_1.causeAsyncException)(reason);
                             }
                             callable = true;
-                            timer === 0 && buffer.length > 0 && self.call(this, buffer.shift());
+                            buffer.length > 0 && self.call(this, buffer.shift());
                         }, delay);
                     }, delay);
                 };
@@ -2152,7 +2238,7 @@ require = function () {
         },
         {
             './exception': 13,
-            './global': 15
+            './global': 16
         }
     ],
     33: [
@@ -2160,6 +2246,7 @@ require = function () {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.isPrimitive = exports.isType = exports.type = void 0;
+            const global_1 = _dereq_('./global');
             const alias_1 = _dereq_('./alias');
             const toString = Object.prototype.toString.call.bind(Object.prototype.toString);
             const ObjectPrototype = Object.prototype;
@@ -2171,8 +2258,10 @@ require = function () {
                     return 'null';
                 const type = typeof value;
                 if (type === 'object') {
+                    if (value[global_1.Symbol.toStringTag])
+                        return value[global_1.Symbol.toStringTag];
                     const proto = (0, alias_1.ObjectGetPrototypeOf)(value);
-                    if (proto === ObjectPrototype || proto === null)
+                    if (proto === ObjectPrototype)
                         return 'Object';
                     if (proto === ArrayPrototype)
                         return 'Array';
@@ -2197,7 +2286,10 @@ require = function () {
             }
             exports.isPrimitive = isPrimitive;
         },
-        { './alias': 4 }
+        {
+            './alias': 4,
+            './global': 16
+        }
     ],
     34: [
         function (_dereq_, module, exports) {
@@ -2243,7 +2335,7 @@ require = function () {
                 }
             }
         },
-        { './global': 15 }
+        { './global': 16 }
     ],
     35: [
         function (_dereq_, module, exports) {
@@ -2381,13 +2473,13 @@ require = function () {
                 }
             }
             exports.isValidPropertyValue = isValidPropertyValue;
+            function isBinary(value) {
+                return value instanceof Int8Array || value instanceof Int16Array || value instanceof Int32Array || value instanceof Uint8Array || value instanceof Uint8ClampedArray || value instanceof Uint16Array || value instanceof Uint32Array || value instanceof ArrayBuffer || value instanceof Blob;
+            }
             function hasBinary(value) {
                 return !(0, type_1.isPrimitive)(value) ? isBinary(value) || (0, alias_1.ObjectValues)(value).some(hasBinary) : false;
             }
             exports.hasBinary = hasBinary;
-            function isBinary(value) {
-                return value instanceof Int8Array || value instanceof Int16Array || value instanceof Int32Array || value instanceof Uint8Array || value instanceof Uint8ClampedArray || value instanceof Uint16Array || value instanceof Uint32Array || value instanceof ArrayBuffer || value instanceof Blob;
-            }
         },
         {
             'spica/alias': 4,
@@ -2483,7 +2575,7 @@ require = function () {
             exports.SavedEventRecord = SavedEventRecord;
             class EventRecordValue {
                 constructor(...sources) {
-                    void (0, assign_1.clone)(this, ...sources);
+                    (0, assign_1.clone)(this, ...sources);
                 }
             }
             exports.EventRecordValue = EventRecordValue;
@@ -2493,7 +2585,7 @@ require = function () {
             './identifier': 40,
             'spica/alias': 4,
             'spica/assign': 6,
-            'spica/global': 15
+            'spica/global': 16
         }
     ],
     40: [
@@ -2546,8 +2638,8 @@ require = function () {
                         ids: new global_1.Map(),
                         dates: new global_1.Map(),
                         update(event) {
-                            void this.dates.set(event.key, (0, alias_1.max)(event.date, this.dates.get(event.key) || 0));
-                            void this.ids.set(event.key, (0, identifier_1.makeEventId)((0, alias_1.max)(event.id, this.ids.get(event.key) || 0)));
+                            this.dates.set(event.key, (0, alias_1.max)(event.date, this.dates.get(event.key) || 0));
+                            this.ids.set(event.key, (0, identifier_1.makeEventId)((0, alias_1.max)(event.id, this.ids.get(event.key) || 0)));
                             if (event instanceof event_1.LoadedEventRecord) {
                                 return void this.store.events.load.emit([
                                     event.key,
@@ -2573,24 +2665,24 @@ require = function () {
                     this.tx = { rwc: 0 };
                     this.counter = 0;
                     this.snapshotCycle = 9;
-                    void this.events.load.monitor([], event => {
+                    this.events.load.monitor([], event => {
                         switch (event.type) {
                         case EventStore.EventType.delete:
                         case EventStore.EventType.snapshot:
-                            void clean(event);
+                            clean(event);
                         }
                     });
-                    void this.events.save.monitor([], event => {
+                    this.events.save.monitor([], event => {
                         switch (event.type) {
                         case EventStore.EventType.delete:
                         case EventStore.EventType.snapshot:
-                            void this.clean(event.key);
-                            void clean(event);
+                            this.clean(event.key);
+                            clean(event);
                         }
                     });
                     const clean = event => {
                         for (const ev of this.memory.reflect([event.key])) {
-                            0 < ev.id && ev.id < event.id && void this.memory.off([
+                            0 < ev.id && ev.id < event.id && this.memory.off([
                                 ev.key,
                                 ev.prop,
                                 true,
@@ -2607,10 +2699,10 @@ require = function () {
                                 autoIncrement: true
                             });
                             if (!store.indexNames.contains(EventStoreSchema.id)) {
-                                void store.createIndex(EventStoreSchema.id, EventStoreSchema.id, { unique: true });
+                                store.createIndex(EventStoreSchema.id, EventStoreSchema.id, { unique: true });
                             }
                             if (!store.indexNames.contains(EventStoreSchema.key)) {
-                                void store.createIndex(EventStoreSchema.key, EventStoreSchema.key);
+                                store.createIndex(EventStoreSchema.key, EventStoreSchema.key);
                             }
                             return true;
                         },
@@ -2628,7 +2720,7 @@ require = function () {
                     const tx = this.tx.rw;
                     this.tx.rwc = 0;
                     this.tx.rw = void 0;
-                    void tx.commit();
+                    tx.commit();
                     return this.tx.rw;
                 }
                 set txrw(tx) {
@@ -2641,13 +2733,13 @@ require = function () {
                             return;
                         this.tx.rw = void 0;
                     };
-                    void this.tx.rw.addEventListener('abort', clear);
-                    void this.tx.rw.addEventListener('error', clear);
-                    void this.tx.rw.addEventListener('complete', clear);
-                    void (0, clock_1.tick)(clear);
+                    this.tx.rw.addEventListener('abort', clear);
+                    this.tx.rw.addEventListener('error', clear);
+                    this.tx.rw.addEventListener('complete', clear);
+                    (0, clock_1.tick)(clear);
                 }
                 transact(cache, success, failure, tx = this.txrw) {
-                    return tx ? void success(tx) : this.listen(db => {
+                    return tx ? void success(tx) : void this.listen(db => {
                         const tx = cache(db);
                         return tx ? void success(this.txrw = tx) : void failure(new Error('Session is already closed.'));
                     }, failure);
@@ -2659,11 +2751,11 @@ require = function () {
                     return void this.listen(db => {
                         if (!this.alive)
                             return void (cb === null || cb === void 0 ? void 0 : cb(new Error('Session is already closed.')));
-                        if (cancellation === null || cancellation === void 0 ? void 0 : cancellation.cancelled)
+                        if (cancellation === null || cancellation === void 0 ? void 0 : cancellation.isCancelled)
                             return void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request is cancelled.')));
                         const tx = db.transaction(this.name, 'readonly');
                         const req = tx.objectStore(this.name).index(EventStoreSchema.key).openCursor(key, 'prev');
-                        void req.addEventListener('success', () => {
+                        req.addEventListener('success', () => {
                             const cursor = req.result;
                             if (!cursor)
                                 return;
@@ -2671,49 +2763,49 @@ require = function () {
                             try {
                                 event = new event_1.LoadedEventRecord(cursor.value);
                             } catch (reason) {
-                                void (0, exception_1.causeAsyncException)(reason);
-                                void cursor.delete();
+                                (0, exception_1.causeAsyncException)(reason);
+                                cursor.delete();
                                 return void cursor.continue();
                             }
                             if (event.id < this.meta(key).id)
                                 return;
-                            void events.unshift(event);
+                            events.unshift(event);
                             if (event.type !== EventStore.EventType.put)
                                 return;
-                            void cursor.continue();
+                            cursor.continue();
                         });
-                        void tx.addEventListener('complete', () => {
+                        tx.addEventListener('complete', () => {
                             for (const [, event] of new global_1.Map(events.map(ev => [
                                     ev.prop,
                                     ev
                                 ]))) {
-                                void this.memory.off([
+                                this.memory.off([
                                     event.key,
                                     event.prop,
                                     event.id > 0,
                                     event.id
                                 ]);
-                                void this.memory.on([
+                                this.memory.on([
                                     event.key,
                                     event.prop,
                                     event.id > 0,
                                     event.id
                                 ], () => event);
-                                void this.status.update(event);
+                                this.status.update(event);
                             }
                             try {
-                                void (cb === null || cb === void 0 ? void 0 : cb(req.error));
+                                cb === null || cb === void 0 ? void 0 : cb(req.error);
                             } catch (reason) {
-                                void (0, exception_1.causeAsyncException)(reason);
+                                (0, exception_1.causeAsyncException)(reason);
                             }
                             if (events.length >= this.snapshotCycle) {
-                                void this.snapshot(key);
+                                this.snapshot(key);
                             }
                         });
-                        void tx.addEventListener('complete', () => void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()));
-                        void tx.addEventListener('error', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error))));
-                        void tx.addEventListener('abort', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error))));
-                        void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.register(() => void tx.abort()));
+                        tx.addEventListener('complete', () => void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()));
+                        tx.addEventListener('error', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error))));
+                        tx.addEventListener('abort', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error))));
+                        cancellation === null || cancellation === void 0 ? void 0 : cancellation.register(() => void tx.abort());
                     }, () => void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request has failed.'))));
                 }
                 keys() {
@@ -2742,7 +2834,7 @@ require = function () {
                         false,
                         ++this.counter
                     ], () => event);
-                    void this.status.update(event);
+                    this.status.update(event);
                     const active = () => this.memory.reflect([
                         event.key,
                         event.prop,
@@ -2758,32 +2850,36 @@ require = function () {
                             return;
                         const req = tx.objectStore(this.name).add(record(event));
                         const ev = event;
-                        void tx.addEventListener('complete', () => {
-                            void revert();
+                        tx.addEventListener('complete', () => {
+                            revert();
                             const event = new event_1.SavedEventRecord((0, identifier_1.makeEventId)(req.result), ev.key, ev.value, ev.type, ev.date);
-                            void this.memory.off([
+                            this.memory.off([
                                 event.key,
                                 event.prop,
                                 true,
                                 event.id
                             ]);
-                            void this.memory.on([
+                            this.memory.on([
                                 event.key,
                                 event.prop,
                                 true,
                                 event.id
                             ], () => event);
-                            void this.status.update(event);
+                            this.status.update(event);
                             const events = this.memory.reflect([event.key]).filter(ev => ev.id > 0);
                             if (events.length >= this.snapshotCycle || events.filter(event => (0, value_1.hasBinary)(event.value)).length >= 3) {
-                                void this.snapshot(event.key);
+                                this.snapshot(event.key);
                             }
                         });
-                        const fail = () => void revert() || active() && void loss();
-                        void tx.addEventListener('error', fail);
-                        void tx.addEventListener('abort', fail);
-                        void tx.commit();
-                    }, () => void revert() || active() && void loss(), tx);
+                        const fail = () => {
+                            void revert() || active() && loss();
+                        };
+                        tx.addEventListener('error', fail);
+                        tx.addEventListener('abort', fail);
+                        tx.commit();
+                    }, () => {
+                        void revert() || active() && loss();
+                    }, tx);
                 }
                 delete(key) {
                     return void this.add(new event_1.UnstoredEventRecord(key, new EventStore.Value(), EventStore.EventType.delete));
@@ -2797,15 +2893,15 @@ require = function () {
                         const store = tx.objectStore(this.name);
                         const req = store.index(EventStoreSchema.key).openCursor(key, 'prev');
                         const events = [];
-                        void req.addEventListener('success', () => {
+                        req.addEventListener('success', () => {
                             const cursor = req.result;
                             if (cursor) {
                                 try {
                                     const event = new event_1.LoadedEventRecord(cursor.value);
-                                    void events.unshift(event);
+                                    events.unshift(event);
                                 } catch (reason) {
-                                    void (0, exception_1.causeAsyncException)(reason);
-                                    void cursor.delete();
+                                    (0, exception_1.causeAsyncException)(reason);
+                                    cursor.delete();
                                 }
                                 return void cursor.continue();
                             } else {
@@ -2845,8 +2941,8 @@ require = function () {
                             try {
                                 event = new event_1.LoadedEventRecord(cursor.value);
                             } catch (reason) {
-                                void (0, exception_1.causeAsyncException)(reason);
-                                void cursor.delete();
+                                (0, exception_1.causeAsyncException)(reason);
+                                cursor.delete();
                             }
                             switch (event.type) {
                             case EventStore.EventType.put:
@@ -2865,8 +2961,8 @@ require = function () {
                                 deletion = true;
                                 break;
                             }
-                            void events.unshift(event);
-                            void cursor.delete();
+                            events.unshift(event);
+                            cursor.delete();
                             return void cursor.continue();
                         } else if (tx) {
                             if (clear && this.memory.reflect([key]).every(ev => ev.id > 0)) {
@@ -2875,7 +2971,7 @@ require = function () {
                             return;
                         } else if (events.length > 0) {
                             for (const event of events) {
-                                void this.memory.off([
+                                this.memory.off([
                                     event.key,
                                     event.prop,
                                     true,
@@ -2883,7 +2979,7 @@ require = function () {
                                 ]);
                             }
                             for (const event of this.memory.reflect([key]).filter(ev => 0 < ev.id && ev.id < events[events.length - 1].id)) {
-                                void this.memory.off([
+                                this.memory.off([
                                     event.key,
                                     event.prop,
                                     true,
@@ -2905,25 +3001,25 @@ require = function () {
                             ...stores
                         ], mode);
                         const req = index ? tx.objectStore(this.name).index(index).openCursor(query, direction) : tx.objectStore(this.name).openCursor(query, direction);
-                        void req.addEventListener('success', () => {
+                        req.addEventListener('success', () => {
                             const cursor = req.result;
                             if (cursor) {
                                 try {
-                                    void cb(req.error, cursor, tx);
+                                    cb(req.error, cursor, tx);
                                 } catch (reason) {
-                                    void cursor.delete();
-                                    void (0, exception_1.causeAsyncException)(reason);
+                                    cursor.delete();
+                                    (0, exception_1.causeAsyncException)(reason);
                                 }
                                 return;
                             } else {
-                                void cb(tx.error || req.error, null, tx);
-                                mode === 'readwrite' && void tx.commit();
+                                cb(tx.error || req.error, null, tx);
+                                mode === 'readwrite' && tx.commit();
                                 return;
                             }
                         });
-                        void tx.addEventListener('complete', () => void cb(tx.error || req.error, null, null));
-                        void tx.addEventListener('error', () => void cb(tx.error || req.error, null, null));
-                        void tx.addEventListener('abort ', () => void cb(tx.error || req.error, null, null));
+                        tx.addEventListener('complete', () => void cb(tx.error || req.error, null, null));
+                        tx.addEventListener('error', () => void cb(tx.error || req.error, null, null));
+                        tx.addEventListener('abort ', () => void cb(tx.error || req.error, null, null));
                     }, () => void cb(new Error('Request has failed.'), null, null));
                 }
                 close() {
@@ -2996,7 +3092,7 @@ require = function () {
             'spica/clock': 8,
             'spica/concat': 10,
             'spica/exception': 13,
-            'spica/global': 15,
+            'spica/global': 16,
             'spica/observer': 29
         }
     ],
@@ -3036,7 +3132,7 @@ require = function () {
                     const tx = this.tx.rw;
                     this.tx.rwc = 0;
                     this.tx.rw = void 0;
-                    void tx.commit();
+                    tx.commit();
                     return this.tx.rw;
                 }
                 set txrw(tx) {
@@ -3049,13 +3145,13 @@ require = function () {
                             return;
                         this.tx.rw = void 0;
                     };
-                    void this.tx.rw.addEventListener('abort', clear);
-                    void this.tx.rw.addEventListener('error', clear);
-                    void this.tx.rw.addEventListener('complete', clear);
-                    void (0, clock_1.tick)(clear);
+                    this.tx.rw.addEventListener('abort', clear);
+                    this.tx.rw.addEventListener('error', clear);
+                    this.tx.rw.addEventListener('complete', clear);
+                    (0, clock_1.tick)(clear);
                 }
                 transact(cache, success, failure, tx = this.txrw) {
-                    return tx ? void success(tx) : this.listen(db => {
+                    return tx ? void success(tx) : void this.listen(db => {
                         const tx = cache(db);
                         return tx ? void success(this.txrw = tx) : void failure(new Error('Session is already closed.'));
                     }, failure);
@@ -3066,15 +3162,15 @@ require = function () {
                     return void this.listen(db => {
                         if (!this.alive)
                             return void (cb === null || cb === void 0 ? void 0 : cb(new Error('Session is already closed.'), key));
-                        if (cancellation === null || cancellation === void 0 ? void 0 : cancellation.cancelled)
+                        if (cancellation === null || cancellation === void 0 ? void 0 : cancellation.isCancelled)
                             return void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request is cancelled.'), key));
                         const tx = db.transaction(this.name, 'readonly');
                         const req = this.index ? tx.objectStore(this.name).index(this.index).get(key) : tx.objectStore(this.name).get(key);
-                        void req.addEventListener('success', () => (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error, key, req.result)) && this.cache.set(key, req.result));
-                        void tx.addEventListener('complete', () => void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()));
-                        void tx.addEventListener('error', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error, key))));
-                        void tx.addEventListener('abort', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error, key))));
-                        void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.register(() => void tx.abort()));
+                        req.addEventListener('success', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error, key, req.result)) && this.cache.set(key, req.result));
+                        tx.addEventListener('complete', () => void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()));
+                        tx.addEventListener('error', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error, key))));
+                        tx.addEventListener('abort', () => (void (cancellation === null || cancellation === void 0 ? void 0 : cancellation.close()), void (cb === null || cb === void 0 ? void 0 : cb(tx.error || req.error, key))));
+                        cancellation === null || cancellation === void 0 ? void 0 : cancellation.register(() => void tx.abort());
                     }, () => void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request has failed.'), key)));
                 }
                 has(key) {
@@ -3087,26 +3183,26 @@ require = function () {
                     return this.put(value, key, cb);
                 }
                 put(value, key, cb) {
-                    void this.cache.set(key, value);
+                    this.cache.set(key, value);
                     if (!this.alive)
                         return value;
-                    void this.transact(db => this.alive && this.cache.has(key) ? db.transaction(this.name, 'readwrite') : void 0, tx => {
+                    this.transact(db => this.alive && this.cache.has(key) ? db.transaction(this.name, 'readwrite') : void 0, tx => {
                         this.index ? tx.objectStore(this.name).put(this.cache.get(key)) : tx.objectStore(this.name).put(this.cache.get(key), key);
-                        void tx.addEventListener('complete', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key, value)));
-                        void tx.addEventListener('error', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key, value)));
-                        void tx.addEventListener('abort', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key, value)));
+                        tx.addEventListener('complete', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key, value)));
+                        tx.addEventListener('error', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key, value)));
+                        tx.addEventListener('abort', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key, value)));
                     }, () => void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request has failed.'), key, value)));
                     return value;
                 }
                 delete(key, cb) {
-                    void this.cache.delete(key);
+                    this.cache.delete(key);
                     if (!this.alive)
                         return;
-                    void this.transact(db => this.alive ? db.transaction(this.name, 'readwrite') : void 0, tx => {
-                        void tx.objectStore(this.name).delete(key);
-                        void tx.addEventListener('complete', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key)));
-                        void tx.addEventListener('error', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key)));
-                        void tx.addEventListener('abort', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key)));
+                    this.transact(db => this.alive ? db.transaction(this.name, 'readwrite') : void 0, tx => {
+                        tx.objectStore(this.name).delete(key);
+                        tx.addEventListener('complete', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key)));
+                        tx.addEventListener('error', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key)));
+                        tx.addEventListener('abort', () => void (cb === null || cb === void 0 ? void 0 : cb(tx.error, key)));
                     }, () => void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request has failed.'), key)));
                 }
                 count(query, index) {
@@ -3115,18 +3211,16 @@ require = function () {
                             return void reject(new Error('Session is already closed.'));
                         const tx = db.transaction(this.name, 'readonly');
                         const req = index ? tx.objectStore(this.name).index(index).count(query !== null && query !== void 0 ? query : void 0) : tx.objectStore(this.name).count(query !== null && query !== void 0 ? query : void 0);
-                        void req.addEventListener('success', () => {
-                            void resolve(req.result);
-                        });
-                        void tx.addEventListener('complete', () => void reject(req.error));
-                        void tx.addEventListener('error', () => void reject(req.error));
-                        void tx.addEventListener('abort', () => void reject(req.error));
+                        req.addEventListener('success', () => void resolve(req.result));
+                        tx.addEventListener('complete', () => void reject(req.error));
+                        tx.addEventListener('error', () => void reject(req.error));
+                        tx.addEventListener('abort', () => void reject(req.error));
                     }, () => void reject(new Error('Request has failed.'))));
                 }
                 cursor(query, index, direction, mode, stores, cb) {
                     if (!this.alive)
                         return;
-                    void this.listen(db => {
+                    this.listen(db => {
                         if (!this.alive)
                             return;
                         const tx = db.transaction([
@@ -3134,26 +3228,26 @@ require = function () {
                             ...stores
                         ], mode);
                         const req = index ? tx.objectStore(this.name).index(index).openCursor(query, direction) : tx.objectStore(this.name).openCursor(query, direction);
-                        void req.addEventListener('success', () => {
+                        req.addEventListener('success', () => {
                             const cursor = req.result;
                             if (cursor) {
                                 try {
-                                    void this.cache.set(cursor.primaryKey, { ...cursor.value });
-                                    void cb(tx.error || req.error, cursor, tx);
+                                    this.cache.set(cursor.primaryKey, { ...cursor.value });
+                                    cb(tx.error || req.error, cursor, tx);
                                 } catch (reason) {
-                                    void cursor.delete();
-                                    void (0, exception_1.causeAsyncException)(reason);
+                                    cursor.delete();
+                                    (0, exception_1.causeAsyncException)(reason);
                                 }
                                 return;
                             } else {
-                                void cb(tx.error || req.error, null, tx);
-                                mode === 'readwrite' && void tx.commit();
+                                cb(tx.error || req.error, null, tx);
+                                mode === 'readwrite' && tx.commit();
                                 return;
                             }
                         });
-                        void tx.addEventListener('complete', () => void cb(tx.error || req.error, null, null));
-                        void tx.addEventListener('error', () => void cb(tx.error || req.error, null, null));
-                        void tx.addEventListener('abort', () => void cb(tx.error || req.error, null, null));
+                        tx.addEventListener('complete', () => void cb(tx.error || req.error, null, null));
+                        tx.addEventListener('error', () => void cb(tx.error || req.error, null, null));
+                        tx.addEventListener('abort', () => void cb(tx.error || req.error, null, null));
                     }, () => void cb(new Error('Request has failed.'), null, null));
                 }
                 close() {
@@ -3165,7 +3259,7 @@ require = function () {
         {
             'spica/clock': 8,
             'spica/exception': 13,
-            'spica/global': 15
+            'spica/global': 16
         }
     ],
     43: [
@@ -3197,35 +3291,38 @@ require = function () {
                     this.alive = true;
                     if (cache.has(name))
                         throw new Error(`ClientChannel: Broadcast channel "${ name }" is already open.`);
-                    void cache.add(this.name);
+                    cache.add(this.name);
                 }
                 ensureAliveness() {
                     if (!this.alive)
                         throw new Error(`ClientChannel: Broadcast channel "${ this.name }" is already closed.`);
                 }
                 listen(type, listener) {
-                    void this.ensureAliveness();
-                    void this.listeners.add(handler);
-                    void this.channel.addEventListener('message', handler);
+                    this.ensureAliveness();
+                    this.listeners.add(handler);
+                    this.channel.addEventListener('message', handler);
                     const {debug} = this;
-                    return () => (void this.listeners.delete(handler), void this.channel.removeEventListener('message', handler));
+                    return () => {
+                        this.listeners.delete(handler);
+                        this.channel.removeEventListener('message', handler);
+                    };
                     function handler(ev) {
                         const msg = parse(ev.data);
                         if (!msg || msg.type !== type)
                             return;
                         debug && console.log('recv', msg);
-                        return void listener(msg);
+                        listener(msg);
                     }
                 }
                 post(msg) {
-                    void this.ensureAliveness();
+                    this.ensureAliveness();
                     this.debug && console.log('send', msg);
-                    void this.channel.postMessage(msg);
+                    this.channel.postMessage(msg);
                 }
                 close() {
-                    void this.channel.close();
-                    void this.listeners.clear();
-                    void cache.delete(this.name);
+                    this.channel.close();
+                    this.listeners.clear();
+                    cache.delete(this.name);
                     this.alive = false;
                 }
             }
@@ -3324,7 +3421,7 @@ require = function () {
                             enumerable: true,
                             get() {
                                 const value = source[prop];
-                                void (get === null || get === void 0 ? void 0 : get(prop, value));
+                                get === null || get === void 0 ? void 0 : get(prop, value);
                                 return value;
                             },
                             set(newValue) {
@@ -3332,7 +3429,7 @@ require = function () {
                                     throw new TypeError(`ClientChannel: DAO: Invalid value: ${ JSON.stringify(newValue) }`);
                                 const oldValue = source[prop];
                                 source[prop] = newValue;
-                                void (set === null || set === void 0 ? void 0 : set(prop, newValue, oldValue));
+                                set === null || set === void 0 ? void 0 : set(prop, newValue, oldValue);
                             }
                         };
                         return map;
@@ -3365,8 +3462,8 @@ require = function () {
                         }
                     }
                 };
-                void (0, alias_1.ObjectDefineProperties)(target, descmap);
-                void (0, alias_1.ObjectSeal)(target);
+                (0, alias_1.ObjectDefineProperties)(target, descmap);
+                (0, alias_1.ObjectSeal)(target);
                 return target;
             }
             exports.build = build;
@@ -3437,8 +3534,8 @@ require = function () {
                     this.ages = new Map();
                     if (cache.has(name))
                         throw new Error(`ClientChannel: Store channel "${ name }" is already open.`);
-                    void cache.add(name);
-                    void this.cancellation.register(() => void cache.delete(name));
+                    cache.add(name);
+                    this.cancellation.register(() => void cache.delete(name));
                     this.stores = new Stores(this, this.ownership, this.capacity, (0, api_1.open)(name, {
                         make(db) {
                             return data_1.DataStore.configure().make(db) && access_1.AccessStore.configure().make(db) && expiry_1.ExpiryStore.configure().make(db);
@@ -3450,104 +3547,104 @@ require = function () {
                             return data_1.DataStore.configure().destroy(reason, ev) && access_1.AccessStore.configure().destroy(reason, ev) && expiry_1.ExpiryStore.configure().destroy(reason, ev) && destroy(reason, ev);
                         }
                     }));
-                    void this.cancellation.register(api_1.idbEventStream.on([
+                    this.cancellation.register(api_1.idbEventStream.on([
                         name,
                         'destroy'
                     ], () => void this.stores.rebuild()));
-                    void this.cancellation.register(() => void this.stores.close());
-                    void this.cancellation.register(() => void this.ownership.close());
-                    void this.cancellation.register(() => void this.channel.close());
-                    void this.cancellation.register(this.channel.listen('save', ({key}) => void this.load(key)));
-                    void this.events_.save.monitor([], ({key}) => void this.channel.post(new SaveMessage(key)));
+                    this.cancellation.register(() => void this.stores.close());
+                    this.cancellation.register(() => void this.ownership.close());
+                    this.cancellation.register(() => void this.channel.close());
+                    this.cancellation.register(this.channel.listen('save', ({key}) => void this.load(key)));
+                    this.events_.save.monitor([], ({key}) => void this.channel.post(new SaveMessage(key)));
                     if (this.capacity === global_1.Infinity)
                         return;
-                    void this.events_.load.monitor([], ({key, type}) => {
+                    this.events_.load.monitor([], ({key, type}) => {
                         if (type === ChannelStore.EventType.delete) {
-                            void this.keys.delete(key);
+                            this.keys.delete(key);
                         } else if (!this.keys.has(key)) {
-                            void this.keys.add(key);
-                            void this.stores.access.load(key);
+                            this.keys.add(key);
+                            this.stores.access.load(key);
                         }
                     });
-                    void this.events_.save.monitor([], ({key, type}) => {
+                    this.events_.save.monitor([], ({key, type}) => {
                         if (type === ChannelStore.EventType.delete) {
-                            void this.keys.delete(key);
+                            this.keys.delete(key);
                         } else if (!this.keys.has(key)) {
-                            void this.keys.add(key);
-                            void this.stores.access.load(key);
-                            this.keys.size > this.capacity && void this.stores.access.schedule(100);
+                            this.keys.add(key);
+                            this.stores.access.load(key);
+                            this.keys.size > this.capacity && this.stores.access.schedule(100);
                         }
                     });
                 }
                 get alive() {
-                    return this.cancellation.alive;
+                    return this.cancellation.isAlive;
                 }
                 ensureAliveness() {
                     if (!this.alive)
                         throw new Error(`ClientChannel: Store channel "${ this.name }" is already closed.`);
                 }
                 sync(keys, timeout) {
-                    void this.ensureAliveness();
+                    this.ensureAliveness();
                     const cancellation = timeout === void 0 ? void 0 : new cancellation_1.Cancellation();
-                    cancellation && void (0, global_1.setTimeout)(cancellation.cancel, timeout);
+                    cancellation && (0, global_1.setTimeout)(cancellation.cancel, timeout);
                     return global_1.Promise.resolve(promise_1.AtomicPromise.allSettled(keys.map(key => new global_1.Promise((resolve, reject) => void this.load(key, error => error ? void reject(error) : void resolve(key), cancellation)))));
                 }
                 load(key, cb, cancellation) {
-                    void this.ensureAliveness();
+                    this.ensureAliveness();
                     return this.stores.data.load(key, cb, cancellation);
                 }
                 has(key) {
-                    void this.ensureAliveness();
+                    this.ensureAliveness();
                     return this.stores.data.has(key);
                 }
                 meta(key) {
-                    void this.ensureAliveness();
+                    this.ensureAliveness();
                     return this.stores.data.meta(key);
                 }
                 get(key) {
-                    void this.ensureAliveness();
-                    void this.log(key);
+                    this.ensureAliveness();
+                    this.log(key);
                     return this.stores.data.get(key);
                 }
                 add(record) {
-                    void this.ensureAliveness();
+                    this.ensureAliveness();
                     const key = record.key;
-                    void this.stores.data.add(record);
-                    void this.log(key);
+                    this.stores.data.add(record);
+                    this.log(key);
                 }
                 delete(key) {
-                    void this.ensureAliveness();
-                    void this.stores.data.delete(key);
-                    void this.stores.access.set(key, false);
+                    this.ensureAliveness();
+                    this.stores.data.delete(key);
+                    this.stores.access.set(key, false);
                 }
                 clean(key) {
-                    void this.ensureAliveness();
-                    void this.stores.data.clean(key);
+                    this.ensureAliveness();
+                    this.stores.data.clean(key);
                 }
                 log(key) {
                     var _a;
-                    if (!this.has(key))
+                    if (!this.alive)
                         return;
-                    void this.stores.access.set(key);
-                    void this.stores.expiry.set(key, (_a = this.ages.get(key)) !== null && _a !== void 0 ? _a : this.age);
+                    this.stores.access.set(key);
+                    this.stores.expiry.set(key, (_a = this.ages.get(key)) !== null && _a !== void 0 ? _a : this.age);
                 }
                 expire(key, age = this.age) {
-                    void this.ensureAliveness();
-                    void this.ages.set(key, age);
+                    this.ensureAliveness();
+                    this.ages.set(key, age);
                 }
                 recent(cb, timeout) {
                     if (typeof cb === 'number')
                         return this.recent(void 0, cb);
-                    void this.ensureAliveness();
+                    this.ensureAliveness();
                     return this.stores.access.recent(cb, timeout);
                 }
                 close() {
-                    void this.cancellation.cancel();
+                    this.cancellation.cancel();
                     return void (0, api_1.close)(this.name);
                 }
                 destroy() {
-                    void this.ensureAliveness();
-                    void this.cancellation.cancel();
+                    this.ensureAliveness();
+                    this.cancellation.cancel();
                     return void (0, api_1.destroy)(this.name);
                 }
             }
@@ -3572,7 +3669,7 @@ require = function () {
                     this.capacity = capacity;
                     this.listen = listen;
                     this.cancellation = new cancellation_1.Cancellation();
-                    void this.build();
+                    this.build();
                 }
                 build() {
                     const keys = this.data ? this.data.keys() : [];
@@ -3584,27 +3681,27 @@ require = function () {
                             this.expiry.name
                         ],
                         delete: (key, tx) => {
-                            void tx.objectStore(this.access.name).delete(key);
-                            void tx.objectStore(this.expiry.name).delete(key);
+                            tx.objectStore(this.access.name).delete(key);
+                            tx.objectStore(this.expiry.name).delete(key);
                         }
                     });
-                    void this.cancellation.register(() => this.data.close());
-                    void this.cancellation.register(() => this.access.close());
-                    void this.cancellation.register(() => this.expiry.close());
-                    void this.cancellation.register(this.store.events_.load.relay(this.data.events.load));
-                    void this.cancellation.register(this.store.events_.save.relay(this.data.events.save));
-                    void this.cancellation.register(this.store.events.load.relay(this.data.events.load));
-                    void this.cancellation.register(this.store.events.save.relay(this.data.events.save));
-                    void this.cancellation.register(this.store.events.loss.relay(this.data.events.loss));
-                    void this.store.sync(keys);
+                    this.cancellation.register(() => this.data.close());
+                    this.cancellation.register(() => this.access.close());
+                    this.cancellation.register(() => this.expiry.close());
+                    this.cancellation.register(this.store.events_.load.relay(this.data.events.load));
+                    this.cancellation.register(this.store.events_.save.relay(this.data.events.save));
+                    this.cancellation.register(this.store.events.load.relay(this.data.events.load));
+                    this.cancellation.register(this.store.events.save.relay(this.data.events.save));
+                    this.cancellation.register(this.store.events.loss.relay(this.data.events.loss));
+                    this.store.sync(keys);
                 }
                 rebuild() {
-                    void this.close();
+                    this.close();
                     this.cancellation = new cancellation_1.Cancellation();
-                    void this.build();
+                    this.build();
                 }
                 close() {
-                    void this.cancellation.cancel();
+                    this.cancellation.cancel();
                 }
             }
         },
@@ -3617,7 +3714,7 @@ require = function () {
             './channel/data': 49,
             './channel/expiry': 50,
             'spica/cancellation': 7,
-            'spica/global': 15,
+            'spica/global': 16,
             'spica/observer': 29,
             'spica/promise': 30
         }
@@ -3652,68 +3749,66 @@ require = function () {
                             if (global_1.Date.now() + timeout >= schedule)
                                 return;
                             schedule = global_1.Date.now() + timeout;
-                            void clearTimeout(timer);
+                            (0, global_1.clearTimeout)(timer);
                             timer = (0, global_1.setTimeout)(async () => {
-                                if (!this.cancellation.alive)
+                                if (!this.cancellation.isAlive)
                                     return;
                                 if (schedule === 0)
                                     return;
+                                schedule = global_1.Infinity;
                                 if (!this.ownership.take('store', delay))
                                     return void this.schedule(delay *= 2);
-                                const since = global_1.Date.now();
-                                let count = 0;
-                                schedule = 0;
                                 if (this.chan.lock)
-                                    return void this.schedule(delay *= 2);
-                                schedule = global_1.Infinity;
-                                this.chan.lock = true;
+                                    return void this.schedule(delay);
                                 let timer = (0, global_1.setInterval)(() => {
                                     if (this.ownership.extend('store', delay))
                                         return;
                                     (0, global_1.clearInterval)(timer);
                                     timer = 0;
                                 }, delay / 2);
+                                this.chan.lock = true;
                                 const size = await this.store.count(null, 'key').catch(() => NaN);
                                 this.chan.lock = false;
-                                schedule = 0;
                                 if (size >= 0 === false)
                                     return void (0, global_1.clearInterval)(timer) || void this.schedule(delay *= 2);
                                 if (size <= this.capacity)
                                     return void (0, global_1.clearInterval)(timer);
+                                let count = 0;
+                                schedule = 0;
                                 this.chan.lock = true;
                                 return void this.store.cursor(null, 'date', 'next', 'readonly', [], (error, cursor, tx) => {
                                     if (!cursor && !tx)
                                         return;
                                     this.chan.lock = false;
+                                    schedule = global_1.Infinity;
                                     if (timer) {
                                         (0, global_1.clearInterval)(timer);
                                         timer = 0;
                                     }
-                                    schedule = global_1.Infinity;
-                                    if (!this.cancellation.alive)
+                                    if (!this.cancellation.isAlive)
                                         return;
                                     if (error)
                                         return void this.schedule(delay * 10);
                                     if (!cursor)
                                         return;
                                     if (this.chan.lock)
-                                        return void this.schedule(delay *= 2);
+                                        return void this.schedule(delay);
                                     if (size - count <= this.capacity)
                                         return;
+                                    if (++count > 100)
+                                        return void this.schedule(delay);
                                     const {key} = cursor.value;
-                                    if (!this.ownership.extend('store', delay))
+                                    if (!this.ownership.take('store', delay))
                                         return void this.schedule(delay *= 2);
-                                    if (++count > 50 || global_1.Date.now() > since + 1 * 1000)
-                                        return void this.schedule(5 * 1000);
+                                    this.chan.has(key) || this.chan.meta(key).date === 0 ? this.chan.delete(key) : this.chan.clean(key);
                                     schedule = 0;
                                     this.chan.lock = true;
-                                    this.chan.has(key) || this.chan.meta(key).date === 0 ? void this.chan.delete(key) : void this.chan.clean(key);
                                     return void cursor.continue();
                                 });
                             }, timeout);
                         };
                     })();
-                    void this.schedule(10 * 1000);
+                    this.schedule(10 * 1000);
                 }
                 static configure() {
                     return {
@@ -3723,10 +3818,10 @@ require = function () {
                                 autoIncrement: false
                             });
                             if (!store.indexNames.contains('key')) {
-                                void store.createIndex('key', 'key', { unique: true });
+                                store.createIndex('key', 'key', { unique: true });
                             }
                             if (!store.indexNames.contains('date')) {
-                                void store.createIndex('date', 'date');
+                                store.createIndex('date', 'date');
                             }
                             return true;
                         },
@@ -3741,7 +3836,7 @@ require = function () {
                 recent(cb, timeout) {
                     return new Promise((resolve, reject) => {
                         let done = false;
-                        timeout >= 0 && void (0, global_1.setTimeout)(() => done = !void reject(new Error('Timeout.')), timeout);
+                        timeout >= 0 && (0, global_1.setTimeout)(() => done = !void reject(new Error('Timeout.')), timeout);
                         const keys = [];
                         void this.store.cursor(null, 'date', 'prev', 'readonly', [], (error, cursor) => {
                             if (done)
@@ -3752,11 +3847,11 @@ require = function () {
                                 return void resolve(keys);
                             const {key, alive} = cursor.value;
                             if (alive) {
-                                void keys.push(key);
+                                keys.push(key);
                                 if ((cb === null || cb === void 0 ? void 0 : cb(key, keys)) === false)
                                     return void resolve(keys);
                             }
-                            void cursor.continue();
+                            cursor.continue();
                         });
                     });
                 }
@@ -3767,10 +3862,10 @@ require = function () {
                     }, cancellation);
                 }
                 set(key, alive = true) {
-                    void this.store.set(key, new AccessRecord(key, alive));
+                    this.store.set(key, new AccessRecord(key, alive));
                 }
                 close() {
-                    void this.store.close();
+                    this.store.close();
                 }
             }
             exports.AccessStore = AccessStore;
@@ -3785,7 +3880,7 @@ require = function () {
         {
             '../../../../data/kvs/store': 42,
             'spica/alias': 4,
-            'spica/global': 15
+            'spica/global': 16
         }
     ],
     49: [
@@ -3840,57 +3935,59 @@ require = function () {
                             if (global_1.Date.now() + timeout >= schedule)
                                 return;
                             schedule = global_1.Date.now() + timeout;
-                            void clearTimeout(timer);
+                            (0, global_1.clearTimeout)(timer);
                             timer = (0, global_1.setTimeout)(() => {
-                                if (!this.cancellation.alive)
+                                if (!this.cancellation.isAlive)
                                     return;
                                 if (schedule === 0)
                                     return;
+                                schedule = global_1.Infinity;
                                 if (!this.ownership.take('store', delay))
                                     return void this.schedule(delay *= 2);
-                                const since = global_1.Date.now();
-                                let count = 0;
-                                schedule = 0;
+                                if (this.chan.lock)
+                                    return void this.schedule(delay);
                                 let timer = (0, global_1.setInterval)(() => {
                                     if (this.ownership.extend('store', delay))
                                         return;
                                     (0, global_1.clearInterval)(timer);
                                     timer = 0;
                                 }, delay / 2);
+                                let count = 0;
+                                schedule = 0;
                                 this.chan.lock = true;
                                 return void this.store.cursor(null, 'expiry', 'next', 'readonly', [], (error, cursor, tx) => {
                                     if (!cursor && !tx)
                                         return;
                                     this.chan.lock = false;
+                                    schedule = global_1.Infinity;
                                     if (timer) {
                                         (0, global_1.clearInterval)(timer);
                                         timer = 0;
                                     }
-                                    schedule = global_1.Infinity;
-                                    if (!this.cancellation.alive)
+                                    if (!this.cancellation.isAlive)
                                         return;
                                     if (error)
                                         return void this.schedule(delay * 10);
                                     if (!cursor)
                                         return;
                                     if (this.chan.lock)
-                                        return void this.schedule(delay *= 2);
+                                        return void this.schedule(delay);
+                                    if (++count > 100)
+                                        return void this.schedule(delay);
                                     const {key, expiry} = cursor.value;
                                     if (expiry > global_1.Date.now())
                                         return void this.schedule(expiry - global_1.Date.now());
-                                    if (!this.ownership.extend('store', delay))
+                                    if (!this.ownership.take('store', delay))
                                         return void this.schedule(delay *= 2);
-                                    if (++count > 50 || global_1.Date.now() > since + 1 * 1000)
-                                        return void this.schedule(5 * 1000);
+                                    this.chan.has(key) || this.chan.meta(key).date === 0 ? this.chan.delete(key) : this.chan.clean(key);
                                     schedule = 0;
                                     this.chan.lock = true;
-                                    this.chan.has(key) || this.chan.meta(key).date === 0 ? void this.chan.delete(key) : void this.chan.clean(key);
                                     return void cursor.continue();
                                 });
                             }, timeout);
                         };
                     })();
-                    void this.schedule(10 * 1000);
+                    this.schedule(10 * 1000);
                 }
                 static configure() {
                     return {
@@ -3900,10 +3997,10 @@ require = function () {
                                 autoIncrement: false
                             });
                             if (!store.indexNames.contains('key')) {
-                                void store.createIndex('key', 'key', { unique: true });
+                                store.createIndex('key', 'key', { unique: true });
                             }
                             if (!store.indexNames.contains('expiry')) {
-                                void store.createIndex('expiry', 'expiry');
+                                store.createIndex('expiry', 'expiry');
                             }
                             return true;
                         },
@@ -3924,11 +4021,11 @@ require = function () {
                 set(key, age) {
                     if (age === global_1.Infinity)
                         return void this.store.delete(key);
-                    void this.schedule(age);
-                    void this.store.set(key, new ExpiryRecord(key, global_1.Date.now() + age));
+                    this.schedule(age);
+                    this.store.set(key, new ExpiryRecord(key, global_1.Date.now() + age));
                 }
                 close() {
-                    void this.store.close();
+                    this.store.close();
                 }
             }
             exports.ExpiryStore = ExpiryStore;
@@ -3942,7 +4039,7 @@ require = function () {
         {
             '../../../../data/kvs/store': 42,
             'spica/alias': 4,
-            'spica/global': 15
+            'spica/global': 16
         }
     ],
     51: [
@@ -3980,15 +4077,15 @@ require = function () {
                         }).filter(({newValue, oldValue}) => !(0, compare_1.equal)(newValue, oldValue));
                         if (changes.length === 0)
                             return;
-                        void (migrate === null || migrate === void 0 ? void 0 : migrate(link));
+                        migrate === null || migrate === void 0 ? void 0 : migrate(link);
                         for (const {prop, oldValue} of changes) {
-                            void source[StoreChannel.Value.event].emit([
+                            source[StoreChannel.Value.event].emit([
                                 api_2.StorageChannel.EventType.recv,
                                 prop
                             ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.recv, prop, memory[prop], oldValue));
                         }
                     };
-                    void this.events_.load.monitor([], ({key, prop, type}) => {
+                    this.events_.load.monitor([], ({key, prop, type}) => {
                         if (!this.sources.has(key))
                             return;
                         switch (type) {
@@ -4011,20 +4108,29 @@ require = function () {
                     }), '' in this.schemas ? ((_a = this.schemas[key]) !== null && _a !== void 0 ? _a : this.schemas[''])(key) : this.schemas[key](key), (prop, newValue, oldValue) => {
                         if (!this.alive)
                             return;
-                        void this.add(new StoreChannel.Record(key, { [prop]: newValue }));
+                        this.add(new StoreChannel.Record(key, { [prop]: newValue }));
                         if ((0, compare_1.equal)(newValue, oldValue))
                             return;
-                        void this.sources.get(key)[StoreChannel.Value.event].emit([
+                        this.sources.get(key)[StoreChannel.Value.event].emit([
                             api_2.StorageChannel.EventType.send,
                             prop
                         ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.send, prop, newValue, oldValue));
-                    }, (0, throttle_1.throttle)(100, () => this.alive && this.links.has(key) && void this.log(key)))).get(key);
+                    }, (0, throttle_1.throttle)(100, () => {
+                        this.links.has(key) && this.alive && this.log(key);
+                    }))).get(key);
                 }
                 link(key, age) {
-                    void this.ensureAliveness();
-                    void this.expire(key, age);
-                    void this.load(key, error => !error && this.alive && this.links.has(key) && void this.log(key));
+                    this.ensureAliveness();
+                    this.expire(key, age);
+                    this.load(key, error => {
+                        !error && this.alive && this.log(key);
+                    });
                     return this.link_(key);
+                }
+                delete(key) {
+                    this.ensureAliveness();
+                    this.links.delete(key);
+                    super.delete(key);
                 }
             }
             exports.StoreChannel = StoreChannel;
@@ -4055,10 +4161,11 @@ require = function () {
             const channel_1 = _dereq_('../broadcast/channel');
             const cancellation_1 = _dereq_('spica/cancellation');
             class OwnershipMessage extends channel_1.ChannelMessage {
-                constructor(key, priority) {
+                constructor(key, priority, age) {
                     super(key, 'ownership');
                     this.key = key;
                     this.priority = priority;
+                    this.age = age;
                 }
             }
             class Ownership {
@@ -4067,71 +4174,83 @@ require = function () {
                     this.store = new Map();
                     this.cancellation = new cancellation_1.Cancellation();
                     this.alive = true;
-                    void this.cancellation.register((() => {
+                    this.cancellation.register((() => {
                         const listener = () => this.close();
-                        void self.addEventListener('unload', listener);
+                        self.addEventListener('unload', listener);
                         return () => void self.removeEventListener('unload', listener);
                     })());
-                    void this.cancellation.register(() => {
+                    this.cancellation.register(() => {
                         for (const key of this.store.keys()) {
-                            void this.release(key);
+                            this.release(key);
                         }
-                        void this.channel.close();
+                        this.channel.close();
                     });
-                    void this.channel.listen('ownership', ({
+                    this.channel.listen('ownership', ({
                         key,
-                        priority: newPriority
+                        priority: newPriority,
+                        age
                     }) => {
-                        const oldPriority = this.getPriority(key);
+                        const {priority: oldPriority} = this.getOwnership(key);
                         switch (true) {
                         case newPriority < 0:
                             return newPriority === oldPriority ? void this.store.delete(key) : void 0;
                         case oldPriority === 0:
-                            return void this.setPriority(key, -newPriority);
+                            return void this.setOwnership(key, -newPriority, age);
                         case oldPriority > 0:
-                            return oldPriority < newPriority && this.has(key) ? void this.castPriority(key) : void this.setPriority(key, -newPriority);
+                            return oldPriority < newPriority && this.has(key) ? void this.castOwnership(key) : void this.setOwnership(key, -newPriority, age);
                         case oldPriority < 0:
-                            return void this.setPriority(key, -newPriority);
+                            return void this.setOwnership(key, -newPriority, age);
                         default:
                         }
                     });
                 }
-                static genPriority(age) {
+                static genExpiry(age) {
                     return global_1.Date.now() + age;
                 }
-                getPriority(key) {
-                    return this.store.get(key) || 0;
+                getOwnership(key) {
+                    var _a;
+                    return (_a = this.store.get(key)) !== null && _a !== void 0 ? _a : {
+                        priority: 0,
+                        age: 0
+                    };
                 }
-                setPriority(key, newPriority) {
-                    const oldPriority = this.getPriority(key);
+                setOwnership(key, newPriority, newAge) {
+                    const {
+                        priority: oldPriority,
+                        age: oldAge
+                    } = this.getOwnership(key);
                     if (newPriority === oldPriority)
                         return;
-                    void this.store.set(key, newPriority);
-                    const mergin = 1000;
-                    if (newPriority > 0 && newPriority > oldPriority + mergin) {
-                        void this.castPriority(key);
+                    this.store.set(key, {
+                        priority: newPriority,
+                        age: (0, alias_1.max)(newPriority + newAge, oldPriority + oldAge) - newPriority
+                    });
+                    const throttle = Ownership.margin - 1000;
+                    if (newPriority > 0 && newPriority > oldPriority + throttle) {
+                        this.castOwnership(key);
                     }
                 }
-                castPriority(key) {
-                    void this.channel.post(new OwnershipMessage(key, this.getPriority(key)));
+                castOwnership(key) {
+                    const {priority, age} = this.getOwnership(key);
+                    this.channel.post(new OwnershipMessage(key, priority, age));
                 }
                 has(key) {
-                    const priority = this.getPriority(key);
-                    return priority > 0 && priority >= Ownership.genPriority(0) + Ownership.mergin;
+                    const {priority, age} = this.getOwnership(key);
+                    return priority > 0 && priority + age > Ownership.genExpiry(0);
                 }
                 isTakable(key) {
-                    const priority = this.getPriority(key);
-                    return priority >= 0 || Ownership.genPriority(0) > (0, alias_1.abs)(priority);
+                    const {priority, age} = this.getOwnership(key);
+                    return priority >= 0 || Ownership.genExpiry(0) > (0, alias_1.abs)(priority) + age;
                 }
                 take(key, age, wait) {
                     if (!this.alive)
                         throw new Error(`ClientChannel: Ownership channel "${ this.channel.name }" is already closed.`);
                     if (!this.isTakable(key))
                         return wait === void 0 ? false : global_1.Promise.resolve(false);
-                    age = (0, alias_1.min)((0, alias_1.max)(age, 1 * 1000), 60 * 1000);
+                    age = (0, alias_1.floor)((0, alias_1.min)((0, alias_1.max)(age, 1 * 1000), 60 * 1000));
                     wait = wait === void 0 ? wait : (0, alias_1.min)(wait, 0);
-                    const priority = Ownership.genPriority(age) + Ownership.mergin;
-                    priority > this.getPriority(key) && void this.setPriority(key, priority);
+                    const priority = Ownership.genExpiry(age) + Ownership.margin + ((0, alias_1.random)() * 1000 | 0);
+                    priority > this.getOwnership(key).priority && this.setOwnership(key, priority, age);
                     return wait === void 0 ? this.has(key) : new global_1.Promise(resolve => void (0, global_1.setTimeout)(() => void resolve(this.extend(key, age)), wait));
                 }
                 extend(key, age) {
@@ -4144,23 +4263,23 @@ require = function () {
                         throw new Error(`ClientChannel: Ownership channel "${ this.channel.name }" is already closed.`);
                     if (!this.has(key))
                         return;
-                    void this.setPriority(key, -(0, alias_1.abs)(this.getPriority(key)));
-                    void this.castPriority(key);
-                    void this.store.delete(key);
+                    this.setOwnership(key, -(0, alias_1.abs)(this.getOwnership(key).priority), 0);
+                    this.castOwnership(key);
+                    this.store.delete(key);
                 }
                 close() {
-                    void this.cancellation.cancel();
+                    this.cancellation.cancel();
                     this.alive = false;
                 }
             }
             exports.Ownership = Ownership;
-            Ownership.mergin = 5 * 1000;
+            Ownership.margin = 6 * 1000;
         },
         {
             '../broadcast/channel': 43,
             'spica/alias': 4,
             'spica/cancellation': 7,
-            'spica/global': 15
+            'spica/global': 16
         }
     ],
     53: [
@@ -4210,13 +4329,13 @@ require = function () {
                     return this.store.has(key) ? this.store.get(key) : null;
                 }
                 setItem(key, data) {
-                    void this.store.set(key, data);
+                    this.store.set(key, data);
                 }
                 removeItem(key) {
-                    void this.store.delete(key);
+                    this.store.delete(key);
                 }
                 clear() {
-                    void this.store.clear();
+                    this.store.clear();
                 }
             }
             exports.fakeStorage = new Storage();
@@ -4248,8 +4367,8 @@ require = function () {
                     };
                     if (cache.has(name))
                         throw new Error(`ClientChannel: Storage channel "${ name }" is already open.`);
-                    void cache.add(name);
-                    void this.cancellation.register(() => void cache.delete(name));
+                    cache.add(name);
+                    this.cancellation.register(() => void cache.delete(name));
                     const source = {
                         ...parse(this.storage.getItem(this.name)),
                         [StorageChannel.Value.key]: this.name,
@@ -4258,16 +4377,16 @@ require = function () {
                     this.link_ = (0, api_1.build)(source, schema(), (prop, newValue, oldValue) => {
                         if (!this.alive)
                             return;
-                        void this.storage.setItem(this.name, JSON.stringify((0, alias_1.ObjectFromEntries)((0, alias_1.ObjectEntries)(source).filter(api_1.isValidProperty))));
+                        this.storage.setItem(this.name, JSON.stringify((0, alias_1.ObjectFromEntries)((0, alias_1.ObjectEntries)(source).filter(api_1.isValidProperty))));
                         const event = new StorageChannel.Event(StorageChannel.EventType.send, prop, newValue, oldValue);
-                        void this.events.send.emit([event.prop], event);
-                        void source[StorageChannel.Value.event].emit([
+                        this.events.send.emit([event.prop], event);
+                        source[StorageChannel.Value.event].emit([
                             event.type,
                             event.prop
                         ], event);
                     });
-                    void (migrate === null || migrate === void 0 ? void 0 : migrate(this.link_));
-                    void this.cancellation.register(api_2.storageEventStream.on([
+                    migrate === null || migrate === void 0 ? void 0 : migrate(this.link_);
+                    this.cancellation.register(api_2.storageEventStream.on([
                         this.mode,
                         this.name
                     ], ({newValue}) => {
@@ -4278,10 +4397,10 @@ require = function () {
                             if ((0, compare_1.equal)(newValue, oldValue))
                                 return;
                             source[prop] = newValue;
-                            void (migrate === null || migrate === void 0 ? void 0 : migrate(this.link_));
+                            migrate === null || migrate === void 0 ? void 0 : migrate(this.link_);
                             const event = new StorageChannel.Event(StorageChannel.EventType.recv, prop, source[prop], oldValue);
-                            void this.events.recv.emit([event.prop], event);
-                            void source[StorageChannel.Value.event].emit([
+                            this.events.recv.emit([event.prop], event);
+                            source[StorageChannel.Value.event].emit([
                                 event.type,
                                 event.prop
                             ], event);
@@ -4289,23 +4408,23 @@ require = function () {
                     }));
                 }
                 get alive() {
-                    return this.cancellation.alive;
+                    return this.cancellation.isAlive;
                 }
                 ensureAliveness() {
                     if (!this.alive)
                         throw new Error(`ClientChannel: Storage channel "${ this.name }" is already closed.`);
                 }
                 link() {
-                    void this.ensureAliveness();
+                    this.ensureAliveness();
                     return this.link_;
                 }
                 close() {
-                    void this.cancellation.cancel();
+                    this.cancellation.cancel();
                 }
                 destroy() {
-                    void this.ensureAliveness();
-                    void this.cancellation.cancel();
-                    void this.storage.removeItem(this.name);
+                    this.ensureAliveness();
+                    this.cancellation.cancel();
+                    this.storage.removeItem(this.name);
                 }
             }
             exports.StorageChannel = StorageChannel;
@@ -4381,10 +4500,10 @@ require = function () {
                     if (!self.navigator.cookieEnabled)
                         throw void 0;
                     const key = 'clientchannel#' + (0, uuid_1.uuid)();
-                    void self.sessionStorage.setItem(key, key);
+                    self.sessionStorage.setItem(key, key);
                     if (key !== self.sessionStorage.getItem(key))
                         throw void 0;
-                    void self.sessionStorage.removeItem(key);
+                    self.sessionStorage.removeItem(key);
                     return exports.isStorageAvailable = true;
                 } catch (_a) {
                     return exports.isStorageAvailable = false;
@@ -4466,9 +4585,9 @@ require = function () {
             const transition_1 = _dereq_('./transition');
             const event_1 = _dereq_('./event');
             const api_1 = _dereq_('../../environment/api');
-            const noop_1 = _dereq_('spica/noop');
+            const function_1 = _dereq_('spica/function');
             function open(database, config) {
-                void operate(database, 'open', config);
+                operate(database, 'open', config);
                 return (success, failure) => void request(database, success, failure);
             }
             exports.open = open;
@@ -4512,25 +4631,25 @@ require = function () {
                         ], () => void operate(database, command, config));
                     }
                 }
-                void state_1.commands.set(database, command);
-                void state_1.configs.set(database, config);
+                state_1.commands.set(database, command);
+                state_1.configs.set(database, config);
                 if (!state_1.isIDBAvailable || !api_1.isStorageAvailable)
                     return;
                 if (state_1.states.has(database)) {
-                    return void request(database, noop_1.noop);
+                    return void request(database, function_1.noop);
                 } else {
                     return void (0, transition_1.handle)(database);
                 }
             }
-            function request(database, success, failure = noop_1.noop) {
+            function request(database, success, failure = function_1.noop) {
                 if (!state_1.isIDBAvailable)
                     return void failure(new Error('Database is unavailable.'));
                 if (!api_1.isStorageAvailable)
                     return void failure(new Error('Storage is unavailable.'));
                 if (!state_1.requests.has(database))
                     return void failure(new Error('Database is inactive.'));
-                void state_1.requests.get(database).enqueue(success, failure);
-                void (0, transition_1.handle)(database);
+                state_1.requests.get(database).enqueue(success, failure);
+                (0, transition_1.handle)(database);
             }
         },
         {
@@ -4538,7 +4657,7 @@ require = function () {
             './event': 60,
             './state': 61,
             './transition': 62,
-            'spica/noop': 28
+            'spica/function': 14
         }
     ],
     60: [
@@ -4577,7 +4696,7 @@ require = function () {
                     const state = exports.states.get(this.database);
                     if (!state || !state.alive || state.queue !== this)
                         return void failure(new Error('Request is invalid.'));
-                    void this.queue.push({
+                    this.queue.push({
                         success,
                         failure
                     });
@@ -4592,7 +4711,7 @@ require = function () {
                     while (true) {
                         try {
                             while (this.queue.length > 0) {
-                                void this.queue.shift().failure(new Error('Request is cancelled.'));
+                                this.queue.shift().failure(new Error('Request is cancelled.'));
                             }
                             return;
                         } catch (_a) {
@@ -4612,14 +4731,14 @@ require = function () {
                         this.alive = !curr;
                         if (!this.alive)
                             return;
-                        void exports.requests.set(database, exports.requests.get(database) || new RequestQueue(database));
+                        exports.requests.set(database, exports.requests.get(database) || new RequestQueue(database));
                     } else {
                         this.alive = !!curr;
                         if (!this.alive || !curr)
                             return;
                         curr.alive = false;
                     }
-                    void exports.states.set(database, this);
+                    exports.states.set(database, this);
                 }
                 get command() {
                     return exports.commands.get(this.database);
@@ -4710,12 +4829,12 @@ require = function () {
                     switch (this.command) {
                     case 'close':
                     case 'destroy':
-                        void ((_a = exports.requests.get(this.database)) === null || _a === void 0 ? void 0 : _a.clear());
-                        void exports.commands.delete(this.database);
-                        void exports.configs.delete(this.database);
-                        void exports.requests.delete(this.database);
+                        (_a = exports.requests.get(this.database)) === null || _a === void 0 ? void 0 : _a.clear();
+                        exports.commands.delete(this.database);
+                        exports.configs.delete(this.database);
+                        exports.requests.delete(this.database);
                     }
-                    void exports.states.delete(this.database);
+                    exports.states.delete(this.database);
                     this.alive = false;
                 }
             }
@@ -4749,7 +4868,7 @@ require = function () {
                     openRequest.onsuccess = () => void handleSuccessState(new state_1.SuccessState(state, openRequest.result));
                     openRequest.onerror = event => void handleErrorState(new state_1.ErrorState(state, openRequest.error, event));
                 } catch (reason) {
-                    void handleCrashState(new state_1.CrashState(state, reason));
+                    handleCrashState(new state_1.CrashState(state, reason));
                 }
             }
             function handleBlockedState(state) {
@@ -4760,7 +4879,7 @@ require = function () {
                 session.onupgradeneeded = () => void handleUpgradeState(new state_1.UpgradeState(state, session));
                 session.onsuccess = () => void handleSuccessState(new state_1.SuccessState(state, session.result));
                 session.onerror = event => void handleErrorState(new state_1.ErrorState(state, session.error, event));
-                void event_1.idbEventStream_.emit([
+                event_1.idbEventStream_.emit([
                     database,
                     'block'
                 ], new event_1.IDBEvent(database, 'block'));
@@ -4778,7 +4897,7 @@ require = function () {
                         session.onsuccess = session.onerror = event => (void db.close(), config.destroy(session.error, event) ? void handleDestroyState(new state_1.DestroyState(state)) : void handleEndState(new state_1.EndState(state)));
                     }
                 } catch (reason) {
-                    void handleCrashState(new state_1.CrashState(state, reason));
+                    handleCrashState(new state_1.CrashState(state, reason));
                 }
             }
             function handleSuccessState(state) {
@@ -4787,12 +4906,12 @@ require = function () {
                 const {database, connection, config, queue} = state;
                 connection.onversionchange = () => {
                     const curr = new state_1.EndState(state);
-                    void connection.close();
-                    void event_1.idbEventStream_.emit([
+                    connection.close();
+                    event_1.idbEventStream_.emit([
                         database,
                         'destroy'
                     ], new event_1.IDBEvent(database, 'destroy'));
-                    void handleEndState(curr);
+                    handleEndState(curr);
                 };
                 connection.onerror = event => void handleErrorState(new state_1.ErrorState(state, event.target.error, event));
                 connection.onabort = event => void handleAbortState(new state_1.AbortState(state, event));
@@ -4803,13 +4922,13 @@ require = function () {
                             try {
                                 if (config.verify(connection))
                                     break VALIDATION;
-                                void connection.close();
+                                connection.close();
                                 return void handleEndState(new state_1.EndState(state, connection.version + 1));
                             } catch (reason) {
-                                void connection.close();
+                                connection.close();
                                 return void handleCrashState(new state_1.CrashState(state, reason));
                             }
-                        void event_1.idbEventStream_.emit([
+                        event_1.idbEventStream_.emit([
                             database,
                             'connect'
                         ], new event_1.IDBEvent(database, 'connect'));
@@ -4825,20 +4944,20 @@ require = function () {
                             }
                             return;
                         } catch (reason) {
-                            void (0, exception_1.causeAsyncException)(reason);
+                            (0, exception_1.causeAsyncException)(reason);
                             const curr = new state_1.CrashState(state, reason);
-                            void connection.close();
+                            connection.close();
                             return void handleCrashState(curr);
                         }
                     }
                 case 'close': {
                         const curr = new state_1.EndState(state);
-                        void connection.close();
+                        connection.close();
                         return void handleEndState(curr);
                     }
                 case 'destroy': {
                         const curr = new state_1.DestroyState(state);
-                        void connection.close();
+                        connection.close();
                         return void handleDestroyState(curr);
                     }
                 }
@@ -4847,8 +4966,8 @@ require = function () {
                 if (!state.alive)
                     return;
                 const {database, error, event, config} = state;
-                void event.preventDefault();
-                void event_1.idbEventStream_.emit([
+                event.preventDefault();
+                event_1.idbEventStream_.emit([
                     database,
                     'error'
                 ], new event_1.IDBEvent(database, 'error'));
@@ -4862,8 +4981,8 @@ require = function () {
                 if (!state.alive)
                     return;
                 const {database, event} = state;
-                void event.preventDefault();
-                void event_1.idbEventStream_.emit([
+                event.preventDefault();
+                event_1.idbEventStream_.emit([
                     database,
                     'abort'
                 ], new event_1.IDBEvent(database, 'abort'));
@@ -4873,7 +4992,7 @@ require = function () {
                 if (!state.alive)
                     return;
                 const {database, reason, config} = state;
-                void event_1.idbEventStream_.emit([
+                event_1.idbEventStream_.emit([
                     database,
                     'crash'
                 ], new event_1.IDBEvent(database, 'crash'));
@@ -4900,8 +5019,8 @@ require = function () {
                 if (!state.alive)
                     return;
                 const {database, version, command} = state;
-                void state.complete();
-                void event_1.idbEventStream_.emit([
+                state.complete();
+                event_1.idbEventStream_.emit([
                     database,
                     'disconnect'
                 ], new event_1.IDBEvent(database, 'disconnect'));
