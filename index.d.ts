@@ -18,7 +18,7 @@ export class StoreChannel<M extends object, K extends keyof M & string = keyof M
 }
 export namespace StoreChannel {
   export interface Config<M extends object> {
-    schemas: { [K in keyof M & string]: (key: K) => M[K]; };
+    schemas: { readonly [K in keyof M & string]: (key: K) => M[K]; };
     capacity?: number;
     age?: number;
     migrate?(link: M[keyof M & string]): void;
