@@ -38,8 +38,8 @@ export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Val
     private readonly debug = false,
   ) {
     if (cache.has(name)) throw new Error(`ClientChannel: Store channel "${name}" is already open.`);
-    void cache.add(name);
-    void this.cancellation.register(() =>
+    cache.add(name);
+    this.cancellation.register(() =>
       void cache.delete(name));
 
     this.stores = new Stores<K, V>(this, this.ownership, this.capacity, open(name, {
@@ -62,41 +62,41 @@ export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Val
     }));
     // NOTE: Deleting databases on devtools won't trigger the `destroy` event
     // but `indexedDB.deleteDatabase()` triggers the event as expected.
-    void this.cancellation.register(idbEventStream.on([name, IDBEventType.destroy], () =>
+    this.cancellation.register(idbEventStream.on([name, IDBEventType.destroy], () =>
       void this.stores.rebuild()));
-    void this.cancellation.register(() =>
+    this.cancellation.register(() =>
       void this.stores.close());
 
-    void this.cancellation.register(() =>
+    this.cancellation.register(() =>
       void this.ownership.close());
 
-    void this.cancellation.register(() =>
+    this.cancellation.register(() =>
       void this.channel.close());
-    void this.cancellation.register(this.channel.listen('save', ({ key }) =>
+    this.cancellation.register(this.channel.listen('save', ({ key }) =>
       void this.load(key)));
 
-    void this.events_.save.monitor([], ({ key }) =>
+    this.events_.save.monitor([], ({ key }) =>
       void this.channel.post(new SaveMessage(key)));
 
     if (this.capacity === Infinity) return;
 
-    void this.events_.load.monitor([], ({ key, type }) => {
+    this.events_.load.monitor([], ({ key, type }) => {
       if (type === ChannelStore.EventType.delete) {
-        void this.keys.delete(key);
+        this.keys.delete(key);
       }
       else if (!this.keys.has(key)) {
-        void this.keys.add(key);
-        void this.stores.access.load(key);
+        this.keys.add(key);
+        this.stores.access.load(key);
       }
     });
-    void this.events_.save.monitor([], ({ key, type }) => {
+    this.events_.save.monitor([], ({ key, type }) => {
       if (type === ChannelStore.EventType.delete) {
-        void this.keys.delete(key);
+        this.keys.delete(key);
       }
       else if (!this.keys.has(key)) {
-        void this.keys.add(key);
-        void this.stores.access.load(key);
-        this.keys.size > this.capacity && void this.stores.access.schedule(100);
+        this.keys.add(key);
+        this.stores.access.load(key);
+        this.keys.size > this.capacity && this.stores.access.schedule(100);
       }
     });
   }
@@ -125,11 +125,11 @@ export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Val
     if (!this.alive) throw new Error(`ClientChannel: Store channel "${this.name}" is already closed.`);
   }
   public sync(keys: readonly K[], timeout?: number): Promise<PromiseSettledResult<K>[]> {
-    void this.ensureAliveness();
+    this.ensureAliveness();
     const cancellation = timeout === void 0
       ? void 0
       : new Cancellation();
-    cancellation && void setTimeout(cancellation.cancel, timeout);
+    cancellation && setTimeout(cancellation.cancel, timeout);
     return Promise.resolve(AtomicPromise.allSettled(
       keys.map(key =>
         new Promise<K>((resolve, reject) =>
@@ -140,63 +140,64 @@ export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Val
             cancellation)))));
   }
   public load(key: K, cb?: (error: DOMException | Error | null) => void, cancellation?: Cancellation): void {
-    void this.ensureAliveness();
+    this.ensureAliveness();
     return this.stores.data.load(key, cb, cancellation);
   }
   public has(key: K): boolean {
-    void this.ensureAliveness();
+    this.ensureAliveness();
     return this.stores.data.has(key);
   }
   public meta(key: K): ChannelStore.ValueMetaData<K> {
-    void this.ensureAliveness();
+    this.ensureAliveness();
     return this.stores.data.meta(key);
   }
   public get(key: K): Partial<V> {
-    void this.ensureAliveness();
-    void this.log(key);
+    this.ensureAliveness();
+    this.log(key);
     return this.stores.data.get(key);
   }
   public add(record: DataStore.Record<K, V>): void {
     assert(record.type === DataStore.EventType.put);
-    void this.ensureAliveness();
+    this.ensureAliveness();
     const key = record.key;
-    void this.stores.data.add(record);
-    void this.log(key);
+    this.stores.data.add(record);
+    this.log(key);
   }
   public delete(key: K): void {
-    void this.ensureAliveness();
-    void this.stores.data.delete(key);
-    void this.stores.access.set(key, false);
+    this.ensureAliveness();
+    this.stores.data.delete(key);
+    this.stores.access.set(key, false);
   }
   public clean(key: K): void {
-    void this.ensureAliveness();
-    void this.stores.data.clean(key);
+    this.ensureAliveness();
+    this.stores.data.clean(key);
   }
   protected log(key: K): void {
-    if (!this.has(key)) return;
-    void this.stores.access.set(key);
-    void this.stores.expiry.set(key, this.ages.get(key) ?? this.age);
+    assert(this.alive);
+    if (!this.alive) return;
+    this.stores.access.set(key);
+    this.stores.expiry.set(key, this.ages.get(key) ?? this.age);
   }
   private readonly ages = new Map<K, number>();
   public expire(key: K, age: number = this.age): void {
     assert(age > 0);
-    void this.ensureAliveness();
-    void this.ages.set(key, age);
+    this.ensureAliveness();
+    this.ages.set(key, age);
   }
   public recent(timeout?: number): Promise<K[]>;
   public recent(cb?: (key: K, keys: readonly K[]) => boolean | void, timeout?: number): Promise<K[]>;
   public recent(cb?: number | ((key: K, keys: readonly K[]) => boolean | void), timeout?: number): Promise<K[]> {
     if (typeof cb === 'number') return this.recent(void 0, cb);
-    void this.ensureAliveness();
+    this.ensureAliveness();
     return this.stores.access.recent(cb, timeout);
   }
   public close(): void {
-    void this.cancellation.cancel();
+    this.cancellation.cancel();
     return void close(this.name);
   }
   public destroy(): void {
-    void this.ensureAliveness();
-    void this.cancellation.cancel();
+    this.ensureAliveness();
+    this.cancellation.cancel();
     return void destroy(this.name);
   }
 }
@@ -229,7 +230,7 @@ class Stores<K extends string, V extends ChannelStore.Value<K>> {
     private readonly capacity: number,
     private readonly listen: Listen,
   ) {
-    void this.build();
+    this.build();
   }
   private cancellation = new Cancellation();
   private build(): void {
@@ -241,35 +242,35 @@ class Stores<K extends string, V extends ChannelStore.Value<K>> {
     this.data = new DataStore<K, V>(this.listen, {
       stores: [this.access.name, this.expiry.name],
       delete: (key, tx) => {
-        void tx.objectStore(this.access.name).delete(key);
-        void tx.objectStore(this.expiry.name).delete(key);
+        tx.objectStore(this.access.name).delete(key);
+        tx.objectStore(this.expiry.name).delete(key);
       },
     });
 
-    void this.cancellation.register(() => this.data.close());
-    void this.cancellation.register(() => this.access.close());
-    void this.cancellation.register(() => this.expiry.close());
+    this.cancellation.register(() => this.data.close());
+    this.cancellation.register(() => this.access.close());
+    this.cancellation.register(() => this.expiry.close());
 
-    void this.cancellation.register(this.store.events_.load.relay(this.data.events.load));
-    void this.cancellation.register(this.store.events_.save.relay(this.data.events.save));
+    this.cancellation.register(this.store.events_.load.relay(this.data.events.load));
+    this.cancellation.register(this.store.events_.save.relay(this.data.events.save));
     // @ts-expect-error
-    void this.cancellation.register(this.store.events.load.relay(this.data.events.load));
+    this.cancellation.register(this.store.events.load.relay(this.data.events.load));
     // @ts-expect-error
-    void this.cancellation.register(this.store.events.save.relay(this.data.events.save));
+    this.cancellation.register(this.store.events.save.relay(this.data.events.save));
     // @ts-expect-error
-    void this.cancellation.register(this.store.events.loss.relay(this.data.events.loss));
+    this.cancellation.register(this.store.events.loss.relay(this.data.events.loss));
 
-    void this.store.sync(keys);
+    this.store.sync(keys);
   }
   public rebuild(): void {
-    void this.close();
+    this.close();
     this.cancellation = new Cancellation();
-    void this.build();
+    this.build();
   }
   public data!: DataStore<K, V>;
   public access!: AccessStore<K>;
   public expiry!: ExpiryStore<K>;
   public close(): void {
-    void this.cancellation.cancel();
+    this.cancellation.cancel();
   }
 }

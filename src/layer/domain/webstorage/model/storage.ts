@@ -17,13 +17,13 @@ class Storage implements StorageLike {
       : null;
   }
   public setItem(key: string, data: string): void {
-    void this.store.set(key, data);
+    this.store.set(key, data);
   }
   public removeItem(key: string): void {
-    void this.store.delete(key);
+    this.store.delete(key);
   }
   public clear(): void {
-    void this.store.clear();
+    this.store.clear();
   }
 }
 

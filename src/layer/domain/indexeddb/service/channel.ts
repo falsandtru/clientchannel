@@ -44,14 +44,14 @@ export class StoreChannel<M extends object, K extends keyof M & string = keyof M
         .filter(({ newValue, oldValue }) =>
           !equal(newValue, oldValue));
       if (changes.length === 0) return;
-      void migrate?.(link);
+      migrate?.(link);
       for (const { prop, oldValue } of changes) {
-        void (source[StoreChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<M[K]>], StorageChannel.Event<M[K]>, void>)
+        (source[StoreChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<M[K]>], StorageChannel.Event<M[K]>, void>)
           .emit([StorageChannel.EventType.recv, prop], new StorageChannel.Event<M[K]>(StorageChannel.EventType.recv, prop, memory[prop], oldValue));
       }
     };
 
-    void this.events_.load
+    this.events_.load
       .monitor([], ({ key, prop, type }) => {
         if (!this.sources.has(key)) return;
         switch (type) {
@@ -93,25 +93,24 @@ export class StoreChannel<M extends object, K extends keyof M & string = keyof M
             : this.schemas[key](key) as M[L] & object,
           (prop, newValue, oldValue) => {
             if (!this.alive) return;
-            void this.add(new StoreChannel.Record<L, StoreChannel.Value<L>>(key, { [prop]: newValue }));
+            this.add(new StoreChannel.Record<L, StoreChannel.Value<L>>(key, { [prop]: newValue }));
             if (equal(newValue, oldValue)) return;
-            void (this.sources.get(key)![StoreChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<M[L]>], StorageChannel.Event<M[L]>, void>)
+            (this.sources.get(key)![StoreChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<M[L]>], StorageChannel.Event<M[L]>, void>)
               .emit([StorageChannel.EventType.send, prop], new StorageChannel.Event<M[L]>(StorageChannel.EventType.send, prop, newValue, oldValue));
           },
-          throttle(100, () => this.alive && this.links.has(key) && void this.log(key))))
+          throttle(100, () => { this.links.has(key) && this.alive && this.log(key); })))
           .get(key) as M[L];
   }
   public link<L extends K>(key: L, age?: number): M[L] {
-    void this.ensureAliveness();
-    void this.expire(key, age);
-    void this.load(key, error =>
-      !error && this.alive && this.links.has(key) && void this.log(key));
+    this.ensureAliveness();
+    this.expire(key, age);
+    this.load(key, error => { !error && this.alive && this.log(key); });
     return this.link_(key);
   }
   public override delete(key: K): void {
-    void this.ensureAliveness();
-    void this.links.delete(key);
-    void super.delete(key);
+    this.ensureAliveness();
+    this.links.delete(key);
+    super.delete(key);
   }
 }
 export namespace StoreChannel {

@@ -27,18 +27,18 @@ export class Ownership<K extends string> {
   constructor(
     private readonly channel: Channel<K>,
   ) {
-    void this.cancellation.register((() => {
+    this.cancellation.register((() => {
       const listener = () => this.close();
-      void self.addEventListener('unload', listener);
+      self.addEventListener('unload', listener);
       return () => void self.removeEventListener('unload', listener);
     })());
-    void this.cancellation.register(() => {
+    this.cancellation.register(() => {
       for (const key of this.store.keys()) {
-        void this.release(key);
+        this.release(key);
       }
-      void this.channel.close();
+      this.channel.close();
     });
-    void this.channel.listen('ownership', ({ key, priority: newPriority }) => {
+    this.channel.listen('ownership', ({ key, priority: newPriority }) => {
       const oldPriority = this.getPriority(key);
       switch (true) {
         case newPriority < 0:
@@ -79,17 +79,17 @@ export class Ownership<K extends string> {
     const oldPriority = this.getPriority(key);
     // Don't cast the same priority repeatedly.
     if (newPriority === oldPriority) return;
-    void this.store.set(key, newPriority);
+    this.store.set(key, newPriority);
     assert(this.getPriority(key) === newPriority);
     const mergin = 1000;
     assert(mergin < Ownership.mergin / 2);
     if (newPriority > 0 && newPriority > oldPriority + mergin) {
-      void this.castPriority(key);
+      this.castPriority(key);
     }
   }
   private castPriority(key: K): void {
     assert(this.store.has(key));
-    void this.channel.post(new OwnershipMessage(key, this.getPriority(key)));
+    this.channel.post(new OwnershipMessage(key, this.getPriority(key)));
   }
   private has(key: K): boolean {
     const priority = this.getPriority(key);
@@ -110,7 +110,7 @@ export class Ownership<K extends string> {
     age = min(max(age, 1 * 1000), 60 * 1000);
     wait = wait === void 0 ? wait : min(wait, 0);
     const priority = Ownership.genPriority(age) + Ownership.mergin;
-    priority > this.getPriority(key) && void this.setPriority(key, priority);
+    priority > this.getPriority(key) && this.setPriority(key, priority);
     assert(this.getPriority(key) > 0);
     return wait === void 0
       ? this.has(key)
@@ -125,12 +125,12 @@ export class Ownership<K extends string> {
   public release(key: K): void {
     if (!this.alive) throw new Error(`ClientChannel: Ownership channel "${this.channel.name}" is already closed.`);
     if (!this.has(key)) return;
-    void this.setPriority(key, -abs(this.getPriority(key)));
-    void this.castPriority(key);
-    void this.store.delete(key);
+    this.setPriority(key, -abs(this.getPriority(key)));
+    this.castPriority(key);
+    this.store.delete(key);
   }
   public close(): void {
-    void this.cancellation.cancel();
+    this.cancellation.cancel();
     this.alive = false;
   }
 }

@@ -24,12 +24,12 @@ export class AccessStore<K extends string> {
               autoIncrement: false
             });
         if (!store.indexNames.contains(AccessStoreSchema.key)) {
-          void store.createIndex(AccessStoreSchema.key, AccessStoreSchema.key, {
+          store.createIndex(AccessStoreSchema.key, AccessStoreSchema.key, {
             unique: true
           });
         }
         if (!store.indexNames.contains(AccessStoreSchema.date)) {
-          void store.createIndex(AccessStoreSchema.date, AccessStoreSchema.date);
+          store.createIndex(AccessStoreSchema.date, AccessStoreSchema.date);
         }
         return true;
       },
@@ -50,7 +50,7 @@ export class AccessStore<K extends string> {
     private readonly listen: Listen,
     private readonly capacity: number,
   ) {
-    void this.schedule(10 * 1000);
+    this.schedule(10 * 1000);
     assert(Object.freeze(this));
   }
   public readonly name = name;
@@ -64,7 +64,7 @@ export class AccessStore<K extends string> {
       timeout = min(timeout, 60 * 60 * 1000);
       if (Date.now() + timeout >= schedule) return;
       schedule = Date.now() + timeout;
-      void clearTimeout(timer);
+      clearTimeout(timer);
       timer = setTimeout(async () => {
         if (!this.cancellation.alive) return;
         if (schedule === 0) return;
@@ -107,8 +107,8 @@ export class AccessStore<K extends string> {
             schedule = 0;
             this.chan.lock = true;
             this.chan.has(key) || this.chan.meta(key).date === 0
-              ? void this.chan.delete(key)
-              : void this.chan.clean(key);
+              ? this.chan.delete(key)
+              : this.chan.clean(key);
             assert(!this.chan.has(key));
             return void cursor.continue();
           });
@@ -118,7 +118,7 @@ export class AccessStore<K extends string> {
   public recent(cb?: (key: K, keys: readonly K[]) => boolean | void, timeout?: number): Promise<K[]> {
     return new Promise((resolve, reject) => {
       let done = false;
-      timeout! >= 0 && void setTimeout(() => done = !void reject(new Error('Timeout.')), timeout);
+      timeout! >= 0 && setTimeout(() => done = !void reject(new Error('Timeout.')), timeout);
       const keys: K[] = [];
       void this.store.cursor(
         null, AccessStoreSchema.date, 'prev', 'readonly', [],
@@ -128,10 +128,10 @@ export class AccessStore<K extends string> {
           if (!cursor) return void resolve(keys);
           const { key, alive }: AccessRecord<K> = cursor.value;
           if (alive) {
-            void keys.push(key);
+            keys.push(key);
             if (cb?.(key, keys) === false) return void resolve(keys);
           }
-          void cursor.continue();
+          cursor.continue();
         });
     });
   }
@@ -143,10 +143,10 @@ export class AccessStore<K extends string> {
       cancellation);
   }
   public set(key: K, alive = true): void {
-    void this.store.set(key, new AccessRecord(key, alive));
+    this.store.set(key, new AccessRecord(key, alive));
   }
   public close(): void {
-    void this.store.close();
+    this.store.close();
   }
 }
 

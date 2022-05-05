@@ -118,7 +118,7 @@ export class SavedEventRecord<K extends string, V extends EventRecordValue> exte
 
 export class EventRecordValue {
   constructor(...sources: object[]) {
-    void clone(this, ...sources);
+    clone(this, ...sources);
     assert(Object.entries(this).every(isValidProperty));
   }
 }

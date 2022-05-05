@@ -7,7 +7,7 @@ import { noop } from 'spica/noop';
 export type Listen = (success: (db: IDBDatabase) => void, failure?: (reason: unknown) => void) => void;
 
 export function open(database: string, config: Config): Listen {
-  void operate(database, Command.open, config);
+  operate(database, Command.open, config);
   return (success: (db: IDBDatabase) => void, failure?: (reason: unknown) => void) =>
     void request(database, success, failure);
 }
@@ -53,8 +53,8 @@ function operate(database: string, command: Command, config: Config): void {
             void operate(database, command, config));
     }
   }
-  void commands.set(database, command);
-  void configs.set(database, config);
+  commands.set(database, command);
+  configs.set(database, config);
   if (!isIDBAvailable || !isStorageAvailable) return;
   if (states.has(database)) {
     assert(requests.has(database));
@@ -71,6 +71,6 @@ function request(database: string, success: (db: IDBDatabase) => void, failure: 
   if (!isIDBAvailable) return void failure(new Error('Database is unavailable.'));
   if (!isStorageAvailable) return void failure(new Error('Storage is unavailable.'));
   if (!requests.has(database)) return void failure(new Error('Database is inactive.'));
-  void requests.get(database)!.enqueue(success, failure);
-  void handle(database);
+  requests.get(database)!.enqueue(success, failure);
+  handle(database);
 }

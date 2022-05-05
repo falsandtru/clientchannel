@@ -35,14 +35,14 @@ export function build<T>(
           enumerable: true,
           get() {
             const value = source[prop];
-            void get?.(prop, value);
+            get?.(prop, value);
             return value;
           },
           set(newValue) {
             if (!isValidPropertyValue(newValue)) throw new TypeError(`ClientChannel: DAO: Invalid value: ${JSON.stringify(newValue)}`);
             const oldValue = source[prop];
             source[prop] = newValue;
-            void set?.(prop, newValue, oldValue);
+            set?.(prop, newValue, oldValue);
           },
         };
         return map;
@@ -75,7 +75,7 @@ export function build<T>(
       },
     }
   };
-  void ObjectDefineProperties(target, descmap);
-  void ObjectSeal(target);
+  ObjectDefineProperties(target, descmap);
+  ObjectSeal(target);
   return target;
 }

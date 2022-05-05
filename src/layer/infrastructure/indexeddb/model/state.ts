@@ -24,7 +24,7 @@ class RequestQueue {
   public enqueue(success: (db: IDBDatabase) => void, failure: (reason: unknown) => void): void {
     const state = states.get(this.database);
     if (!state || !state.alive || state.queue !== this) return void failure(new Error('Request is invalid.'));
-    void this.queue.push({ success, failure });
+    this.queue.push({ success, failure });
   }
   public dequeue(): Request | undefined {
     return this.queue.shift();
@@ -36,7 +36,7 @@ class RequestQueue {
     while (true) {
       try {
         while (this.queue.length > 0) {
-          void this.queue.shift()!.failure(new Error('Request is cancelled.'));
+          this.queue.shift()!.failure(new Error('Request is cancelled.'));
         }
         return;
       }
@@ -66,7 +66,7 @@ abstract class State {
       this.alive = !curr;
       if (!this.alive) return;
       assert(!states.has(database));
-      void requests.set(database, requests.get(database) || new RequestQueue(database));
+      requests.set(database, requests.get(database) || new RequestQueue(database));
     }
     else {
       assert(requests.has(database));
@@ -77,7 +77,7 @@ abstract class State {
     }
     assert(!curr || !curr.alive);
     assert(this.alive);
-    void states.set(database, this);
+    states.set(database, this);
   }
   public alive = false;
   public get command(): Command {
@@ -204,12 +204,12 @@ export class EndState extends State {
     switch (this.command) {
       case Command.close:
       case Command.destroy:
-        void requests.get(this.database)?.clear();
-        void commands.delete(this.database);
-        void configs.delete(this.database);
-        void requests.delete(this.database);
+        requests.get(this.database)?.clear();
+        commands.delete(this.database);
+        configs.delete(this.database);
+        requests.delete(this.database);
     }
-    void states.delete(this.database);
+    states.delete(this.database);
     this.alive = false;
   }
 }

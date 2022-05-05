@@ -12,7 +12,7 @@ describe('Unit: layers/data/kvs/store', function () {
             if (tx.db.objectStoreNames.contains('test')) {
               tx.db.deleteObjectStore('test');
             }
-            void tx.db.createObjectStore('test', {
+            tx.db.createObjectStore('test', {
               autoIncrement: false
             });
             return true;

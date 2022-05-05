@@ -24,12 +24,12 @@ export class ExpiryStore<K extends string> {
               autoIncrement: false
             });
         if (!store.indexNames.contains(ExpiryStoreSchema.key)) {
-          void store.createIndex(ExpiryStoreSchema.key, ExpiryStoreSchema.key, {
+          store.createIndex(ExpiryStoreSchema.key, ExpiryStoreSchema.key, {
             unique: true
           });
         }
         if (!store.indexNames.contains(ExpiryStoreSchema.expiry)) {
-          void store.createIndex(ExpiryStoreSchema.expiry, ExpiryStoreSchema.expiry);
+          store.createIndex(ExpiryStoreSchema.expiry, ExpiryStoreSchema.expiry);
         }
         return true;
       },
@@ -49,7 +49,7 @@ export class ExpiryStore<K extends string> {
     private readonly ownership: Ownership<string>,
     private readonly listen: Listen,
   ) {
-    void this.schedule(10 * 1000);
+    this.schedule(10 * 1000);
     assert(Object.freeze(this));
   }
   public readonly name = name;
@@ -62,7 +62,7 @@ export class ExpiryStore<K extends string> {
       timeout = min(timeout, 60 * 60 * 1000);
       if (Date.now() + timeout >= schedule) return;
       schedule = Date.now() + timeout;
-      void clearTimeout(timer);
+      clearTimeout(timer);
       timer = setTimeout(() => {
         if (!this.cancellation.alive) return;
         if (schedule === 0) return;
@@ -97,8 +97,8 @@ export class ExpiryStore<K extends string> {
             schedule = 0;
             this.chan.lock = true;
             this.chan.has(key) || this.chan.meta(key).date === 0
-              ? void this.chan.delete(key)
-              : void this.chan.clean(key);
+              ? this.chan.delete(key)
+              : this.chan.clean(key);
             assert(!this.chan.has(key));
             return void cursor.continue();
           });
@@ -114,11 +114,11 @@ export class ExpiryStore<K extends string> {
   }
   public set(key: K, age: number): void {
     if (age === Infinity) return void this.store.delete(key);
-    void this.schedule(age);
-    void this.store.set(key, new ExpiryRecord(key, Date.now() + age));
+    this.schedule(age);
+    this.store.set(key, new ExpiryRecord(key, Date.now() + age));
   }
   public close(): void {
-    void this.store.close();
+    this.store.close();
   }
 }
 

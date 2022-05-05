@@ -18,8 +18,8 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
     migrate?: (link: V) => void,
   ) {
     if (cache.has(name)) throw new Error(`ClientChannel: Storage channel "${name}" is already open.`);
-    void cache.add(name);
-    void this.cancellation.register(() =>
+    cache.add(name);
+    this.cancellation.register(() =>
       void cache.delete(name));
     const source: V = {
       ...parse<V>(this.storage.getItem(this.name)),
@@ -28,13 +28,13 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
     };
     this.link_ = build<V>(source, schema(), (prop, newValue, oldValue) => {
       if (!this.alive) return;
-      void this.storage.setItem(this.name, JSON.stringify(ObjectFromEntries(ObjectEntries(source).filter(isValidProperty))));
+      this.storage.setItem(this.name, JSON.stringify(ObjectFromEntries(ObjectEntries(source).filter(isValidProperty))));
       const event = new StorageChannel.Event<V>(StorageChannel.EventType.send, prop, newValue, oldValue);
-      void this.events.send.emit([event.prop], event);
-      void (source[StorageChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>).emit([event.type, event.prop], event);
+      this.events.send.emit([event.prop], event);
+      (source[StorageChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>).emit([event.type, event.prop], event);
     });
-    void migrate?.(this.link_);
-    void this.cancellation.register(
+    migrate?.(this.link_);
+    this.cancellation.register(
       storageEventStream.on([this.mode, this.name], ({ newValue }: StorageEvent): void => {
         const item = parse<V>(newValue);
         void (ObjectEntries(item) as [Prop<V>, V[Prop<V>]][])
@@ -44,10 +44,10 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
             const newValue = item[prop];
             if (equal(newValue, oldValue)) return;
             source[prop] = newValue;
-            void migrate?.(this.link_);
+            migrate?.(this.link_);
             const event = new StorageChannel.Event(StorageChannel.EventType.recv, prop, source[prop], oldValue);
-            void this.events.recv.emit([event.prop], event);
-            void (source[StorageChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>).emit([event.type, event.prop], event);
+            this.events.recv.emit([event.prop], event);
+            (source[StorageChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>).emit([event.type, event.prop], event);
           });
       }));
     assert(Object.freeze(this));
@@ -66,16 +66,16 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
   }
   private readonly link_: V;
   public link(): V {
-    void this.ensureAliveness();
+    this.ensureAliveness();
     return this.link_;
   }
   public close(): void {
-    void this.cancellation.cancel();
+    this.cancellation.cancel();
   }
   public destroy(): void {
-    void this.ensureAliveness();
-    void this.cancellation.cancel();
-    void this.storage.removeItem(this.name);
+    this.ensureAliveness();
+    this.cancellation.cancel();
+    this.storage.removeItem(this.name);
   }
 }
 export namespace StorageChannel {

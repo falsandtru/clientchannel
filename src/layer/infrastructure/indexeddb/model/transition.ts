@@ -30,7 +30,7 @@ function handleInitialState(state: InitialState): void {
       void handleErrorState(new ErrorState(state, openRequest.error!, event));
   }
   catch (reason) {
-    void handleCrashState(new CrashState(state, reason));
+    handleCrashState(new CrashState(state, reason));
   }
 }
 
@@ -45,7 +45,7 @@ function handleBlockedState(state: BlockState): void {
     void handleSuccessState(new SuccessState(state, session.result));
   session.onerror = event =>
     void handleErrorState(new ErrorState(state, session.error!, event));
-  void idbEventStream_.emit([database, IDBEventType.block], new IDBEvent(database, IDBEventType.block));
+  idbEventStream_.emit([database, IDBEventType.block], new IDBEvent(database, IDBEventType.block));
 }
 
 function handleUpgradeState(state: UpgradeState): void {
@@ -70,7 +70,7 @@ function handleUpgradeState(state: UpgradeState): void {
     }
   }
   catch (reason) {
-    void handleCrashState(new CrashState(state, reason));
+    handleCrashState(new CrashState(state, reason));
   }
 }
 
@@ -80,9 +80,9 @@ function handleSuccessState(state: SuccessState): void {
 
   connection.onversionchange = () => {
     const curr = new EndState(state);
-    void connection.close();
-    void idbEventStream_.emit([database, IDBEventType.destroy], new IDBEvent(database, IDBEventType.destroy));
-    void handleEndState(curr);
+    connection.close();
+    idbEventStream_.emit([database, IDBEventType.destroy], new IDBEvent(database, IDBEventType.destroy));
+    handleEndState(curr);
   };
   connection.onerror = event =>
     void handleErrorState(new ErrorState(state, (event.target as any).error, event));
@@ -96,14 +96,14 @@ function handleSuccessState(state: SuccessState): void {
       VALIDATION:
       try {
         if (config.verify(connection)) break VALIDATION;
-        void connection.close();
+        connection.close();
         return void handleEndState(new EndState(state, connection.version + 1));
       }
       catch (reason) {
-        void connection.close();
+        connection.close();
         return void handleCrashState(new CrashState(state, reason));
       }
-      void idbEventStream_.emit([database, IDBEventType.connect], new IDBEvent(database, IDBEventType.connect));
+      idbEventStream_.emit([database, IDBEventType.connect], new IDBEvent(database, IDBEventType.connect));
       try {
         while (queue.size > 0 && state.alive) {
           assert(state.command === Command.open);
@@ -120,20 +120,20 @@ function handleSuccessState(state: SuccessState): void {
       }
       catch (reason) {
         assert(!void console.error(reason + ''));
-        void causeAsyncException(reason);
+        causeAsyncException(reason);
         const curr = new CrashState(state, reason);
-        void connection.close();
+        connection.close();
         return void handleCrashState(curr);
       }
     }
     case Command.close: {
       const curr = new EndState(state);
-      void connection.close();
+      connection.close();
       return void handleEndState(curr);
     }
     case Command.destroy: {
       const curr = new DestroyState(state);
-      void connection.close();
+      connection.close();
       return void handleDestroyState(curr);
     }
   }
@@ -143,8 +143,8 @@ function handleErrorState(state: ErrorState): void {
   if (!state.alive) return;
   const { database, error, event, config } = state;
   assert(error);
-  void event.preventDefault();
-  void idbEventStream_.emit([database, IDBEventType.error], new IDBEvent(database, IDBEventType.error));
+  event.preventDefault();
+  idbEventStream_.emit([database, IDBEventType.error], new IDBEvent(database, IDBEventType.error));
   if (config.destroy(error, event)) {
     return void handleDestroyState(new DestroyState(state));
   }
@@ -156,15 +156,15 @@ function handleErrorState(state: ErrorState): void {
 function handleAbortState(state: AbortState): void {
   if (!state.alive) return;
   const { database, event } = state;
-  void event.preventDefault();
-  void idbEventStream_.emit([database, IDBEventType.abort], new IDBEvent(database, IDBEventType.abort));
+  event.preventDefault();
+  idbEventStream_.emit([database, IDBEventType.abort], new IDBEvent(database, IDBEventType.abort));
   return void handleEndState(new EndState(state));
 }
 
 function handleCrashState(state: CrashState): void {
   if (!state.alive) return;
   const { database, reason, config } = state;
-  void idbEventStream_.emit([database, IDBEventType.crash], new IDBEvent(database, IDBEventType.crash));
+  idbEventStream_.emit([database, IDBEventType.crash], new IDBEvent(database, IDBEventType.crash));
   if (config.destroy(reason)) {
     return void handleDestroyState(new DestroyState(state));
   }
@@ -189,8 +189,8 @@ function handleEndState(state: EndState): void {
   if (!state.alive) return;
   const { database, version, command } = state;
   assert(version >= 0);
-  void state.complete();
-  void idbEventStream_
+  state.complete();
+  idbEventStream_
     .emit([database, IDBEventType.disconnect], new IDBEvent(database, IDBEventType.disconnect));
   if (!isIDBAvailable || !verifyStorageAccess()) return;
   switch (command) {
