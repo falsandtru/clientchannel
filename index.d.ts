@@ -17,6 +17,13 @@ export class StoreChannel<M extends object, K extends keyof M & string = keyof M
   destroy(): void;
 }
 export namespace StoreChannel {
+  export interface Config<M extends object> {
+    schemas: { [K in keyof M & string]: (key: K) => M[K]; };
+    capacity?: number;
+    age?: number;
+    migrate?(link: M[keyof M & string]): void;
+    destroy?(reason: unknown, event?: global.Event): boolean;
+  }
   export interface Value<K extends string = string> {
     readonly [Value.meta]: ValueMetaData<K>;
     readonly [Value.id]: number;
@@ -35,13 +42,6 @@ export namespace StoreChannel {
     readonly id: number;
     readonly key: K;
     readonly date: number;
-  }
-  export interface Config<M extends object> {
-    schemas: { [K in keyof M & string]: (key: K) => M[K]; };
-    capacity?: number;
-    age?: number;
-    migrate?(link: M[keyof M & string]): void;
-    destroy?(reason: unknown, event?: global.Event): boolean;
   }
   export interface Event<K extends string, P extends string> {
     readonly type: EventType;
@@ -76,16 +76,16 @@ export class StorageChannel<V extends StorageChannel.Value> {
   destroy(): void;
 }
 export namespace StorageChannel {
+  export interface Config<V extends StorageChannel.Value> {
+    schema: () => V;
+    migrate?(link: V): void;
+  }
   export interface Value {
     readonly [Value.event]: Observer<{ [P in Prop<this>]: [[EventType, P], Event<this, P>, void]; }[Prop<this>]>;
   }
   export namespace Value {
     export const key: typeof DAO.key;
     export const event: typeof DAO.event;
-  }
-  export interface Config<V extends StorageChannel.Value> {
-    schema: () => V;
-    migrate?(link: V): void;
   }
   export interface Event<V, P extends Prop<V> = Prop<V>> {
     readonly type: EventType;
