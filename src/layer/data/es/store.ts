@@ -317,7 +317,8 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
             return void cursor.continue();
           }
           else {
-            if (events.length === 0) return;
+            if (events.length <= 1) return;
+            if (events[events.length - 1].type === EventStore.EventType.snapshot) return;
             const event = compose(key, events);
             if (event.id > 0) return;
             switch (event.type) {
@@ -491,7 +492,6 @@ export function record<K extends string, V extends EventRecordValue>(event: Unst
   return record;
 }
 
-// Input order must be asc.
 export function compose<K extends string, V extends EventStore.Value>(
   key: K,
   events: Array<UnstoredEventRecord<K, V> | StoredEventRecord<K, V>>,
