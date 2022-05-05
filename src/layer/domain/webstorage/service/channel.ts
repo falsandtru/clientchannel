@@ -79,6 +79,7 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
   }
 }
 export namespace StorageChannel {
+  export import Config = IStorageChannel.Config;
   export interface Value {
     readonly [Value.event]: Observer<{ [P in Prop<this>]: [[EventType, P], Event<this, P>, void]; }[Prop<this>]>;
   }
@@ -86,7 +87,6 @@ export namespace StorageChannel {
     export const key: typeof DAO.key = DAO.key;
     export const event: typeof DAO.event = DAO.event;
   }
-  export import Config = IStorageChannel.Config;
   export class Event<V, P extends Prop<V> = Prop<V>> implements IStorageChannel.Event<V, P> {
     constructor(
       public readonly type: EventType,

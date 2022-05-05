@@ -15,8 +15,8 @@ export class StoreChannel<M extends object> extends BaseStoreChannel<M> {
   }
 }
 export namespace StoreChannel {
-  export import Value = BaseStoreChannel.Value;
   export import Config = BaseStoreChannel.Config;
+  export import Value = BaseStoreChannel.Value;
 }
 
 export class StorageChannel<V extends BaseStorageChannel.Value> extends BaseStorageChannel<V> {
@@ -31,8 +31,8 @@ export class StorageChannel<V extends BaseStorageChannel.Value> extends BaseStor
   }
 }
 export namespace StorageChannel {
-  export import Value = BaseStorageChannel.Value;
   export import Config = BaseStorageChannel.Config;
+  export import Value = BaseStorageChannel.Value;
 }
 
 export class Ownership<K extends string> extends BaseOwnership<K> {

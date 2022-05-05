@@ -202,6 +202,7 @@ export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Val
   }
 }
 export namespace ChannelStore {
+  export import Config = StoreChannel.Config;
   export interface Value<K extends string = string> {
     readonly [Value.meta]: ValueMetaData<K>;
     readonly [Value.id]: number;
@@ -217,7 +218,6 @@ export namespace ChannelStore {
     export const event: typeof DAO.event = DAO.event;
   }
   export import ValueMetaData = StoreChannel.ValueMetaData;
-  export import Config = StoreChannel.Config;
   export import Event = DataStore.Event;
   export import EventType = DataStore.EventType;
   export import Record = DataStore.Record;

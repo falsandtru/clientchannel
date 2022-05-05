@@ -114,8 +114,8 @@ export class StoreChannel<M extends object, K extends keyof M & string = keyof M
   }
 }
 export namespace StoreChannel {
-  export import Value = ChannelStore.Value;
   export import Config = ChannelStore.Config;
+  export import Value = ChannelStore.Value;
   export import Event = ChannelStore.Event;
   export import EventType = ChannelStore.EventType;
   export import Record = ChannelStore.Record;
