@@ -1,5 +1,5 @@
 import { Date, Promise, setTimeout } from 'spica/global';
-import { abs, floor, max, min } from 'spica/alias';
+import { abs, floor, max, min, random } from 'spica/alias';
 import { Channel, ChannelMessage } from '../broadcast/channel';
 import { Cancellation } from 'spica/cancellation';
 
@@ -13,14 +13,15 @@ class OwnershipMessage<K extends string> extends ChannelMessage<K> {
   constructor(
     public override readonly key: K,
     public readonly priority: number,
+    public readonly age: number,
   ) {
     super(key, 'ownership');
   }
 }
 
 export class Ownership<K extends string> {
-  private static readonly margin = 5 * 1000;
-  private static genPriority(age: number): number {
+  private static readonly margin = 6 * 1000;
+  private static genExpiry(age: number): number {
     assert(age >= 0);
     return Date.now() + age;
   }
@@ -38,8 +39,8 @@ export class Ownership<K extends string> {
       }
       this.channel.close();
     });
-    this.channel.listen('ownership', ({ key, priority: newPriority }) => {
-      const oldPriority = this.getPriority(key);
+    this.channel.listen('ownership', ({ key, priority: newPriority, age }) => {
+      const { priority: oldPriority } = this.getOwnership(key);
       switch (true) {
         case newPriority < 0:
           // Release the foreign ownership.
@@ -49,57 +50,60 @@ export class Ownership<K extends string> {
         case oldPriority === 0:
           assert(newPriority >= 0);
           // Accept the foreign ownership.
-          return void this.setPriority(key, -newPriority);
+          return void this.setOwnership(key, -newPriority, age);
         case oldPriority > 0:
           assert(newPriority >= 0);
           // First commit wins.
           return oldPriority < newPriority
               && this.has(key)
             // Notify my active ownership.
-            ? void this.castPriority(key)
+            ? void this.castOwnership(key)
             // Accept the foreign ownership.
-            : void this.setPriority(key, -newPriority);
+            : void this.setOwnership(key, -newPriority, age);
         case oldPriority < 0:
           assert(newPriority >= 0);
           // Update the foreign ownership.
           // Last statement wins.
-          return void this.setPriority(key, -newPriority);
+          return void this.setOwnership(key, -newPriority, age);
         default:
           assert(false);
       }
     });
   }
-  private readonly store = new Map<K, number>();
+  private readonly store = new Map<K, { readonly priority: number; readonly age: number; }>();
   private readonly cancellation = new Cancellation();
   private alive = true;
-  private getPriority(key: K): number {
-    return this.store.get(key) || 0;
+  private getOwnership(key: K): { readonly priority: number; readonly age: number; } {
+    return this.store.get(key) ?? { priority: 0, age: 0 };
   }
-  private setPriority(key: K, newPriority: number): void {
-    const oldPriority = this.getPriority(key);
+  private setOwnership(key: K, newPriority: number, newAge: number): void {
+    const { priority: oldPriority, age: oldAge } = this.getOwnership(key);
     // Don't cast the same priority repeatedly.
     if (newPriority === oldPriority) return;
-    this.store.set(key, newPriority);
-    assert(this.getPriority(key) === newPriority);
-    const margin = 1000;
-    assert(margin < Ownership.margin / 2);
-    if (newPriority > 0 && newPriority > oldPriority + margin) {
-      this.castPriority(key);
+    this.store.set(key, {
+      priority: newPriority,
+      age: max(newPriority + newAge, oldPriority + oldAge) - newPriority,
+    });
+    const throttle = Ownership.margin - 1000;
+    assert(throttle >= 1000);
+    if (newPriority > 0 && newPriority > oldPriority + throttle) {
+      this.castOwnership(key);
     }
   }
-  private castPriority(key: K): void {
+  private castOwnership(key: K): void {
     assert(this.store.has(key));
-    this.channel.post(new OwnershipMessage(key, this.getPriority(key)));
+    const { priority, age } = this.getOwnership(key);
+    this.channel.post(new OwnershipMessage(key, priority, age));
   }
   private has(key: K): boolean {
-    const priority = this.getPriority(key);
+    const { priority, age } = this.getOwnership(key);
     return priority > 0
-        && priority >= Ownership.genPriority(0) + Ownership.margin;
+        && priority + age > Ownership.genExpiry(0);
   }
   private isTakable(key: K): boolean {
-    const priority = this.getPriority(key);
+    const { priority, age } = this.getOwnership(key);
     return priority >= 0
-        || Ownership.genPriority(0) > abs(priority);
+        || Ownership.genExpiry(0) > abs(priority) + age;
   }
   public take(key: K, age: number): boolean
   public take(key: K, age: number, wait: number): Promise<boolean>
@@ -109,9 +113,9 @@ export class Ownership<K extends string> {
     assert(0 <= age && age < 60 * 1000);
     age = floor(min(max(age, 1 * 1000), 60 * 1000));
     wait = wait === void 0 ? wait : min(wait, 0);
-    const priority = Ownership.genPriority(age) + Ownership.margin;
-    priority > this.getPriority(key) && this.setPriority(key, priority);
-    assert(this.getPriority(key) > 0);
+    const priority = Ownership.genExpiry(age) + Ownership.margin + (random() * 1000 | 0);
+    priority > this.getOwnership(key).priority && this.setOwnership(key, priority, age);
+    assert(this.getOwnership(key).priority > 0);
     return wait === void 0
       ? this.has(key)
       : new Promise(resolve => void setTimeout(() => void resolve(this.extend(key, age)), wait));
@@ -125,8 +129,8 @@ export class Ownership<K extends string> {
   public release(key: K): void {
     if (!this.alive) throw new Error(`ClientChannel: Ownership channel "${this.channel.name}" is already closed.`);
     if (!this.has(key)) return;
-    this.setPriority(key, -abs(this.getPriority(key)));
-    this.castPriority(key);
+    this.setOwnership(key, -abs(this.getOwnership(key).priority), 0);
+    this.castOwnership(key);
     this.store.delete(key);
   }
   public close(): void {
