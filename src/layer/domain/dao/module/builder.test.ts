@@ -44,7 +44,7 @@ describe('Unit: layers/domain/dao/module/build', () => {
       try {
         // @ts-expect-error
         delete target.n;
-        throw 0;
+        throw 1;
       }
       catch (e) {
         assert(e instanceof Error);
@@ -61,7 +61,7 @@ describe('Unit: layers/domain/dao/module/build', () => {
 
       try {
         object[DAO.id] = 0;
-        throw 0;
+        throw 1;
       }
       catch (e) {
         assert(e instanceof Error);
@@ -78,7 +78,7 @@ describe('Unit: layers/domain/dao/module/build', () => {
 
       try {
         object.name = '';
-        throw 0;
+        throw 1;
       }
       catch (e) {
         assert(e instanceof Error);
