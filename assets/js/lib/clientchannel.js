@@ -2809,7 +2809,7 @@ require = function () {
                     }, () => void (cb === null || cb === void 0 ? void 0 : cb(new Error('Request has failed.'))));
                 }
                 keys() {
-                    return this.memory.reflect([]).reduce((keys, ev) => keys.length === 0 || keys[keys.length - 1] !== ev.key ? (0, concat_1.concat)(keys, [ev.key]) : keys, []).sort();
+                    return this.memory.reflect([]).reduce((keys, ev) => keys.at(-1) !== ev.key ? (0, concat_1.concat)(keys, [ev.key]) : keys, []).sort();
                 }
                 has(key) {
                     return compose(key, this.memory.reflect([key])).type !== EventStore.EventType.delete;
@@ -2905,7 +2905,9 @@ require = function () {
                                 }
                                 return void cursor.continue();
                             } else {
-                                if (events.length === 0)
+                                if (events.length <= 1)
+                                    return;
+                                if (events.at(-1).type === EventStore.EventType.snapshot)
                                     return;
                                 const event = compose(key, events);
                                 if (event.id > 0)
@@ -2978,7 +2980,7 @@ require = function () {
                                     event.id
                                 ]);
                             }
-                            for (const event of this.memory.reflect([key]).filter(ev => 0 < ev.id && ev.id < events[events.length - 1].id)) {
+                            for (const event of this.memory.reflect([key]).filter(ev => 0 < ev.id && ev.id < events.at(-1).id)) {
                                 this.memory.off([
                                     event.key,
                                     event.prop,
@@ -4204,8 +4206,8 @@ require = function () {
                         }
                     });
                 }
-                static genExpiry(age) {
-                    return global_1.Date.now() + age;
+                static genPriority() {
+                    return global_1.Date.now();
                 }
                 getOwnership(key) {
                     var _a;
@@ -4215,15 +4217,12 @@ require = function () {
                     };
                 }
                 setOwnership(key, newPriority, newAge) {
-                    const {
-                        priority: oldPriority,
-                        age: oldAge
-                    } = this.getOwnership(key);
+                    const {priority: oldPriority} = this.getOwnership(key);
                     if (newPriority === oldPriority)
                         return;
                     this.store.set(key, {
                         priority: newPriority,
-                        age: (0, alias_1.max)(newPriority + newAge, oldPriority + oldAge) - newPriority
+                        age: newAge
                     });
                     const throttle = Ownership.margin - 1000;
                     if (newPriority > 0 && newPriority > oldPriority + throttle) {
@@ -4236,11 +4235,11 @@ require = function () {
                 }
                 has(key) {
                     const {priority, age} = this.getOwnership(key);
-                    return priority > 0 && priority + age > Ownership.genExpiry(0);
+                    return priority > 0 && priority + age > Ownership.genPriority();
                 }
                 isTakable(key) {
                     const {priority, age} = this.getOwnership(key);
-                    return priority >= 0 || Ownership.genExpiry(0) > (0, alias_1.abs)(priority) + age;
+                    return priority >= 0 || Ownership.genPriority() > (0, alias_1.abs)(priority) + age;
                 }
                 take(key, age, wait) {
                     if (!this.alive)
@@ -4249,8 +4248,8 @@ require = function () {
                         return wait === void 0 ? false : global_1.Promise.resolve(false);
                     age = (0, alias_1.floor)((0, alias_1.min)((0, alias_1.max)(age, 1 * 1000), 60 * 1000));
                     wait = wait === void 0 ? wait : (0, alias_1.min)(wait, 0);
-                    const priority = Ownership.genExpiry(age) + Ownership.margin + ((0, alias_1.random)() * 1000 | 0);
-                    priority > this.getOwnership(key).priority && this.setOwnership(key, priority, age);
+                    const priority = Ownership.genPriority() + Ownership.margin + ((0, alias_1.random)() * 1000 | 0);
+                    this.setOwnership(key, priority, age);
                     return wait === void 0 ? this.has(key) : new global_1.Promise(resolve => void (0, global_1.setTimeout)(() => void resolve(this.extend(key, age)), wait));
                 }
                 extend(key, age) {
