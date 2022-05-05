@@ -21,9 +21,8 @@ class OwnershipMessage<K extends string> extends ChannelMessage<K> {
 
 export class Ownership<K extends string> {
   private static readonly margin = 6 * 1000;
-  private static genExpiry(age: number): number {
-    assert(age >= 0);
-    return Date.now() + age;
+  private static genPriority(): number {
+    return Date.now();
   }
   constructor(
     private readonly channel: Channel<K>,
@@ -77,12 +76,12 @@ export class Ownership<K extends string> {
     return this.store.get(key) ?? { priority: 0, age: 0 };
   }
   private setOwnership(key: K, newPriority: number, newAge: number): void {
-    const { priority: oldPriority, age: oldAge } = this.getOwnership(key);
+    const { priority: oldPriority } = this.getOwnership(key);
     // Don't cast the same priority repeatedly.
     if (newPriority === oldPriority) return;
     this.store.set(key, {
       priority: newPriority,
-      age: max(newPriority + newAge, oldPriority + oldAge) - newPriority,
+      age: newAge,
     });
     const throttle = Ownership.margin - 1000;
     assert(throttle >= 1000);
@@ -98,12 +97,12 @@ export class Ownership<K extends string> {
   private has(key: K): boolean {
     const { priority, age } = this.getOwnership(key);
     return priority > 0
-        && priority + age > Ownership.genExpiry(0);
+        && priority + age > Ownership.genPriority();
   }
   private isTakable(key: K): boolean {
     const { priority, age } = this.getOwnership(key);
     return priority >= 0
-        || Ownership.genExpiry(0) > abs(priority) + age;
+        || Ownership.genPriority() > abs(priority) + age;
   }
   public take(key: K, age: number): boolean
   public take(key: K, age: number, wait: number): Promise<boolean>
@@ -113,8 +112,8 @@ export class Ownership<K extends string> {
     assert(0 <= age && age < 60 * 1000);
     age = floor(min(max(age, 1 * 1000), 60 * 1000));
     wait = wait === void 0 ? wait : min(wait, 0);
-    const priority = Ownership.genExpiry(age) + Ownership.margin + (random() * 1000 | 0);
-    priority > this.getOwnership(key).priority && this.setOwnership(key, priority, age);
+    const priority = Ownership.genPriority() + Ownership.margin + (random() * 1000 | 0);
+    this.setOwnership(key, priority, age);
     assert(this.getOwnership(key).priority > 0);
     return wait === void 0
       ? this.has(key)
