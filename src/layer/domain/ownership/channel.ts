@@ -19,7 +19,7 @@ class OwnershipMessage<K extends string> extends ChannelMessage<K> {
 }
 
 export class Ownership<K extends string> {
-  private static readonly mergin = 5 * 1000;
+  private static readonly margin = 5 * 1000;
   private static genPriority(age: number): number {
     assert(age >= 0);
     return Date.now() + age;
@@ -81,9 +81,9 @@ export class Ownership<K extends string> {
     if (newPriority === oldPriority) return;
     this.store.set(key, newPriority);
     assert(this.getPriority(key) === newPriority);
-    const mergin = 1000;
-    assert(mergin < Ownership.mergin / 2);
-    if (newPriority > 0 && newPriority > oldPriority + mergin) {
+    const margin = 1000;
+    assert(margin < Ownership.margin / 2);
+    if (newPriority > 0 && newPriority > oldPriority + margin) {
       this.castPriority(key);
     }
   }
@@ -94,7 +94,7 @@ export class Ownership<K extends string> {
   private has(key: K): boolean {
     const priority = this.getPriority(key);
     return priority > 0
-        && priority >= Ownership.genPriority(0) + Ownership.mergin;
+        && priority >= Ownership.genPriority(0) + Ownership.margin;
   }
   private isTakable(key: K): boolean {
     const priority = this.getPriority(key);
@@ -109,7 +109,7 @@ export class Ownership<K extends string> {
     assert(0 <= age && age < 60 * 1000);
     age = floor(min(max(age, 1 * 1000), 60 * 1000));
     wait = wait === void 0 ? wait : min(wait, 0);
-    const priority = Ownership.genPriority(age) + Ownership.mergin;
+    const priority = Ownership.genPriority(age) + Ownership.margin;
     priority > this.getPriority(key) && this.setPriority(key, priority);
     assert(this.getPriority(key) > 0);
     return wait === void 0
