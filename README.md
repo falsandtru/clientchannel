@@ -2,18 +2,18 @@
 
 ![CI](https://github.com/falsandtru/clientChannel/workflows/CI/badge.svg)
 
-Store and sync objects between tabs via IndexedDB or LocalStorage.
+Persist objects and sync them between tabs via IndexedDB or LocalStorage.
 
 ## Features
 
-- Store and restore objects using IndexedDB or LocalStorage.
-- Cross data binding between tabs.
-- Expiration per individual objects.
-- Limitation of the number of objects.
+- Persist objects using IndexedDB or LocalStorage.
+- Sync objects between tabs.
+- Limit the number of objects.
+- Expire each object.
 
 ## Demos
 
-Store and sync the text and the canvas.
+Persist and sync a text and a canvas between tabs.
 
 https://falsandtru.github.io/clientchannel/
 
@@ -25,9 +25,9 @@ https://falsandtru.github.io/clientchannel/
 
 ### Persist data
 
-A schema is defined by properties of objects made by the given factory function.
-Property names having the underscore(`_`) or dollar(`$`) prefix or postfix are excluded from schema.
-Property values of linked objects are stored when updating.
+A schema is constructed by object properties created from the given schemas.
+Property names having a prefix or a suffix of an underscore(`_`) or a dollar(`$`) are excluded from schema.
+Property values of linked objects are saved when updating.
 **Linked objects are automatically updated when a linked object is updated on another thread(tab).**
 
 ```ts
@@ -79,11 +79,11 @@ const chan = new StoreChannel<SettingsSchemas>('settings', {
   age: 365 * 24 * 60 * 60 * 1e3,
 });
 
-// Load an object from IndexedDB.
+// Load an object from IndexedDB, and link it to the same objects of all the tabs.
 const theme = chan.link('theme/v1');
-// Save changes of property values to IndexedDB, and sync them between all tabs.
+// Save the changes of property values to IndexedDB, and sync them between all the tabs.
 theme.name = 'black';
-// Schemas are defined by keys.
+// Schemas are selected by keys.
 const editor = chan.link('editor/v1');
 editor.mode = 'vim';
 editor.event().on(['recv', 'mode'], ev =>
@@ -92,9 +92,9 @@ editor.event().on(['recv', 'mode'], ev =>
 
 ### Communication and Synchronization
 
-Linked objects provede send and recv events.
-`send` event is emitted when a linked object is changed by own thread(tab).
-`recv` event is emitted when a linked object is changed by another thread(tab).
+Linked objects provede the send and the recv events.
+The `send` event is emitted when a linked object is changed by own thread(tab).
+The `recv` event is emitted when a linked object is changed by another thread(tab).
 
 ```ts
 import { StorageChannel } from 'clientchannel';

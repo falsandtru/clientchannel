@@ -19,15 +19,15 @@ describe('Integration: Package', function () {
       interface EditorSettings extends StoreChannel.Value {
       }
       class EditorSettings {
-        // Getter and setter names will be excluded from schema.
+        // Getter and setter names are excluded from schema.
         get key() {
           return this[StoreChannel.Value.key];
         }
-        // Properties having an invalid value will be excluded from schema.
+        // Properties having an invalid value are excluded from schema.
         event() {
           return this[StoreChannel.Value.event];
         }
-        // Properties having an invalid name will be excluded from schema.
+        // Properties having an invalid name are excluded from schema.
         protected prop_ = '';
         protected $prop = '';
         revision = 0;
@@ -49,11 +49,11 @@ describe('Integration: Package', function () {
         age: 365 * 24 * 60 * 60 * 1e3,
       });
 
-      // Load an object from IndexedDB.
+      // Load an object from IndexedDB, and link it to the same objects of all the tabs.
       const theme = chan.link('theme/v1');
-      // Save changes of property values to IndexedDB, and sync them between all tabs.
+      // Save the changes of property values to IndexedDB, and sync them between all the tabs.
       theme.name = 'black';
-      // Schemas are defined by keys.
+      // Schemas are selected by keys.
       const editor = chan.link('editor/v1');
       editor.mode = 'vim';
       editor.event().on(['recv', 'mode'], ev =>

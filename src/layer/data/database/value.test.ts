@@ -12,7 +12,7 @@ describe('Unit: layers/data/database/value', () => {
       assert(!isValidPropertyName('$v'));
     });
 
-    it('postfix', () => {
+    it('suffix', () => {
       assert(!isValidPropertyName('v_'));
       assert(!isValidPropertyName('v$'));
     });
