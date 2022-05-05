@@ -86,6 +86,8 @@ theme.name = 'black';
 // Schemas are defined by keys.
 const editor = chan.link('editor/v1');
 editor.mode = 'vim';
+editor.event().on(['recv', 'mode'], ev =>
+  console.log(`"${ev.prop}" value is changed to "${ev.newValue}" from "${ev.oldValue}".`));
 ```
 
 ### Communication and Synchronization

@@ -56,6 +56,8 @@ describe('Integration: Package', function () {
       // Schemas are defined by keys.
       const editor = chan.link('editor/v1');
       editor.mode = 'vim';
+      editor.event().on(['recv', 'mode'], ev =>
+        console.log(`"${ev.prop}" value is changed to "${ev.newValue}" from "${ev.oldValue}".`));
 
       await new Promise(resolve => chan.events.save.once(['theme/v1', 'name', 'put'], resolve));
       await Promise.all([
