@@ -155,7 +155,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     const events: LoadedEventRecord<K, V>[] = [];
     return void this.listen(db => {
       if (!this.alive) return void cb?.(new Error('Session is already closed.'));
-      if (cancellation?.cancelled) return void cb?.(new Error('Request is cancelled.'));
+      if (cancellation?.isCancelled) return void cb?.(new Error('Request is cancelled.'));
       const tx = db.transaction(this.name, 'readonly');
       const req = tx
         .objectStore(this.name)

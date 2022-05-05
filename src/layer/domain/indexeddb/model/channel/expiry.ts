@@ -64,7 +64,7 @@ export class ExpiryStore<K extends string> {
       schedule = Date.now() + timeout;
       clearTimeout(timer as 0);
       timer = setTimeout(() => {
-        if (!this.cancellation.alive) return;
+        if (!this.cancellation.isAlive) return;
         if (schedule === 0) return;
         schedule = Infinity;
         if (!this.ownership.take('store', delay)) return void this.schedule(delay *= 2);
@@ -86,7 +86,7 @@ export class ExpiryStore<K extends string> {
               clearInterval(timer);
               timer = 0;
             }
-            if (!this.cancellation.alive) return;
+            if (!this.cancellation.isAlive) return;
             if (error) return void this.schedule(delay * 10);
             if (!cursor) return;
             if (this.chan.lock) return void this.schedule(delay *= 2);

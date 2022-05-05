@@ -2,7 +2,7 @@ import { isIDBAvailable, states, commands, configs, requests, Command, Config } 
 import { handle } from './transition';
 import { idbEventStream, IDBEventType } from './event';
 import { isStorageAvailable } from '../../environment/api';
-import { noop } from 'spica/noop';
+import { noop } from 'spica/function';
 
 export type Listen = (success: (db: IDBDatabase) => void, failure?: (reason: unknown) => void) => void;
 

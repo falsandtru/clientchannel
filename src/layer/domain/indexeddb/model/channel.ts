@@ -107,7 +107,7 @@ export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Val
   private readonly keys = new Set<K>();
   public lock = false;
   protected get alive(): boolean {
-    return this.cancellation.alive;
+    return this.cancellation.isAlive;
   }
   public readonly events_ = {
     load: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>(),
@@ -234,7 +234,7 @@ class Stores<K extends string, V extends ChannelStore.Value<K>> {
   }
   private cancellation = new Cancellation();
   private build(): void {
-    assert(this.cancellation.alive);
+    assert(this.cancellation.isAlive);
     const keys = this.data ? this.data.keys() : [];
 
     this.access = new AccessStore<K>(this.store, this.cancellation, this.ownership, this.listen, this.capacity);
