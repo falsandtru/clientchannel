@@ -4,7 +4,3 @@ type IDBValidValue
   | Object
   | File
   | Blob;
-
-interface Window {
-  IDBKeyRange: typeof IDBKeyRange;
-}
