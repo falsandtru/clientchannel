@@ -4,7 +4,7 @@ import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
 import { ChannelStore } from '../channel';
 import { Ownership } from '../../../ownership/channel';
-import { Cancellation, Cancellee } from 'spica/cancellation';
+import { Cancellee } from 'spica/cancellation';
 
 export const name = 'access';
 
@@ -132,13 +132,6 @@ export class AccessStore<K extends string> {
           cursor.continue();
         });
     });
-  }
-  public load(key: K, cancellation?: Cancellation): undefined {
-    return this.store.load(
-      key,
-      (err, key, value) =>
-        !err && value?.date! > this.store.get(key)?.date!,
-      cancellation);
   }
   public set(key: K, alive = true): void {
     this.store.set(key, new AccessRecord(key, alive));

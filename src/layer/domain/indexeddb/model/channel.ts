@@ -86,7 +86,6 @@ export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Val
       }
       else if (!this.keys.has(key)) {
         this.keys.add(key);
-        this.stores.access.load(key);
       }
     });
     this.events_.save.monitor([], ({ key, type }) => {
@@ -95,7 +94,6 @@ export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Val
       }
       else if (!this.keys.has(key)) {
         this.keys.add(key);
-        this.stores.access.load(key);
         this.keys.size > this.capacity && this.stores.access.schedule(100);
       }
     });
