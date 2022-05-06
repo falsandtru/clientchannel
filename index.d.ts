@@ -106,9 +106,9 @@ export namespace StorageChannel {
 
 export class Ownership<K extends string> {
   constructor(name: K);
-  take(key: K, age: number): boolean;
-  take(key: K, age: number, wait: number): Promise<boolean>;
-  extend(key: K, age: number): boolean;
+  take(key: K, ttl: number): boolean;
+  take(key: K, ttl: number, wait: number): Promise<boolean>;
+  extend(key: K, ttl: number): boolean;
   release(key: K): void;
   close(): void;
 }

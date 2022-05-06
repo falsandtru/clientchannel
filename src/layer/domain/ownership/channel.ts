@@ -13,10 +13,14 @@ class OwnershipMessage<K extends string> extends ChannelMessage<K> {
   constructor(
     public override readonly key: K,
     public readonly priority: number,
-    public readonly age: number,
+    public readonly ttl: number,
   ) {
     super(key, 'ownership');
   }
+}
+interface OwnershipValue {
+  readonly priority: number;
+  readonly ttl: number;
 }
 
 export class Ownership<K extends string> {
@@ -38,7 +42,7 @@ export class Ownership<K extends string> {
       }
       this.channel.close();
     });
-    this.channel.listen('ownership', ({ key, priority: newPriority, age }) => {
+    this.channel.listen('ownership', ({ key, priority: newPriority, ttl: newTTL }) => {
       const { priority: oldPriority } = this.getOwnership(key);
       switch (true) {
         case newPriority < 0:
@@ -49,7 +53,7 @@ export class Ownership<K extends string> {
         case oldPriority === 0:
           assert(newPriority >= 0);
           // Accept the foreign ownership.
-          return void this.setOwnership(key, -newPriority, age);
+          return void this.setOwnership(key, -newPriority, newTTL);
         case oldPriority > 0:
           assert(newPriority >= 0);
           // First commit wins.
@@ -58,22 +62,22 @@ export class Ownership<K extends string> {
             // Notify my active ownership.
             ? void this.castOwnership(key)
             // Accept the foreign ownership.
-            : void this.setOwnership(key, -newPriority, age);
+            : void this.setOwnership(key, -newPriority, newTTL);
         case oldPriority < 0:
           assert(newPriority >= 0);
           // Update the foreign ownership.
           // Last statement wins.
-          return void this.setOwnership(key, -newPriority, age);
+          return void this.setOwnership(key, -newPriority, newTTL);
         default:
           assert(false);
       }
     });
   }
-  private readonly store = new Map<K, { readonly priority: number; readonly age: number; }>();
+  private readonly store = new Map<K, OwnershipValue>();
   private readonly cancellation = new Cancellation();
   private alive = true;
-  private getOwnership(key: K): { readonly priority: number; readonly age: number; } {
-    return this.store.get(key) ?? { priority: 0, age: 0 };
+  private getOwnership(key: K): OwnershipValue {
+    return this.store.get(key) ?? { priority: 0, ttl: 0 };
   }
   private setOwnership(key: K, newPriority: number, newAge: number): void {
     const { priority: oldPriority } = this.getOwnership(key);
@@ -81,7 +85,7 @@ export class Ownership<K extends string> {
     if (newPriority === oldPriority) return;
     this.store.set(key, {
       priority: newPriority,
-      age: newAge,
+      ttl: newAge,
     });
     const throttle = Ownership.margin - 1000;
     assert(throttle >= 1000);
@@ -91,38 +95,38 @@ export class Ownership<K extends string> {
   }
   private castOwnership(key: K): void {
     assert(this.store.has(key));
-    const { priority, age } = this.getOwnership(key);
-    this.channel.post(new OwnershipMessage(key, priority, age));
+    const { priority, ttl } = this.getOwnership(key);
+    this.channel.post(new OwnershipMessage(key, priority, ttl));
   }
   private has(key: K): boolean {
-    const { priority, age } = this.getOwnership(key);
+    const { priority, ttl } = this.getOwnership(key);
     return priority >= 0
-        && Ownership.genPriority() <= priority + age;
+        && Ownership.genPriority() <= priority + ttl;
   }
   private isTakable(key: K): boolean {
-    const { priority, age } = this.getOwnership(key);
+    const { priority, ttl } = this.getOwnership(key);
     return priority >= 0
-        || Ownership.genPriority() > abs(priority) + age;
+        || Ownership.genPriority() > abs(priority) + ttl;
   }
-  public take(key: K, age: number): boolean
-  public take(key: K, age: number, wait: number): Promise<boolean>
-  public take(key: K, age: number, wait?: number): boolean | Promise<boolean> {
+  public take(key: K, ttl: number): boolean
+  public take(key: K, ttl: number, wait: number): Promise<boolean>
+  public take(key: K, ttl: number, wait?: number): boolean | Promise<boolean> {
     if (!this.alive) throw new Error(`ClientChannel: Ownership channel "${this.channel.name}" is already closed.`);
     if (!this.isTakable(key)) return wait === void 0 ? false : Promise.resolve(false);
-    assert(0 <= age && age < 60 * 1000);
-    age = floor(min(max(age, 1 * 1000), 60 * 1000));
+    assert(0 <= ttl && ttl < 60 * 1000);
+    ttl = floor(min(max(ttl, 1 * 1000), 60 * 1000));
     wait = wait === void 0 ? wait : min(wait, 0);
     const priority = Ownership.genPriority() + Ownership.margin + (random() * 1000 | 0);
-    this.setOwnership(key, priority, age);
+    this.setOwnership(key, priority, ttl);
     assert(this.getOwnership(key).priority > 0);
     return wait === void 0
       ? this.has(key)
-      : new Promise(resolve => void setTimeout(() => void resolve(this.extend(key, age)), wait));
+      : new Promise(resolve => void setTimeout(() => void resolve(this.extend(key, ttl)), wait));
   }
-  public extend(key: K, age: number): boolean {
+  public extend(key: K, ttl: number): boolean {
     if (!this.alive) throw new Error(`ClientChannel: Ownership channel "${this.channel.name}" is already closed.`);
     return this.has(key)
-      ? this.take(key, age)
+      ? this.take(key, ttl)
       : false;
   }
   public release(key: K): void {
