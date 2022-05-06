@@ -97,7 +97,6 @@ export class AccessStore<K extends string> {
             if (!this.cancellation.isAlive) return;
             if (error) return void this.schedule(delay * 10);
             if (!cursor) return;
-            if (this.chan.lock) return void this.schedule(delay);
             if (size - count <= this.capacity) return;
             if (++count > 100) return void this.schedule(delay);
             const { key }: AccessRecord<K> = cursor.value;

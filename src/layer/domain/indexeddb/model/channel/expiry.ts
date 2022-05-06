@@ -90,7 +90,6 @@ export class ExpiryStore<K extends string> {
             if (!this.cancellation.isAlive) return;
             if (error) return void this.schedule(delay * 10);
             if (!cursor) return;
-            if (this.chan.lock) return void this.schedule(delay);
             if (++count > 100) return void this.schedule(delay);
             const { key, expiry }: ExpiryRecord<K> = cursor.value;
             if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
