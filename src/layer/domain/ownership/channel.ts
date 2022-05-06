@@ -96,8 +96,8 @@ export class Ownership<K extends string> {
   }
   private has(key: K): boolean {
     const { priority, age } = this.getOwnership(key);
-    return priority > 0
-        && priority + age > Ownership.genPriority();
+    return priority >= 0
+        && Ownership.genPriority() <= priority + age;
   }
   private isTakable(key: K): boolean {
     const { priority, age } = this.getOwnership(key);
