@@ -177,6 +177,49 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
         void reject(req.error));
     }, () => void reject(new Error('Request has failed.'))));
   }
+  public getAll<R extends object>(
+    query: IDBValidKey | IDBKeyRange | null | undefined,
+    count: number | undefined,
+    index: string, mode: IDBTransactionMode, stores: string[],
+    cb: (error: DOMException | Error | null, cursor: R[] | null, tx: IDBTransaction | null) => void,
+  ): void {
+    if (!this.alive) return;
+    this.listen(db => {
+      if (!this.alive) return;
+      const tx = db.transaction([this.name, ...stores], mode);
+      const req = index
+        ? tx
+          .objectStore(this.name)
+          .index(index)
+          .getAll(query, count)
+        : tx
+          .objectStore(this.name)
+          .getAll(query, count);
+      req.addEventListener('success', () => {
+        const values = req.result;
+        if (values) {
+          try {
+            cb(tx.error || req.error, values, tx);
+          }
+          catch (reason) {
+            causeAsyncException(reason);
+          }
+          return;
+        }
+        else {
+          cb(tx.error || req.error, null, tx);
+          mode === 'readwrite' && tx.commit();
+          return;
+        }
+      });
+      tx.addEventListener('complete', () =>
+        void cb(tx.error || req.error, null, null));
+      tx.addEventListener('error', () =>
+        void cb(tx.error || req.error, null, null));
+      tx.addEventListener('abort', () =>
+        void cb(tx.error || req.error, null, null));
+    }, () => void cb(new Error('Request has failed.'), null, null));
+  }
   public cursor(
     query: IDBValidKey | IDBKeyRange | null | undefined,
     index: string, direction: IDBCursorDirection, mode: IDBTransactionMode, stores: string[],

@@ -62,6 +62,7 @@ describe('Unit: layers/domain/indexeddb/model/channel', function () {
     it('age', async () => {
       const chan = new ChannelStore<string, Value>('test', () => true, Infinity, Infinity);
 
+      chan.expire('a', 10000);
       chan.add(new ChannelStore.Record('a', new Value(0)));
       chan.expire('b', 100);
       chan.add(new ChannelStore.Record('b', new Value(0)));

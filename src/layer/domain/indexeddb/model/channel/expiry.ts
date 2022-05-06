@@ -74,11 +74,11 @@ export class ExpiryStore<K extends string> {
           clearInterval(timer as 0);
           timer = 0;
         }, delay / 2);
-        let count = 0;
+        const limit = 100;
         schedule = 0;
         this.chan.lock = true;
-        return void this.store.cursor(
-          null, ExpiryStoreSchema.expiry, 'next', 'readonly', [],
+        return void this.store.getAll<ExpiryRecord<K>>(
+          null, limit, ExpiryStoreSchema.expiry, 'readonly', [],
           (error, cursor, tx) => {
             if (!cursor && !tx) return;
             this.chan.lock = false;
@@ -90,17 +90,14 @@ export class ExpiryStore<K extends string> {
             if (!this.cancellation.isAlive) return;
             if (error) return void this.schedule(delay * 10);
             if (!cursor) return;
-            if (++count > 100) return void this.schedule(delay);
-            const { key, expiry }: ExpiryRecord<K> = cursor.value;
-            if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
-            if (!this.ownership.take('store', delay)) return void this.schedule(delay *= 2);
-            this.chan.has(key) || this.chan.meta(key).date === 0
-              ? this.chan.delete(key)
-              : this.chan.clean(key);
-            assert(!this.chan.has(key));
-            schedule = 0;
-            this.chan.lock = true;
-            return void cursor.continue();
+            for (const { key, expiry } of cursor) {
+              if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
+              this.chan.has(key) || this.chan.meta(key).date === 0
+                ? this.chan.delete(key)
+                : this.chan.clean(key);
+              assert(!this.chan.has(key));
+            }
+            cursor.length === limit && this.schedule(delay);
           });
       }, timeout);
     };

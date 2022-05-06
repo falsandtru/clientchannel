@@ -81,11 +81,11 @@ export class AccessStore<K extends string> {
         this.chan.lock = false;
         if (size >= 0 === false) return void clearInterval(timer) || void this.schedule(delay *= 2);
         if (size <= this.capacity) return void clearInterval(timer);
-        let count = 0;
+        const limit = 100;
         schedule = 0;
         this.chan.lock = true;
-        return void this.store.cursor(
-          null, AccessStoreSchema.date, 'next', 'readonly', [],
+        return void this.store.getAll<AccessRecord<K>>(
+          null, min(size - this.capacity, limit), AccessStoreSchema.date, 'readonly', [],
           (error, cursor, tx) => {
             if (!cursor && !tx) return;
             this.chan.lock = false;
@@ -97,17 +97,13 @@ export class AccessStore<K extends string> {
             if (!this.cancellation.isAlive) return;
             if (error) return void this.schedule(delay * 10);
             if (!cursor) return;
-            if (size - count <= this.capacity) return;
-            if (++count > 100) return void this.schedule(delay);
-            const { key }: AccessRecord<K> = cursor.value;
-            if (!this.ownership.take('store', delay)) return void this.schedule(delay *= 2);
-            this.chan.has(key) || this.chan.meta(key).date === 0
-              ? this.chan.delete(key)
-              : this.chan.clean(key);
-            assert(!this.chan.has(key));
-            schedule = 0;
-            this.chan.lock = true;
-            return void cursor.continue();
+            for (const { key } of cursor) {
+              this.chan.has(key) || this.chan.meta(key).date === 0
+                ? this.chan.delete(key)
+                : this.chan.clean(key);
+              assert(!this.chan.has(key));
+            }
+            cursor.length === limit && this.schedule(delay);
           });
       }, timeout);
     };
