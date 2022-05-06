@@ -4163,11 +4163,11 @@ require = function () {
             const channel_1 = _dereq_('../broadcast/channel');
             const cancellation_1 = _dereq_('spica/cancellation');
             class OwnershipMessage extends channel_1.ChannelMessage {
-                constructor(key, priority, age) {
+                constructor(key, priority, ttl) {
                     super(key, 'ownership');
                     this.key = key;
                     this.priority = priority;
-                    this.age = age;
+                    this.ttl = ttl;
                 }
             }
             class Ownership {
@@ -4190,18 +4190,18 @@ require = function () {
                     this.channel.listen('ownership', ({
                         key,
                         priority: newPriority,
-                        age
+                        ttl: newTTL
                     }) => {
                         const {priority: oldPriority} = this.getOwnership(key);
                         switch (true) {
                         case newPriority < 0:
                             return newPriority === oldPriority ? void this.store.delete(key) : void 0;
                         case oldPriority === 0:
-                            return void this.setOwnership(key, -newPriority, age);
+                            return void this.setOwnership(key, -newPriority, newTTL);
                         case oldPriority > 0:
-                            return oldPriority < newPriority && this.has(key) ? void this.castOwnership(key) : void this.setOwnership(key, -newPriority, age);
+                            return oldPriority < newPriority && this.has(key) ? void this.castOwnership(key) : void this.setOwnership(key, -newPriority, newTTL);
                         case oldPriority < 0:
-                            return void this.setOwnership(key, -newPriority, age);
+                            return void this.setOwnership(key, -newPriority, newTTL);
                         default:
                         }
                     });
@@ -4213,7 +4213,7 @@ require = function () {
                     var _a;
                     return (_a = this.store.get(key)) !== null && _a !== void 0 ? _a : {
                         priority: 0,
-                        age: 0
+                        ttl: 0
                     };
                 }
                 setOwnership(key, newPriority, newAge) {
@@ -4222,7 +4222,7 @@ require = function () {
                         return;
                     this.store.set(key, {
                         priority: newPriority,
-                        age: newAge
+                        ttl: newAge
                     });
                     const throttle = Ownership.margin - 1000;
                     if (newPriority > 0 && newPriority > oldPriority + throttle) {
@@ -4230,32 +4230,32 @@ require = function () {
                     }
                 }
                 castOwnership(key) {
-                    const {priority, age} = this.getOwnership(key);
-                    this.channel.post(new OwnershipMessage(key, priority, age));
+                    const {priority, ttl} = this.getOwnership(key);
+                    this.channel.post(new OwnershipMessage(key, priority, ttl));
                 }
                 has(key) {
-                    const {priority, age} = this.getOwnership(key);
-                    return priority > 0 && priority + age > Ownership.genPriority();
+                    const {priority, ttl} = this.getOwnership(key);
+                    return priority >= 0 && Ownership.genPriority() <= priority + ttl;
                 }
                 isTakable(key) {
-                    const {priority, age} = this.getOwnership(key);
-                    return priority >= 0 || Ownership.genPriority() > (0, alias_1.abs)(priority) + age;
+                    const {priority, ttl} = this.getOwnership(key);
+                    return priority >= 0 || Ownership.genPriority() > (0, alias_1.abs)(priority) + ttl;
                 }
-                take(key, age, wait) {
+                take(key, ttl, wait) {
                     if (!this.alive)
                         throw new Error(`ClientChannel: Ownership channel "${ this.channel.name }" is already closed.`);
                     if (!this.isTakable(key))
                         return wait === void 0 ? false : global_1.Promise.resolve(false);
-                    age = (0, alias_1.floor)((0, alias_1.min)((0, alias_1.max)(age, 1 * 1000), 60 * 1000));
+                    ttl = (0, alias_1.floor)((0, alias_1.min)((0, alias_1.max)(ttl, 1 * 1000), 60 * 1000));
                     wait = wait === void 0 ? wait : (0, alias_1.min)(wait, 0);
                     const priority = Ownership.genPriority() + Ownership.margin + ((0, alias_1.random)() * 1000 | 0);
-                    this.setOwnership(key, priority, age);
-                    return wait === void 0 ? this.has(key) : new global_1.Promise(resolve => void (0, global_1.setTimeout)(() => void resolve(this.extend(key, age)), wait));
+                    this.setOwnership(key, priority, ttl);
+                    return wait === void 0 ? this.has(key) : new global_1.Promise(resolve => void (0, global_1.setTimeout)(() => void resolve(this.extend(key, ttl)), wait));
                 }
-                extend(key, age) {
+                extend(key, ttl) {
                     if (!this.alive)
                         throw new Error(`ClientChannel: Ownership channel "${ this.channel.name }" is already closed.`);
-                    return this.has(key) ? this.take(key, age) : false;
+                    return this.has(key) ? this.take(key, ttl) : false;
                 }
                 release(key) {
                     if (!this.alive)
