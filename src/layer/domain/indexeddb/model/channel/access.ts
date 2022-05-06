@@ -119,8 +119,8 @@ export class AccessStore<K extends string> {
           if (done) return;
           if (error) return void reject(error);
           if (!cursor) return void resolve(keys);
-          const { key, alive }: AccessRecord<K> = cursor.value;
-          if (alive) {
+          const { key, active }: AccessRecord<K> = cursor.value;
+          if (active) {
             keys.push(key);
             if (cb?.(key, keys) === false) return void resolve(keys);
           }
@@ -128,8 +128,8 @@ export class AccessStore<K extends string> {
         });
     });
   }
-  public set(key: K, alive = true): void {
-    this.store.set(key, new AccessRecord(key, alive));
+  public set(key: K, active = true): void {
+    this.store.set(key, new AccessRecord(key, active));
   }
   public close(): void {
     this.store.close();
@@ -139,7 +139,7 @@ export class AccessStore<K extends string> {
 class AccessRecord<K extends string> {
   constructor(
     key: K,
-    public readonly alive: boolean,
+    public readonly active: boolean,
   ) {
     this[AccessStoreSchema.key] = key;
   }
