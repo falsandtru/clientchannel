@@ -142,9 +142,11 @@ export class AccessStore<K extends string> {
 
 class AccessRecord<K extends string> {
   constructor(
-    public readonly key: K,
+    key: K,
     public readonly alive: boolean,
   ) {
+    this[AccessStoreSchema.key] = key;
   }
-  public readonly date: number = Date.now();
+  public readonly [AccessStoreSchema.key]: K;
+  public readonly [AccessStoreSchema.date]: number = Date.now();
 }

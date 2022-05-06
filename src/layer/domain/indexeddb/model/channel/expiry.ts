@@ -124,11 +124,15 @@ export class ExpiryStore<K extends string> {
 
 class ExpiryRecord<K extends string> {
   constructor(
-    public readonly key: K,
-    public readonly expiry: number
+    key: K,
+    expiry: number
   ) {
     assert(Number.isFinite(expiry));
     assert(Number.isSafeInteger(expiry));
     assert(expiry >= Date.now());
+    this[ExpiryStoreSchema.key] = key;
+    this[ExpiryStoreSchema.expiry] = expiry;
   }
+  public readonly [ExpiryStoreSchema.key]: K;
+  public readonly [ExpiryStoreSchema.expiry]: number;
 }
