@@ -329,7 +329,7 @@ require = function () {
             './alias': 4,
             './array': 5,
             './global': 16,
-            './type': 33
+            './type': 34
         }
     ],
     7: [
@@ -1767,9 +1767,10 @@ require = function () {
             'use strict';
             var _a, _b;
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.never = exports.isPromiseLike = exports.Internal = exports.AtomicPromise = exports.internal = void 0;
+            exports.wait = exports.never = exports.isPromiseLike = exports.Internal = exports.AtomicPromise = exports.internal = void 0;
             const global_1 = _dereq_('./global');
             const alias_1 = _dereq_('./alias');
+            const clock_1 = _dereq_('./clock');
             const function_1 = _dereq_('./function');
             exports.internal = Symbol.for('spica/promise::internal');
             class AtomicPromise {
@@ -2106,9 +2107,14 @@ require = function () {
                     return this;
                 }
             }();
+            function wait(ms) {
+                return ms === 0 ? AtomicPromise.resolve(clock_1.clock) : new AtomicPromise(resolve => void (0, global_1.setTimeout)(resolve, ms));
+            }
+            exports.wait = wait;
         },
         {
             './alias': 4,
+            './clock': 8,
             './function': 14,
             './global': 16
         }
@@ -2245,6 +2251,31 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
+            exports.setInterval = exports.setTimeout = void 0;
+            const global_1 = _dereq_('./global');
+            const function_1 = _dereq_('./function');
+            exports.setTimeout = template(global_1.global.setTimeout, global_1.global.clearTimeout);
+            exports.setInterval = template(global_1.global.setInterval, global_1.global.clearInterval);
+            function template(set, unset) {
+                return (wait, handler, unhandler) => {
+                    let params;
+                    const timer = set(() => params = [handler()], wait);
+                    return (0, function_1.singleton)(() => {
+                        unset(timer);
+                        params && (unhandler === null || unhandler === void 0 ? void 0 : unhandler(params[0]));
+                    });
+                };
+            }
+        },
+        {
+            './function': 14,
+            './global': 16
+        }
+    ],
+    34: [
+        function (_dereq_, module, exports) {
+            'use strict';
+            Object.defineProperty(exports, '__esModule', { value: true });
             exports.isPrimitive = exports.isType = exports.type = void 0;
             const global_1 = _dereq_('./global');
             const alias_1 = _dereq_('./alias');
@@ -2291,7 +2322,7 @@ require = function () {
             './global': 16
         }
     ],
-    34: [
+    35: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2337,13 +2368,13 @@ require = function () {
         },
         { './global': 16 }
     ],
-    35: [
+    36: [
         function (_dereq_, module, exports) {
             arguments[4][1][0].apply(exports, arguments);
         },
         { 'dup': 1 }
     ],
-    36: [
+    37: [
         function (_dereq_, module, exports) {
             'use strict';
             var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
@@ -2372,9 +2403,9 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             __exportStar(_dereq_('./layer/interface/api'), exports);
         },
-        { './layer/interface/api': 67 }
+        { './layer/interface/api': 68 }
     ],
-    37: [
+    38: [
         function (_dereq_, module, exports) {
             'use strict';
             var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
@@ -2434,13 +2465,13 @@ require = function () {
             exports.Ownership = Ownership;
         },
         {
-            '../domain/broadcast/channel': 43,
-            '../domain/indexeddb/api': 46,
-            '../domain/ownership/channel': 52,
-            '../domain/webstorage/api': 53
+            '../domain/broadcast/channel': 44,
+            '../domain/indexeddb/api': 47,
+            '../domain/ownership/channel': 53,
+            '../domain/webstorage/api': 54
         }
     ],
-    38: [
+    39: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2483,10 +2514,10 @@ require = function () {
         },
         {
             'spica/alias': 4,
-            'spica/type': 33
+            'spica/type': 34
         }
     ],
-    39: [
+    40: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2581,14 +2612,14 @@ require = function () {
             exports.EventRecordValue = EventRecordValue;
         },
         {
-            '../database/value': 38,
-            './identifier': 40,
+            '../database/value': 39,
+            './identifier': 41,
             'spica/alias': 4,
             'spica/assign': 6,
             'spica/global': 16
         }
     ],
-    40: [
+    41: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -2603,7 +2634,7 @@ require = function () {
         },
         {}
     ],
-    41: [
+    42: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3086,10 +3117,10 @@ require = function () {
             exports.compose = compose;
         },
         {
-            '../../infrastructure/indexeddb/api': 58,
-            '../database/value': 38,
-            './event': 39,
-            './identifier': 40,
+            '../../infrastructure/indexeddb/api': 59,
+            '../database/value': 39,
+            './event': 40,
+            './identifier': 41,
             'spica/alias': 4,
             'spica/clock': 8,
             'spica/concat': 10,
@@ -3098,7 +3129,7 @@ require = function () {
             'spica/observer': 29
         }
     ],
-    42: [
+    43: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3295,7 +3326,7 @@ require = function () {
             'spica/global': 16
         }
     ],
-    43: [
+    44: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3363,7 +3394,7 @@ require = function () {
         },
         {}
     ],
-    44: [
+    45: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3400,9 +3431,9 @@ require = function () {
                 }
             });
         },
-        { './module/builder': 45 }
+        { './module/builder': 46 }
     ],
-    45: [
+    46: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3502,11 +3533,11 @@ require = function () {
             exports.build = build;
         },
         {
-            '../../../data/database/value': 38,
+            '../../../data/database/value': 39,
             'spica/alias': 4
         }
     ],
-    46: [
+    47: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3519,9 +3550,9 @@ require = function () {
                 }
             });
         },
-        { './service/channel': 51 }
+        { './service/channel': 52 }
     ],
-    47: [
+    48: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3737,20 +3768,20 @@ require = function () {
             }
         },
         {
-            '../../../infrastructure/indexeddb/api': 58,
-            '../../broadcast/channel': 43,
-            '../../dao/api': 44,
-            '../../ownership/channel': 52,
-            './channel/access': 48,
-            './channel/data': 49,
-            './channel/expiry': 50,
+            '../../../infrastructure/indexeddb/api': 59,
+            '../../broadcast/channel': 44,
+            '../../dao/api': 45,
+            '../../ownership/channel': 53,
+            './channel/access': 49,
+            './channel/data': 50,
+            './channel/expiry': 51,
             'spica/cancellation': 7,
             'spica/global': 16,
             'spica/observer': 29,
             'spica/promise': 30
         }
     ],
-    48: [
+    49: [
         function (_dereq_, module, exports) {
             'use strict';
             var _a;
@@ -3759,6 +3790,7 @@ require = function () {
             const global_1 = _dereq_('spica/global');
             const alias_1 = _dereq_('spica/alias');
             const store_1 = _dereq_('../../../../data/kvs/store');
+            const timer_1 = _dereq_('spica/timer');
             exports.name = 'access';
             class AccessStore {
                 constructor(chan, cancellation, ownership, listen, capacity) {
@@ -3771,7 +3803,7 @@ require = function () {
                     this.store = new class extends store_1.KeyValueStore {
                     }(exports.name, 'key', this.listen);
                     this.schedule = (() => {
-                        let timer = 0;
+                        let untimer;
                         let delay = 10 * 1000;
                         let schedule = global_1.Infinity;
                         return timeout => {
@@ -3781,8 +3813,8 @@ require = function () {
                             if (global_1.Date.now() + timeout >= schedule)
                                 return;
                             schedule = global_1.Date.now() + timeout;
-                            (0, global_1.clearTimeout)(timer);
-                            timer = (0, global_1.setTimeout)(async () => {
+                            untimer === null || untimer === void 0 ? void 0 : untimer();
+                            untimer = (0, timer_1.setTimeout)(timeout, async () => {
                                 if (!this.cancellation.isAlive)
                                     return;
                                 if (schedule === 0)
@@ -3792,19 +3824,18 @@ require = function () {
                                     return void this.schedule(delay *= 2);
                                 if (this.chan.lock)
                                     return void this.schedule(delay);
-                                let timer = (0, global_1.setInterval)(() => {
+                                let untimer = (0, timer_1.setInterval)(delay / 2, () => {
                                     if (this.ownership.extend('store', delay))
                                         return;
-                                    (0, global_1.clearInterval)(timer);
-                                    timer = 0;
-                                }, delay / 2);
+                                    untimer();
+                                });
                                 this.chan.lock = true;
                                 const size = await this.store.count(null, 'key').catch(() => NaN);
                                 this.chan.lock = false;
                                 if (size >= 0 === false)
-                                    return void (0, global_1.clearInterval)(timer) || void this.schedule(delay *= 2);
+                                    return void untimer() || void this.schedule(delay *= 2);
                                 if (size <= this.capacity)
-                                    return void (0, global_1.clearInterval)(timer);
+                                    return void untimer();
                                 const limit = 100;
                                 schedule = 0;
                                 this.chan.lock = true;
@@ -3813,10 +3844,7 @@ require = function () {
                                         return;
                                     this.chan.lock = false;
                                     schedule = global_1.Infinity;
-                                    if (timer) {
-                                        (0, global_1.clearInterval)(timer);
-                                        timer = 0;
-                                    }
+                                    untimer();
                                     if (!this.cancellation.isAlive)
                                         return;
                                     if (error)
@@ -3828,7 +3856,7 @@ require = function () {
                                     }
                                     cursor.length === limit && this.schedule(delay);
                                 });
-                            }, timeout);
+                            });
                         };
                     })();
                     this.schedule(10 * 1000);
@@ -3859,7 +3887,7 @@ require = function () {
                 recent(cb, timeout) {
                     return new Promise((resolve, reject) => {
                         let done = false;
-                        timeout >= 0 && (0, global_1.setTimeout)(() => done = !void reject(new Error('Timeout.')), timeout);
+                        timeout && (0, timer_1.setTimeout)(timeout, () => done = !void reject(new Error('Timeout.')));
                         const keys = [];
                         void this.store.cursor(null, 'date', 'prev', 'readonly', [], (error, cursor) => {
                             if (done)
@@ -3896,12 +3924,13 @@ require = function () {
             'key', _a = 'date';
         },
         {
-            '../../../../data/kvs/store': 42,
+            '../../../../data/kvs/store': 43,
             'spica/alias': 4,
-            'spica/global': 16
+            'spica/global': 16,
+            'spica/timer': 33
         }
     ],
-    49: [
+    50: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3924,9 +3953,9 @@ require = function () {
                 DataStore.Value = store_1.EventStore.Value;
             }(DataStore = exports.DataStore || (exports.DataStore = {})));
         },
-        { '../../../../data/es/store': 41 }
+        { '../../../../data/es/store': 42 }
     ],
-    50: [
+    51: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -3934,6 +3963,7 @@ require = function () {
             const global_1 = _dereq_('spica/global');
             const alias_1 = _dereq_('spica/alias');
             const store_1 = _dereq_('../../../../data/kvs/store');
+            const timer_1 = _dereq_('spica/timer');
             const name = 'expiry';
             class ExpiryStore {
                 constructor(chan, cancellation, ownership, listen) {
@@ -3945,7 +3975,7 @@ require = function () {
                     this.store = new class extends store_1.KeyValueStore {
                     }(name, 'key', this.listen);
                     this.schedule = (() => {
-                        let timer = 0;
+                        let untimer;
                         let delay = 10 * 1000;
                         let schedule = global_1.Infinity;
                         return timeout => {
@@ -3953,8 +3983,8 @@ require = function () {
                             if (global_1.Date.now() + timeout >= schedule)
                                 return;
                             schedule = global_1.Date.now() + timeout;
-                            (0, global_1.clearTimeout)(timer);
-                            timer = (0, global_1.setTimeout)(() => {
+                            untimer === null || untimer === void 0 ? void 0 : untimer();
+                            untimer = (0, timer_1.setTimeout)(timeout, () => {
                                 if (!this.cancellation.isAlive)
                                     return;
                                 if (schedule === 0)
@@ -3964,12 +3994,11 @@ require = function () {
                                     return void this.schedule(delay *= 2);
                                 if (this.chan.lock)
                                     return void this.schedule(delay);
-                                let timer = (0, global_1.setInterval)(() => {
+                                let untimer = (0, timer_1.setInterval)(delay / 2, () => {
                                     if (this.ownership.extend('store', delay))
                                         return;
-                                    (0, global_1.clearInterval)(timer);
-                                    timer = 0;
-                                }, delay / 2);
+                                    untimer();
+                                });
                                 const limit = 100;
                                 schedule = 0;
                                 this.chan.lock = true;
@@ -3978,10 +4007,7 @@ require = function () {
                                         return;
                                     this.chan.lock = false;
                                     schedule = global_1.Infinity;
-                                    if (timer) {
-                                        (0, global_1.clearInterval)(timer);
-                                        timer = 0;
-                                    }
+                                    untimer();
                                     if (!this.cancellation.isAlive)
                                         return;
                                     if (error)
@@ -3995,7 +4021,7 @@ require = function () {
                                     }
                                     cursor.length === limit && this.schedule(delay);
                                 });
-                            }, timeout);
+                            });
                         };
                     })();
                     this.schedule(10 * 1000);
@@ -4049,12 +4075,13 @@ require = function () {
             'key', 'expiry';
         },
         {
-            '../../../../data/kvs/store': 42,
+            '../../../../data/kvs/store': 43,
             'spica/alias': 4,
-            'spica/global': 16
+            'spica/global': 16,
+            'spica/timer': 33
         }
     ],
-    51: [
+    52: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4154,16 +4181,16 @@ require = function () {
             }(StoreChannel = exports.StoreChannel || (exports.StoreChannel = {})));
         },
         {
-            '../../dao/api': 44,
-            '../../webstorage/api': 53,
-            '../model/channel': 47,
+            '../../dao/api': 45,
+            '../../webstorage/api': 54,
+            '../model/channel': 48,
             'spica/alias': 4,
             'spica/compare': 9,
             'spica/observer': 29,
             'spica/throttle': 32
         }
     ],
-    52: [
+    53: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4226,16 +4253,16 @@ require = function () {
                         ttl: 0
                     };
                 }
-                setOwnership(key, newPriority, newAge) {
-                    const {priority: oldPriority} = this.getOwnership(key);
-                    if (newPriority === oldPriority)
-                        return;
+                setOwnership(key, newPriority, newTTL) {
+                    const {
+                        priority: oldPriority,
+                        ttl: oldTTL
+                    } = this.getOwnership(key);
                     this.store.set(key, {
                         priority: newPriority,
-                        ttl: newAge
+                        ttl: newTTL
                     });
-                    const throttle = Ownership.margin - 1000;
-                    if (newPriority > 0 && newPriority > oldPriority + throttle) {
+                    if (newPriority > 0 && newPriority + newTTL - Ownership.throttle > (0, alias_1.abs)(oldPriority) + oldTTL) {
                         this.castOwnership(key);
                     }
                 }
@@ -4258,7 +4285,7 @@ require = function () {
                         return wait === void 0 ? false : global_1.Promise.resolve(false);
                     ttl = (0, alias_1.floor)((0, alias_1.min)((0, alias_1.max)(ttl, 1 * 1000), 60 * 1000));
                     wait = wait === void 0 ? wait : (0, alias_1.min)(wait, 0);
-                    const priority = Ownership.genPriority() + Ownership.margin + ((0, alias_1.random)() * 1000 | 0);
+                    const priority = Ownership.genPriority() + Ownership.throttle + Ownership.margin;
                     this.setOwnership(key, priority, ttl);
                     return wait === void 0 ? this.has(key) : new global_1.Promise(resolve => void (0, global_1.setTimeout)(() => void resolve(this.extend(key, ttl)), wait));
                 }
@@ -4272,7 +4299,7 @@ require = function () {
                         throw new Error(`ClientChannel: Ownership channel "${ this.channel.name }" is already closed.`);
                     if (!this.has(key))
                         return;
-                    this.setOwnership(key, -(0, alias_1.abs)(this.getOwnership(key).priority), 0);
+                    this.setOwnership(key, -this.getOwnership(key).priority, 0);
                     this.castOwnership(key);
                     this.store.delete(key);
                 }
@@ -4282,16 +4309,17 @@ require = function () {
                 }
             }
             exports.Ownership = Ownership;
-            Ownership.margin = 6 * 1000;
+            Ownership.throttle = 5 * 1000;
+            Ownership.margin = 1 * 1000;
         },
         {
-            '../broadcast/channel': 43,
+            '../broadcast/channel': 44,
             'spica/alias': 4,
             'spica/cancellation': 7,
             'spica/global': 16
         }
     ],
-    53: [
+    54: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4318,11 +4346,11 @@ require = function () {
             });
         },
         {
-            '../../infrastructure/webstorage/api': 64,
-            './service/channel': 55
+            '../../infrastructure/webstorage/api': 65,
+            './service/channel': 56
         }
     ],
-    54: [
+    55: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4351,7 +4379,7 @@ require = function () {
         },
         {}
     ],
-    55: [
+    56: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4467,16 +4495,16 @@ require = function () {
             }
         },
         {
-            '../../../infrastructure/webstorage/api': 64,
-            '../../dao/api': 44,
-            '../model/storage': 54,
+            '../../../infrastructure/webstorage/api': 65,
+            '../../dao/api': 45,
+            '../model/storage': 55,
             'spica/alias': 4,
             'spica/cancellation': 7,
             'spica/compare': 9,
             'spica/observer': 29
         }
     ],
-    56: [
+    57: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4495,9 +4523,9 @@ require = function () {
                 }
             });
         },
-        { './module/storage': 57 }
+        { './module/storage': 58 }
     ],
-    57: [
+    58: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4520,9 +4548,9 @@ require = function () {
             }
             exports.verifyStorageAccess = verifyStorageAccess;
         },
-        { 'spica/uuid': 34 }
+        { 'spica/uuid': 35 }
     ],
-    58: [
+    59: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4580,12 +4608,12 @@ require = function () {
             });
         },
         {
-            './model/access': 59,
-            './model/event': 60,
-            './module/global': 63
+            './model/access': 60,
+            './model/event': 61,
+            './module/global': 64
         }
     ],
-    59: [
+    60: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4662,14 +4690,14 @@ require = function () {
             }
         },
         {
-            '../../environment/api': 56,
-            './event': 60,
-            './state': 61,
-            './transition': 62,
+            '../../environment/api': 57,
+            './event': 61,
+            './state': 62,
+            './transition': 63,
             'spica/function': 14
         }
     ],
-    60: [
+    61: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4687,7 +4715,7 @@ require = function () {
         },
         { 'spica/observer': 29 }
     ],
-    61: [
+    62: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -4851,7 +4879,7 @@ require = function () {
         },
         {}
     ],
-    62: [
+    63: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -5045,14 +5073,14 @@ require = function () {
             }
         },
         {
-            '../../environment/api': 56,
-            '../module/global': 63,
-            './event': 60,
-            './state': 61,
+            '../../environment/api': 57,
+            '../module/global': 64,
+            './event': 61,
+            './state': 62,
             'spica/exception': 13
         }
     ],
-    63: [
+    64: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -5062,7 +5090,7 @@ require = function () {
         },
         {}
     ],
-    64: [
+    65: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -5095,11 +5123,11 @@ require = function () {
             });
         },
         {
-            './model/event': 65,
-            './module/global': 66
+            './model/event': 66,
+            './module/global': 67
         }
     ],
-    65: [
+    66: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -5126,11 +5154,11 @@ require = function () {
             });
         },
         {
-            '../module/global': 66,
+            '../module/global': 67,
             'spica/observer': 29
         }
     ],
-    66: [
+    67: [
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
@@ -5139,9 +5167,9 @@ require = function () {
             exports.localStorage = api_1.isStorageAvailable ? self.localStorage : void 0;
             exports.sessionStorage = api_1.isStorageAvailable ? self.sessionStorage : void 0;
         },
-        { '../../environment/api': 56 }
+        { '../../environment/api': 57 }
     ],
-    67: [
+    68: [
         function (_dereq_, module, exports) {
             'use strict';
             var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
@@ -5170,7 +5198,7 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             __exportStar(_dereq_('../application/api'), exports);
         },
-        { '../application/api': 37 }
+        { '../application/api': 38 }
     ],
     'clientchannel': [
         function (_dereq_, module, exports) {
@@ -5201,14 +5229,14 @@ require = function () {
             Object.defineProperty(exports, '__esModule', { value: true });
             __exportStar(_dereq_('./src/export'), exports);
         },
-        { './src/export': 36 }
+        { './src/export': 37 }
     ]
 }, {}, [
     1,
     2,
     3,
     'clientchannel',
-    35
+    36
 ]);
 (function (root, factory) {
     if (typeof define === 'function' && define.amd) {
