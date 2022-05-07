@@ -1,5 +1,5 @@
 import { Date, Promise, setTimeout } from 'spica/global';
-import { abs, floor, max, min, random } from 'spica/alias';
+import { abs, floor, max, min } from 'spica/alias';
 import { Channel, ChannelMessage } from '../broadcast/channel';
 import { Cancellation } from 'spica/cancellation';
 
@@ -24,7 +24,8 @@ interface OwnershipValue {
 }
 
 export class Ownership<K extends string> {
-  private static readonly margin = 6 * 1000;
+  private static readonly throttle = 5 * 1000;
+  private static readonly margin = 1 * 1000;
   private static genPriority(): number {
     return Date.now();
   }
@@ -59,7 +60,7 @@ export class Ownership<K extends string> {
           // First commit wins.
           return oldPriority < newPriority
               && this.has(key)
-            // Notify my active ownership.
+            // Notify my valid ownership.
             ? void this.castOwnership(key)
             // Accept the foreign ownership.
             : void this.setOwnership(key, -newPriority, newTTL);
@@ -79,17 +80,13 @@ export class Ownership<K extends string> {
   private getOwnership(key: K): OwnershipValue {
     return this.store.get(key) ?? { priority: 0, ttl: 0 };
   }
-  private setOwnership(key: K, newPriority: number, newAge: number): void {
-    const { priority: oldPriority } = this.getOwnership(key);
-    // Don't cast the same priority repeatedly.
-    if (newPriority === oldPriority) return;
+  private setOwnership(key: K, newPriority: number, newTTL: number): void {
+    const { priority: oldPriority, ttl: oldTTL } = this.getOwnership(key);
     this.store.set(key, {
       priority: newPriority,
-      ttl: newAge,
+      ttl: newTTL,
     });
-    const throttle = Ownership.margin - 1000;
-    assert(throttle >= 1000);
-    if (newPriority > 0 && newPriority - throttle > oldPriority) {
+    if (newPriority > 0 && newPriority + newTTL - Ownership.throttle > abs(oldPriority) + oldTTL) {
       this.castOwnership(key);
     }
   }
@@ -116,9 +113,9 @@ export class Ownership<K extends string> {
     assert(0 <= ttl && ttl < 60 * 1000);
     ttl = floor(min(max(ttl, 1 * 1000), 60 * 1000));
     wait = wait === void 0 ? wait : min(wait, 0);
-    const priority = Ownership.genPriority() + Ownership.margin + (random() * 1000 | 0);
+    const priority = Ownership.genPriority() + Ownership.throttle + Ownership.margin;
+    assert(priority > 0);
     this.setOwnership(key, priority, ttl);
-    assert(this.getOwnership(key).priority > 0);
     return wait === void 0
       ? this.has(key)
       : new Promise(resolve => void setTimeout(() => void resolve(this.extend(key, ttl)), wait));
@@ -132,7 +129,7 @@ export class Ownership<K extends string> {
   public release(key: K): void {
     if (!this.alive) throw new Error(`ClientChannel: Ownership channel "${this.channel.name}" is already closed.`);
     if (!this.has(key)) return;
-    this.setOwnership(key, -abs(this.getOwnership(key).priority), 0);
+    this.setOwnership(key, -this.getOwnership(key).priority, 0);
     this.castOwnership(key);
     this.store.delete(key);
   }
