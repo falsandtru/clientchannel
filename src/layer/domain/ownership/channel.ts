@@ -89,7 +89,7 @@ export class Ownership<K extends string> {
     });
     const throttle = Ownership.margin - 1000;
     assert(throttle >= 1000);
-    if (newPriority > 0 && newPriority > oldPriority + throttle) {
+    if (newPriority > 0 && newPriority - throttle > oldPriority) {
       this.castOwnership(key);
     }
   }
