@@ -1,10 +1,11 @@
-import { Infinity, Date, setTimeout, clearTimeout, setInterval, clearInterval } from 'spica/global';
+import { Infinity, Date } from 'spica/global';
 import { min } from 'spica/alias';
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
 import { ChannelStore } from '../channel';
 import { Ownership } from '../../../ownership/channel';
 import { Cancellation, Cancellee } from 'spica/cancellation';
+import { setTimeout, setInterval } from 'spica/timer';
 
 const name = 'expiry';
 
@@ -55,25 +56,24 @@ export class ExpiryStore<K extends string> {
   public readonly name = name;
   private store = new class extends KeyValueStore<K, ExpiryRecord<K>> { }(name, ExpiryStoreSchema.key, this.listen);
   public schedule = (() => {
-    let timer: ReturnType<typeof setTimeout> | 0 = 0;
+    let untimer: () => void;
     let delay = 10 * 1000;
     let schedule = Infinity;
     return (timeout: number): void => {
       timeout = min(timeout, 60 * 60 * 1000);
       if (Date.now() + timeout >= schedule) return;
       schedule = Date.now() + timeout;
-      clearTimeout(timer as 0);
-      timer = setTimeout(() => {
+      untimer?.();
+      untimer = setTimeout(timeout, () => {
         if (!this.cancellation.isAlive) return;
         if (schedule === 0) return;
         schedule = Infinity;
         if (!this.ownership.take('store', delay)) return void this.schedule(delay *= 2);
         if (this.chan.lock) return void this.schedule(delay);
-        let timer: ReturnType<typeof setTimeout> | 0 = setInterval(() => {
+        let untimer = setInterval(delay / 2, () => {
           if (this.ownership.extend('store', delay)) return;
-          clearInterval(timer as 0);
-          timer = 0;
-        }, delay / 2);
+          untimer();
+        });
         const limit = 100;
         schedule = 0;
         this.chan.lock = true;
@@ -83,10 +83,7 @@ export class ExpiryStore<K extends string> {
             if (!cursor && !tx) return;
             this.chan.lock = false;
             schedule = Infinity;
-            if (timer) {
-              clearInterval(timer);
-              timer = 0;
-            }
+            untimer();
             if (!this.cancellation.isAlive) return;
             if (error) return void this.schedule(delay * 10);
             if (!cursor) return;
@@ -99,7 +96,7 @@ export class ExpiryStore<K extends string> {
             }
             cursor.length === limit && this.schedule(delay);
           });
-      }, timeout);
+      });
     };
   })();
   public load(key: K, cancellation?: Cancellation): undefined {
