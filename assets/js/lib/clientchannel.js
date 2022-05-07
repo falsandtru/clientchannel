@@ -3219,6 +3219,37 @@ require = function () {
                         tx.addEventListener('abort', () => void reject(req.error));
                     }, () => void reject(new Error('Request has failed.'))));
                 }
+                getAll(query, count, index, mode, stores, cb) {
+                    if (!this.alive)
+                        return;
+                    this.listen(db => {
+                        if (!this.alive)
+                            return;
+                        const tx = db.transaction([
+                            this.name,
+                            ...stores
+                        ], mode);
+                        const req = index ? tx.objectStore(this.name).index(index).getAll(query, count) : tx.objectStore(this.name).getAll(query, count);
+                        req.addEventListener('success', () => {
+                            const values = req.result;
+                            if (values) {
+                                try {
+                                    cb(tx.error || req.error, values, tx);
+                                } catch (reason) {
+                                    (0, exception_1.causeAsyncException)(reason);
+                                }
+                                return;
+                            } else {
+                                cb(tx.error || req.error, null, tx);
+                                mode === 'readwrite' && tx.commit();
+                                return;
+                            }
+                        });
+                        tx.addEventListener('complete', () => void cb(tx.error || req.error, null, null));
+                        tx.addEventListener('error', () => void cb(tx.error || req.error, null, null));
+                        tx.addEventListener('abort', () => void cb(tx.error || req.error, null, null));
+                    }, () => void cb(new Error('Request has failed.'), null, null));
+                }
                 cursor(query, index, direction, mode, stores, cb) {
                     if (!this.alive)
                         return;
@@ -3565,7 +3596,6 @@ require = function () {
                             this.keys.delete(key);
                         } else if (!this.keys.has(key)) {
                             this.keys.add(key);
-                            this.stores.access.load(key);
                         }
                     });
                     this.events_.save.monitor([], ({key, type}) => {
@@ -3573,7 +3603,6 @@ require = function () {
                             this.keys.delete(key);
                         } else if (!this.keys.has(key)) {
                             this.keys.add(key);
-                            this.stores.access.load(key);
                             this.keys.size > this.capacity && this.stores.access.schedule(100);
                         }
                     });
@@ -3724,6 +3753,7 @@ require = function () {
     48: [
         function (_dereq_, module, exports) {
             'use strict';
+            var _a;
             Object.defineProperty(exports, '__esModule', { value: true });
             exports.AccessStore = exports.name = void 0;
             const global_1 = _dereq_('spica/global');
@@ -3775,10 +3805,10 @@ require = function () {
                                     return void (0, global_1.clearInterval)(timer) || void this.schedule(delay *= 2);
                                 if (size <= this.capacity)
                                     return void (0, global_1.clearInterval)(timer);
-                                let count = 0;
+                                const limit = 100;
                                 schedule = 0;
                                 this.chan.lock = true;
-                                return void this.store.cursor(null, 'date', 'next', 'readonly', [], (error, cursor, tx) => {
+                                return void this.store.getAll(null, (0, alias_1.min)(size - this.capacity, limit), 'date', 'readonly', [], (error, cursor, tx) => {
                                     if (!cursor && !tx)
                                         return;
                                     this.chan.lock = false;
@@ -3793,19 +3823,10 @@ require = function () {
                                         return void this.schedule(delay * 10);
                                     if (!cursor)
                                         return;
-                                    if (this.chan.lock)
-                                        return void this.schedule(delay);
-                                    if (size - count <= this.capacity)
-                                        return;
-                                    if (++count > 100)
-                                        return void this.schedule(delay);
-                                    const {key} = cursor.value;
-                                    if (!this.ownership.take('store', delay))
-                                        return void this.schedule(delay *= 2);
-                                    this.chan.has(key) || this.chan.meta(key).date === 0 ? this.chan.delete(key) : this.chan.clean(key);
-                                    schedule = 0;
-                                    this.chan.lock = true;
-                                    return void cursor.continue();
+                                    for (const {key} of cursor) {
+                                        this.chan.has(key) || this.chan.meta(key).date === 0 ? this.chan.delete(key) : this.chan.clean(key);
+                                    }
+                                    cursor.length === limit && this.schedule(delay);
                                 });
                             }, timeout);
                         };
@@ -3847,8 +3868,8 @@ require = function () {
                                 return void reject(error);
                             if (!cursor)
                                 return void resolve(keys);
-                            const {key, alive} = cursor.value;
-                            if (alive) {
+                            const {key, active} = cursor.value;
+                            if (active) {
                                 keys.push(key);
                                 if ((cb === null || cb === void 0 ? void 0 : cb(key, keys)) === false)
                                     return void resolve(keys);
@@ -3857,14 +3878,8 @@ require = function () {
                         });
                     });
                 }
-                load(key, cancellation) {
-                    return this.store.load(key, (err, key, value) => {
-                        var _a;
-                        return !err && (value === null || value === void 0 ? void 0 : value.date) > ((_a = this.store.get(key)) === null || _a === void 0 ? void 0 : _a.date);
-                    }, cancellation);
-                }
-                set(key, alive = true) {
-                    this.store.set(key, new AccessRecord(key, alive));
+                set(key, active = true) {
+                    this.store.set(key, new AccessRecord(key, active));
                 }
                 close() {
                     this.store.close();
@@ -3872,12 +3887,13 @@ require = function () {
             }
             exports.AccessStore = AccessStore;
             class AccessRecord {
-                constructor(key, alive) {
-                    this.key = key;
-                    this.alive = alive;
-                    this.date = global_1.Date.now();
+                constructor(key, active) {
+                    this.active = active;
+                    this[_a] = global_1.Date.now();
+                    this['key'] = key;
                 }
             }
+            'key', _a = 'date';
         },
         {
             '../../../../data/kvs/store': 42,
@@ -3954,10 +3970,10 @@ require = function () {
                                     (0, global_1.clearInterval)(timer);
                                     timer = 0;
                                 }, delay / 2);
-                                let count = 0;
+                                const limit = 100;
                                 schedule = 0;
                                 this.chan.lock = true;
-                                return void this.store.cursor(null, 'expiry', 'next', 'readonly', [], (error, cursor, tx) => {
+                                return void this.store.getAll(null, limit, 'expiry', 'readonly', [], (error, cursor, tx) => {
                                     if (!cursor && !tx)
                                         return;
                                     this.chan.lock = false;
@@ -3972,19 +3988,12 @@ require = function () {
                                         return void this.schedule(delay * 10);
                                     if (!cursor)
                                         return;
-                                    if (this.chan.lock)
-                                        return void this.schedule(delay);
-                                    if (++count > 100)
-                                        return void this.schedule(delay);
-                                    const {key, expiry} = cursor.value;
-                                    if (expiry > global_1.Date.now())
-                                        return void this.schedule(expiry - global_1.Date.now());
-                                    if (!this.ownership.take('store', delay))
-                                        return void this.schedule(delay *= 2);
-                                    this.chan.has(key) || this.chan.meta(key).date === 0 ? this.chan.delete(key) : this.chan.clean(key);
-                                    schedule = 0;
-                                    this.chan.lock = true;
-                                    return void cursor.continue();
+                                    for (const {key, expiry} of cursor) {
+                                        if (expiry > global_1.Date.now())
+                                            return void this.schedule(expiry - global_1.Date.now());
+                                        this.chan.has(key) || this.chan.meta(key).date === 0 ? this.chan.delete(key) : this.chan.clean(key);
+                                    }
+                                    cursor.length === limit && this.schedule(delay);
                                 });
                             }, timeout);
                         };
@@ -4033,10 +4042,11 @@ require = function () {
             exports.ExpiryStore = ExpiryStore;
             class ExpiryRecord {
                 constructor(key, expiry) {
-                    this.key = key;
-                    this.expiry = expiry;
+                    this['key'] = key;
+                    this['expiry'] = expiry;
                 }
             }
+            'key', 'expiry';
         },
         {
             '../../../../data/kvs/store': 42,
