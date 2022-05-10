@@ -4485,7 +4485,9 @@ require = function () {
                     (_b = (_a = this.config).migrate) === null || _b === void 0 ? void 0 : _b.call(_a, this.link_);
                     return this.link();
                 }
-                unlink() {
+                unlink(link) {
+                    if (link && this.link_ !== link)
+                        return false;
                     const result = !!this.source;
                     this.source = this.link_ = void 0;
                     return result;
