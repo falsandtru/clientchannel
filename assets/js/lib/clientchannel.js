@@ -4175,7 +4175,7 @@ require = function () {
                 }
                 unlink(link) {
                     const key = typeof link === 'string' ? link : link[StoreChannel.Value.key];
-                    if (typeof link === 'object')
+                    if (key !== link)
                         return link === this.links.get(key) && this.unlink(key);
                     return this.sources.delete(key) && this.links.delete(key);
                 }
