@@ -14,37 +14,42 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
     });
 
     it('resource', () => {
-      const chan = new StorageChannel('test', sessionStorage, () => new DAO());
-      assert.throws(() => new StorageChannel('test', sessionStorage, () => new DAO()));
+      const chan = new StorageChannel('test', sessionStorage, { schema: () => new DAO() });
+      assert.throws(() => new StorageChannel('test', sessionStorage, { schema: () => new DAO() }));
       chan.destroy();
     });
 
     it('make/destroy', () => {
       assert(sessionStorage.getItem('test') === null);
-      const chan = new StorageChannel('test', sessionStorage, () => new DAO());
+      const chan = new StorageChannel('test', sessionStorage, { schema: () => new DAO() });
       const link = chan.link();
       assert(link.value === 0);
       assert(sessionStorage.getItem('test') === null);
       link.value = 1;
       assert(link.value === 1);
       assert(sessionStorage.getItem('test') === '{\"value\":1}');
+      assert(chan.unlink() === true);
+      link.value = 2;
+      assert(link.value === 2);
+      assert(sessionStorage.getItem('test') === '{\"value\":1}');
+      assert(chan.unlink() === false);
       chan.destroy();
-      assert(link.value === 1);
+      assert(link.value === 2);
       assert(sessionStorage.getItem('test') === null);
     });
 
     it('remake', () => {
       assert(sessionStorage.getItem('test') === null);
-      const chan = new StorageChannel('test', sessionStorage, () => new DAO());
+      const chan = new StorageChannel('test', sessionStorage, { schema: () => new DAO() });
       assert(chan.link() === chan.link());
       chan.destroy();
-      new StorageChannel('test', sessionStorage, () => new DAO())
+      new StorageChannel('test', sessionStorage, { schema: () => new DAO() })
         .destroy();
       assert(sessionStorage.getItem('test') === null);
     });
 
     it('update', () => {
-      const chan = new StorageChannel('test', sessionStorage, () => new DAO());
+      const chan = new StorageChannel('test', sessionStorage, { schema: () => new DAO() });
       const link = chan.link();
       assert(link.value === 0);
       link.value = 1;
@@ -58,9 +63,12 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
 
     it('migrate', () => {
       sessionStorage.setItem('test', JSON.stringify({ value: 0 }));
-      const chan = new StorageChannel('test', sessionStorage, () => new DAO(), v => {
-        if (v.value % 2) return;
-        v.value += 1;
+      const chan = new StorageChannel('test', sessionStorage, {
+        schema: () => new DAO(),
+        migrate: v => {
+          if (v.value % 2) return;
+          v.value += 1;
+        },
       });
       const link = chan.link();
       assert(link.value === 1);

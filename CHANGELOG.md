@@ -3,6 +3,7 @@
 ## 0.34.0
 
 - Add StoreChannel.unlink method.
+- Add StorageChannel.unlink method.
 
 ## 0.33.10
 

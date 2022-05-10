@@ -1,5 +1,5 @@
 import { StoreChannel as BaseStoreChannel } from '../domain/indexeddb/api';
-import { StorageChannel as BaseStorageChannel, localStorage } from '../domain/webstorage/api';
+import { StorageChannel as BaseStorageChannel, localStorage, sessionStorage, fakeStorage } from '../domain/webstorage/api';
 import { Channel as BroadcastChannel } from '../domain/broadcast/channel';
 import { Ownership as BaseOwnership } from '../domain/ownership/channel';
 
@@ -22,12 +22,9 @@ export namespace StoreChannel {
 export class StorageChannel<V extends BaseStorageChannel.Value> extends BaseStorageChannel<V> {
   constructor(
     name: string,
-    {
-      schema,
-      migrate,
-    }: StorageChannel.Config<V>
+    config: StorageChannel.Config<V>
   ) {
-    super(name, localStorage, schema, migrate);
+    super(name, localStorage || sessionStorage || fakeStorage, config);
   }
 }
 export namespace StorageChannel {

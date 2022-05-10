@@ -14,43 +14,31 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
   constructor(
     public readonly name: string,
     private readonly storage: StorageLike = sessionStorage || fakeStorage,
-    schema: () => V,
-    migrate?: (link: V) => void,
+    private readonly config: StorageChannel.Config<V>,
   ) {
     if (cache.has(name)) throw new Error(`ClientChannel: Storage channel "${name}" is already open.`);
     cache.add(name);
     this.cancellation.register(() =>
       void cache.delete(name));
-    const source: V = {
-      ...parse<V>(this.storage.getItem(this.name)),
-      [StorageChannel.Value.key]: this.name,
-      [StorageChannel.Value.event]: new Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>({ limit: Infinity }),
-    };
-    this.link_ = build<V>(source, schema(), (prop, newValue, oldValue) => {
-      if (!this.alive) return;
-      this.storage.setItem(this.name, JSON.stringify(ObjectFromEntries(ObjectEntries(source).filter(isValidProperty))));
-      const event = new StorageChannel.Event<V>(StorageChannel.EventType.send, prop, newValue, oldValue);
-      this.events.send.emit([event.prop], event);
-      (source[StorageChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>).emit([event.type, event.prop], event);
-    });
-    migrate?.(this.link_);
     this.cancellation.register(
       storageEventStream.on([this.mode, this.name], ({ newValue }: StorageEvent): void => {
-        const item = parse<V>(newValue);
-        void (ObjectEntries(item) as [Prop<V>, V[Prop<V>]][])
+        const source = this.source;
+        const memory = parse<V>(newValue);
+        const link = this.link_;
+        if (!source || !link) return;
+        void (ObjectEntries(memory) as [Prop<V>, V[Prop<V>]][])
           .filter(isValidProperty)
           .forEach(([prop]) => {
+            const newValue = memory[prop];
             const oldValue = source[prop];
-            const newValue = item[prop];
             if (equal(newValue, oldValue)) return;
             source[prop] = newValue;
-            migrate?.(this.link_);
+            this.config.migrate?.(link);
             const event = new StorageChannel.Event(StorageChannel.EventType.recv, prop, source[prop], oldValue);
             this.events.recv.emit([event.prop], event);
             (source[StorageChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>).emit([event.type, event.prop], event);
           });
       }));
-    assert(Object.freeze(this));
   }
   private cancellation = new Cancellation();
   private readonly mode = this.storage === localStorage ? 'local' : 'session';
@@ -64,10 +52,30 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
   private ensureAliveness(): void {
     if (!this.alive) throw new Error(`ClientChannel: Storage channel "${this.name}" is already closed.`);
   }
-  private readonly link_: V;
+  private source?: V;
+  private link_?: V;
   public link(): V {
     this.ensureAliveness();
-    return this.link_;
+    if (this.link_) return this.link_;
+    const source = this.source = {
+      ...parse<V>(this.storage.getItem(this.name)),
+      [StorageChannel.Value.key]: this.name,
+      [StorageChannel.Value.event]: new Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>({ limit: Infinity }),
+    };
+    this.link_ = build<V>(source, this.config.schema(), (prop, newValue, oldValue) => {
+      if (!this.alive || this.source !== source) return;
+      this.storage.setItem(this.name, JSON.stringify(ObjectFromEntries(ObjectEntries(source).filter(isValidProperty))));
+      const event = new StorageChannel.Event<V>(StorageChannel.EventType.send, prop, newValue, oldValue);
+      this.events.send.emit([event.prop], event);
+      (source[StorageChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>).emit([event.type, event.prop], event);
+    });
+    this.config.migrate?.(this.link_);
+    return this.link();
+  }
+  public unlink(): boolean {
+    const result = !!this.source;
+    this.source = this.link_ = void 0;
+    return result;
   }
   public close(): void {
     this.cancellation.cancel();
