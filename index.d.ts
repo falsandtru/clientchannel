@@ -10,7 +10,8 @@ export class StoreChannel<M extends object> {
   };
   sync(keys: readonly K<M>[], timeout?: number): Promise<PromiseSettledResult<K<M>>[]>;
   link<L extends K<M>>(key: L, age?: number): M[L];
-  unlink(key: K<M> | M[K<M>]): boolean;
+  unlink(link: M[K<M>]): boolean;
+  unlink(key: K<M>): boolean;
   delete(key: K<M>): void;
   recent(timeout?: number): Promise<K<M>[]>;
   recent(cb?: (key: K<M>, keys: readonly K<M>[]) => boolean | void, timeout?: number): Promise<K<M>[]>;

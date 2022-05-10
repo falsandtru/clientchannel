@@ -117,14 +117,14 @@ export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChan
     });
     return link;
   }
-  public unlink(key: K<M> | M[K<M>]): boolean {
-    if (typeof key === 'object') {
-      return key === this.links.get(key[StoreChannel.Value.key])
-          && this.unlink(key[StoreChannel.Value.key]);
-    }
-    assert(key = key as K<M>);
-    return this.sources.delete(key)
-        && this.links.delete(key);
+  public unlink(link: M[K<M>]): boolean;
+  public unlink(key: K<M>): boolean;
+  public unlink(link: K<M> | M[K<M>]): boolean {
+    const key: K<M> = typeof link === 'string'
+      ? link
+      : link[StoreChannel.Value.key];
+    if (typeof link === 'object') return link === this.links.get(key) && this.unlink(key);
+    return this.sources.delete(key) && this.links.delete(key);
   }
   public override delete(key: K<M>): void {
     this.ensureAliveness();
