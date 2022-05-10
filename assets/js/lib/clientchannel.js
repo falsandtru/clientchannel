@@ -2449,8 +2449,8 @@ require = function () {
                 StoreChannel.Value = api_1.StoreChannel.Value;
             }(StoreChannel = exports.StoreChannel || (exports.StoreChannel = {})));
             class StorageChannel extends api_2.StorageChannel {
-                constructor(name, {schema, migrate}) {
-                    super(name, api_2.localStorage, schema, migrate);
+                constructor(name, config) {
+                    super(name, api_2.localStorage || api_2.sessionStorage || api_2.fakeStorage, config);
                 }
             }
             exports.StorageChannel = StorageChannel;
@@ -4138,33 +4138,43 @@ require = function () {
                 }
                 link_(key) {
                     var _a;
-                    return this.links.has(key) ? this.links.get(key) : this.links.set(key, (0, api_1.build)((0, alias_1.ObjectDefineProperties)(this.sources.set(key, this.get(key)).get(key), {
+                    if (this.links.has(key))
+                        return this.links.get(key);
+                    const source = this.get(key);
+                    this.sources.set(key, source);
+                    this.links.set(key, (0, api_1.build)((0, alias_1.ObjectDefineProperties)(source, {
                         [StoreChannel.Value.meta]: { get: () => this.meta(key) },
                         [StoreChannel.Value.id]: { get: () => this.meta(key).id },
                         [StoreChannel.Value.key]: { get: () => this.meta(key).key },
                         [StoreChannel.Value.date]: { get: () => this.meta(key).date },
                         [StoreChannel.Value.event]: { value: new observer_1.Observation({ limit: Infinity }) }
                     }), '' in this.schemas ? ((_a = this.schemas[key]) !== null && _a !== void 0 ? _a : this.schemas[''])(key) : this.schemas[key](key), (prop, newValue, oldValue) => {
-                        if (!this.alive)
+                        if (!this.alive || this.sources.get(key) !== source)
                             return;
                         this.add(new StoreChannel.Record(key, { [prop]: newValue }));
                         if ((0, compare_1.equal)(newValue, oldValue))
                             return;
-                        this.sources.get(key)[StoreChannel.Value.event].emit([
+                        source[StoreChannel.Value.event].emit([
                             api_2.StorageChannel.EventType.send,
                             prop
                         ], new api_2.StorageChannel.Event(api_2.StorageChannel.EventType.send, prop, newValue, oldValue));
                     }, (0, throttle_1.throttle)(100, () => {
-                        this.links.has(key) && this.alive && this.log(key);
+                        this.alive && this.sources.get(key) === source && this.log(key);
                     }))).get(key);
+                    return this.link_(key);
                 }
                 link(key, age) {
                     this.ensureAliveness();
                     this.expire(key, age);
+                    const link = this.link_(key);
+                    const source = this.sources.get(key);
                     this.load(key, error => {
-                        !error && this.alive && this.log(key);
+                        !error && this.alive && this.sources.get(key) === source && this.log(key);
                     });
-                    return this.link_(key);
+                    return link;
+                }
+                unlink(key) {
+                    return this.sources.delete(key) && this.links.delete(key);
                 }
                 delete(key) {
                     this.ensureAliveness();
@@ -4323,7 +4333,7 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.sessionStorage = exports.localStorage = exports.StorageChannel = void 0;
+            exports.fakeStorage = exports.sessionStorage = exports.localStorage = exports.StorageChannel = void 0;
             var channel_1 = _dereq_('./service/channel');
             Object.defineProperty(exports, 'StorageChannel', {
                 enumerable: true,
@@ -4344,9 +4354,17 @@ require = function () {
                     return api_1.sessionStorage;
                 }
             });
+            var storage_1 = _dereq_('./model/storage');
+            Object.defineProperty(exports, 'fakeStorage', {
+                enumerable: true,
+                get: function () {
+                    return storage_1.fakeStorage;
+                }
+            });
         },
         {
             '../../infrastructure/webstorage/api': 65,
+            './model/storage': 55,
             './service/channel': 56
         }
     ],
@@ -4393,9 +4411,10 @@ require = function () {
             const compare_1 = _dereq_('spica/compare');
             const cache = new Set();
             class StorageChannel {
-                constructor(name, storage = api_2.sessionStorage || storage_1.fakeStorage, schema, migrate) {
+                constructor(name, storage = api_2.sessionStorage || storage_1.fakeStorage, config) {
                     this.name = name;
                     this.storage = storage;
+                    this.config = config;
                     this.cancellation = new cancellation_1.Cancellation();
                     this.mode = this.storage === api_2.localStorage ? 'local' : 'session';
                     this.events = {
@@ -4406,35 +4425,23 @@ require = function () {
                         throw new Error(`ClientChannel: Storage channel "${ name }" is already open.`);
                     cache.add(name);
                     this.cancellation.register(() => void cache.delete(name));
-                    const source = {
-                        ...parse(this.storage.getItem(this.name)),
-                        [StorageChannel.Value.key]: this.name,
-                        [StorageChannel.Value.event]: new observer_1.Observation({ limit: Infinity })
-                    };
-                    this.link_ = (0, api_1.build)(source, schema(), (prop, newValue, oldValue) => {
-                        if (!this.alive)
-                            return;
-                        this.storage.setItem(this.name, JSON.stringify((0, alias_1.ObjectFromEntries)((0, alias_1.ObjectEntries)(source).filter(api_1.isValidProperty))));
-                        const event = new StorageChannel.Event(StorageChannel.EventType.send, prop, newValue, oldValue);
-                        this.events.send.emit([event.prop], event);
-                        source[StorageChannel.Value.event].emit([
-                            event.type,
-                            event.prop
-                        ], event);
-                    });
-                    migrate === null || migrate === void 0 ? void 0 : migrate(this.link_);
                     this.cancellation.register(api_2.storageEventStream.on([
                         this.mode,
                         this.name
                     ], ({newValue}) => {
-                        const item = parse(newValue);
-                        void (0, alias_1.ObjectEntries)(item).filter(api_1.isValidProperty).forEach(([prop]) => {
+                        const source = this.source;
+                        const memory = parse(newValue);
+                        const link = this.link_;
+                        if (!source || !link)
+                            return;
+                        void (0, alias_1.ObjectEntries)(memory).filter(api_1.isValidProperty).forEach(([prop]) => {
+                            var _a, _b;
+                            const newValue = memory[prop];
                             const oldValue = source[prop];
-                            const newValue = item[prop];
                             if ((0, compare_1.equal)(newValue, oldValue))
                                 return;
                             source[prop] = newValue;
-                            migrate === null || migrate === void 0 ? void 0 : migrate(this.link_);
+                            (_b = (_a = this.config).migrate) === null || _b === void 0 ? void 0 : _b.call(_a, link);
                             const event = new StorageChannel.Event(StorageChannel.EventType.recv, prop, source[prop], oldValue);
                             this.events.recv.emit([event.prop], event);
                             source[StorageChannel.Value.event].emit([
@@ -4452,8 +4459,33 @@ require = function () {
                         throw new Error(`ClientChannel: Storage channel "${ this.name }" is already closed.`);
                 }
                 link() {
+                    var _a, _b;
                     this.ensureAliveness();
-                    return this.link_;
+                    if (this.link_)
+                        return this.link_;
+                    const source = this.source = {
+                        ...parse(this.storage.getItem(this.name)),
+                        [StorageChannel.Value.key]: this.name,
+                        [StorageChannel.Value.event]: new observer_1.Observation({ limit: Infinity })
+                    };
+                    this.link_ = (0, api_1.build)(source, this.config.schema(), (prop, newValue, oldValue) => {
+                        if (!this.alive || this.source !== source)
+                            return;
+                        this.storage.setItem(this.name, JSON.stringify((0, alias_1.ObjectFromEntries)((0, alias_1.ObjectEntries)(source).filter(api_1.isValidProperty))));
+                        const event = new StorageChannel.Event(StorageChannel.EventType.send, prop, newValue, oldValue);
+                        this.events.send.emit([event.prop], event);
+                        source[StorageChannel.Value.event].emit([
+                            event.type,
+                            event.prop
+                        ], event);
+                    });
+                    (_b = (_a = this.config).migrate) === null || _b === void 0 ? void 0 : _b.call(_a, this.link_);
+                    return this.link();
+                }
+                unlink() {
+                    const result = !!this.source;
+                    this.source = this.link_ = void 0;
+                    return result;
                 }
                 close() {
                     this.cancellation.cancel();
