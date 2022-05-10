@@ -4173,10 +4173,10 @@ require = function () {
                     });
                     return link;
                 }
-                unlink(key) {
-                    if (typeof key === 'object') {
-                        return key === this.links.get(key[StoreChannel.Value.key]) && this.unlink(key[StoreChannel.Value.key]);
-                    }
+                unlink(link) {
+                    const key = typeof link === 'string' ? link : link[StoreChannel.Value.key];
+                    if (typeof link === 'object')
+                        return link === this.links.get(key) && this.unlink(key);
                     return this.sources.delete(key) && this.links.delete(key);
                 }
                 delete(key) {
