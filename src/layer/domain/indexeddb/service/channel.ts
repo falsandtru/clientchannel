@@ -123,7 +123,7 @@ export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChan
     const key: K<M> = typeof link === 'string'
       ? link
       : link[StoreChannel.Value.key];
-    if (typeof link === 'object') return link === this.links.get(key) && this.unlink(key);
+    if (key !== link) return link === this.links.get(key) && this.unlink(key);
     return this.sources.delete(key) && this.links.delete(key);
   }
   public override delete(key: K<M>): void {
