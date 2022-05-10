@@ -73,7 +73,7 @@ export class StorageChannel<V extends StorageChannel.Value> {
     readonly recv: Observer<{ [P in Prop<V>]: [[P], StorageChannel.Event<V, P>, void]; }[Prop<V>]>;
   };
   link(): V;
-  unlink(): boolean;
+  unlink(link?: V): boolean;
   close(): void;
   destroy(): void;
 }

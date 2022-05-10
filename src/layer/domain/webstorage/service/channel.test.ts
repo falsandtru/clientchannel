@@ -28,12 +28,16 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
       link.value = 1;
       assert(link.value === 1);
       assert(sessionStorage.getItem('test') === '{\"value\":1}');
-      assert(chan.unlink() === true);
+      assert(chan.unlink(link) === true);
       link.value = 2;
+      assert(chan.unlink(link) === false);
       assert(link.value === 2);
       assert(sessionStorage.getItem('test') === '{\"value\":1}');
       assert(chan.unlink() === false);
       chan.link().value = 3;
+      assert(sessionStorage.getItem('test') === '{\"value\":3}');
+      assert(chan.unlink() === true);
+      assert(chan.unlink() === false);
 
       chan.destroy();
       assert(link.value === 2);

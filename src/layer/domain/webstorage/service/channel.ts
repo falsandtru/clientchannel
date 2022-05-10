@@ -72,7 +72,8 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
     this.config.migrate?.(this.link_);
     return this.link();
   }
-  public unlink(): boolean {
+  public unlink(link?: V): boolean {
+    if (link && this.link_ !== link) return false;
     const result = !!this.source;
     this.source = this.link_ = void 0;
     return result;
