@@ -35,8 +35,14 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       assert(link[StoreChannel.Value.date] === 0);
       assert(link.num === 0);
       assert(link.str === '');
+      link.num = 1;
+      assert(link.num === 1);
+      assert(chan.unlink('a') === true);
+      assert(link.num === 1);
+      assert(chan.unlink('a') === false);
 
       chan.destroy();
+      assert(link.num === 1);
     });
 
     it('sync', done => {

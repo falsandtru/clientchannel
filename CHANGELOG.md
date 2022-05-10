@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.34.0
+
+- Add StoreChannel.unlink method.
+
 ## 0.33.10
 
 - Refactoring.

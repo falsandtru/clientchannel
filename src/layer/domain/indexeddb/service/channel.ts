@@ -67,46 +67,59 @@ export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChan
   private readonly sources = new Map<K<M>, Partial<M[K<M>]>>();
   private readonly links = new Map<K<M>, M[K<M>]>();
   private link_<L extends K<M>>(key: L): M[L] {
-    return this.links.has(key)
-      ? this.links.get(key) as M[L]
-      : this.links.set(key, build<M[L]>(
-          ObjectDefineProperties(
-            this.sources.set(key, this.get(key) as Partial<M[L]>).get(key) as M[L] & object,
-            {
-              [StoreChannel.Value.meta]: {
-                get: () => this.meta(key)
-              },
-              [StoreChannel.Value.id]: {
-                get: () => this.meta(key).id
-              },
-              [StoreChannel.Value.key]: {
-                get: () => this.meta(key).key
-              },
-              [StoreChannel.Value.date]: {
-                get: () => this.meta(key).date
-              },
-              [StoreChannel.Value.event]: {
-                value: new Observation<[StorageChannel.EventType, Prop<M[L]>], StorageChannel.Event<M[L]>, void>({ limit: Infinity })
-              },
-            }),
-          '' in this.schemas
-            ? (this.schemas[key] ?? this.schemas[''])(key) as M[L] & object
-            : this.schemas[key](key) as M[L] & object,
-          (prop, newValue, oldValue) => {
-            if (!this.alive) return;
-            this.add(new StoreChannel.Record<L, StoreChannel.Value<L>>(key, { [prop]: newValue }));
-            if (equal(newValue, oldValue)) return;
-            (this.sources.get(key)![StoreChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<M[L]>], StorageChannel.Event<M[L]>, void>)
-              .emit([StorageChannel.EventType.send, prop], new StorageChannel.Event<M[L]>(StorageChannel.EventType.send, prop, newValue, oldValue));
+    if (this.links.has(key)) return this.links.get(key) as M[L];
+    const source = this.get(key) as Partial<M[L]>;
+    this.sources.set(key, source);
+    this.links.set(key, build<M[L]>(
+      ObjectDefineProperties(
+        source as M[L] & object,
+        {
+          [StoreChannel.Value.meta]: {
+            get: () => this.meta(key)
           },
-          throttle(100, () => { this.links.has(key) && this.alive && this.log(key); })))
-          .get(key) as M[L];
+          [StoreChannel.Value.id]: {
+            get: () => this.meta(key).id
+          },
+          [StoreChannel.Value.key]: {
+            get: () => this.meta(key).key
+          },
+          [StoreChannel.Value.date]: {
+            get: () => this.meta(key).date
+          },
+          [StoreChannel.Value.event]: {
+            value: new Observation<[StorageChannel.EventType, Prop<M[L]>], StorageChannel.Event<M[L]>, void>({ limit: Infinity })
+          },
+        }),
+      '' in this.schemas
+        ? (this.schemas[key] ?? this.schemas[''])(key) as M[L] & object
+        : this.schemas[key](key) as M[L] & object,
+      (prop, newValue, oldValue) => {
+        if (!this.alive || this.sources.get(key) !== source) return;
+        this.add(new StoreChannel.Record<L, StoreChannel.Value<L>>(key, { [prop]: newValue }));
+        if (equal(newValue, oldValue)) return;
+        (source[StoreChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<M[L]>], StorageChannel.Event<M[L]>, void>)
+          .emit([StorageChannel.EventType.send, prop], new StorageChannel.Event<M[L]>(StorageChannel.EventType.send, prop, newValue, oldValue));
+      },
+      throttle(100, () => {
+        this.alive && this.sources.get(key) === source && this.log(key);
+      })))
+      .get(key) as M[L];
+    return this.link_(key);
   }
   public link<L extends K<M>>(key: L, age?: number): M[L] {
     this.ensureAliveness();
     this.expire(key, age);
-    this.load(key, error => { !error && this.alive && this.log(key); });
-    return this.link_(key);
+    const link = this.link_(key);
+    const source = this.sources.get(key)!;
+    assert(source);
+    this.load(key, error => {
+      !error && this.alive && this.sources.get(key) === source && this.log(key);
+    });
+    return link;
+  }
+  public unlink(key: K<M>): boolean {
+    return this.sources.delete(key)
+        && this.links.delete(key);
   }
   public override delete(key: K<M>): void {
     this.ensureAliveness();
