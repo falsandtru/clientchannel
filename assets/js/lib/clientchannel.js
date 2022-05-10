@@ -4174,6 +4174,9 @@ require = function () {
                     return link;
                 }
                 unlink(key) {
+                    if (typeof key === 'object') {
+                        return key === this.links.get(key[StoreChannel.Value.key]) && this.unlink(key[StoreChannel.Value.key]);
+                    }
                     return this.sources.delete(key) && this.links.delete(key);
                 }
                 delete(key) {
