@@ -1,6 +1,6 @@
 import { ObjectEntries, ObjectFromEntries } from 'spica/alias';
 import { StorageChannel as IStorageChannel } from '../../../../../';
-import { Observer } from '../../../../../observer';
+import { Observer } from '../../../../../internal';
 import { DAO, Prop, isValidProperty, build } from '../../dao/api';
 import { localStorage, sessionStorage, storageEventStream } from '../../../infrastructure/webstorage/api';
 import { StorageLike, fakeStorage } from '../model/storage';

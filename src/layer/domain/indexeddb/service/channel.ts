@@ -1,5 +1,6 @@
 import { ObjectDefineProperties, ObjectKeys } from 'spica/alias';
 import { StoreChannel as IStoreChannel } from '../../../../../';
+import { K } from '../../../../../internal';
 import { Prop } from '../../../data/database/value';
 import { build } from '../../dao/api';
 import { ChannelStore } from '../model/channel';
@@ -8,10 +9,10 @@ import { Observation } from 'spica/observer';
 import { throttle } from 'spica/throttle';
 import { equal } from 'spica/compare';
 
-export class StoreChannel<M extends object, K extends keyof M & string = keyof M & string> extends ChannelStore<K, StoreChannel.Value<K>, M> implements IStoreChannel<M, K> {
+export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChannel.Value<K<M>>, M> implements IStoreChannel<M> {
   constructor(
     name: string,
-    private readonly schemas: { [K in keyof M & string]: (key: K) => M[K]; },
+    private readonly schemas: { [L in K<M>]: (key: L) => M[L]; },
     {
       migrate,
       destroy = () => true,
@@ -22,13 +23,13 @@ export class StoreChannel<M extends object, K extends keyof M & string = keyof M
   ) {
     super(name, destroy, age, capacity, debug);
 
-    const update = (key: K, prop: Prop<M[K]> | ''): void => {
-      const source = this.sources.get(key)! as M[K];
-      const memory = this.get(key)! as M[K];
+    const update = (key: K<M>, prop: Prop<M[K<M>]> | ''): void => {
+      const source = this.sources.get(key)! as M[K<M>];
+      const memory = this.get(key)! as M[K<M>];
       const link = this.link_(key);
       assert(memory instanceof Object === false);
       const props = prop === ''
-        ? ObjectKeys(memory) as Prop<M[K]>[]
+        ? ObjectKeys(memory) as Prop<M[K<M>]>[]
         : prop in memory ? [prop] : [];
       const changes = props
         .map(prop => {
@@ -46,8 +47,8 @@ export class StoreChannel<M extends object, K extends keyof M & string = keyof M
       if (changes.length === 0) return;
       migrate?.(link);
       for (const { prop, oldValue } of changes) {
-        (source[StoreChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<M[K]>], StorageChannel.Event<M[K]>, void>)
-          .emit([StorageChannel.EventType.recv, prop], new StorageChannel.Event<M[K]>(StorageChannel.EventType.recv, prop, memory[prop], oldValue));
+        (source[StoreChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<M[K<M>]>], StorageChannel.Event<M[K<M>]>, void>)
+          .emit([StorageChannel.EventType.recv, prop], new StorageChannel.Event<M[K<M>]>(StorageChannel.EventType.recv, prop, memory[prop], oldValue));
       }
     };
 
@@ -63,9 +64,9 @@ export class StoreChannel<M extends object, K extends keyof M & string = keyof M
         }
       });
   }
-  private readonly sources = new Map<K, Partial<M[K]>>();
-  private readonly links = new Map<K, M[K]>();
-  private link_<L extends K>(key: L): M[L] {
+  private readonly sources = new Map<K<M>, Partial<M[K<M>]>>();
+  private readonly links = new Map<K<M>, M[K<M>]>();
+  private link_<L extends K<M>>(key: L): M[L] {
     return this.links.has(key)
       ? this.links.get(key) as M[L]
       : this.links.set(key, build<M[L]>(
@@ -101,13 +102,13 @@ export class StoreChannel<M extends object, K extends keyof M & string = keyof M
           throttle(100, () => { this.links.has(key) && this.alive && this.log(key); })))
           .get(key) as M[L];
   }
-  public link<L extends K>(key: L, age?: number): M[L] {
+  public link<L extends K<M>>(key: L, age?: number): M[L] {
     this.ensureAliveness();
     this.expire(key, age);
     this.load(key, error => { !error && this.alive && this.log(key); });
     return this.link_(key);
   }
-  public override delete(key: K): void {
+  public override delete(key: K<M>): void {
     this.ensureAliveness();
     this.links.delete(key);
     super.delete(key);

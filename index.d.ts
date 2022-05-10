@@ -1,24 +1,24 @@
 import { DAO, Prop } from './src/layer/domain/dao/api';
-import { Observer } from './observer';
+import { K, Observer } from './internal';
 
-export class StoreChannel<M extends object, K extends keyof M & string = keyof M & string, V extends M[K] = M[K]> {
+export class StoreChannel<M extends object> {
   constructor(name: string, config: StoreChannel.Config<M>);
   readonly events: {
-    readonly load: Observer<{ [L in K]: { [P in Prop<M[L]>]: [[L, P, StoreChannel.EventType], StoreChannel.Event<L, P>, void]; }[Prop<M[L]>] | [[L, '', StoreChannel.EventType], StoreChannel.Event<L, ''>, void]; }[K]>;
-    readonly save: Observer<{ [L in K]: { [P in Prop<M[L]>]: [[L, P, StoreChannel.EventType], StoreChannel.Event<L, P>, void]; }[Prop<M[L]>] | [[L, '', StoreChannel.EventType], StoreChannel.Event<L, ''>, void]; }[K]>;
-    readonly loss: Observer<{ [L in K]: { [P in Prop<M[L]>]: [[L, P, StoreChannel.EventType], StoreChannel.Event<L, P>, void]; }[Prop<M[L]>] | [[L, '', StoreChannel.EventType], StoreChannel.Event<L, ''>, void]; }[K]>;
+    readonly load: Observer<{ [L in K<M>]: { [P in Prop<M[L]>]: [[L, P, StoreChannel.EventType], StoreChannel.Event<L, P>, void]; }[Prop<M[L]>] | [[L, '', StoreChannel.EventType], StoreChannel.Event<L, ''>, void]; }[K<M>]>;
+    readonly save: Observer<{ [L in K<M>]: { [P in Prop<M[L]>]: [[L, P, StoreChannel.EventType], StoreChannel.Event<L, P>, void]; }[Prop<M[L]>] | [[L, '', StoreChannel.EventType], StoreChannel.Event<L, ''>, void]; }[K<M>]>;
+    readonly loss: Observer<{ [L in K<M>]: { [P in Prop<M[L]>]: [[L, P, StoreChannel.EventType], StoreChannel.Event<L, P>, void]; }[Prop<M[L]>] | [[L, '', StoreChannel.EventType], StoreChannel.Event<L, ''>, void]; }[K<M>]>;
   };
-  sync(keys: readonly K[], timeout?: number): Promise<PromiseSettledResult<K>[]>;
-  link<L extends K>(key: L, age?: number): M[L];
-  delete(key: K): void;
-  recent(timeout?: number): Promise<K[]>;
-  recent(cb?: (key: K, keys: readonly K[]) => boolean | void, timeout?: number): Promise<K[]>;
+  sync(keys: readonly K<M>[], timeout?: number): Promise<PromiseSettledResult<K<M>>[]>;
+  link<L extends K<M>>(key: L, age?: number): M[L];
+  delete(key: K<M>): void;
+  recent(timeout?: number): Promise<K<M>[]>;
+  recent(cb?: (key: K<M>, keys: readonly K<M>[]) => boolean | void, timeout?: number): Promise<K<M>[]>;
   close(): void;
   destroy(): void;
 }
 export namespace StoreChannel {
   export interface Config<M extends object> {
-    schemas: { readonly [K in keyof M & string]: (key: K) => M[K]; };
+    schemas: { readonly [L in K<M>]: (key: L) => M[L]; };
     capacity?: number;
     age?: number;
     migrate?(link: M[keyof M & string]): void;

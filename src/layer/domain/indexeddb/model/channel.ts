@@ -1,6 +1,6 @@
 import { Infinity, Promise, setTimeout } from 'spica/global';
 import { StoreChannel } from '../../../../../';
-import { Observer } from '../../../../../observer';
+import { Observer } from '../../../../../internal';
 import { open, Listen, close, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { DAO, Prop } from '../../dao/api';
 import { DataStore } from './channel/data';

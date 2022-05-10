@@ -1,6 +1,8 @@
 import { Inits } from 'spica/type';
 import { ObserverOptions } from 'spica/observer';
 
+export type K<M> = keyof M & string;
+
 export interface Observer<M extends readonly [unknown[], unknown, unknown]> {
   monitor<N extends Readonly<Inits<M[0]>>>(namespace: N, listener: Monitor<MOption<N, M>>, options?: ObserverOptions): () => void;
   on<N extends Readonly<M[0]>>(namespace: N, listener: Subscriber<SOption<N, M>>, options?: ObserverOptions): () => void;
