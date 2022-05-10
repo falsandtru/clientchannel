@@ -117,7 +117,12 @@ export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChan
     });
     return link;
   }
-  public unlink(key: K<M>): boolean {
+  public unlink(key: K<M> | M[K<M>]): boolean {
+    if (typeof key === 'object') {
+      return key === this.links.get(key[StoreChannel.Value.key])
+          && this.unlink(key[StoreChannel.Value.key]);
+    }
+    assert(key = key as K<M>);
     return this.sources.delete(key)
         && this.links.delete(key);
   }

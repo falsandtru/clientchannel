@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.35.0
+
+- Extend StoreChannel.unlink method.
+
 ## 0.34.0
 
 - Add StoreChannel.unlink method.

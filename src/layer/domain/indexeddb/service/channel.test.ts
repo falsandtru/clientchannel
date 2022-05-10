@@ -37,9 +37,13 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
       assert(link.str === '');
       link.num = 1;
       assert(link.num === 1);
-      assert(chan.unlink('a') === true);
+      assert(chan.unlink(link) === true);
       assert(link.num === 1);
+      assert(chan.unlink(link) === false);
       assert(chan.unlink('a') === false);
+      chan.link('a').num = 2;
+      assert(chan.unlink(link) === false);
+      assert(chan.unlink('a') === true);
 
       chan.destroy();
       assert(link.num === 1);
