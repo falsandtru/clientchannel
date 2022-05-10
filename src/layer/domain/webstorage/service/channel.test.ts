@@ -36,6 +36,7 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
       assert(chan.unlink() === false);
       chan.link().value = 3;
       assert(sessionStorage.getItem('test') === '{\"value\":3}');
+      assert(chan.unlink(link) === false);
       assert(chan.unlink() === true);
       assert(chan.unlink() === false);
 
