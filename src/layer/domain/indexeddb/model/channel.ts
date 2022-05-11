@@ -74,7 +74,6 @@ export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Val
       void this.channel.close());
     this.cancellation.register(this.channel.listen('save', ({ key }) =>
       void this.load(key)));
-
     this.events_.save.monitor([], ({ key }) =>
       void this.channel.post(new SaveMessage(key)));
 
