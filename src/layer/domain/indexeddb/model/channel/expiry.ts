@@ -5,7 +5,7 @@ import { KeyValueStore } from '../../../../data/kvs/store';
 import { ChannelStore } from '../channel';
 import { Ownership } from '../../../ownership/channel';
 import { Cancellation, Cancellee } from 'spica/cancellation';
-import { setTimeout, setInterval } from 'spica/timer';
+import { setTimer, setRepeatTimer } from 'spica/timer';
 
 const name = 'expiry';
 
@@ -64,13 +64,13 @@ export class ExpiryStore<K extends string> {
       if (Date.now() + timeout >= schedule) return;
       schedule = Date.now() + timeout;
       untimer?.();
-      untimer = setTimeout(timeout, () => {
+      untimer = setTimer(timeout, () => {
         if (!this.cancellation.isAlive) return;
         if (schedule === 0) return;
         schedule = Infinity;
         if (!this.ownership.take('store', delay)) return void this.schedule(delay *= 2);
         if (this.chan.lock) return void this.schedule(delay);
-        let untimer = setInterval(delay / 2, () => {
+        let untimer = setRepeatTimer(delay / 2, () => {
           if (this.ownership.extend('store', delay)) return;
           untimer();
         });

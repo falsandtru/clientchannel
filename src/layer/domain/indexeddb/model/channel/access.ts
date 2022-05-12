@@ -5,7 +5,7 @@ import { KeyValueStore } from '../../../../data/kvs/store';
 import { ChannelStore } from '../channel';
 import { Ownership } from '../../../ownership/channel';
 import { Cancellee } from 'spica/cancellation';
-import { setTimeout, setInterval } from 'spica/timer';
+import { setTimer, setRepeatTimer } from 'spica/timer';
 
 export const name = 'access';
 
@@ -66,13 +66,13 @@ export class AccessStore<K extends string> {
       if (Date.now() + timeout >= schedule) return;
       schedule = Date.now() + timeout;
       untimer?.();
-      untimer = setTimeout(timeout, async () => {
+      untimer = setTimer(timeout, async () => {
         if (!this.cancellation.isAlive) return;
         if (schedule === 0) return;
         schedule = Infinity;
         if (!this.ownership.take('store', delay)) return void this.schedule(delay *= 2);
         if (this.chan.lock) return void this.schedule(delay);
-        let untimer = setInterval(delay / 2, () => {
+        let untimer = setRepeatTimer(delay / 2, () => {
           if (this.ownership.extend('store', delay)) return;
           untimer();
         });
@@ -108,7 +108,7 @@ export class AccessStore<K extends string> {
   public recent(cb?: (key: K, keys: readonly K[]) => boolean | void, timeout?: number): Promise<K[]> {
     return new Promise((resolve, reject) => {
       let done = false;
-      timeout && setTimeout(timeout, () => done = !void reject(new Error('Timeout.')));
+      timeout && setTimer(timeout, () => done = !void reject(new Error('Timeout.')));
       const keys: K[] = [];
       void this.store.cursor(
         null, AccessStoreSchema.date, 'prev', 'readonly', [],
