@@ -1773,10 +1773,9 @@ require = function () {
             'use strict';
             var _a, _b;
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.wait = exports.never = exports.isPromiseLike = exports.Internal = exports.AtomicPromise = exports.internal = void 0;
+            exports.never = exports.isPromiseLike = exports.Internal = exports.AtomicPromise = exports.internal = void 0;
             const global_1 = _dereq_('./global');
             const alias_1 = _dereq_('./alias');
-            const clock_1 = _dereq_('./clock');
             const function_1 = _dereq_('./function');
             exports.internal = Symbol.for('spica/promise::internal');
             class AtomicPromise {
@@ -2113,14 +2112,9 @@ require = function () {
                     return this;
                 }
             }();
-            function wait(ms) {
-                return ms === 0 ? AtomicPromise.resolve(clock_1.clock) : new AtomicPromise(resolve => void (0, global_1.setTimeout)(resolve, ms));
-            }
-            exports.wait = wait;
         },
         {
             './alias': 5,
-            './clock': 9,
             './function': 15,
             './global': 17
         }
@@ -2257,21 +2251,30 @@ require = function () {
         function (_dereq_, module, exports) {
             'use strict';
             Object.defineProperty(exports, '__esModule', { value: true });
-            exports.setInterval = exports.setTimeout = void 0;
+            exports.wait = exports.setRepeatTimer = exports.setTimer = void 0;
             const global_1 = _dereq_('./global');
             const function_1 = _dereq_('./function');
-            exports.setTimeout = template(global_1.global.setTimeout, global_1.global.clearTimeout);
-            exports.setInterval = template(global_1.global.setInterval, global_1.global.clearInterval);
-            function template(set, unset) {
-                return (wait, handler, unhandler) => {
+            exports.setTimer = template(1);
+            exports.setRepeatTimer = template(Infinity);
+            function template(count) {
+                return (timeout, handler, unhandler) => {
                     let params;
-                    const timer = set(() => params = [handler()], wait);
+                    let id = (0, global_1.setTimeout)(async function loop() {
+                        params = [await handler()];
+                        if (--count === 0)
+                            return;
+                        id = (0, global_1.setTimeout)(loop, timeout);
+                    }, timeout);
                     return (0, function_1.singleton)(() => {
-                        unset(timer);
+                        (0, global_1.clearTimeout)(id);
                         params && (unhandler === null || unhandler === void 0 ? void 0 : unhandler(params[0]));
                     });
                 };
             }
+            function wait(ms) {
+                return ms === 0 ? Promise.resolve(void 0) : new Promise(resolve => void (0, global_1.setTimeout)(resolve, ms));
+            }
+            exports.wait = wait;
         },
         {
             './function': 15,
@@ -3814,7 +3817,7 @@ require = function () {
                                 return;
                             schedule = global_1.Date.now() + timeout;
                             untimer === null || untimer === void 0 ? void 0 : untimer();
-                            untimer = (0, timer_1.setTimeout)(timeout, async () => {
+                            untimer = (0, timer_1.setTimer)(timeout, async () => {
                                 if (!this.cancellation.isAlive)
                                     return;
                                 if (schedule === 0)
@@ -3824,7 +3827,7 @@ require = function () {
                                     return void this.schedule(delay *= 2);
                                 if (this.chan.lock)
                                     return void this.schedule(delay);
-                                let untimer = (0, timer_1.setInterval)(delay / 2, () => {
+                                let untimer = (0, timer_1.setRepeatTimer)(delay / 2, () => {
                                     if (this.ownership.extend('store', delay))
                                         return;
                                     untimer();
@@ -3887,7 +3890,7 @@ require = function () {
                 recent(cb, timeout) {
                     return new Promise((resolve, reject) => {
                         let done = false;
-                        timeout && (0, timer_1.setTimeout)(timeout, () => done = !void reject(new Error('Timeout.')));
+                        timeout && (0, timer_1.setTimer)(timeout, () => done = !void reject(new Error('Timeout.')));
                         const keys = [];
                         void this.store.cursor(null, 'date', 'prev', 'readonly', [], (error, cursor) => {
                             if (done)
@@ -3984,7 +3987,7 @@ require = function () {
                                 return;
                             schedule = global_1.Date.now() + timeout;
                             untimer === null || untimer === void 0 ? void 0 : untimer();
-                            untimer = (0, timer_1.setTimeout)(timeout, () => {
+                            untimer = (0, timer_1.setTimer)(timeout, () => {
                                 if (!this.cancellation.isAlive)
                                     return;
                                 if (schedule === 0)
@@ -3994,7 +3997,7 @@ require = function () {
                                     return void this.schedule(delay *= 2);
                                 if (this.chan.lock)
                                     return void this.schedule(delay);
-                                let untimer = (0, timer_1.setInterval)(delay / 2, () => {
+                                let untimer = (0, timer_1.setRepeatTimer)(delay / 2, () => {
                                     if (this.ownership.extend('store', delay))
                                         return;
                                     untimer();
