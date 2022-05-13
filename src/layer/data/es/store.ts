@@ -60,16 +60,16 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     this.events.load
       .monitor([], event => {
         switch (event.type) {
-          case EventStore.EventType.delete:
-          case EventStore.EventType.snapshot:
+          case EventStore.EventType.Delete:
+          case EventStore.EventType.Snapshot:
             clean(event);
         }
       });
     this.events.save
       .monitor([], event => {
         switch (event.type) {
-          case EventStore.EventType.delete:
-          case EventStore.EventType.snapshot:
+          case EventStore.EventType.Delete:
+          case EventStore.EventType.Snapshot:
             this.clean(event.key);
             clean(event);
         }
@@ -176,7 +176,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
         if (event!.id < this.meta(key).id) return;
         assert(event = event!);
         events.unshift(event);
-        if (event.type !== EventStore.EventType.put) return;
+        if (event.type !== EventStore.EventType.Put) return;
         cursor.continue();
       });
       tx.addEventListener('complete', () => {
@@ -220,7 +220,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       .sort();
   }
   public has(key: K): boolean {
-    return compose(key, this.memory.reflect([key])).type !== EventStore.EventType.delete;
+    return compose(key, this.memory.reflect([key])).type !== EventStore.EventType.Delete;
   }
   public meta(key: K): MetaData<K> {
     const events = this.memory.reflect([key]);
@@ -240,7 +240,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
   private counter = 0;
   public add(event: UnstoredEventRecord<K, V>, tx?: IDBTransaction): void {
     assert(event instanceof UnstoredEventRecord);
-    assert(event.type === EventStore.EventType.snapshot ? tx : true);
+    assert(event.type === EventStore.EventType.Snapshot ? tx : true);
     if (!this.alive) return;
     const revert = this.memory
       .on([event.key, event.prop, false, ++this.counter], () => event);
@@ -286,7 +286,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       tx);
   }
   public delete(key: K): void {
-    return void this.add(new UnstoredEventRecord<K, V>(key, new EventStore.Value(), EventStore.EventType.delete));
+    return void this.add(new UnstoredEventRecord<K, V>(key, new EventStore.Value(), EventStore.EventType.Delete));
   }
   private readonly snapshotCycle: number = 9;
   private snapshot(key: K): void {
@@ -318,11 +318,11 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           }
           else {
             if (events.length <= 1) return;
-            if (events.at(-1)!.type === EventStore.EventType.snapshot) return;
+            if (events.at(-1)!.type === EventStore.EventType.Snapshot) return;
             const event = compose(key, events);
             if (event.id > 0) return;
             switch (event.type) {
-              case EventStore.EventType.snapshot:
+              case EventStore.EventType.Snapshot:
                 // Snapshot's date must not be later than unsaved event's date.
                 return void this.add(
                   new UnstoredEventRecord(
@@ -331,9 +331,9 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
                     event.type,
                     events.reduce((date, ev) => ev.date > date ? ev.date : date, 0)),
                   tx);
-              case EventStore.EventType.delete:
+              case EventStore.EventType.Delete:
                 return void tx.commit();
-              case EventStore.EventType.put:
+              case EventStore.EventType.Put:
               default:
                 throw new TypeError(`ClientChannel: EventStore: Invalid event type: ${event.type}`);
             }
@@ -364,16 +364,16 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           }
           assert(event = event!);
           switch (event.type) {
-            case EventStore.EventType.put:
+            case EventStore.EventType.Put:
               clear ??= false;
               if (deletion) break;
               return void cursor.continue();
-            case EventStore.EventType.snapshot:
+            case EventStore.EventType.Snapshot:
               clear ??= false;
               if (deletion) break;
               deletion = true;
               return void cursor.continue();
-            case EventStore.EventType.delete:
+            case EventStore.EventType.Delete:
               clear ??= true;
               deletion = true;
               break;
@@ -502,7 +502,7 @@ export function compose<K extends string, V extends EventStore.Value>(
   return group(events)
     .map(events =>
       events
-        .reduceRight(compose, new UnstoredEventRecord<K, V>(key, new EventStore.Value(), EventStore.EventType.delete, 0)))
+        .reduceRight(compose, new UnstoredEventRecord<K, V>(key, new EventStore.Value(), EventStore.EventType.Delete, 0)))
     .reduce(ev => ev);
 
   function group(events: E[]): E[][] {
@@ -524,17 +524,17 @@ export function compose<K extends string, V extends EventStore.Value>(
   }
   function compose(target: E, source: E): E {
     switch (source.type) {
-      case EventStore.EventType.put:
+      case EventStore.EventType.Put:
         assert(source.prop !== '');
         return new UnstoredEventRecord<K, V>(
           source.key,
           new EventStore.Value(target.value, {
             [source.prop]: source.value[source.prop as Prop<V>]
           }),
-          EventStore.EventType.snapshot);
-      case EventStore.EventType.snapshot:
+          EventStore.EventType.Snapshot);
+      case EventStore.EventType.Snapshot:
         return source;
-      case EventStore.EventType.delete:
+      case EventStore.EventType.Delete:
         return source;
     }
     throw new TypeError(`ClientChannel: EventStore: Invalid event type: ${source}`);

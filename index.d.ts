@@ -61,9 +61,9 @@ export namespace StoreChannel {
     export type Snapshot = 'snapshot';
   }
   export const EventType: {
-    readonly put: EventType.Put;
-    readonly delete: EventType.Delete;
-    readonly snapshot: EventType.Snapshot;
+    readonly Put: EventType.Put;
+    readonly Delete: EventType.Delete;
+    readonly Snapshot: EventType.Snapshot;
   };
 }
 

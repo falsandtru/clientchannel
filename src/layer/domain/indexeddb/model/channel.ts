@@ -80,7 +80,7 @@ export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Val
     if (this.capacity === Infinity) return;
 
     this.events$.load.monitor([], ({ key, type }) => {
-      if (type === ChannelStore.EventType.delete) {
+      if (type === ChannelStore.EventType.Delete) {
         this.keys.delete(key);
       }
       else if (!this.keys.has(key)) {
@@ -88,7 +88,7 @@ export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Val
       }
     });
     this.events$.save.monitor([], ({ key, type }) => {
-      if (type === ChannelStore.EventType.delete) {
+      if (type === ChannelStore.EventType.Delete) {
         this.keys.delete(key);
       }
       else if (!this.keys.has(key)) {
@@ -154,7 +154,7 @@ export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Val
     return this.stores.data.get(key);
   }
   public add(record: DataStore.Record<K, V>): void {
-    assert(record.type === DataStore.EventType.put);
+    assert(record.type === DataStore.EventType.Put);
     this.ensureAliveness();
     const key = record.key;
     this.stores.data.add(record);

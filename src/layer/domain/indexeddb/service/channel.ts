@@ -56,10 +56,10 @@ export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChan
       .monitor([], ({ key, prop, type }) => {
         if (!this.sources.has(key)) return;
         switch (type) {
-          case StoreChannel.EventType.put:
-          case StoreChannel.EventType.snapshot:
+          case StoreChannel.EventType.Put:
+          case StoreChannel.EventType.Snapshot:
             return void update(key, prop);
-          case StoreChannel.EventType.delete:
+          case StoreChannel.EventType.Delete:
             return;
         }
       });

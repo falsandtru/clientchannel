@@ -7,9 +7,9 @@ import { clone } from 'spica/assign';
 
 export type EventRecordType = StoreChannel.EventType
 export const EventRecordType = {
-  put: 'put',
-  delete: 'delete',
-  snapshot: 'snapshot',
+  Put: 'put',
+  Delete: 'delete',
+  Snapshot: 'snapshot',
 } as const;
 export namespace EventRecordType {
 }
@@ -27,27 +27,27 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
     if (typeof this.key !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event key: ${this.key}`);
     if (typeof this.value !== 'object' || !this.value) throw new TypeError(`ClientChannel: EventRecord: Invalid event value: ${JSON.stringify(this.value)}`);
     if (typeof this.date !== 'number' || this.date >= 0 === false || !Number.isFinite(this.date)) throw new TypeError(`ClientChannel: EventRecord: Invalid event date: ${this.date}`);
-    this.prop = this.type === EventRecordType.put
+    this.prop = this.type === EventRecordType.Put
       ? ObjectKeys(value).filter(isValidPropertyName)[0] as Prop<V>
       : '';
     if (typeof this.prop !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event prop: ${this.key}`);
 
     switch (type) {
-      case EventRecordType.put:
+      case EventRecordType.Put:
         if (!isValidPropertyName(this.prop)) throw new TypeError(`ClientChannel: EventRecord: Invalid event prop with ${this.type}: ${this.prop}`);
         assert(this.prop !== '');
         this.value = value = new EventRecordValue({ [this.prop]: value[this.prop as Prop<V>] });
         assert(Object.freeze(this.value));
         assert(Object.freeze(this));
         return;
-      case EventRecordType.snapshot:
+      case EventRecordType.Snapshot:
         if (this.prop !== '') throw new TypeError(`ClientChannel: EventRecord: Invalid event prop with ${this.type}: ${this.prop}`);
         this.value = value = new EventRecordValue(value);
         assert(Object.entries(this.value).every(isValidProperty));
         assert(Object.freeze(this.value));
         assert(Object.freeze(this));
         return;
-      case EventRecordType.delete:
+      case EventRecordType.Delete:
         if (this.prop !== '') throw new TypeError(`ClientChannel: EventRecord: Invalid event prop with ${this.type}: ${this.prop}`);
         this.value = value = new EventRecordValue();
         assert.deepStrictEqual(Object.keys(this.value), []);
@@ -65,7 +65,7 @@ export class UnstoredEventRecord<K extends string, V extends EventRecordValue> e
   constructor(
     key: K,
     value: Partial<V>,
-    type: EventRecordType = EventRecordType.put,
+    type: EventRecordType = EventRecordType.Put,
     date: number = Date.now()
   ) {
     super(makeEventId(0), type, key, value, date);
