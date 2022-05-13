@@ -59,7 +59,7 @@
     "npm-check-updates": "^12.5.11",
     "power-assert": "^1.6.1",
     "semver": "^7.3.7",
-    "spica": "0.0.543",
+    "spica": "0.0.544",
     "tsify": "^5.0.4",
     "typescript": "4.6.4",
     "vinyl-buffer": "^1.0.1",
