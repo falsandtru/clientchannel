@@ -24,7 +24,7 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
       storageEventStream.on([this.mode, this.name], ({ newValue }: StorageEvent): void => {
         const source = this.source;
         const memory = parse<V>(newValue);
-        const link = this.link_;
+        const link = this.$link;
         if (!source || !link) return;
         void (ObjectEntries(memory) as [Prop<V>, V[Prop<V>]][])
           .filter(isValidProperty)
@@ -53,29 +53,29 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
     if (!this.alive) throw new Error(`ClientChannel: Storage channel "${this.name}" is already closed.`);
   }
   private source?: V;
-  private link_?: V;
+  private $link?: V;
   public link(): V {
     this.ensureAliveness();
-    if (this.link_) return this.link_;
+    if (this.$link) return this.$link;
     const source = this.source = {
       ...parse<V>(this.storage.getItem(this.name)),
       [StorageChannel.Value.key]: this.name,
       [StorageChannel.Value.event]: new Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>({ limit: Infinity }),
     };
-    this.link_ = build<V>(source, this.config.schema(), (prop, newValue, oldValue) => {
+    this.$link = build<V>(source, this.config.schema(), (prop, newValue, oldValue) => {
       if (!this.alive || this.source !== source) return;
       this.storage.setItem(this.name, JSON.stringify(ObjectFromEntries(ObjectEntries(source).filter(isValidProperty))));
       const event = new StorageChannel.Event<V>(StorageChannel.EventType.send, prop, newValue, oldValue);
       this.events.send.emit([event.prop], event);
       (source[StorageChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>).emit([event.type, event.prop], event);
     });
-    this.config.migrate?.(this.link_);
+    this.config.migrate?.(this.$link);
     return this.link();
   }
   public unlink(link?: V): boolean {
-    if (link && this.link_ !== link) return false;
+    if (link && this.$link !== link) return false;
     const result = !!this.source;
-    this.source = this.link_ = void 0;
+    this.source = this.$link = void 0;
     return result;
   }
   public close(): void {

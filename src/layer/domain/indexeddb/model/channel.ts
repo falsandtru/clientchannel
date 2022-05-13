@@ -74,12 +74,12 @@ export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Val
       void this.channel.close());
     this.cancellation.register(this.channel.listen('save', ({ key }) =>
       void this.load(key)));
-    this.events_.save.monitor([], ({ key }) =>
+    this.events$.save.monitor([], ({ key }) =>
       void this.channel.post(new SaveMessage(key)));
 
     if (this.capacity === Infinity) return;
 
-    this.events_.load.monitor([], ({ key, type }) => {
+    this.events$.load.monitor([], ({ key, type }) => {
       if (type === ChannelStore.EventType.delete) {
         this.keys.delete(key);
       }
@@ -87,7 +87,7 @@ export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Val
         this.keys.add(key);
       }
     });
-    this.events_.save.monitor([], ({ key, type }) => {
+    this.events$.save.monitor([], ({ key, type }) => {
       if (type === ChannelStore.EventType.delete) {
         this.keys.delete(key);
       }
@@ -106,7 +106,7 @@ export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Val
   protected get alive(): boolean {
     return this.cancellation.isAlive;
   }
-  public readonly events_ = {
+  public readonly events$ = {
     load: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>(),
     save: new Observation<[K, Prop<V> | '', ChannelStore.EventType], ChannelStore.Event<K, Prop<V> | ''>, void>(),
   } as const;
@@ -248,8 +248,8 @@ class Stores<K extends string, V extends ChannelStore.Value<K>> {
     this.cancellation.register(() => this.access.close());
     this.cancellation.register(() => this.expiry.close());
 
-    this.cancellation.register(this.store.events_.load.relay(this.data.events.load));
-    this.cancellation.register(this.store.events_.save.relay(this.data.events.save));
+    this.cancellation.register(this.store.events$.load.relay(this.data.events.load));
+    this.cancellation.register(this.store.events$.save.relay(this.data.events.save));
     // @ts-expect-error
     this.cancellation.register(this.store.events.load.relay(this.data.events.load));
     // @ts-expect-error

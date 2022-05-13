@@ -1,5 +1,5 @@
 import { StorageChannel } from './channel';
-import { storageEventStream_ } from '../../../infrastructure/webstorage/api';
+import { storageEventStream$ } from '../../../infrastructure/webstorage/api';
 
 describe('Unit: layers/domain/webstorage/service/channel', () => {
   describe('spec', () => {
@@ -81,7 +81,7 @@ describe('Unit: layers/domain/webstorage/service/channel', () => {
       assert(link.value === 1);
       assert(JSON.parse(sessionStorage.getItem('test')!).value === 1);
       sessionStorage.setItem('test', JSON.stringify({ value: 2 }));
-      storageEventStream_.emit(['session', chan.name], { newValue: '{"value": 2}' } as StorageEvent)
+      storageEventStream$.emit(['session', chan.name], { newValue: '{"value": 2}' } as StorageEvent)
       assert(link.value === 3);
       assert(JSON.parse(sessionStorage.getItem('test')!).value === 3);
       chan.destroy();

@@ -1,6 +1,6 @@
 import { indexedDB } from '../module/global';
 import { isIDBAvailable, states, Command, InitialState, BlockState, UpgradeState, SuccessState, ErrorState, AbortState, CrashState, DestroyState, EndState } from './state';
-import { idbEventStream_, IDBEvent, IDBEventType } from './event';
+import { idbEventStream$, IDBEvent, IDBEventType } from './event';
 import { verifyStorageAccess } from '../../environment/api';
 import { causeAsyncException } from 'spica/exception';
 
@@ -45,7 +45,7 @@ function handleBlockedState(state: BlockState): void {
     void handleSuccessState(new SuccessState(state, session.result));
   session.onerror = event =>
     void handleErrorState(new ErrorState(state, session.error!, event));
-  idbEventStream_.emit([database, IDBEventType.block], new IDBEvent(database, IDBEventType.block));
+  idbEventStream$.emit([database, IDBEventType.block], new IDBEvent(database, IDBEventType.block));
 }
 
 function handleUpgradeState(state: UpgradeState): void {
@@ -81,7 +81,7 @@ function handleSuccessState(state: SuccessState): void {
   connection.onversionchange = () => {
     const curr = new EndState(state);
     connection.close();
-    idbEventStream_.emit([database, IDBEventType.destroy], new IDBEvent(database, IDBEventType.destroy));
+    idbEventStream$.emit([database, IDBEventType.destroy], new IDBEvent(database, IDBEventType.destroy));
     handleEndState(curr);
   };
   connection.onerror = event =>
@@ -103,7 +103,7 @@ function handleSuccessState(state: SuccessState): void {
         connection.close();
         return void handleCrashState(new CrashState(state, reason));
       }
-      idbEventStream_.emit([database, IDBEventType.connect], new IDBEvent(database, IDBEventType.connect));
+      idbEventStream$.emit([database, IDBEventType.connect], new IDBEvent(database, IDBEventType.connect));
       try {
         while (queue.size > 0 && state.alive) {
           assert(state.command === Command.open);
@@ -144,7 +144,7 @@ function handleErrorState(state: ErrorState): void {
   const { database, error, event, config } = state;
   assert(error);
   event.preventDefault();
-  idbEventStream_.emit([database, IDBEventType.error], new IDBEvent(database, IDBEventType.error));
+  idbEventStream$.emit([database, IDBEventType.error], new IDBEvent(database, IDBEventType.error));
   if (config.destroy(error, event)) {
     return void handleDestroyState(new DestroyState(state));
   }
@@ -157,14 +157,14 @@ function handleAbortState(state: AbortState): void {
   if (!state.alive) return;
   const { database, event } = state;
   event.preventDefault();
-  idbEventStream_.emit([database, IDBEventType.abort], new IDBEvent(database, IDBEventType.abort));
+  idbEventStream$.emit([database, IDBEventType.abort], new IDBEvent(database, IDBEventType.abort));
   return void handleEndState(new EndState(state));
 }
 
 function handleCrashState(state: CrashState): void {
   if (!state.alive) return;
   const { database, reason, config } = state;
-  idbEventStream_.emit([database, IDBEventType.crash], new IDBEvent(database, IDBEventType.crash));
+  idbEventStream$.emit([database, IDBEventType.crash], new IDBEvent(database, IDBEventType.crash));
   if (config.destroy(reason)) {
     return void handleDestroyState(new DestroyState(state));
   }
@@ -179,7 +179,7 @@ function handleDestroyState(state: DestroyState): void {
   const { database } = state;
   const deleteRequest = indexedDB.deleteDatabase(database);
   deleteRequest.onsuccess = () => (
-    void idbEventStream_.emit([database, IDBEventType.destroy], new IDBEvent(database, IDBEventType.destroy)),
+    void idbEventStream$.emit([database, IDBEventType.destroy], new IDBEvent(database, IDBEventType.destroy)),
     void handleEndState(new EndState(state)));
   deleteRequest.onerror = event =>
     void handleErrorState(new ErrorState(state, deleteRequest.error!, event));
@@ -190,7 +190,7 @@ function handleEndState(state: EndState): void {
   const { database, version, command } = state;
   assert(version >= 0);
   state.complete();
-  idbEventStream_
+  idbEventStream$
     .emit([database, IDBEventType.disconnect], new IDBEvent(database, IDBEventType.disconnect));
   if (!isIDBAvailable || !verifyStorageAccess()) return;
   switch (command) {

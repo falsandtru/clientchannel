@@ -52,7 +52,7 @@ export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChan
       }
     };
 
-    this.events_.load
+    this.events$.load
       .monitor([], ({ key, prop, type }) => {
         if (!this.sources.has(key)) return;
         switch (type) {

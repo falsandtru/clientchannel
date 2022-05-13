@@ -1,2 +1,2 @@
 export { localStorage, sessionStorage } from './module/global';
-export { storageEventStream, storageEventStream_ } from './model/event';
+export { storageEventStream, storageEventStream$ } from './model/event';
