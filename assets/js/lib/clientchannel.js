@@ -2531,9 +2531,9 @@ require = function () {
             const value_1 = _dereq_('../database/value');
             const assign_1 = _dereq_('spica/assign');
             exports.EventRecordType = {
-                put: 'put',
-                delete: 'delete',
-                snapshot: 'snapshot'
+                Put: 'put',
+                Delete: 'delete',
+                Snapshot: 'snapshot'
             };
             class EventRecord {
                 constructor(id, type, key, value, date) {
@@ -2552,21 +2552,21 @@ require = function () {
                         throw new TypeError(`ClientChannel: EventRecord: Invalid event value: ${ JSON.stringify(this.value) }`);
                     if (typeof this.date !== 'number' || this.date >= 0 === false || !global_1.Number.isFinite(this.date))
                         throw new TypeError(`ClientChannel: EventRecord: Invalid event date: ${ this.date }`);
-                    this.prop = this.type === exports.EventRecordType.put ? (0, alias_1.ObjectKeys)(value).filter(value_1.isValidPropertyName)[0] : '';
+                    this.prop = this.type === exports.EventRecordType.Put ? (0, alias_1.ObjectKeys)(value).filter(value_1.isValidPropertyName)[0] : '';
                     if (typeof this.prop !== 'string')
                         throw new TypeError(`ClientChannel: EventRecord: Invalid event prop: ${ this.key }`);
                     switch (type) {
-                    case exports.EventRecordType.put:
+                    case exports.EventRecordType.Put:
                         if (!(0, value_1.isValidPropertyName)(this.prop))
                             throw new TypeError(`ClientChannel: EventRecord: Invalid event prop with ${ this.type }: ${ this.prop }`);
                         this.value = value = new EventRecordValue({ [this.prop]: value[this.prop] });
                         return;
-                    case exports.EventRecordType.snapshot:
+                    case exports.EventRecordType.Snapshot:
                         if (this.prop !== '')
                             throw new TypeError(`ClientChannel: EventRecord: Invalid event prop with ${ this.type }: ${ this.prop }`);
                         this.value = value = new EventRecordValue(value);
                         return;
-                    case exports.EventRecordType.delete:
+                    case exports.EventRecordType.Delete:
                         if (this.prop !== '')
                             throw new TypeError(`ClientChannel: EventRecord: Invalid event prop with ${ this.type }: ${ this.prop }`);
                         this.value = value = new EventRecordValue();
@@ -2577,7 +2577,7 @@ require = function () {
                 }
             }
             class UnstoredEventRecord extends EventRecord {
-                constructor(key, value, type = exports.EventRecordType.put, date = global_1.Date.now()) {
+                constructor(key, value, type = exports.EventRecordType.Put, date = global_1.Date.now()) {
                     super((0, identifier_1.makeEventId)(0), type, key, value, date);
                     this.EVENT_RECORD;
                     if (this.id !== 0)
@@ -2701,15 +2701,15 @@ require = function () {
                     this.snapshotCycle = 9;
                     this.events.load.monitor([], event => {
                         switch (event.type) {
-                        case EventStore.EventType.delete:
-                        case EventStore.EventType.snapshot:
+                        case EventStore.EventType.Delete:
+                        case EventStore.EventType.Snapshot:
                             clean(event);
                         }
                     });
                     this.events.save.monitor([], event => {
                         switch (event.type) {
-                        case EventStore.EventType.delete:
-                        case EventStore.EventType.snapshot:
+                        case EventStore.EventType.Delete:
+                        case EventStore.EventType.Snapshot:
                             this.clean(event.key);
                             clean(event);
                         }
@@ -2804,7 +2804,7 @@ require = function () {
                             if (event.id < this.meta(key).id)
                                 return;
                             events.unshift(event);
-                            if (event.type !== EventStore.EventType.put)
+                            if (event.type !== EventStore.EventType.Put)
                                 return;
                             cursor.continue();
                         });
@@ -2846,7 +2846,7 @@ require = function () {
                     return this.memory.reflect([]).reduce((keys, ev) => keys.at(-1) !== ev.key ? (0, concat_1.concat)(keys, [ev.key]) : keys, []).sort();
                 }
                 has(key) {
-                    return compose(key, this.memory.reflect([key])).type !== EventStore.EventType.delete;
+                    return compose(key, this.memory.reflect([key])).type !== EventStore.EventType.Delete;
                 }
                 meta(key) {
                     const events = this.memory.reflect([key]);
@@ -2916,7 +2916,7 @@ require = function () {
                     }, tx);
                 }
                 delete(key) {
-                    return void this.add(new event_1.UnstoredEventRecord(key, new EventStore.Value(), EventStore.EventType.delete));
+                    return void this.add(new event_1.UnstoredEventRecord(key, new EventStore.Value(), EventStore.EventType.Delete));
                 }
                 snapshot(key) {
                     if (!this.alive)
@@ -2941,17 +2941,17 @@ require = function () {
                             } else {
                                 if (events.length <= 1)
                                     return;
-                                if (events.at(-1).type === EventStore.EventType.snapshot)
+                                if (events.at(-1).type === EventStore.EventType.Snapshot)
                                     return;
                                 const event = compose(key, events);
                                 if (event.id > 0)
                                     return;
                                 switch (event.type) {
-                                case EventStore.EventType.snapshot:
+                                case EventStore.EventType.Snapshot:
                                     return void this.add(new event_1.UnstoredEventRecord(event.key, event.value, event.type, events.reduce((date, ev) => ev.date > date ? ev.date : date, 0)), tx);
-                                case EventStore.EventType.delete:
+                                case EventStore.EventType.Delete:
                                     return void tx.commit();
-                                case EventStore.EventType.put:
+                                case EventStore.EventType.Put:
                                 default:
                                     throw new TypeError(`ClientChannel: EventStore: Invalid event type: ${ event.type }`);
                                 }
@@ -2981,18 +2981,18 @@ require = function () {
                                 cursor.delete();
                             }
                             switch (event.type) {
-                            case EventStore.EventType.put:
+                            case EventStore.EventType.Put:
                                 clear !== null && clear !== void 0 ? clear : clear = false;
                                 if (deletion)
                                     break;
                                 return void cursor.continue();
-                            case EventStore.EventType.snapshot:
+                            case EventStore.EventType.Snapshot:
                                 clear !== null && clear !== void 0 ? clear : clear = false;
                                 if (deletion)
                                     break;
                                 deletion = true;
                                 return void cursor.continue();
-                            case EventStore.EventType.delete:
+                            case EventStore.EventType.Delete:
                                 clear !== null && clear !== void 0 ? clear : clear = true;
                                 deletion = true;
                                 break;
@@ -3093,7 +3093,7 @@ require = function () {
             }
             exports.record = record;
             function compose(key, events) {
-                return group(events).map(events => events.reduceRight(compose, new event_1.UnstoredEventRecord(key, new EventStore.Value(), EventStore.EventType.delete, 0))).reduce(ev => ev);
+                return group(events).map(events => events.reduceRight(compose, new event_1.UnstoredEventRecord(key, new EventStore.Value(), EventStore.EventType.Delete, 0))).reduce(ev => ev);
                 function group(events) {
                     return events.map((ev, i) => [
                         ev,
@@ -3107,11 +3107,11 @@ require = function () {
                 }
                 function compose(target, source) {
                     switch (source.type) {
-                    case EventStore.EventType.put:
-                        return new event_1.UnstoredEventRecord(source.key, new EventStore.Value(target.value, { [source.prop]: source.value[source.prop] }), EventStore.EventType.snapshot);
-                    case EventStore.EventType.snapshot:
+                    case EventStore.EventType.Put:
+                        return new event_1.UnstoredEventRecord(source.key, new EventStore.Value(target.value, { [source.prop]: source.value[source.prop] }), EventStore.EventType.Snapshot);
+                    case EventStore.EventType.Snapshot:
                         return source;
-                    case EventStore.EventType.delete:
+                    case EventStore.EventType.Delete:
                         return source;
                     }
                     throw new TypeError(`ClientChannel: EventStore: Invalid event type: ${ source }`);
@@ -3626,14 +3626,14 @@ require = function () {
                     if (this.capacity === global_1.Infinity)
                         return;
                     this.events$.load.monitor([], ({key, type}) => {
-                        if (type === ChannelStore.EventType.delete) {
+                        if (type === ChannelStore.EventType.Delete) {
                             this.keys.delete(key);
                         } else if (!this.keys.has(key)) {
                             this.keys.add(key);
                         }
                     });
                     this.events$.save.monitor([], ({key, type}) => {
-                        if (type === ChannelStore.EventType.delete) {
+                        if (type === ChannelStore.EventType.Delete) {
                             this.keys.delete(key);
                         } else if (!this.keys.has(key)) {
                             this.keys.add(key);
@@ -4135,10 +4135,10 @@ require = function () {
                         if (!this.sources.has(key))
                             return;
                         switch (type) {
-                        case StoreChannel.EventType.put:
-                        case StoreChannel.EventType.snapshot:
+                        case StoreChannel.EventType.Put:
+                        case StoreChannel.EventType.Snapshot:
                             return void update(key, prop);
-                        case StoreChannel.EventType.delete:
+                        case StoreChannel.EventType.Delete:
                             return;
                         }
                     });
