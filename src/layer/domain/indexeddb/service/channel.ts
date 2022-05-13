@@ -26,7 +26,7 @@ export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChan
     const update = (key: K<M>, prop: Prop<M[K<M>]> | ''): void => {
       const source = this.sources.get(key)! as M[K<M>];
       const memory = this.get(key)! as M[K<M>];
-      const link = this.link_(key);
+      const link = this.link$(key);
       assert(memory instanceof Object === false);
       const props = prop === ''
         ? ObjectKeys(memory) as Prop<M[K<M>]>[]
@@ -66,7 +66,7 @@ export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChan
   }
   private readonly sources = new Map<K<M>, Partial<M[K<M>]>>();
   private readonly links = new Map<K<M>, M[K<M>]>();
-  private link_<L extends K<M>>(key: L): M[L] {
+  private link$<L extends K<M>>(key: L): M[L] {
     if (this.links.has(key)) return this.links.get(key) as M[L];
     const source = this.get(key) as Partial<M[L]>;
     this.sources.set(key, source);
@@ -104,12 +104,12 @@ export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChan
         this.alive && this.sources.get(key) === source && this.log(key);
       })))
       .get(key) as M[L];
-    return this.link_(key);
+    return this.link$(key);
   }
   public link<L extends K<M>>(key: L, age?: number): M[L] {
     this.ensureAliveness();
     this.expire(key, age);
-    const link = this.link_(key);
+    const link = this.link$(key);
     const source = this.sources.get(key)!;
     assert(source);
     this.load(key, error => {
