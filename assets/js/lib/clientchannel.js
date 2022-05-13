@@ -4109,7 +4109,7 @@ require = function () {
                     const update = (key, prop) => {
                         const source = this.sources.get(key);
                         const memory = this.get(key);
-                        const link = this.link_(key);
+                        const link = this.link$(key);
                         const props = prop === '' ? (0, alias_1.ObjectKeys)(memory) : prop in memory ? [prop] : [];
                         const changes = props.map(prop => {
                             const newValue = memory[prop];
@@ -4143,7 +4143,7 @@ require = function () {
                         }
                     });
                 }
-                link_(key) {
+                link$(key) {
                     var _a;
                     if (this.links.has(key))
                         return this.links.get(key);
@@ -4168,12 +4168,12 @@ require = function () {
                     }, (0, throttle_1.throttle)(100, () => {
                         this.alive && this.sources.get(key) === source && this.log(key);
                     }))).get(key);
-                    return this.link_(key);
+                    return this.link$(key);
                 }
                 link(key, age) {
                     this.ensureAliveness();
                     this.expire(key, age);
-                    const link = this.link_(key);
+                    const link = this.link$(key);
                     const source = this.sources.get(key);
                     this.load(key, error => {
                         !error && this.alive && this.sources.get(key) === source && this.log(key);
