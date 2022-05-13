@@ -70,7 +70,7 @@ export class ExpiryStore<K extends string> {
         schedule = Infinity;
         if (!this.ownership.take('store', delay)) return void this.schedule(delay *= 2);
         if (this.chan.lock) return void this.schedule(delay);
-        let untimer = setRepeatTimer(delay / 2, () => {
+        let untimer = setRepeatTimer(1000, () => {
           if (this.ownership.extend('store', delay)) return;
           untimer();
         });
@@ -87,6 +87,7 @@ export class ExpiryStore<K extends string> {
             if (!this.cancellation.isAlive) return;
             if (error) return void this.schedule(delay * 10);
             if (!cursor) return;
+            if (!this.ownership.extend('store', delay)) return void this.schedule(delay *= 2);
             for (const { key, expiry } of cursor) {
               if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
               this.chan.has(key) || this.chan.meta(key).date === 0
