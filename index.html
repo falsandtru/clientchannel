@@ -36,19 +36,16 @@
 <canvas class="canvas" width="400" height="400"></canvas>
 <input class="clear" type="button" value="clear" />
 
-<script src="https://cdn.polyfill.io/v3/polyfill.js?flags=gated&features=default"></script>
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/fabric.js/1.5.0/fabric.min.js"></script>
-<script src="/clientchannel/assets/js/lib/clientchannel.js"></script>
+<script src="/clientchannel/assets/dist/index.js"></script>
 
 <script>
   $(function () {
     const width = 400, height = 500;
-    // connect to database
-    const { StoreChannel } = require('clientchannel');
+    const { StoreChannel } = global['clientchannel'];
     const chan = new StoreChannel('demo', {
       schemas: {
-        // define schema
         'canvas': () => ({
           event() {
             return this[StoreChannel.Value.event];
@@ -62,9 +59,7 @@
         return true;
       },
     });
-    // create data binding object
     const canvas = chan.link('canvas');
-    // component
     canvas.event().on(['recv', 'title'], function (ev) {
       document.querySelector('.title').value = ev.newValue;
     });
@@ -92,7 +87,7 @@
   });
 </script>
 <script>
-  const { StoreChannel } = require('clientchannel');
+  const { StoreChannel } = global['clientchannel'];
   const chan = new StoreChannel('random', {
     schemas: {
       '': () => ({
@@ -124,7 +119,6 @@
 </footer>
 
 </div>
-<script src="https://cdn.polyfill.io/v2/polyfill.js?features=default,WeakMap,WeakSet&flags=gated"></script>
 
 <script>
 if (!window.ga) {
