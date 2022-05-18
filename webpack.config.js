@@ -25,11 +25,6 @@ module.exports = env => {
   });
   const config = {
     mode: 'production',
-    externals: {
-      benchmark: 'Benchmark',
-      prismjs: 'Prism',
-      dompurify: 'DOMPurify',
-    },
     resolve: {
       extensions: ['.ts', '.js'],
     },

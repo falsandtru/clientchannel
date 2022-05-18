@@ -86,9 +86,9 @@ jobs:
           git fetch --depth 9 origin $(git branch --show-current)
           npm i -g json
           mkdir -p gh-pages/assets/dist
-          cp -r dist gh-pages/assets
+          mv dist gh-pages/assets
           mkdir ../gh-pages
-          cp -r gh-pages ..
+          mv gh-pages ..
           cat package.json | json version
           NEW_VERSION=$(cat package.json | json version)
           git checkout HEAD~ package.json
@@ -100,7 +100,7 @@ jobs:
           git checkout --orphan gh-pages || true
           git checkout -f gh-pages
           ls -a | grep -vE "^.git$|^\.+$" | xargs rm -r
-          cp -r ../gh-pages/* .
+          mv ../gh-pages/* .
           find | grep -vE "^./.git(/|$)"
           sed -i 's|\(baseurl:\s\+\)|\1//falsandtru.github.io|' _config.yml
           git add -A
