@@ -54,7 +54,7 @@
     "mocha": "^10.0.0",
     "npm-check-updates": "^13.0.1",
     "semver": "^7.3.7",
-    "spica": "0.0.550",
+    "spica": "0.0.551",
     "ts-loader": "^9.3.0",
     "typescript": "4.6.4",
     "webpack": "^5.72.1",
