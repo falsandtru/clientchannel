@@ -8,7 +8,7 @@
 		exports["clientchannel"] = factory();
 	else
 		root["clientchannel"] = factory();
-})(globalThis, () => {
+})(this, () => {
 return /******/ (() => { // webpackBootstrap
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
