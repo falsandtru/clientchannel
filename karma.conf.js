@@ -5,7 +5,7 @@ module.exports = function (config) {
     files: [
       { pattern: 'dist/**/*.{js,map}', watched: true, served: true, included: true },
     ],
-    reporters: ['dots', 'coverage'],
+    reporters: ['dots'],
     preprocessors: {
       'dist/**/*.js': ['coverage'],
     },
