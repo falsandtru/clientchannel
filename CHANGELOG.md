@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.37.1
+
+- Update dependencies.
+
 ## 0.37.0
 
 - Use webpack.
