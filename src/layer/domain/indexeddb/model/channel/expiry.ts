@@ -128,6 +128,8 @@ class ExpiryRecord<K extends string> {
     this[ExpiryStoreSchema.key] = key;
     this[ExpiryStoreSchema.expiry] = expiry;
   }
-  public readonly [ExpiryStoreSchema.key]: K;
-  public readonly [ExpiryStoreSchema.expiry]: number;
+  // Bug: TypeScript
+  public readonly [ExpiryStoreSchema.key]: K = '' as K;
+  // Bug: TypeScript
+  public readonly [ExpiryStoreSchema.expiry]: number = 0;
 }

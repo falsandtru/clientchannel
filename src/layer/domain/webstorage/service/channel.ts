@@ -1,4 +1,4 @@
-import { ObjectEntries, ObjectFromEntries } from 'spica/alias';
+import { Object } from 'spica/global';
 import { StorageChannel as IStorageChannel } from '../../../../../';
 import { Observer } from '../../../../../internal';
 import { DAO, Prop, isValidProperty, build } from '../../dao/api';
@@ -26,7 +26,7 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
         const memory = parse<V>(newValue);
         const link = this.$link;
         if (!source || !link) return;
-        void (ObjectEntries(memory) as [Prop<V>, V[Prop<V>]][])
+        void (Object.entries(memory) as [Prop<V>, V[Prop<V>]][])
           .filter(isValidProperty)
           .forEach(([prop]) => {
             const newValue = memory[prop];
@@ -64,7 +64,7 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
     };
     this.$link = build<V>(source, this.config.schema(), (prop, newValue, oldValue) => {
       if (!this.alive || this.source !== source) return;
-      this.storage.setItem(this.name, JSON.stringify(ObjectFromEntries(ObjectEntries(source).filter(isValidProperty))));
+      this.storage.setItem(this.name, JSON.stringify(Object.fromEntries(Object.entries(source).filter(isValidProperty))));
       const event = new StorageChannel.Event<V>(StorageChannel.EventType.send, prop, newValue, oldValue);
       this.events.send.emit([event.prop], event);
       (source[StorageChannel.Value.event] as Observation<[StorageChannel.EventType, Prop<V>], StorageChannel.Event<V>, void>).emit([event.type, event.prop], event);

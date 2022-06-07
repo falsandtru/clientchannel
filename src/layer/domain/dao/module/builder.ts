@@ -1,4 +1,4 @@
-import { ObjectDefineProperties, ObjectEntries, ObjectGetOwnPropertyDescriptor, ObjectSeal } from 'spica/alias';
+import { Object } from 'spica/global';
 import { Prop, isValidProperty, isValidPropertyValue } from '../../../data/database/value';
 
 export { Prop, isValidProperty, isValidPropertyName, isValidPropertyValue } from '../../../data/database/value';
@@ -20,12 +20,12 @@ export function build<T>(
   assert(Object.values(target).every(prop => !(prop in target)));
   if (typeof source[DAO.key] !== 'string') throw new TypeError(`ClientChannel: DAO: Invalid key: ${source[DAO.key]}`);
   const descmap: PropertyDescriptorMap = {
-    ...(ObjectEntries(target) as [Prop<T>, T[Prop<T>]][])
+    ...(Object.entries(target) as [Prop<T>, T[Prop<T>]][])
       .filter(isValidProperty)
       .reduce<PropertyDescriptorMap>((map, [prop, iniValue]) => {
         assert(target.hasOwnProperty(prop));
         {
-          const desc = ObjectGetOwnPropertyDescriptor(target, prop) ?? {};
+          const desc = Object.getOwnPropertyDescriptor(target, prop) ?? {};
           if (desc.get || desc.set) return map;
         }
         if (!(prop in source)) {
@@ -75,7 +75,7 @@ export function build<T>(
       },
     }
   };
-  ObjectDefineProperties(target, descmap);
-  ObjectSeal(target);
+  Object.defineProperties(target, descmap);
+  Object.seal(target);
   return target;
 }

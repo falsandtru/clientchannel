@@ -1,5 +1,5 @@
-import { Map, indexedDB } from 'spica/global';
-import { max, ObjectAssign, ObjectCreate } from 'spica/alias';
+import { Object, Map, indexedDB } from 'spica/global';
+import { max } from 'spica/alias';
 import { Listen, Config, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { EventId, makeEventId } from './identifier';
 import { EventRecordType, UnstoredEventRecord, StoredEventRecord, LoadedEventRecord, SavedEventRecord, EventRecordValue } from './event';
@@ -235,7 +235,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     };
   }
   public get(key: K): Partial<V> {
-    return ObjectAssign(ObjectCreate(null), compose(key, this.memory.reflect([key])).value);
+    return Object.assign(Object.create(null), compose(key, this.memory.reflect([key])).value);
   }
   private counter = 0;
   public add(event: UnstoredEventRecord<K, V>, tx?: IDBTransaction): void {

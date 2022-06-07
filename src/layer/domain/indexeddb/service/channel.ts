@@ -1,4 +1,4 @@
-import { ObjectDefineProperties, ObjectKeys } from 'spica/alias';
+import { Object } from 'spica/global';
 import { StoreChannel as IStoreChannel } from '../../../../../';
 import { K } from '../../../../../internal';
 import { Prop } from '../../../data/database/value';
@@ -29,7 +29,7 @@ export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChan
       const link = this.link$(key);
       assert(memory instanceof Object === false);
       const props = prop === ''
-        ? ObjectKeys(memory) as Prop<M[K<M>]>[]
+        ? Object.keys(memory) as Prop<M[K<M>]>[]
         : prop in memory ? [prop] : [];
       const changes = props
         .map(prop => {
@@ -71,7 +71,7 @@ export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChan
     const source = this.get(key) as Partial<M[L]>;
     this.sources.set(key, source);
     this.links.set(key, build<M[L]>(
-      ObjectDefineProperties(
+      Object.defineProperties(
         source as M[L] & object,
         {
           [StoreChannel.Value.meta]: {

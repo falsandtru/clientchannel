@@ -1,5 +1,4 @@
-import { Number, Date } from 'spica/global';
-import { ObjectKeys } from 'spica/alias';
+import { Number, Object, Date } from 'spica/global';
 import { StoreChannel } from '../../../..';
 import { EventId, makeEventId } from './identifier';
 import { Prop, isValidProperty, isValidPropertyName } from '../database/value';
@@ -28,7 +27,7 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
     if (typeof this.value !== 'object' || !this.value) throw new TypeError(`ClientChannel: EventRecord: Invalid event value: ${JSON.stringify(this.value)}`);
     if (typeof this.date !== 'number' || this.date >= 0 === false || !Number.isFinite(this.date)) throw new TypeError(`ClientChannel: EventRecord: Invalid event date: ${this.date}`);
     this.prop = this.type === EventRecordType.Put
-      ? ObjectKeys(value).filter(isValidPropertyName)[0] as Prop<V>
+      ? Object.keys(value).filter(isValidPropertyName)[0] as Prop<V>
       : '';
     if (typeof this.prop !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event prop: ${this.key}`);
 

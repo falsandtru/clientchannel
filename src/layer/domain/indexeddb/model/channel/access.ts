@@ -141,6 +141,7 @@ class AccessRecord<K extends string> {
   ) {
     this[AccessStoreSchema.key] = key;
   }
-  public readonly [AccessStoreSchema.key]: K;
+  // Bug: TypeScript
+  public readonly [AccessStoreSchema.key]: K = '' as K;
   public readonly [AccessStoreSchema.date]: number = Date.now();
 }

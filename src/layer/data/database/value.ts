@@ -1,4 +1,4 @@
-import { ObjectEntries, ObjectValues } from 'spica/alias';
+import { Object } from 'spica/global';
 import { isPrimitive } from 'spica/type';
 
 export type Prop<O, K extends keyof O = keyof O> = K extends PropName<keyof O & string> ? [PropValue<O[K]>] extends [never] ? never : K : never;
@@ -23,7 +23,7 @@ export function isValidPropertyValue(value: unknown): boolean {
       try {
         return value === null
             || isBinary(value)
-            || ObjectEntries(value).every(isValidProperty);
+            || Object.entries(value).every(isValidProperty);
       }
       catch {
         return false;
@@ -47,6 +47,6 @@ function isBinary(value: IDBValidValue): boolean {
 
 export function hasBinary(value: IDBValidValue): boolean {
   return !isPrimitive(value)
-    ? isBinary(value) || ObjectValues(value).some(hasBinary)
+    ? isBinary(value) || Object.values(value).some(hasBinary)
     : false;
 }
