@@ -57,50 +57,18 @@ __exportStar(__webpack_require__(4279), exports);
 Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
-exports.isArray = exports.ObjectValues = exports.ObjectSetPrototypeOf = exports.ObjectSeal = exports.ObjectPreventExtensions = exports.ObjectKeys = exports.isSealed = exports.isFrozen = exports.isExtensible = exports.ObjectIs = exports.ObjectGetPrototypeOf = exports.ObjectGetOwnPropertySymbols = exports.ObjectGetOwnPropertyNames = exports.ObjectGetOwnPropertyDescriptors = exports.ObjectGetOwnPropertyDescriptor = exports.ObjectFromEntries = exports.ObjectFreeze = exports.ObjectEntries = exports.ObjectDefineProperty = exports.ObjectDefineProperties = exports.ObjectCreate = exports.ObjectAssign = exports.toString = exports.isEnumerable = exports.isPrototypeOf = exports.hasOwnProperty = exports.SymbolKeyFor = exports.SymbolFor = exports.sign = exports.round = exports.random = exports.min = exports.max = exports.floor = exports.ceil = exports.abs = exports.parseInt = exports.parseFloat = exports.isSafeInteger = exports.isNaN = exports.isInteger = exports.isFinite = exports[NaN] = void 0;
+exports.ObjectSetPrototypeOf = exports.ObjectGetPrototypeOf = exports.ObjectCreate = exports.ObjectAssign = exports.toString = exports.isEnumerable = exports.isPrototypeOf = exports.hasOwnProperty = exports.isArray = exports.sign = exports.round = exports.random = exports.min = exports.max = exports.floor = exports.ceil = exports.abs = exports.parseInt = exports.parseFloat = exports.isSafeInteger = exports.isNaN = exports.isInteger = exports.isFinite = exports[NaN] = void 0;
 exports[NaN] = Number.NaN, exports.isFinite = Number.isFinite, exports.isInteger = Number.isInteger, exports.isNaN = Number.isNaN, exports.isSafeInteger = Number.isSafeInteger, exports.parseFloat = Number.parseFloat, exports.parseInt = Number.parseInt;
-exports.abs = Math.abs, exports.ceil = Math.ceil, exports.floor = Math.floor, exports.max = Math.max, exports.min = Math.min, exports.random = Math.random, exports.round = Math.round, exports.sign = Math.sign; //export const SymbolAsyncIterator: typeof Symbol.asyncIterator = Symbol.asyncIterator;
-
-exports.SymbolFor = Symbol.for; //export const SymbolHasInstance: typeof Symbol.hasInstance = Symbol.hasInstance;
-//export const SymbolIsConcatSpreadable: typeof Symbol.isConcatSpreadable = Symbol.isConcatSpreadable;
-//export const SymbolIterator: typeof Symbol.iterator = Symbol.iterator;
-
-exports.SymbolKeyFor = Symbol.keyFor; //export const SymbolMatch: typeof Symbol.match = Symbol.match;
-//export const SymbolReplace: typeof Symbol.replace = Symbol.replace;
-//export const SymbolSearch: typeof Symbol.search = Symbol.search;
-//export const SymbolSpecies: typeof Symbol.species = Symbol.species;
-//export const SymbolSplit: typeof Symbol.split = Symbol.split;
-//export const SymbolToPrimitive: typeof Symbol.toPrimitive = Symbol.toPrimitive;
-//export const SymbolToStringTag: typeof Symbol.toStringTag = Symbol.toStringTag;
-//export const SymbolUnscopables: typeof Symbol.unscopables = Symbol.unscopables;
-
+exports.abs = Math.abs, exports.ceil = Math.ceil, exports.floor = Math.floor, exports.max = Math.max, exports.min = Math.min, exports.random = Math.random, exports.round = Math.round, exports.sign = Math.sign;
+exports.isArray = Array.isArray;
 exports.hasOwnProperty = Object.prototype.hasOwnProperty.call.bind(Object.prototype.hasOwnProperty);
 exports.isPrototypeOf = Object.prototype.isPrototypeOf.call.bind(Object.prototype.isPrototypeOf);
 exports.isEnumerable = Object.prototype.propertyIsEnumerable.call.bind(Object.prototype.propertyIsEnumerable);
 exports.toString = Object.prototype.toString.call.bind(Object.prototype.toString);
 exports.ObjectAssign = Object.assign;
 exports.ObjectCreate = Object.create;
-exports.ObjectDefineProperties = Object.defineProperties;
-exports.ObjectDefineProperty = Object.defineProperty;
-exports.ObjectEntries = Object.entries;
-exports.ObjectFreeze = Object.freeze; // @ts-ignore
-
-exports.ObjectFromEntries = Object.fromEntries;
-exports.ObjectGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
-exports.ObjectGetOwnPropertyDescriptors = Object.getOwnPropertyDescriptors;
-exports.ObjectGetOwnPropertyNames = Object.getOwnPropertyNames;
-exports.ObjectGetOwnPropertySymbols = Object.getOwnPropertySymbols;
 exports.ObjectGetPrototypeOf = Object.getPrototypeOf;
-exports.ObjectIs = Object.is;
-exports.isExtensible = Object.isExtensible;
-exports.isFrozen = Object.isFrozen;
-exports.isSealed = Object.isSealed;
-exports.ObjectKeys = Object.keys;
-exports.ObjectPreventExtensions = Object.preventExtensions;
-exports.ObjectSeal = Object.seal;
 exports.ObjectSetPrototypeOf = Object.setPrototypeOf;
-exports.ObjectValues = Object.values;
-exports.isArray = Array.isArray;
 
 /***/ }),
 
@@ -112,7 +80,7 @@ exports.isArray = Array.isArray;
 Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
-exports.join = exports.splice = exports.pop = exports.push = exports.shift = exports.unshift = exports.indexOf = void 0;
+exports.splice = exports.pop = exports.push = exports.shift = exports.unshift = exports.indexOf = void 0;
 
 const global_1 = __webpack_require__(4128);
 
@@ -209,18 +177,6 @@ function splice(as, index, count, ...inserts) {
 }
 
 exports.splice = splice;
-
-function join(as, sep = '') {
-  let acc = '';
-
-  for (let i = 0; i < as.length; ++i) {
-    acc += i === 0 ? as[i] : sep + as[i];
-  }
-
-  return acc;
-}
-
-exports.join = join;
 
 /***/ }),
 
@@ -359,7 +315,7 @@ function template(strategy) {
       const source = sources[i];
       if (source === target) continue;
       if ((0, type_1.isPrimitive)(source)) continue;
-      const keys = (0, alias_1.ObjectKeys)(source);
+      const keys = global_1.Object.keys(source);
 
       for (let i = 0; i < keys.length; ++i) {
         strategy(keys[i], target, source);
@@ -1915,14 +1871,14 @@ class Observation {
     const {
       monitors
     } = this.seekNode(namespace, 0
-    /* Extensible */
+    /* SeekMode.Extensible */
     );
     if (monitors.length === this.settings.limit) throw new global_1.Error(`Spica: Observation: Exceeded max listener limit.`);
     if (this.id === global_1.Number.MAX_SAFE_INTEGER) throw new global_1.Error(`Spica: Observation: Max listener ID reached max safe integer.`);
     const item = {
       id: ++this.id,
       type: 0
-      /* Monitor */
+      /* ListenerType.Monitor */
       ,
       namespace,
       listener: monitor,
@@ -1937,14 +1893,14 @@ class Observation {
     const {
       subscribers
     } = this.seekNode(namespace, 0
-    /* Extensible */
+    /* SeekMode.Extensible */
     );
     if (subscribers.length === this.settings.limit) throw new global_1.Error(`Spica: Observation: Exceeded max listener limit.`);
     if (this.id === global_1.Number.MAX_SAFE_INTEGER) throw new global_1.Error(`Spica: Observation: Max listener ID reached max safe integer.`);
     const item = {
       id: ++this.id,
       type: 1
-      /* Subscriber */
+      /* ListenerType.Subscriber */
       ,
       namespace,
       listener: subscriber,
@@ -1962,7 +1918,7 @@ class Observation {
 
   off(namespace, subscriber) {
     const node = this.seekNode(namespace, 1
-    /* Breakable */
+    /* SeekMode.Breakable */
     );
     if (!node) return;
 
@@ -1970,7 +1926,7 @@ class Observation {
       case 'object':
         {
           const items = subscriber.type === 0
-          /* Monitor */
+          /* ListenerType.Monitor */
           ? node.monitors : node.subscribers;
           if (items.length === 0 || subscriber.id < items[0].id || subscriber.id > items[items.length - 1].id) return;
           return void (0, array_1.splice)(items, items.indexOf(subscriber), 1);
@@ -2005,23 +1961,23 @@ class Observation {
 
   refs(namespace) {
     const node = this.seekNode(namespace, 1
-    /* Breakable */
+    /* SeekMode.Breakable */
     );
     if (!node) return [];
     return (0, array_1.push)(this.refsBelow(node, 0
-    /* Monitor */
+    /* ListenerType.Monitor */
     ), this.refsBelow(node, 1
-    /* Subscriber */
+    /* ListenerType.Subscriber */
     )).reduce((acc, rs) => (0, array_1.push)(acc, rs), []);
   }
 
   drain(namespace, data, tracker) {
     const node = this.seekNode(namespace, 1
-    /* Breakable */
+    /* SeekMode.Breakable */
     );
     const results = [];
     const sss = node ? this.refsBelow(node, 1
-    /* Subscriber */
+    /* ListenerType.Subscriber */
     ) : [];
 
     for (let i = 0; i < sss.length; ++i) {
@@ -2049,9 +2005,9 @@ class Observation {
     }
 
     const mss = this.refsAbove(node || this.seekNode(namespace, 2
-    /* Closest */
+    /* SeekMode.Closest */
     ), 0
-    /* Monitor */
+    /* ListenerType.Monitor */
     );
 
     for (let i = 0; i < mss.length; ++i) {
@@ -2092,12 +2048,12 @@ class Observation {
     subscribers
   }, type) {
     const acc = type === 0
-    /* Monitor */
+    /* ListenerType.Monitor */
     ? [monitors] : [subscribers];
 
     while (parent) {
       type === 0
-      /* Monitor */
+      /* ListenerType.Monitor */
       ? acc.push(parent.monitors) : acc.push(parent.subscribers);
       parent = parent.parent;
     }
@@ -2115,7 +2071,7 @@ class Observation {
     children
   }, type, acc) {
     type === 0
-    /* Monitor */
+    /* ListenerType.Monitor */
     ? acc.push(monitors) : acc.push(subscribers);
     let count = 0;
 
@@ -2146,12 +2102,12 @@ class Observation {
       if (!child) {
         switch (mode) {
           case 1
-          /* Breakable */
+          /* SeekMode.Breakable */
           :
             return;
 
           case 2
-          /* Closest */
+          /* SeekMode.Closest */
           :
             return node;
         }
@@ -2247,14 +2203,14 @@ class AtomicPromise {
 
           switch (status.state) {
             case 2
-            /* fulfilled */
+            /* State.fulfilled */
             :
               results[i] = status.value;
               ++count;
               continue;
 
             case 3
-            /* rejected */
+            /* State.rejected */
             :
               return reject(status.reason);
           }
@@ -2292,12 +2248,12 @@ class AtomicPromise {
 
           switch (status.state) {
             case 2
-            /* fulfilled */
+            /* State.fulfilled */
             :
               return resolve(status.value);
 
             case 3
-            /* rejected */
+            /* State.rejected */
             :
               return reject(status.reason);
           }
@@ -2344,7 +2300,7 @@ class AtomicPromise {
 
           switch (status.state) {
             case 2
-            /* fulfilled */
+            /* State.fulfilled */
             :
               results[i] = {
                 status: 'fulfilled',
@@ -2354,7 +2310,7 @@ class AtomicPromise {
               continue;
 
             case 3
-            /* rejected */
+            /* State.rejected */
             :
               results[i] = {
                 status: 'rejected',
@@ -2407,12 +2363,12 @@ class AtomicPromise {
 
           switch (status.state) {
             case 2
-            /* fulfilled */
+            /* State.fulfilled */
             :
               return resolve(status.value);
 
             case 3
-            /* rejected */
+            /* State.rejected */
             :
               reasons[i] = status.reason;
               ++count;
@@ -2463,7 +2419,7 @@ class Internal {
   constructor() {
     this.status = {
       state: 0
-      /* pending */
+      /* State.pending */
 
     };
     this.fulfillReactions = [];
@@ -2472,19 +2428,19 @@ class Internal {
 
   get isPending() {
     return this.status.state === 0
-    /* pending */
+    /* State.pending */
     ;
   }
 
   resolve(value) {
     if (this.status.state !== 0
-    /* pending */
+    /* State.pending */
     ) return;
 
     if (!isPromiseLike(value)) {
       this.status = {
         state: 2
-        /* fulfilled */
+        /* State.fulfilled */
         ,
         value: value
       };
@@ -2496,10 +2452,10 @@ class Internal {
 
       switch (core.status.state) {
         case 2
-        /* fulfilled */
+        /* State.fulfilled */
         :
         case 3
-        /* rejected */
+        /* State.rejected */
         :
           this.status = core.status;
           return this.resume();
@@ -2511,14 +2467,14 @@ class Internal {
 
     this.status = {
       state: 1
-      /* resolved */
+      /* State.resolved */
       ,
       promise: value
     };
     return void value.then(value => {
       this.status = {
         state: 2
-        /* fulfilled */
+        /* State.fulfilled */
         ,
         value
       };
@@ -2526,7 +2482,7 @@ class Internal {
     }, reason => {
       this.status = {
         state: 3
-        /* rejected */
+        /* State.rejected */
         ,
         reason
       };
@@ -2536,11 +2492,11 @@ class Internal {
 
   reject(reason) {
     if (this.status.state !== 0
-    /* pending */
+    /* State.pending */
     ) return;
     this.status = {
       state: 3
-      /* rejected */
+      /* State.rejected */
       ,
       reason
     };
@@ -2556,13 +2512,13 @@ class Internal {
 
     switch (status.state) {
       case 2
-      /* fulfilled */
+      /* State.fulfilled */
       :
         if (fulfillReactions.length !== 0) break;
         return call(resolve, reject, resolve, onfulfilled, status.value);
 
       case 3
-      /* rejected */
+      /* State.rejected */
       :
         if (rejectReactions.length !== 0) break;
         return call(resolve, reject, reject, onrejected, status.reason);
@@ -2581,15 +2537,15 @@ class Internal {
 
     switch (status.state) {
       case 0
-      /* pending */
+      /* State.pending */
       :
       case 1
-      /* resolved */
+      /* State.resolved */
       :
         return;
 
       case 2
-      /* fulfilled */
+      /* State.fulfilled */
       :
         if (rejectReactions.length !== 0) {
           this.rejectReactions = [];
@@ -2601,7 +2557,7 @@ class Internal {
         return;
 
       case 3
-      /* rejected */
+      /* State.rejected */
       :
         if (fulfillReactions.length !== 0) {
           this.fulfillReactions = [];
@@ -2873,7 +2829,6 @@ const global_1 = __webpack_require__(4128);
 
 const alias_1 = __webpack_require__(5406);
 
-const toString = Object.prototype.toString.call.bind(Object.prototype.toString);
 const ObjectPrototype = Object.prototype;
 const ArrayPrototype = Array.prototype;
 
@@ -2887,7 +2842,7 @@ function type(value) {
     const proto = (0, alias_1.ObjectGetPrototypeOf)(value);
     if (proto === ObjectPrototype) return 'Object';
     if (proto === ArrayPrototype) return 'Array';
-    return toString(value).slice(8, -1);
+    return (0, alias_1.toString)(value).slice(8, -1);
   }
 
   if (type === 'function') return 'Function';
@@ -3095,7 +3050,7 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.hasBinary = exports.isValidPropertyValue = exports.isValidPropertyName = exports.isValidProperty = void 0;
 
-const alias_1 = __webpack_require__(5406);
+const global_1 = __webpack_require__(4128);
 
 const type_1 = __webpack_require__(5177);
 
@@ -3121,7 +3076,7 @@ function isValidPropertyValue(value) {
 
     case 'object':
       try {
-        return value === null || isBinary(value) || (0, alias_1.ObjectEntries)(value).every(isValidProperty);
+        return value === null || isBinary(value) || global_1.Object.entries(value).every(isValidProperty);
       } catch {
         return false;
       }
@@ -3138,7 +3093,7 @@ function isBinary(value) {
 }
 
 function hasBinary(value) {
-  return !(0, type_1.isPrimitive)(value) ? isBinary(value) || (0, alias_1.ObjectValues)(value).some(hasBinary) : false;
+  return !(0, type_1.isPrimitive)(value) ? isBinary(value) || global_1.Object.values(value).some(hasBinary) : false;
 }
 
 exports.hasBinary = hasBinary;
@@ -3156,8 +3111,6 @@ Object.defineProperty(exports, "__esModule", ({
 exports.EventRecordValue = exports.SavedEventRecord = exports.LoadedEventRecord = exports.StoredEventRecord = exports.UnstoredEventRecord = exports.EventRecordType = void 0;
 
 const global_1 = __webpack_require__(4128);
-
-const alias_1 = __webpack_require__(5406);
 
 const identifier_1 = __webpack_require__(4581);
 
@@ -3183,7 +3136,7 @@ class EventRecord {
     if (typeof this.key !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event key: ${this.key}`);
     if (typeof this.value !== 'object' || !this.value) throw new TypeError(`ClientChannel: EventRecord: Invalid event value: ${JSON.stringify(this.value)}`);
     if (typeof this.date !== 'number' || this.date >= 0 === false || !global_1.Number.isFinite(this.date)) throw new TypeError(`ClientChannel: EventRecord: Invalid event date: ${this.date}`);
-    this.prop = this.type === exports.EventRecordType.Put ? (0, alias_1.ObjectKeys)(value).filter(value_1.isValidPropertyName)[0] : '';
+    this.prop = this.type === exports.EventRecordType.Put ? global_1.Object.keys(value).filter(value_1.isValidPropertyName)[0] : '';
     if (typeof this.prop !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event prop: ${this.key}`);
 
     switch (type) {
@@ -3529,7 +3482,7 @@ class EventStore {
   }
 
   get(key) {
-    return (0, alias_1.ObjectAssign)((0, alias_1.ObjectCreate)(null), compose(key, this.memory.reflect([key])).value);
+    return global_1.Object.assign(global_1.Object.create(null), compose(key, this.memory.reflect([key])).value);
   }
 
   add(event, tx) {
@@ -4136,7 +4089,7 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.build = exports.DAO = exports.isValidPropertyValue = exports.isValidPropertyName = exports.isValidProperty = void 0;
 
-const alias_1 = __webpack_require__(5406);
+const global_1 = __webpack_require__(4128);
 
 const value_1 = __webpack_require__(8089);
 
@@ -4172,9 +4125,9 @@ var DAO;
 
 function build(source, target, set, get) {
   if (typeof source[DAO.key] !== 'string') throw new TypeError(`ClientChannel: DAO: Invalid key: ${source[DAO.key]}`);
-  const descmap = { ...(0, alias_1.ObjectEntries)(target).filter(value_1.isValidProperty).reduce((map, [prop, iniValue]) => {
+  const descmap = { ...global_1.Object.entries(target).filter(value_1.isValidProperty).reduce((map, [prop, iniValue]) => {
       {
-        const desc = (0, alias_1.ObjectGetOwnPropertyDescriptor)(target, prop) ?? {};
+        const desc = global_1.Object.getOwnPropertyDescriptor(target, prop) ?? {};
         if (desc.get || desc.set) return map;
       }
 
@@ -4229,8 +4182,8 @@ function build(source, target, set, get) {
       }
     }
   };
-  (0, alias_1.ObjectDefineProperties)(target, descmap);
-  (0, alias_1.ObjectSeal)(target);
+  global_1.Object.defineProperties(target, descmap);
+  global_1.Object.seal(target);
   return target;
 }
 
@@ -4348,7 +4301,7 @@ class ChannelStore {
     // but `indexedDB.deleteDatabase()` triggers the event as expected.
 
     this.cancellation.register(api_1.idbEventStream.on([name, "destroy"
-    /* destroy */
+    /* IDBEventType.destroy */
     ], () => void this.stores.rebuild()));
     this.cancellation.register(() => void this.stores.close());
     this.cancellation.register(() => void this.ownership.close());
@@ -4539,7 +4492,7 @@ class Stores {
 
 
 
-var _a;
+var _a, _b;
 
 Object.defineProperty(exports, "__esModule", ({
   value: true
@@ -4565,7 +4518,7 @@ class AccessStore {
     this.capacity = capacity;
     this.name = exports.name;
     this.store = new class extends store_1.KeyValueStore {}(exports.name, "key"
-    /* key */
+    /* AccessStoreSchema.key */
     , this.listen);
 
     this.schedule = (() => {
@@ -4590,7 +4543,7 @@ class AccessStore {
           });
           this.chan.lock = true;
           const size = await this.store.count(null, "key"
-          /* key */
+          /* AccessStoreSchema.key */
           ).catch(() => NaN);
           this.chan.lock = false;
           if (size >= 0 === false) return void untimer() || void this.schedule(delay *= 2);
@@ -4599,7 +4552,7 @@ class AccessStore {
           schedule = 0;
           this.chan.lock = true;
           return void this.store.getAll(null, (0, alias_1.min)(size - this.capacity, limit), "date"
-          /* date */
+          /* AccessStoreSchema.date */
           , 'readonly', [], (error, cursor, tx) => {
             if (!cursor && !tx) return;
             this.chan.lock = false;
@@ -4630,30 +4583,30 @@ class AccessStore {
       make(tx) {
         const store = tx.db.objectStoreNames.contains(exports.name) ? tx.objectStore(exports.name) : tx.db.createObjectStore(exports.name, {
           keyPath: "key"
-          /* key */
+          /* AccessStoreSchema.key */
           ,
           autoIncrement: false
         });
 
         if (!store.indexNames.contains("key"
-        /* key */
+        /* AccessStoreSchema.key */
         )) {
           store.createIndex("key"
-          /* key */
+          /* AccessStoreSchema.key */
           , "key"
-          /* key */
+          /* AccessStoreSchema.key */
           , {
             unique: true
           });
         }
 
         if (!store.indexNames.contains("date"
-        /* date */
+        /* AccessStoreSchema.date */
         )) {
           store.createIndex("date"
-          /* date */
+          /* AccessStoreSchema.date */
           , "date"
-          /* date */
+          /* AccessStoreSchema.date */
           );
         }
 
@@ -4662,9 +4615,9 @@ class AccessStore {
 
       verify(db) {
         return db.objectStoreNames.contains(exports.name) && db.transaction(exports.name).objectStore(exports.name).indexNames.contains("key"
-        /* key */
+        /* AccessStoreSchema.key */
         ) && db.transaction(exports.name).objectStore(exports.name).indexNames.contains("date"
-        /* date */
+        /* AccessStoreSchema.date */
         );
       },
 
@@ -4681,7 +4634,7 @@ class AccessStore {
       timeout && (0, timer_1.setTimer)(timeout, () => done = !void reject(new Error('Timeout.')));
       const keys = [];
       void this.store.cursor(null, "date"
-      /* date */
+      /* AccessStoreSchema.date */
       , 'prev', 'readonly', [], (error, cursor) => {
         if (done) return;
         if (error) return void reject(error);
@@ -4715,19 +4668,21 @@ exports.AccessStore = AccessStore;
 
 class AccessRecord {
   constructor(key, active) {
-    this.active = active;
-    this[_a] = global_1.Date.now();
+    this.active = active; // Bug: TypeScript
+
+    this[_a] = '';
+    this[_b] = global_1.Date.now();
     this["key"
-    /* key */
+    /* AccessStoreSchema.key */
     ] = key;
   }
 
 }
 
-"key"
-/* key */
-, _a = "date"
-/* date */
+_a = "key"
+/* AccessStoreSchema.key */
+, _b = "date"
+/* AccessStoreSchema.date */
 ;
 
 /***/ }),
@@ -4773,6 +4728,8 @@ exports.DataStore = DataStore;
 
 
 
+var _a, _b;
+
 Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
@@ -4796,7 +4753,7 @@ class ExpiryStore {
     this.listen = listen;
     this.name = name;
     this.store = new class extends store_1.KeyValueStore {}(name, "key"
-    /* key */
+    /* ExpiryStoreSchema.key */
     , this.listen);
 
     this.schedule = (() => {
@@ -4822,7 +4779,7 @@ class ExpiryStore {
           schedule = 0;
           this.chan.lock = true;
           return void this.store.getAll(null, limit, "expiry"
-          /* expiry */
+          /* ExpiryStoreSchema.expiry */
           , 'readonly', [], (error, cursor, tx) => {
             if (!cursor && !tx) return;
             this.chan.lock = false;
@@ -4855,30 +4812,30 @@ class ExpiryStore {
       make(tx) {
         const store = tx.db.objectStoreNames.contains(name) ? tx.objectStore(name) : tx.db.createObjectStore(name, {
           keyPath: "key"
-          /* key */
+          /* ExpiryStoreSchema.key */
           ,
           autoIncrement: false
         });
 
         if (!store.indexNames.contains("key"
-        /* key */
+        /* ExpiryStoreSchema.key */
         )) {
           store.createIndex("key"
-          /* key */
+          /* ExpiryStoreSchema.key */
           , "key"
-          /* key */
+          /* ExpiryStoreSchema.key */
           , {
             unique: true
           });
         }
 
         if (!store.indexNames.contains("expiry"
-        /* expiry */
+        /* ExpiryStoreSchema.expiry */
         )) {
           store.createIndex("expiry"
-          /* expiry */
+          /* ExpiryStoreSchema.expiry */
           , "expiry"
-          /* expiry */
+          /* ExpiryStoreSchema.expiry */
           );
         }
 
@@ -4887,9 +4844,9 @@ class ExpiryStore {
 
       verify(db) {
         return db.objectStoreNames.contains(name) && db.transaction(name).objectStore(name).indexNames.contains("key"
-        /* key */
+        /* ExpiryStoreSchema.key */
         ) && db.transaction(name).objectStore(name).indexNames.contains("expiry"
-        /* expiry */
+        /* ExpiryStoreSchema.expiry */
         );
       },
 
@@ -4920,20 +4877,24 @@ exports.ExpiryStore = ExpiryStore;
 
 class ExpiryRecord {
   constructor(key, expiry) {
+    // Bug: TypeScript
+    this[_a] = ''; // Bug: TypeScript
+
+    this[_b] = 0;
     this["key"
-    /* key */
+    /* ExpiryStoreSchema.key */
     ] = key;
     this["expiry"
-    /* expiry */
+    /* ExpiryStoreSchema.expiry */
     ] = expiry;
   }
 
 }
 
-"key"
-/* key */
-, "expiry"
-/* expiry */
+_a = "key"
+/* ExpiryStoreSchema.key */
+, _b = "expiry"
+/* ExpiryStoreSchema.expiry */
 ;
 
 /***/ }),
@@ -4948,7 +4909,7 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.StoreChannel = void 0;
 
-const alias_1 = __webpack_require__(5406);
+const global_1 = __webpack_require__(4128);
 
 const api_1 = __webpack_require__(903);
 
@@ -4979,7 +4940,7 @@ class StoreChannel extends channel_1.ChannelStore {
       const source = this.sources.get(key);
       const memory = this.get(key);
       const link = this.link$(key);
-      const props = prop === '' ? (0, alias_1.ObjectKeys)(memory) : prop in memory ? [prop] : [];
+      const props = prop === '' ? global_1.Object.keys(memory) : prop in memory ? [prop] : [];
       const changes = props.map(prop => {
         const newValue = memory[prop];
         const oldValue = source[prop];
@@ -5026,7 +4987,7 @@ class StoreChannel extends channel_1.ChannelStore {
     if (this.links.has(key)) return this.links.get(key);
     const source = this.get(key);
     this.sources.set(key, source);
-    this.links.set(key, (0, api_1.build)((0, alias_1.ObjectDefineProperties)(source, {
+    this.links.set(key, (0, api_1.build)(global_1.Object.defineProperties(source, {
       [StoreChannel.Value.meta]: {
         get: () => this.meta(key)
       },
@@ -5356,7 +5317,7 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.StorageChannel = void 0;
 
-const alias_1 = __webpack_require__(5406);
+const global_1 = __webpack_require__(4128);
 
 const api_1 = __webpack_require__(903);
 
@@ -5397,7 +5358,7 @@ class StorageChannel {
       const memory = parse(newValue);
       const link = this.$link;
       if (!source || !link) return;
-      void (0, alias_1.ObjectEntries)(memory).filter(api_1.isValidProperty).forEach(([prop]) => {
+      void global_1.Object.entries(memory).filter(api_1.isValidProperty).forEach(([prop]) => {
         const newValue = memory[prop];
         const oldValue = source[prop];
         if ((0, compare_1.equal)(newValue, oldValue)) return;
@@ -5429,7 +5390,7 @@ class StorageChannel {
     };
     this.$link = (0, api_1.build)(source, this.config.schema(), (prop, newValue, oldValue) => {
       if (!this.alive || this.source !== source) return;
-      this.storage.setItem(this.name, JSON.stringify((0, alias_1.ObjectFromEntries)((0, alias_1.ObjectEntries)(source).filter(api_1.isValidProperty))));
+      this.storage.setItem(this.name, JSON.stringify(global_1.Object.fromEntries(global_1.Object.entries(source).filter(api_1.isValidProperty))));
       const event = new StorageChannel.Event(StorageChannel.EventType.send, prop, newValue, oldValue);
       this.events.send.emit([event.prop], event);
       source[StorageChannel.Value.event].emit([event.type, event.prop], event);
@@ -5645,7 +5606,7 @@ const function_1 = __webpack_require__(6288);
 
 function open(database, config) {
   operate(database, "open"
-  /* open */
+  /* Command.open */
   , config);
   return (success, failure) => void request(database, success, failure);
 }
@@ -5655,7 +5616,7 @@ exports.listen_ = request;
 
 function close(database) {
   return void operate(database, "close"
-  /* close */
+  /* Command.close */
   , {
     make() {
       return false;
@@ -5676,7 +5637,7 @@ exports.close = close;
 
 function destroy(database) {
   return void operate(database, "destroy"
-  /* destroy */
+  /* Command.destroy */
   , {
     make() {
       return false;
@@ -5697,17 +5658,17 @@ exports.destroy = destroy;
 
 function operate(database, command, config) {
   if (state_1.commands.get(database) === "destroy"
-  /* destroy */
+  /* Command.destroy */
   ) {
     switch (command) {
       case "open"
-      /* open */
+      /* Command.open */
       :
       case "close"
-      /* close */
+      /* Command.close */
       :
         return void event_1.idbEventStream.once([database, "destroy"
-        /* destroy */
+        /* IDBEventType.destroy */
         ], () => void operate(database, command, config));
     }
   }
@@ -5953,10 +5914,10 @@ class EndState extends State {
   complete() {
     switch (this.command) {
       case "close"
-      /* close */
+      /* Command.close */
       :
       case "destroy"
-      /* destroy */
+      /* Command.destroy */
       :
         exports.requests.get(this.database)?.clear();
         exports.commands.delete(this.database);
@@ -6039,9 +6000,9 @@ function handleBlockedState(state) {
   session.onerror = event => void handleErrorState(new state_1.ErrorState(state, session.error, event));
 
   event_1.idbEventStream$.emit([database, "block"
-  /* block */
+  /* IDBEventType.block */
   ], new event_1.IDBEvent(database, "block"
-  /* block */
+  /* IDBEventType.block */
   ));
 }
 
@@ -6079,9 +6040,9 @@ function handleSuccessState(state) {
     const curr = new state_1.EndState(state);
     connection.close();
     event_1.idbEventStream$.emit([database, "destroy"
-    /* destroy */
+    /* IDBEventType.destroy */
     ], new event_1.IDBEvent(database, "destroy"
-    /* destroy */
+    /* IDBEventType.destroy */
     ));
     handleEndState(curr);
   };
@@ -6094,7 +6055,7 @@ function handleSuccessState(state) {
 
   switch (state.command) {
     case "open"
-    /* open */
+    /* Command.open */
     :
       {
         VALIDATION: try {
@@ -6107,9 +6068,9 @@ function handleSuccessState(state) {
         }
 
         event_1.idbEventStream$.emit([database, "connect"
-        /* connect */
+        /* IDBEventType.connect */
         ], new event_1.IDBEvent(database, "connect"
-        /* connect */
+        /* IDBEventType.connect */
         ));
 
         try {
@@ -6137,7 +6098,7 @@ function handleSuccessState(state) {
       }
 
     case "close"
-    /* close */
+    /* Command.close */
     :
       {
         const curr = new state_1.EndState(state);
@@ -6146,7 +6107,7 @@ function handleSuccessState(state) {
       }
 
     case "destroy"
-    /* destroy */
+    /* Command.destroy */
     :
       {
         const curr = new state_1.DestroyState(state);
@@ -6166,9 +6127,9 @@ function handleErrorState(state) {
   } = state;
   event.preventDefault();
   event_1.idbEventStream$.emit([database, "error"
-  /* error */
+  /* IDBEventType.error */
   ], new event_1.IDBEvent(database, "error"
-  /* error */
+  /* IDBEventType.error */
   ));
 
   if (config.destroy(error, event)) {
@@ -6186,9 +6147,9 @@ function handleAbortState(state) {
   } = state;
   event.preventDefault();
   event_1.idbEventStream$.emit([database, "abort"
-  /* abort */
+  /* IDBEventType.abort */
   ], new event_1.IDBEvent(database, "abort"
-  /* abort */
+  /* IDBEventType.abort */
   ));
   return void handleEndState(new state_1.EndState(state));
 }
@@ -6201,9 +6162,9 @@ function handleCrashState(state) {
     config
   } = state;
   event_1.idbEventStream$.emit([database, "crash"
-  /* crash */
+  /* IDBEventType.crash */
   ], new event_1.IDBEvent(database, "crash"
-  /* crash */
+  /* IDBEventType.crash */
   ));
 
   if (config.destroy(reason)) {
@@ -6222,9 +6183,9 @@ function handleDestroyState(state) {
   const deleteRequest = global_1.indexedDB.deleteDatabase(database);
 
   deleteRequest.onsuccess = () => (void event_1.idbEventStream$.emit([database, "destroy"
-  /* destroy */
+  /* IDBEventType.destroy */
   ], new event_1.IDBEvent(database, "destroy"
-  /* destroy */
+  /* IDBEventType.destroy */
   )), void handleEndState(new state_1.EndState(state)));
 
   deleteRequest.onerror = event => void handleErrorState(new state_1.ErrorState(state, deleteRequest.error, event));
@@ -6239,23 +6200,23 @@ function handleEndState(state) {
   } = state;
   state.complete();
   event_1.idbEventStream$.emit([database, "disconnect"
-  /* disconnect */
+  /* IDBEventType.disconnect */
   ], new event_1.IDBEvent(database, "disconnect"
-  /* disconnect */
+  /* IDBEventType.disconnect */
   ));
   if (!state_1.isIDBAvailable || !(0, api_1.verifyStorageAccess)()) return;
 
   switch (command) {
     case "open"
-    /* open */
+    /* Command.open */
     :
       return void handleInitialState(new state_1.InitialState(database, version));
 
     case "close"
-    /* close */
+    /* Command.close */
     :
     case "destroy"
-    /* destroy */
+    /* Command.destroy */
     :
       return;
   }
