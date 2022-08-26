@@ -57,9 +57,9 @@ __exportStar(__webpack_require__(4279), exports);
 Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
-exports.ObjectSetPrototypeOf = exports.ObjectGetPrototypeOf = exports.ObjectCreate = exports.ObjectAssign = exports.toString = exports.isEnumerable = exports.isPrototypeOf = exports.hasOwnProperty = exports.isArray = exports.sign = exports.round = exports.random = exports.min = exports.max = exports.floor = exports.ceil = exports.abs = exports.parseInt = exports.parseFloat = exports.isSafeInteger = exports.isNaN = exports.isInteger = exports.isFinite = exports[NaN] = void 0;
+exports.ObjectSetPrototypeOf = exports.ObjectGetPrototypeOf = exports.ObjectCreate = exports.ObjectAssign = exports.toString = exports.isEnumerable = exports.isPrototypeOf = exports.hasOwnProperty = exports.isArray = exports.sqrt = exports.log = exports.tan = exports.cos = exports.sign = exports.round = exports.random = exports.min = exports.max = exports.floor = exports.ceil = exports.abs = exports.parseInt = exports.parseFloat = exports.isSafeInteger = exports.isNaN = exports.isInteger = exports.isFinite = exports[NaN] = void 0;
 exports[NaN] = Number.NaN, exports.isFinite = Number.isFinite, exports.isInteger = Number.isInteger, exports.isNaN = Number.isNaN, exports.isSafeInteger = Number.isSafeInteger, exports.parseFloat = Number.parseFloat, exports.parseInt = Number.parseInt;
-exports.abs = Math.abs, exports.ceil = Math.ceil, exports.floor = Math.floor, exports.max = Math.max, exports.min = Math.min, exports.random = Math.random, exports.round = Math.round, exports.sign = Math.sign;
+exports.abs = Math.abs, exports.ceil = Math.ceil, exports.floor = Math.floor, exports.max = Math.max, exports.min = Math.min, exports.random = Math.random, exports.round = Math.round, exports.sign = Math.sign, exports.cos = Math.cos, exports.tan = Math.tan, exports.log = Math.log, exports.sqrt = Math.sqrt;
 exports.isArray = Array.isArray;
 exports.hasOwnProperty = Object.prototype.hasOwnProperty.call.bind(Object.prototype.hasOwnProperty);
 exports.isPrototypeOf = Object.prototype.isPrototypeOf.call.bind(Object.prototype.isPrototypeOf);
@@ -579,7 +579,7 @@ exports.equal = equal;
 /***/ }),
 
 /***/ 302:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+/***/ ((__unused_webpack_module, exports) => {
 
 
 
@@ -588,10 +588,8 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.concat = void 0;
 
-const alias_1 = __webpack_require__(5406);
-
 function concat(target, source) {
-  if ((0, alias_1.isArray)(source)) {
+  if ('length' in source) {
     for (let i = 0; i < source.length; ++i) {
       target.push(source[i]);
     }
@@ -700,7 +698,7 @@ exports.causeAsyncException = causeAsyncException;
 Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
-exports.noop = exports.id = exports.clear = exports.singleton = void 0;
+exports.noop = exports.fix = exports.id = exports.clear = exports.singleton = void 0;
 
 function singleton(f) {
   let result;
@@ -723,7 +721,16 @@ function id(a) {
   return a;
 }
 
-exports.id = id; // @ts-ignore
+exports.id = id;
+
+function fix(f) {
+  return a1 => {
+    const a2 = f(a1);
+    return a1 === a2 || a2 !== a2 ? a2 : f(a2);
+  };
+}
+
+exports.fix = fix; // @ts-ignore
 
 function noop() {}
 
@@ -892,8 +899,6 @@ exports.List = void 0;
 
 const global_1 = __webpack_require__(4128);
 
-const alias_1 = __webpack_require__(5406);
-
 const stack_1 = __webpack_require__(5352);
 
 const compare_1 = __webpack_require__(5529); // Circular indexed list
@@ -916,7 +921,7 @@ class List {
 
     this.capacity = capacity;
     this.index = index;
-    this.nodes = this.capacity <= BORDER ? (0, global_1.Array)((0, alias_1.min)(this.capacity, BORDER)) : {};
+    this.nodes = this.capacity <= BORDER ? (0, global_1.Array)(this.capacity) : {};
   }
 
   get length() {
@@ -937,8 +942,18 @@ class List {
     return head && this.nodes[head.prev];
   }
 
+  next(index) {
+    const node = this.node(index);
+    return node && this.nodes[node.next];
+  }
+
+  prev(index) {
+    const node = this.node(index);
+    return node && this.nodes[node.prev];
+  }
+
   node(index) {
-    return 0 <= index && index < this.capacity ? this.nodes[index] : undefined;
+    return this.nodes[index];
   }
 
   rotateToNext() {
@@ -950,7 +965,7 @@ class List {
   }
 
   clear() {
-    this.nodes = this.capacity <= BORDER ? (0, global_1.Array)((0, alias_1.min)(this.capacity, BORDER)) : {};
+    this.nodes = this.capacity <= BORDER ? (0, global_1.Array)(this.capacity) : {};
     this.heap.clear();
     this.index?.clear();
     this.HEAD = 0;
@@ -968,7 +983,7 @@ class List {
     const head = nodes[this.HEAD]; //assert(this.length === 0 ? !head : head);
 
     if (!head) {
-      const index = this.HEAD = this.CURSOR = this.heap.length > 0 ? this.heap.pop() : this.length;
+      const index = this.HEAD = this.CURSOR = this.heap.length === 0 ? this.length : this.heap.pop();
       ++this.LENGTH;
       this.index?.set(key, index);
       nodes[index] = {
@@ -984,7 +999,7 @@ class List {
 
 
     if (this.length !== this.capacity) {
-      const index = this.HEAD = this.CURSOR = this.heap.length > 0 ? this.heap.pop() : this.length; //assert(!nodes[index]);
+      const index = this.HEAD = this.CURSOR = this.heap.length === 0 ? this.length : this.heap.pop(); //assert(!nodes[index]);
 
       ++this.LENGTH;
       this.index?.set(key, index);
@@ -1219,7 +1234,7 @@ class List {
     const nodes = this.nodes;
 
     for (let node = nodes[this.HEAD]; node;) {
-      yield [node.key, node.value];
+      yield [node.key, node.value, node.index];
       node = nodes[node.next];
       if (node?.index === this.HEAD) return;
     }
@@ -2698,9 +2713,11 @@ exports.Stack = Stack;
 Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
-exports.debounce = exports.throttle = void 0;
+exports.cothrottle = exports.debounce = exports.throttle = void 0;
 
 const global_1 = __webpack_require__(4128);
+
+const clock_1 = __webpack_require__(7681);
 
 const exception_1 = __webpack_require__(7822);
 
@@ -2772,6 +2789,23 @@ function debounce(delay, callback, capacity = 1) {
 }
 
 exports.debounce = debounce;
+
+function cothrottle(routine, resource, scheduler) {
+  return async function* () {
+    let start = Date.now();
+
+    for await (const value of routine()) {
+      if (resource - ((0, clock_1.now)() - start) > 0) {
+        yield value;
+      } else {
+        await scheduler();
+        start = (0, clock_1.now)();
+      }
+    }
+  };
+}
+
+exports.cothrottle = cothrottle;
 
 /***/ }),
 
