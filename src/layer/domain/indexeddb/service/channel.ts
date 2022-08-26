@@ -29,7 +29,7 @@ export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChan
       const link = this.link$(key);
       assert(memory instanceof Object === false);
       const props = prop === ''
-        ? Object.keys(memory) as Prop<M[K<M>]>[]
+        ? Object.keys(memory as object) as Prop<M[K<M>]>[]
         : prop in memory ? [prop] : [];
       const changes = props
         .map(prop => {
