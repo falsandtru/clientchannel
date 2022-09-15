@@ -1,6 +1,6 @@
 {
   "name": "clientchannel",
-  "version": "0.37.1",
+  "version": "0.37.2",
   "description": "Persist objects and sync them between tabs via IndexedDB or LocalStorage.",
   "private": true,
   "homepage": "https://github.com/falsandtru/clientchannel",
