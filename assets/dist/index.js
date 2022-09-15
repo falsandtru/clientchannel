@@ -84,6 +84,8 @@ exports.splice = exports.pop = exports.push = exports.shift = exports.unshift = 
 
 const global_1 = __webpack_require__(4128);
 
+const undefined = void 0;
+
 function indexOf(as, a) {
   if (as.length === 0) return -1;
   return a === a ? as.indexOf(a) : as.findIndex(a => a !== a);
@@ -93,7 +95,10 @@ exports.indexOf = indexOf;
 
 function unshift(as, bs) {
   if ('length' in as) {
-    for (let i = as.length - 1; i >= 0; --i) {
+    if (as.length === 1) return bs.unshift(as[0]), bs;
+    if (global_1.Symbol.iterator in as) return bs.unshift(...as), bs;
+
+    for (let i = as.length; i--;) {
       bs.unshift(as[i]);
     }
   } else {
@@ -107,14 +112,17 @@ exports.unshift = unshift;
 
 function shift(as, count) {
   if (count < 0) throw new Error('Unexpected negative number');
-  return count === void 0 ? [as.shift(), as] : [splice(as, 0, count), as];
+  return count === undefined ? [as.shift(), as] : [splice(as, 0, count), as];
 }
 
 exports.shift = shift;
 
 function push(as, bs) {
   if ('length' in bs) {
-    for (let i = 0, len = bs.length; i < len; ++i) {
+    if (bs.length === 1) return as.push(bs[0]), as;
+    if (global_1.Symbol.iterator in bs && bs.length > 50) return as.push(...bs), as;
+
+    for (let len = bs.length, i = 0; i < len; ++i) {
       as.push(bs[i]);
     }
   } else {
@@ -130,50 +138,60 @@ exports.push = push;
 
 function pop(as, count) {
   if (count < 0) throw new Error('Unexpected negative number');
-  return count === void 0 ? [as, as.pop()] : [as, splice(as, as.length - count, count)];
+  return count === undefined ? [as, as.pop()] : [as, splice(as, as.length - count, count)];
 }
 
 exports.pop = pop;
 
-function splice(as, index, count, ...inserts) {
-  if (count === 0 && inserts.length === 0) return [];
+function splice(as, index, count, ...values) {
+  if (as.length === 0) return push(as, values), [];
+
+  if (index > as.length) {
+    index = as.length;
+  } else if (index < 0) {
+    index = -index > as.length ? 0 : as.length + index;
+  }
+
   count = count > as.length ? as.length : count;
+  if (count === 0 && values.length === 0) return [];
+  if (count === 1 && values.length === 1) return [[as[index], as[index] = values[0]][0]];
 
   switch (index) {
     case 0:
-      switch (count) {
-        case 0:
-          return [[], unshift(inserts, as)][0];
-
-        case 1:
-          return as.length === 0 ? [[], unshift(inserts, as)][0] : [[as.shift()], unshift(inserts, as)][0];
-
-        case void 0:
-          if (as.length > 1 || arguments.length > 2) break;
-          return as.length === 0 ? [] : splice(as, index, 1);
-      }
-
+      if (count === 0) return unshift(values, as), [];
+      if (count === 1) return [[as.shift()], unshift(values, as)][0];
       break;
 
-    case -1:
     case as.length - 1:
-      switch (count) {
-        case 1:
-          return as.length === 0 ? [[], push(as, inserts)][0] : [[as.pop()], push(as, inserts)][0];
-
-        case void 0:
-          if (as.length > 1 || arguments.length > 2) break;
-          return as.length === 0 ? [] : splice(as, index, 1);
-      }
-
+      if (count === 1) return [[as.pop()], push(as, values)][0];
       break;
 
     case as.length:
-    case global_1.Infinity:
-      return [[], push(as, inserts)][0];
+      return push(as, values), [];
   }
 
-  return arguments.length > 2 ? as.splice(index, count, ...inserts) : as.splice(index);
+  switch (values.length) {
+    case 0:
+      return arguments.length > 2 ? as.splice(index, count) : as.splice(index);
+
+    case 1:
+      return as.splice(index, count, values[0]);
+
+    case 2:
+      return as.splice(index, count, values[0], values[1]);
+
+    case 3:
+      return as.splice(index, count, values[0], values[1], values[2]);
+
+    case 4:
+      return as.splice(index, count, values[0], values[1], values[2], values[3]);
+
+    case 5:
+      return as.splice(index, count, values[0], values[1], values[2], values[3], values[4]);
+
+    default:
+      return as.splice(index, count, ...values);
+  }
 }
 
 exports.splice = splice;
@@ -361,11 +379,10 @@ const function_1 = __webpack_require__(6288);
 const internal = Symbol.for('spica/cancellation::internal');
 
 class Cancellation {
-  constructor(cancellees = []) {
+  constructor(cancellees) {
     this[_a] = 'Cancellation';
     this[_b] = new Internal();
-
-    for (const cancellee of cancellees) {
+    if (cancellees) for (const cancellee of cancellees) {
       cancellee.register(this.cancel);
     }
   }
@@ -504,58 +521,56 @@ class Internal {
 Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
-exports.tick = exports.clock = exports.now = void 0;
+exports.tick = exports.promise = exports.clock = exports.now = void 0;
 
 const global_1 = __webpack_require__(4128);
 
-const alias_1 = __webpack_require__(5406);
+const queue_1 = __webpack_require__(4934);
 
 const exception_1 = __webpack_require__(7822);
 
-let mem;
+const undefined = void 0;
+let time;
 let count = 0;
 
-function now(nocache = false) {
-  if (mem === void 0) {
-    tick(() => mem = void 0);
-  } else if (!nocache && ++count !== 100) {
-    return mem;
+function now(nocache) {
+  if (time === undefined) {
+    tick(() => time = undefined);
+  } else if (!nocache && count++ !== 20) {
+    return time;
   }
 
-  count = 0;
-  return mem = global_1.Date.now();
+  count = 1;
+  return time = global_1.Date.now();
 }
 
 exports.now = now;
-exports.clock = Promise.resolve(void 0);
-let queue = [];
-let jobs = [];
-let index = 0;
-const scheduler = Promise.resolve();
+exports.clock = global_1.Promise.resolve(undefined);
+
+function promise(cb) {
+  global_1.Promise.resolve().then(cb);
+}
+
+exports.promise = promise;
+const queue = new queue_1.Queue();
+const scheduler = global_1.Promise.resolve();
 
 function tick(cb) {
-  index === 0 && scheduler.then(run);
-  index++ === queue.length ? queue.push(cb) : queue[index - 1] = cb;
+  queue.isEmpty() && scheduler.then(run);
+  queue.push(cb);
 }
 
 exports.tick = tick;
 
 function run() {
-  const count = index;
-  [index, queue, jobs] = [0, jobs, queue];
-
-  for (let i = 0; i < count; ++i) {
+  for (let count = queue.length; count--;) {
     try {
-      (void 0, jobs[i])(); // Release the reference.
-
-      jobs[i] = void 0;
+      // @ts-expect-error
+      (0, queue.pop())();
     } catch (reason) {
       (0, exception_1.causeAsyncException)(reason);
     }
-  } // Gradually reduce the unused buffer space.
-
-
-  jobs.length > 1000 && count < jobs.length * 0.5 && jobs.splice((0, alias_1.floor)(jobs.length * 0.9), jobs.length);
+  }
 }
 
 /***/ }),
@@ -851,7 +866,275 @@ var global = (/* unused pure expression or super */ null && (globalThis));
 
 /***/ }),
 
-/***/ 5704:
+/***/ 818:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+
+Object.defineProperty(exports, "__esModule", ({
+  value: true
+}));
+exports.MultiHeap = exports.Heap = void 0;
+
+const global_1 = __webpack_require__(4128);
+
+const invlist_1 = __webpack_require__(7452);
+
+const memoize_1 = __webpack_require__(1808);
+
+const undefined = void 0;
+let size = 16;
+
+class Heap {
+  constructor(cmp = Heap.max, stable = false) {
+    this.cmp = cmp;
+    this.stable = stable;
+    this.array = (0, global_1.Array)(size);
+    this.$length = 0;
+  }
+
+  get length() {
+    return this.$length;
+  }
+
+  isEmpty() {
+    return this.array[0] !== undefined;
+  }
+
+  peek() {
+    return this.array[0]?.[1];
+  }
+
+  insert(value, order) {
+    if (arguments.length < 2) {
+      order = value;
+    }
+
+    const array = this.array;
+    const node = array[this.$length] = [order, value, this.$length++];
+    upHeapify(this.cmp, array, this.$length);
+    return node;
+  }
+
+  replace(value, order) {
+    if (arguments.length < 2) {
+      order = value;
+    }
+
+    if (this.$length === 0) return void this.insert(value, order);
+    const array = this.array;
+    const replaced = array[0][1];
+    array[0] = [order, value, 0];
+    downHeapify(this.cmp, array, 1, this.$length, this.stable);
+    return replaced;
+  }
+
+  extract() {
+    if (this.$length === 0) return;
+    const node = this.array[0];
+    this.delete(node);
+    return node[1];
+  }
+
+  delete(node) {
+    const array = this.array;
+    const index = node[2];
+    if (array[index] !== node) throw new Error('Invalid node');
+    swap(array, index, --this.$length); // @ts-expect-error
+
+    array[this.$length] = undefined;
+    index < this.$length && sort(this.cmp, array, index, this.$length, this.stable);
+    return node[1];
+  }
+
+  update(node, order, value) {
+    if (arguments.length < 2) {
+      order = node[0];
+    }
+
+    const array = this.array;
+    if (array[node[2]] !== node) throw new Error('Invalid node');
+
+    if (arguments.length > 2) {
+      node[1] = value;
+    }
+
+    if (this.cmp(node[0], node[0] = order) === 0) return;
+    sort(this.cmp, array, node[2], this.$length, this.stable);
+  }
+
+  find(order) {
+    return this.array.find(node => node && node[0] === order);
+  }
+
+  clear() {
+    this.array = (0, global_1.Array)(size);
+    this.$length = 0;
+  }
+
+}
+
+exports.Heap = Heap;
+
+Heap.max = (a, b) => a > b ? -1 : a < b ? 1 : 0;
+
+Heap.min = (a, b) => a > b ? 1 : a < b ? -1 : 0;
+
+class MultiHeap {
+  constructor(cmp = MultiHeap.max, clean = true) {
+    this.cmp = cmp;
+    this.clean = clean;
+    this.heap = new Heap(this.cmp);
+    this.dict = new global_1.Map();
+    this.list = (0, memoize_1.memoize)(order => {
+      const list = new invlist_1.List();
+      list[MultiHeap.order] = order;
+      list[MultiHeap.heap] = this.heap.insert(list, order);
+      return list;
+    }, this.dict);
+    this.$length = 0;
+  }
+
+  get length() {
+    return this.$length;
+  }
+
+  isEmpty() {
+    return this.heap.isEmpty();
+  }
+
+  peek() {
+    return this.heap.peek()?.head.value;
+  }
+
+  insert(value, order) {
+    if (arguments.length < 2) {
+      order = value;
+    }
+
+    ++this.$length;
+    return this.list(order).push(value);
+  }
+
+  extract() {
+    if (this.$length === 0) return;
+    --this.$length;
+    const list = this.heap.peek();
+    const value = list.shift();
+
+    if (list.length === 0) {
+      this.heap.extract();
+      this.clean && this.dict.delete(list[MultiHeap.order]);
+    }
+
+    return value;
+  }
+
+  delete(node) {
+    const list = node.list;
+    if (!list) throw new Error('Invalid node');
+    --this.$length;
+
+    if (list.length === 1) {
+      this.heap.delete(list[MultiHeap.heap]);
+      this.clean && this.dict.delete(list[MultiHeap.order]);
+    }
+
+    return node.delete();
+  }
+
+  update(node, order, value) {
+    const list = node.list;
+    if (!list) throw new Error('Invalid node');
+
+    if (arguments.length < 2) {
+      order = list[MultiHeap.order];
+    }
+
+    if (arguments.length > 2) {
+      node.value = value;
+    }
+
+    if (this.cmp(list[MultiHeap.order], order) === 0) return node;
+    this.delete(node);
+    return this.insert(node.value, order);
+  }
+
+  find(order) {
+    return this.dict.get(order);
+  }
+
+  clear() {
+    this.heap.clear();
+    this.dict.clear();
+    this.$length = 0;
+  }
+
+}
+
+exports.MultiHeap = MultiHeap;
+MultiHeap.order = Symbol('order');
+MultiHeap.heap = Symbol('heap');
+MultiHeap.max = Heap.max;
+MultiHeap.min = Heap.min;
+
+function sort(cmp, array, index, length, stable) {
+  return upHeapify(cmp, array, index + 1) || downHeapify(cmp, array, index + 1, length, stable);
+}
+
+function upHeapify(cmp, array, index) {
+  const order = array[index - 1][0];
+  let changed = false;
+
+  while (index > 1) {
+    const parent = index / 2 | 0;
+    if (cmp(array[parent - 1][0], order) <= 0) break;
+    swap(array, index - 1, parent - 1);
+    index = parent;
+    changed ||= true;
+  }
+
+  return changed;
+}
+
+function downHeapify(cmp, array, index, length, stable) {
+  let changed = false;
+
+  while (index < length) {
+    const left = index * 2;
+    const right = index * 2 + 1;
+    let min = index;
+
+    if (left <= length && (stable ? cmp(array[left - 1][0], array[min - 1][0]) <= 0 : cmp(array[left - 1][0], array[min - 1][0]) < 0)) {
+      min = left;
+    }
+
+    if (right <= length && (stable ? cmp(array[right - 1][0], array[min - 1][0]) <= 0 : cmp(array[right - 1][0], array[min - 1][0]) < 0)) {
+      min = right;
+    }
+
+    if (min === index) break;
+    swap(array, index - 1, min - 1);
+    index = min;
+    changed ||= true;
+  }
+
+  return changed;
+}
+
+function swap(array, index1, index2) {
+  if (index1 === index2) return;
+  const node1 = array[index1];
+  const node2 = array[index2];
+  node1[2] = index2;
+  node2[2] = index1;
+  array[index1] = node2;
+  array[index2] = node1;
+}
+
+/***/ }),
+
+/***/ 7452:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -883,366 +1166,243 @@ Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
 
-__exportStar(__webpack_require__(3766), exports);
+__exportStar(__webpack_require__(2310), exports);
 
 /***/ }),
 
-/***/ 3766:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+/***/ 2310:
+/***/ ((__unused_webpack_module, exports) => {
 
-
+ // Circular Inverse List
 
 Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
 exports.List = void 0;
-
-const global_1 = __webpack_require__(4128);
-
-const stack_1 = __webpack_require__(5352);
-
-const compare_1 = __webpack_require__(5529); // Circular indexed list
-
-
 const undefined = void 0;
-const BORDER = 1000000000;
 
 class List {
-  constructor(capacity = global_1.Infinity, index) {
-    this.heap = new stack_1.Stack();
-    this.HEAD = 0;
-    this.CURSOR = 0;
-    this.LENGTH = 0;
-
-    if (typeof capacity === 'object') {
-      index = capacity;
-      capacity = global_1.Infinity;
-    }
-
-    this.capacity = capacity;
-    this.index = index;
-    this.nodes = this.capacity <= BORDER ? (0, global_1.Array)(this.capacity) : {};
+  constructor() {
+    this.$length = 0;
+    this.head = undefined;
   }
 
   get length() {
-    return this.LENGTH;
-  }
-
-  get head() {
-    return this.nodes[this.HEAD];
+    return this.$length;
   }
 
   get tail() {
-    const head = this.head;
-    return head && this.nodes[head.next];
+    return this.head?.next;
   }
 
   get last() {
-    const head = this.head;
-    return head && this.nodes[head.prev];
-  }
-
-  next(index) {
-    const node = this.node(index);
-    return node && this.nodes[node.next];
-  }
-
-  prev(index) {
-    const node = this.node(index);
-    return node && this.nodes[node.prev];
-  }
-
-  node(index) {
-    return this.nodes[index];
-  }
-
-  rotateToNext() {
-    return this.HEAD = this.tail?.index ?? this.HEAD;
-  }
-
-  rotateToPrev() {
-    return this.HEAD = this.last?.index ?? this.HEAD;
+    return this.head?.prev;
   }
 
   clear() {
-    this.nodes = this.capacity <= BORDER ? (0, global_1.Array)(this.capacity) : {};
-    this.heap.clear();
-    this.index?.clear();
-    this.HEAD = 0;
-    this.CURSOR = 0;
-    this.LENGTH = 0;
+    this.head = undefined;
+    this.$length = 0;
   }
 
-  add(key, value) {
-    if (this.LENGTH === BORDER && 'length' in this.nodes) {
-      this.nodes = { ...this.nodes
-      };
-    }
-
-    const nodes = this.nodes;
-    const head = nodes[this.HEAD]; //assert(this.length === 0 ? !head : head);
-
-    if (!head) {
-      const index = this.HEAD = this.CURSOR = this.heap.length === 0 ? this.length : this.heap.pop();
-      ++this.LENGTH;
-      this.index?.set(key, index);
-      nodes[index] = {
-        index,
-        key,
-        value,
-        next: index,
-        prev: index
-      };
-      //assert(this.length > 10 || [...this].length === this.length);
-      return index;
-    } //assert(head);
-
-
-    if (this.length !== this.capacity) {
-      const index = this.HEAD = this.CURSOR = this.heap.length === 0 ? this.length : this.heap.pop(); //assert(!nodes[index]);
-
-      ++this.LENGTH;
-      this.index?.set(key, index);
-      nodes[index] = {
-        index,
-        key,
-        value,
-        next: head.index,
-        prev: head.prev
-      };
-      head.prev = nodes[head.prev].next = index; //assert(this.length !== 1 || index === this.nodes[index]!.prev && this.nodes[index]!.prev === this.nodes[index]!.next);
-      //assert(this.length !== 2 || index !== this.nodes[index]!.prev && this.nodes[index]!.prev === this.nodes[index]!.next);
-      //assert(this.length < 3 || index !== this.nodes[index]!.prev && this.nodes[index]!.prev !== this.nodes[index]!.next);
-      //assert(this.length > 10 || [...this].length === this.length);
-
-      return index;
-    } else {
-      const node = nodes[head.prev];
-      const index = this.HEAD = this.CURSOR = node.index; //assert(nodes[index]);
-
-      if (this.index && !(0, compare_1.equal)(node.key, key)) {
-        this.index.delete(node.key, index);
-        this.index.set(key, index);
-      }
-
-      node.key = key;
-      node.value = value; //assert(this.length !== 1 || index === this.nodes[index]!.prev && this.nodes[index]!.prev === this.nodes[index]!.next);
-      //assert(this.length !== 2 || index !== this.nodes[index]!.prev && this.nodes[index]!.prev === this.nodes[index]!.next);
-      //assert(this.length < 3 || index !== this.nodes[index]!.prev && this.nodes[index]!.prev !== this.nodes[index]!.next);
-      //assert(this.length > 10 || [...this].length === this.length);
-
-      return index;
-    }
+  unshift(value) {
+    return this.head = this.push(value);
   }
 
-  put(key, value, index) {
-    const node = this.find(key, index);
-    if (!node) return this.add(key, value);
+  push(value) {
+    return new Node(this, value, this.head, this.head?.prev);
+  }
+
+  unshiftNode(node) {
+    return this.head = this.pushNode(node);
+  }
+
+  pushNode(node) {
+    return this.insert(node, this.head);
+  }
+
+  unshiftRotationally(value) {
+    const node = this.last;
+    if (!node) return this.unshift(value);
     node.value = value;
-    return node.index;
-  }
-
-  find(key, index = this.CURSOR) {
-    let node;
-    node = this.node(index);
-    if (node && (0, compare_1.equal)(node.key, key)) return this.CURSOR = index, node;
-    if (!this.index) throw new Error(`Spica: IxList: Need the index but not given.`);
-    if (node ? this.length === 1 : this.length === 0) return;
-    node = this.node(index = this.index.get(key) ?? -1);
-    if (node) return this.CURSOR = index, node;
-  }
-
-  get(index) {
-    return this.node(index);
-  }
-
-  has(index) {
-    return this.node(index) !== undefined;
-  }
-
-  del(index) {
-    const node = this.node(index);
-    if (!node) return;
-    //assert(this.length !== 1 || node === node.prev && node.prev === node.next);
-    //assert(this.length !== 2 || node !== node.prev && node.prev === node.next);
-    //assert(this.length < 3 || node !== node.prev && node.prev !== node.next);
-    --this.LENGTH;
-    this.heap.push(node.index);
-    this.index?.delete(node.key, node.index);
-    const nodes = this.nodes;
-    nodes[node.prev].next = node.next;
-    nodes[node.next].prev = node.prev;
-
-    if (this.HEAD === node.index) {
-      this.HEAD = node.next;
-    }
-
-    if (this.CURSOR === node.index) {
-      this.CURSOR = node.next;
-    } // @ts-expect-error
-
-
-    nodes[node.index] = undefined; //assert(this.length === 0 ? !this.nodes[this.HEAD] : this.nodes[this.HEAD]);
-    //assert(this.length === 0 ? !this.nodes[this.CURSOR] : this.nodes[this.CURSOR]);
-    //assert(this.length > 10 || [...this].length === this.length);
-
+    this.head = node;
     return node;
   }
 
-  delete(key, index) {
-    return this.del(this.find(key, index)?.index ?? -1);
-  }
-
-  insert(key, value, before) {
-    const head = this.HEAD;
-    this.HEAD = before;
-    const index = this.add(key, value);
-
-    if (this.length !== 1) {
-      this.HEAD = head;
-    }
-
-    return index;
-  }
-
-  unshift(key, value) {
-    return this.add(key, value);
-  }
-
-  unshiftRotationally(key, value) {
-    if (this.length === 0) return this.unshift(key, value);
-    const node = this.last;
-
-    if (this.index && !(0, compare_1.equal)(node.key, key)) {
-      this.index.delete(node.key, node.index);
-      this.index.set(key, node.index);
-    }
-
-    this.HEAD = node.index;
-    this.CURSOR = node.index;
-    node.key = key;
+  pushRotationally(value) {
+    const node = this.head;
+    if (!node) return this.push(value);
     node.value = value;
-    return node.index;
+    this.head = node.next;
+    return node;
   }
 
   shift() {
-    const node = this.head;
-    return node && this.del(node.index);
-  }
-
-  push(key, value) {
-    return this.insert(key, value, this.HEAD);
-  }
-
-  pushRotationally(key, value) {
-    if (this.length === 0) return this.push(key, value);
-    const node = this.head;
-
-    if (this.index && !(0, compare_1.equal)(node.key, key)) {
-      this.index.delete(node.key, node.index);
-      this.index.set(key, node.index);
-    }
-
-    this.HEAD = node.next;
-    this.CURSOR = node.index;
-    node.key = key;
-    node.value = value;
-    return node.index;
+    return this.head?.delete();
   }
 
   pop() {
-    const node = this.last;
-    return node && this.del(node.index);
+    return this.last?.delete();
   }
 
-  replace(index, key, value) {
-    const node = this.node(index);
-    if (!node) return;
+  insert(node, before = this.head) {
+    if (node.list === this) return node.moveTo(before), node;
+    node.delete();
+    ++this.$length;
+    this.head ??= node; // @ts-expect-error
 
-    if (this.index && !(0, compare_1.equal)(node.key, key)) {
-      this.index.delete(node.key, index);
-      this.index.set(key, index);
+    node.list = this;
+    const next = node.next = before ?? node;
+    const prev = node.prev = next.prev ?? node;
+    next.prev = prev.next = node;
+    return node;
+  }
+
+  find(f) {
+    for (let head = this.head, node = head; node;) {
+      if (f(node.value)) return node;
+      node = node.next;
+      if (node === head) break;
+    }
+  }
+
+  toNodes() {
+    const acc = [];
+
+    for (let head = this.head, node = head; node;) {
+      acc.push(node);
+      node = node.next;
+      if (node === head) break;
     }
 
-    const clone = {
-      index: node.index,
-      key: node.key,
-      value: node.value,
-      next: node.next,
-      prev: node.prev
-    };
-    node.key = key;
-    node.value = value;
-    return clone;
+    return acc;
   }
 
-  move(index, before) {
-    if (index === before) return false;
-    const a1 = this.node(index);
-    if (!a1) return false;
-    const b1 = this.node(before);
-    if (!b1) return false;
-    if (a1.next === b1.index) return false;
-    const nodes = this.nodes;
-    const b0 = nodes[b1.prev];
-    const a0 = nodes[a1.prev];
-    const a2 = nodes[a1.next];
-    b0.next = a1.index;
-    a1.next = b1.index;
-    b1.prev = a1.index;
-    a1.prev = b0.index;
-    a0.next = a2.index;
-    a2.prev = a0.index;
-    return true;
-  }
+  toArray() {
+    const acc = [];
 
-  moveToHead(index) {
-    this.move(index, this.HEAD);
-    this.HEAD = index;
-  }
-
-  moveToLast(index) {
-    this.move(index, this.HEAD);
-    this.HEAD = index === this.HEAD ? this.head.next : this.HEAD;
-  }
-
-  swap(index1, index2) {
-    if (index1 === index2) return false;
-    const node1 = this.node(index1);
-    if (!node1) return false;
-    const node2 = this.node(index2);
-    if (!node2) return false;
-    const nodes = this.nodes;
-    const node3 = nodes[node2.next];
-    this.move(node2.index, node1.index);
-    this.move(node1.index, node3.index);
-
-    switch (this.HEAD) {
-      case node1.index:
-        this.HEAD = node2.index;
-        break;
-
-      case node2.index:
-        this.HEAD = node1.index;
-        break;
+    for (let head = this.head, node = head; node;) {
+      acc.push(node.value);
+      node = node.next;
+      if (node === head) break;
     }
 
-    return true;
+    return acc;
   }
 
   *[Symbol.iterator]() {
-    const nodes = this.nodes;
-
-    for (let node = nodes[this.HEAD]; node;) {
-      yield [node.key, node.value, node.index];
-      node = nodes[node.next];
-      if (node?.index === this.HEAD) return;
+    for (let head = this.head, node = head; node;) {
+      yield node.value;
+      node = node.next;
+      if (node === head) return;
     }
   }
 
 }
 
 exports.List = List;
+
+class Node {
+  constructor(list, value, next, prev) {
+    this.list = list;
+    this.value = value;
+    this.next = next;
+    this.prev = prev;
+    ++list.$length;
+    list.head ??= this;
+    next && prev ? next.prev = prev.next = this : this.next = this.prev = this;
+  }
+
+  get alive() {
+    return this.list !== undefined;
+  }
+
+  delete() {
+    const list = this.list;
+    if (!list) return this.value;
+    --list.$length;
+    const {
+      next,
+      prev
+    } = this;
+
+    if (list.head === this) {
+      list.head = next === this ? undefined : next;
+    }
+
+    if (next) {
+      next.prev = prev;
+    }
+
+    if (prev) {
+      prev.next = next;
+    } // @ts-expect-error
+
+
+    this.list = undefined; // @ts-expect-error
+
+    this.next = this.prev = undefined;
+    return this.value;
+  }
+
+  insertBefore(value) {
+    return new Node(this.list, value, this, this.prev);
+  }
+
+  insertAfter(value) {
+    return new Node(this.list, value, this.next, this);
+  }
+
+  moveTo(before) {
+    if (!before) return false;
+    if (this === before) return false;
+    if (before.list !== this.list) return before.list.insert(this, before), true;
+    const a1 = this;
+    const b1 = before;
+    if (a1.next === b1) return false;
+    const b0 = b1.prev;
+    const a0 = a1.prev;
+    const a2 = a1.next;
+    b0.next = a1;
+    a1.next = b1;
+    b1.prev = a1;
+    a1.prev = b0;
+    a0.next = a2;
+    a2.prev = a0;
+    return true;
+  }
+
+  moveToHead() {
+    this.moveTo(this.list.head);
+    this.list.head = this;
+  }
+
+  moveToLast() {
+    this.moveTo(this.list.head);
+  }
+
+  swap(node) {
+    const node1 = this;
+    const node2 = node;
+    if (node1 === node2) return false;
+    const node3 = node2.next;
+    if (node1.list !== node2.list) throw new Error(`Spica: InvList: Cannot swap nodes across lists.`);
+    node2.moveTo(node1);
+    node1.moveTo(node3);
+
+    switch (this.list.head) {
+      case node1:
+        this.list.head = node2;
+        break;
+
+      case node2:
+        this.list.head = node1;
+        break;
+    }
+
+    return true;
+  }
+
+}
 
 /***/ }),
 
@@ -1279,6 +1439,76 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 
 __exportStar(__webpack_require__(1869), exports);
+
+/***/ }),
+
+/***/ 1808:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+
+Object.defineProperty(exports, "__esModule", ({
+  value: true
+}));
+exports.reduce = exports.memoize = void 0;
+
+const global_1 = __webpack_require__(4128);
+
+const alias_1 = __webpack_require__(5406);
+
+const compare_1 = __webpack_require__(5529);
+
+const undefined = void 0;
+
+function memoize(f, identify = (...as) => as[0], memory) {
+  if (typeof identify === 'object') return memoize(f, undefined, identify);
+  return (0, alias_1.isArray)(memory) ? memoizeArray(f, identify, memory) : memoizeObject(f, identify, memory ?? new global_1.Map());
+}
+
+exports.memoize = memoize;
+
+function memoizeArray(f, identify, memory) {
+  let nullish = false;
+  return (...as) => {
+    const b = identify(...as);
+    let z = memory[b];
+    if (z !== undefined || nullish && memory[b] !== undefined) return z;
+    z = f(...as);
+    nullish ||= z === undefined;
+    memory[b] = z;
+    return z;
+  };
+}
+
+function memoizeObject(f, identify, memory) {
+  let nullish = false;
+  return (...as) => {
+    const b = identify(...as);
+    let z = memory.get(b);
+    if (z !== undefined || nullish && memory.has(b)) return z;
+    z = f(...as);
+    nullish ||= z === undefined;
+    memory.set(b, z);
+    return z;
+  };
+}
+
+function reduce(f, identify = (...as) => as[0]) {
+  let key = {};
+  let val;
+  return (...as) => {
+    const b = identify(...as);
+
+    if (!(0, compare_1.equal)(key, b)) {
+      key = b;
+      val = f(...as);
+    }
+
+    return val;
+  };
+}
+
+exports.reduce = reduce;
 
 /***/ }),
 
@@ -1848,37 +2078,52 @@ exports.Observation = void 0;
 
 const global_1 = __webpack_require__(4128);
 
-const alias_1 = __webpack_require__(5406);
-
-const ixlist_1 = __webpack_require__(5704);
-
-const function_1 = __webpack_require__(6288);
+const invlist_1 = __webpack_require__(7452);
 
 const array_1 = __webpack_require__(8112);
 
 const exception_1 = __webpack_require__(7822);
 
 class ListenerNode {
-  constructor(parent, index) {
+  constructor(name, parent) {
+    this.name = name;
     this.parent = parent;
-    this.index = index;
-    this.children = new ixlist_1.List(new global_1.Map());
-    this.monitors = [];
-    this.subscribers = [];
+    this.monitors = new invlist_1.List();
+    this.subscribers = new invlist_1.List();
+    this.index = new global_1.Map();
+    this.children = new invlist_1.List();
+  }
+
+  clear() {
+    const {
+      monitors,
+      subscribers,
+      index,
+      children
+    } = this;
+
+    for (let child = children.head, i = children.length; child && i--;) {
+      if (child.value.clear()) {
+        const next = child.next;
+        index.delete(child.value.name);
+        child.delete();
+        child = next;
+      } else {
+        child = child.next;
+      }
+    }
+
+    subscribers.clear();
+    return monitors.length === 0 && children.length === 0;
   }
 
 }
 
 class Observation {
-  constructor(opts = {}) {
-    this.id = 0;
-    this.node = new ListenerNode(void 0, void 0);
-    this.settings = {
-      limit: 10,
-      cleanup: false
-    };
-    this.relaies = new global_1.WeakSet();
-    (0, alias_1.ObjectAssign)(this.settings, opts);
+  constructor(opts) {
+    this.id = global_1.Number.MIN_SAFE_INTEGER;
+    this.node = new ListenerNode(void 0);
+    this.limit = opts?.limit ?? 10;
   }
 
   monitor(namespace, monitor, options = {}) {
@@ -1888,9 +2133,9 @@ class Observation {
     } = this.seekNode(namespace, 0
     /* SeekMode.Extensible */
     );
-    if (monitors.length === this.settings.limit) throw new global_1.Error(`Spica: Observation: Exceeded max listener limit.`);
+    if (monitors.length === this.limit) throw new global_1.Error(`Spica: Observation: Exceeded max listener limit.`);
     if (this.id === global_1.Number.MAX_SAFE_INTEGER) throw new global_1.Error(`Spica: Observation: Max listener ID reached max safe integer.`);
-    const item = {
+    const node = monitors.push({
       id: ++this.id,
       type: 0
       /* ListenerType.Monitor */
@@ -1898,9 +2143,8 @@ class Observation {
       namespace,
       listener: monitor,
       options
-    };
-    monitors.push(item);
-    return (0, function_1.singleton)(() => void this.off(namespace, item));
+    });
+    return () => void node.delete();
   }
 
   on(namespace, subscriber, options = {}) {
@@ -1910,9 +2154,9 @@ class Observation {
     } = this.seekNode(namespace, 0
     /* SeekMode.Extensible */
     );
-    if (subscribers.length === this.settings.limit) throw new global_1.Error(`Spica: Observation: Exceeded max listener limit.`);
+    if (subscribers.length === this.limit) throw new global_1.Error(`Spica: Observation: Exceeded max listener limit.`);
     if (this.id === global_1.Number.MAX_SAFE_INTEGER) throw new global_1.Error(`Spica: Observation: Max listener ID reached max safe integer.`);
-    const item = {
+    const node = subscribers.push({
       id: ++this.id,
       type: 1
       /* ListenerType.Subscriber */
@@ -1920,9 +2164,8 @@ class Observation {
       namespace,
       listener: subscriber,
       options
-    };
-    subscribers.push(item);
-    return (0, function_1.singleton)(() => void this.off(namespace, item));
+    });
+    return () => void node.delete();
   }
 
   once(namespace, subscriber) {
@@ -1932,30 +2175,11 @@ class Observation {
   }
 
   off(namespace, subscriber) {
-    const node = this.seekNode(namespace, 1
+    return subscriber ? void this.seekNode(namespace, 1
     /* SeekMode.Breakable */
-    );
-    if (!node) return;
-
-    switch (typeof subscriber) {
-      case 'object':
-        {
-          const items = subscriber.type === 0
-          /* ListenerType.Monitor */
-          ? node.monitors : node.subscribers;
-          if (items.length === 0 || subscriber.id < items[0].id || subscriber.id > items[items.length - 1].id) return;
-          return void (0, array_1.splice)(items, items.indexOf(subscriber), 1);
-        }
-
-      case 'function':
-        {
-          const items = node.subscribers;
-          return void (0, array_1.splice)(items, items.findIndex(item => item.listener === subscriber), 1);
-        }
-
-      case 'undefined':
-        return void clear(node);
-    }
+    )?.subscribers?.find(item => item.listener === subscriber)?.delete() : void this.seekNode(namespace, 1
+    /* SeekMode.Breakable */
+    )?.clear();
   }
 
   emit(namespace, data, tracker) {
@@ -1969,6 +2193,7 @@ class Observation {
   }
 
   relay(source) {
+    this.relaies ??= new global_1.WeakSet();
     if (this.relaies.has(source)) throw new global_1.Error(`Spica: Observation: Relay source is already registered.`);
     this.relaies.add(source);
     return source.monitor([], (data, namespace) => void this.emit(namespace, data));
@@ -1983,7 +2208,7 @@ class Observation {
     /* ListenerType.Monitor */
     ), this.refsBelow(node, 1
     /* ListenerType.Subscriber */
-    )).reduce((acc, rs) => (0, array_1.push)(acc, rs), []);
+    )).reduce((acc, listeners) => (0, array_1.push)(acc, listeners.toArray()), []);
   }
 
   drain(namespace, data, tracker) {
@@ -1998,13 +2223,12 @@ class Observation {
     for (let i = 0; i < sss.length; ++i) {
       const items = sss[i];
       if (items.length === 0) continue;
+      const recents = [];
 
-      for (let i = 0, max = items[items.length - 1].id; i < items.length && items[i].id <= max; ++i) {
-        const item = items[i];
-
-        if (item.options.once) {
-          this.off(item.namespace, item);
-        }
+      for (let node = items.head, min = node.value.id, max = node.prev.value.id; node && min <= node.value.id && node.value.id <= max;) {
+        min = node.value.id + 1;
+        const item = node.value;
+        item.options.once && node.delete();
 
         try {
           const result = item.listener(data, namespace);
@@ -2013,9 +2237,9 @@ class Observation {
           (0, exception_1.causeAsyncException)(reason);
         }
 
-        i = i < items.length ? i : items.length - 1;
+        node.alive && recents.push(node); // TODO: Use Array.findLast.
 
-        for (; i >= 0 && items[i].id > item.id; --i);
+        node = node.next ?? findLast(recents, item => item.next) ?? items.head;
       }
     }
 
@@ -2028,13 +2252,12 @@ class Observation {
     for (let i = 0; i < mss.length; ++i) {
       const items = mss[i];
       if (items.length === 0) continue;
+      const recents = [];
 
-      for (let i = 0, max = items[items.length - 1].id; i < items.length && items[i].id <= max; ++i) {
-        const item = items[i];
-
-        if (item.options.once) {
-          this.off(item.namespace, item);
-        }
+      for (let node = items.head, min = node.value.id, max = node.prev.value.id; node && min <= node.value.id && node.value.id <= max;) {
+        min = node.value.id + 1;
+        const item = node.value;
+        item.options.once && node.delete();
 
         try {
           item.listener(data, namespace);
@@ -2042,9 +2265,9 @@ class Observation {
           (0, exception_1.causeAsyncException)(reason);
         }
 
-        i = i < items.length ? i : items.length - 1;
+        node.alive && recents.push(node); // TODO: Use Array.findLast.
 
-        for (; i >= 0 && items[i].id > item.id; --i);
+        node = node.next ?? findLast(recents, item => item.next) ?? items.head;
       }
     }
 
@@ -2083,6 +2306,7 @@ class Observation {
   refsBelow_({
     monitors,
     subscribers,
+    index,
     children
   }, type, acc) {
     type === 0
@@ -2090,14 +2314,17 @@ class Observation {
     ? acc.push(monitors) : acc.push(subscribers);
     let count = 0;
 
-    for (let node = children.last, i = 0; node && i < children.length; (node = children.node(node.prev)) && ++i) {
-      const cnt = this.refsBelow_(node.value, type, acc)[1];
+    for (let child = children.head, i = children.length; child && i--;) {
+      const cnt = this.refsBelow_(child.value, type, acc)[1];
       count += cnt;
 
-      if (cnt === 0 && this.settings.cleanup) {
-        node = children.node(children.del(node.index).next);
-        if (!node) break;
-        --i;
+      if (cnt === 0) {
+        const next = child.next;
+        index.delete(child.value.name);
+        child.delete();
+        child = next;
+      } else {
+        child = child.next;
       }
     }
 
@@ -2110,9 +2337,10 @@ class Observation {
     for (let i = 0; i < namespace.length; ++i) {
       const name = namespace[i];
       const {
+        index,
         children
       } = node;
-      let child = children.find(name)?.value;
+      let child = index.get(name);
 
       if (!child) {
         switch (mode) {
@@ -2127,8 +2355,9 @@ class Observation {
             return node;
         }
 
-        child = new ListenerNode(node, name);
-        children.add(name, child);
+        child = new ListenerNode(name, node);
+        index.set(name, child);
+        children.push(child);
       }
 
       node = child;
@@ -2141,20 +2370,10 @@ class Observation {
 
 exports.Observation = Observation;
 
-function clear({
-  monitors,
-  subscribers,
-  children
-}) {
-  for (let node = children.last, i = 0; node && i < children.length; (node = children.node(node.prev)) && ++i) {
-    if (!clear(node.value)) continue;
-    node = children.node(children.del(node.index).next);
-    if (!node) break;
-    --i;
+function findLast(array, f) {
+  for (let i = array.length; i--;) {
+    if (f(array[i])) return array[i];
   }
-
-  (0, array_1.splice)(subscribers, 0);
-  return monitors.length === 0;
 }
 
 /***/ }),
@@ -2641,54 +2860,86 @@ exports.never = new class Never extends Promise {
 
 /***/ }),
 
-/***/ 5352:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ 4934:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 
 Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
-exports.Stack = void 0; // Note: Generally much slower than arrays.
+exports.MultiQueue = exports.PriorityQueue = exports.Queue = void 0;
+
+const global_1 = __webpack_require__(4128);
+
+const heap_1 = __webpack_require__(818);
+
+const memoize_1 = __webpack_require__(1808);
 
 const undefined = void 0;
+const size = 2048;
+const initsize = 16;
 
-class Stack {
+class Queue {
   constructor() {
-    this.list = undefined;
-    this.length = 0;
+    this.head = new FixedQueue(initsize);
+    this.tail = this.head;
+    this.count = 0;
+    this.irregular = 0;
+  }
+
+  get length() {
+    return this.count === 0 ? this.head.length : this.head.length + this.tail.length + (size - 1) * (this.count - 2) + (this.irregular || size) - 1;
+  }
+
+  isEmpty() {
+    return this.head.isEmpty();
+  }
+
+  peek(index = 0) {
+    return index === 0 ? this.head.peek(0) : this.tail.peek(-1);
   }
 
   push(value) {
-    const node = this.list;
-    const values = node?.[0];
-    ++this.length;
-    !values || values.length === 100 ? this.list = [[value], node] : values.push(value);
+    const tail = this.tail;
+
+    if (tail.isFull()) {
+      if (tail.next.isEmpty()) {
+        this.tail = tail.next;
+      } else {
+        this.tail = tail.next = new FixedQueue(size, tail.next);
+      }
+
+      ++this.count;
+
+      if (tail.size !== size && tail !== this.head) {
+        this.irregular = tail.size;
+      }
+    }
+
+    this.tail.push(value);
   }
 
   pop() {
-    const node = this.list;
-    if (node === undefined) return;
-    const values = node[0]; //assert(values.length > 0);
+    const head = this.head;
+    const value = head.pop();
 
-    --this.length;
-    if (values.length !== 1) return values.pop();
-    const value = values[0];
-    this.list = node[1];
-    node[1] = undefined;
+    if (head.isEmpty() && !head.next.isEmpty()) {
+      --this.count;
+      this.head = head.next;
+
+      if (this.head.size === this.irregular) {
+        this.irregular = 0;
+      }
+    }
+
     return value;
   }
 
   clear() {
-    this.list = undefined;
-  }
-
-  isEmpty() {
-    return this.list === undefined;
-  }
-
-  peek() {
-    return this.list?.[0][0];
+    this.head = this.tail = new FixedQueue(initsize);
+    this.count = 0;
+    this.irregular = 0;
   }
 
   *[Symbol.iterator]() {
@@ -2701,7 +2952,211 @@ class Stack {
 
 }
 
-exports.Stack = Stack;
+exports.Queue = Queue;
+
+class FixedQueue {
+  constructor(size, next) {
+    this.size = size;
+    this.array = (0, global_1.Array)(this.size);
+    this.mask = this.array.length - 1;
+    this.head = 0;
+    this.tail = 0;
+    this.next = next ?? this;
+  }
+
+  get length() {
+    return this.tail >= this.head ? this.tail - this.head : this.array.length - this.head + this.tail;
+  }
+
+  isEmpty() {
+    return this.tail === this.head;
+  }
+
+  isFull() {
+    return (this.tail + 1 & this.mask) === this.head;
+  }
+
+  peek(index = 0) {
+    return index === 0 ? this.array[this.head] : this.array[this.tail - 1 & this.mask];
+  }
+
+  push(value) {
+    this.array[this.tail] = value;
+    this.tail = this.tail + 1 & this.mask;
+  }
+
+  pop() {
+    if (this.isEmpty()) return;
+    const value = this.array[this.head];
+    this.array[this.head] = undefined;
+    this.head = this.head + 1 & this.mask;
+    return value;
+  }
+
+}
+
+class PriorityQueue {
+  constructor(cmp = PriorityQueue.max, clean = true) {
+    this.clean = clean;
+    this.dict = new global_1.Map();
+    this.queue = (0, memoize_1.memoize)(priority => {
+      const queue = new Queue();
+      queue[PriorityQueue.priority] = priority;
+      this.heap.insert(queue, priority);
+      return queue;
+    }, this.dict);
+    this.$length = 0;
+    this.heap = new heap_1.Heap(cmp);
+  }
+
+  get length() {
+    return this.$length;
+  }
+
+  isEmpty() {
+    return this.$length === 0;
+  }
+
+  peek(priority) {
+    return arguments.length === 0 ? this.heap.peek()?.peek() : this.dict.get(priority)?.peek();
+  }
+
+  push(priority, value) {
+    ++this.$length;
+    this.queue(priority).push(value);
+  }
+
+  pop(priority) {
+    if (this.$length === 0) return;
+    --this.$length;
+    const queue = arguments.length === 0 ? this.heap.peek() : this.dict.get(priority);
+    const value = queue?.pop();
+
+    if (queue?.isEmpty()) {
+      this.heap.extract();
+      this.clean && this.dict.delete(queue[PriorityQueue.priority]);
+    }
+
+    return value;
+  }
+
+  clear() {
+    this.heap.clear();
+    this.dict.clear();
+    this.$length = 0;
+  }
+
+  *[Symbol.iterator]() {
+    while (!this.isEmpty()) {
+      yield this.pop();
+    }
+
+    return;
+  }
+
+}
+
+exports.PriorityQueue = PriorityQueue;
+PriorityQueue.priority = Symbol('priority');
+PriorityQueue.max = heap_1.Heap.max;
+PriorityQueue.min = heap_1.Heap.min;
+
+class MultiQueue {
+  constructor(entries) {
+    this.dict = new global_1.Map();
+    if (entries) for (const {
+      0: k,
+      1: v
+    } of entries) {
+      this.set(k, v);
+    }
+  }
+
+  get length() {
+    return this.dict.size;
+  }
+
+  isEmpty() {
+    return this.dict.size === 0;
+  }
+
+  peek(key) {
+    return this.dict.get(key)?.peek();
+  }
+
+  push(key, value) {
+    let vs = this.dict.get(key);
+    if (vs) return void vs.push(value);
+    vs = new Queue();
+    vs.push(value);
+    this.dict.set(key, vs);
+  }
+
+  pop(key) {
+    return this.dict.get(key)?.pop();
+  }
+
+  clear() {
+    this.dict = new global_1.Map();
+  }
+
+  take(key, count) {
+    if (count === void 0) return this.pop(key);
+    const vs = this.dict.get(key);
+    const acc = [];
+
+    while (vs && !vs.isEmpty() && count--) {
+      acc.push(vs.pop());
+    }
+
+    return acc;
+  }
+
+  ref(key) {
+    let vs = this.dict.get(key);
+    if (vs) return vs;
+    vs = new Queue();
+    this.dict.set(key, vs);
+    return vs;
+  }
+
+  get size() {
+    return this.length;
+  }
+
+  get(key) {
+    return this.peek(key);
+  }
+
+  set(key, value) {
+    this.push(key, value);
+    return this;
+  }
+
+  has(key) {
+    return this.dict.has(key);
+  }
+
+  delete(key) {
+    return this.dict.delete(key);
+  }
+
+  *[Symbol.iterator]() {
+    for (const {
+      0: k,
+      1: vs
+    } of this.dict) {
+      while (!vs.isEmpty()) {
+        yield [k, vs.pop()];
+      }
+    }
+
+    return;
+  }
+
+}
+
+exports.MultiQueue = MultiQueue;
 
 /***/ }),
 
@@ -2729,8 +3184,8 @@ function throttle(interval, callback, capacity = 1) {
     if (capacity === 1) {
       buffer = [data];
     } else {
-      buffer.length === capacity && buffer.pop();
-      buffer.unshift(data);
+      buffer.length === capacity && buffer.shift();
+      buffer.push(data);
     }
 
     if (timer !== 0) return;
@@ -2739,13 +3194,13 @@ function throttle(interval, callback, capacity = 1) {
       buffer = [];
 
       try {
-        await callback.call(this, buf[0], buf);
+        await callback.call(this, buf[buf.length - 1], buf);
       } catch (reason) {
         (0, exception_1.causeAsyncException)(reason);
       }
 
       timer = 0;
-      buffer.length > 0 && self.call(this, buffer.shift());
+      buffer.length > 0 && self.call(this, buffer.pop());
     }, interval);
   };
 }
@@ -2761,8 +3216,8 @@ function debounce(delay, callback, capacity = 1) {
     if (capacity === 1) {
       buffer = [data];
     } else {
-      buffer.length === capacity && buffer.pop();
-      buffer.unshift(data);
+      buffer.length === capacity && buffer.shift();
+      buffer.push(data);
     }
 
     if (timer !== 0) return;
@@ -2776,13 +3231,13 @@ function debounce(delay, callback, capacity = 1) {
         callable = false;
 
         try {
-          await callback.call(this, buf[0], buf);
+          await callback.call(this, buf[buf.length - 1], buf);
         } catch (reason) {
           (0, exception_1.causeAsyncException)(reason);
         }
 
         callable = true;
-        buffer.length > 0 && self.call(this, buffer.shift());
+        buffer.length > 0 && self.call(this, buffer.pop());
       }, delay);
     }, delay);
   };
@@ -2792,7 +3247,7 @@ exports.debounce = debounce;
 
 function cothrottle(routine, resource, scheduler) {
   return async function* () {
-    let start = Date.now();
+    let start = (0, clock_1.now)();
 
     for await (const value of routine()) {
       if (resource - ((0, clock_1.now)() - start) > 0) {
@@ -2817,21 +3272,21 @@ exports.cothrottle = cothrottle;
 Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
-exports.wait = exports.setRepeatTimer = exports.setTimer = void 0;
+exports.wait = exports.captureTimers = exports.setRepeatTimer = exports.setTimer = void 0;
 
 const global_1 = __webpack_require__(4128);
 
 const function_1 = __webpack_require__(6288);
 
-exports.setTimer = template(1);
-exports.setRepeatTimer = template(Infinity);
+exports.setTimer = template(false);
+exports.setRepeatTimer = template(true);
 
-function template(count) {
+function template(repeat) {
   return (timeout, handler, unhandler) => {
     let params;
     let id = (0, global_1.setTimeout)(async function loop() {
       params = [await handler()];
-      if (--count === 0) return;
+      if (!repeat) return;
       id = (0, global_1.setTimeout)(loop, timeout);
     }, timeout);
     return (0, function_1.singleton)(() => {
@@ -2840,6 +3295,24 @@ function template(count) {
     });
   };
 }
+
+function captureTimers(callback) {
+  const start = (0, global_1.setTimeout)(function_1.noop);
+  (0, global_1.clearTimeout)(start);
+  if (typeof start !== 'number') throw new Error('Timer ID is not a number');
+  return (0, function_1.singleton)((...as) => {
+    const end = (0, global_1.setTimeout)(function_1.noop);
+    (0, global_1.clearTimeout)(end);
+
+    for (let i = start; i < end; ++i) {
+      (0, global_1.clearTimeout)(i);
+    }
+
+    callback?.(...as);
+  });
+}
+
+exports.captureTimers = captureTimers;
 
 function wait(ms) {
   return ms === 0 ? Promise.resolve(void 0) : new Promise(resolve => void (0, global_1.setTimeout)(resolve, ms));
@@ -2857,7 +3330,7 @@ exports.wait = wait;
 Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
-exports.isPrimitive = exports.isType = exports.type = void 0;
+exports.isPrimitive = exports.is = exports.type = void 0;
 
 const global_1 = __webpack_require__(4128);
 
@@ -2867,35 +3340,64 @@ const ObjectPrototype = Object.prototype;
 const ArrayPrototype = Array.prototype;
 
 function type(value) {
-  if (value === void 0) return 'undefined';
-  if (value === null) return 'null';
   const type = typeof value;
 
-  if (type === 'object') {
-    if (value[global_1.Symbol.toStringTag]) return value[global_1.Symbol.toStringTag];
-    const proto = (0, alias_1.ObjectGetPrototypeOf)(value);
-    if (proto === ObjectPrototype) return 'Object';
-    if (proto === ArrayPrototype) return 'Array';
-    return (0, alias_1.toString)(value).slice(8, -1);
-  }
+  switch (type) {
+    case 'function':
+      return 'Function';
 
-  if (type === 'function') return 'Function';
-  return type;
+    case 'object':
+      if (value === null) return 'null';
+      const tag = value[global_1.Symbol.toStringTag];
+      if (tag) return tag;
+
+      switch ((0, alias_1.ObjectGetPrototypeOf)(value)) {
+        case ArrayPrototype:
+          return 'Array';
+
+        case ObjectPrototype:
+          return 'Object';
+
+        default:
+          return (0, alias_1.toString)(value).slice(8, -1);
+      }
+
+    default:
+      return type;
+  }
 }
 
 exports.type = type;
 
-function isType(value, name) {
-  if (name === 'object') return value !== null && typeof value === name;
-  if (name === 'function') return typeof value === name;
-  return type(value) === name;
+function is(type, value) {
+  switch (type) {
+    case 'null':
+      return value === null;
+
+    case 'array':
+      return (0, alias_1.isArray)(value);
+
+    case 'object':
+      return value !== null && typeof value === type;
+
+    default:
+      return typeof value === type;
+  }
 }
 
-exports.isType = isType;
+exports.is = is;
 
 function isPrimitive(value) {
-  const type = typeof value;
-  return type === 'object' || type === 'function' ? value === null : true;
+  switch (typeof value) {
+    case 'function':
+      return false;
+
+    case 'object':
+      return value === null;
+
+    default:
+      return true;
+  }
 }
 
 exports.isPrimitive = isPrimitive;
@@ -2912,30 +3414,40 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.uuid = void 0;
 
-const global_1 = __webpack_require__(4128);
+const global_1 = __webpack_require__(4128); // Version 4
+
+
+const format = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx';
 
 function uuid() {
-  // version 4
-  return gen(rnd16, HEX);
+  let acc = '';
+
+  for (let i = 0; i < format.length; ++i) {
+    const c = format[i];
+
+    switch (c) {
+      case 'x':
+        acc += HEX[rnd16()];
+        continue;
+
+      case 'y':
+        acc += HEX[rnd16() & 0x03 | 0x08];
+        continue;
+
+      default:
+        acc += c;
+        continue;
+    }
+  }
+
+  return acc;
 }
 
 exports.uuid = uuid;
-const HEX = [...Array(16)].map((_, i) => i.toString(16));
-const gen = Function('rnd16', 'HEX', ['"use strict";', 'return ""', 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/./g, c => {
-  switch (c) {
-    case 'x':
-      return `+ HEX[rnd16()]`;
-
-    case 'y':
-      return `+ HEX[rnd16() & 0x03 | 0x08]`;
-
-    default:
-      return `+ '${c}'`;
-  }
-})].join(''));
+const HEX = [...Array(16)].map((_, i) => i.toString(16)).join('');
 const buffer = new Uint16Array(512);
 const digit = 16;
-const mask = 0b1111;
+const mask = digit - 1;
 let index = buffer.length;
 let offset = digit;
 
@@ -3326,8 +3838,7 @@ class EventStore {
     this.relation = relation;
     this.alive = true;
     this.memory = new observer_1.Observation({
-      limit: 1,
-      cleanup: true
+      limit: 1
     });
     this.status = {
       store: this,
