@@ -24,7 +24,7 @@ export namespace StoreChannel {
     capacity?: number;
     age?: number;
     migrate?(link: M[keyof M & string]): void;
-    destroy?(reason: unknown, event?: global.Event): boolean;
+    destroy?(reason: unknown, event?: globalThis.Event): boolean;
   }
   export interface Value<K extends string = string> {
     readonly [Value.meta]: ValueMetaData<K>;

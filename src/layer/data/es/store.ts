@@ -81,7 +81,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     };
   }
   private alive = true;
-  private readonly memory = new Observation<[K, Prop<V> | '', boolean, number], void, UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>>({ limit: 1, cleanup: true });
+  private readonly memory = new Observation<[K, Prop<V> | '', boolean, number], void, UnstoredEventRecord<K, V> | LoadedEventRecord<K, V> | SavedEventRecord<K, V>>({ limit: 1 });
   private readonly status = {
     store: this,
     ids: new Map<K, EventId>(),
