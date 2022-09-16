@@ -1,7 +1,7 @@
 import { Promise } from 'spica/global';
 import { Listen, Config } from '../../infrastructure/indexeddb/api';
 import { Cancellation } from 'spica/cancellation';
-import { tick } from 'spica/clock';
+import { clock } from 'spica/clock';
 import { causeAsyncException } from 'spica/exception';
 
 export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
@@ -54,7 +54,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     this.tx.rw.addEventListener('abort', clear);
     this.tx.rw.addEventListener('error', clear);
     this.tx.rw.addEventListener('complete', clear);
-    tick(clear);
+    clock.now(clear);
   }
   public transact(
     cache: (db: IDBDatabase) => IDBTransaction | undefined,
@@ -75,7 +75,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     if (!this.alive) return void cb?.(new Error('Session is already closed.'), key);
     return void this.listen(db => {
       if (!this.alive) return void cb?.(new Error('Session is already closed.'), key);
-      if (cancellation?.isCancelled) return void cb?.(new Error('Request is cancelled.'), key);
+      if (cancellation?.isCancelled()) return void cb?.(new Error('Request is cancelled.'), key);
       const tx = db.transaction(this.name, 'readonly');
       const req: IDBRequest<V> = this.index
         ? tx

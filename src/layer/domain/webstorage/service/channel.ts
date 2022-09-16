@@ -43,7 +43,7 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
   private cancellation = new Cancellation();
   private readonly mode = this.storage === localStorage ? 'local' : 'session';
   private get alive(): boolean {
-    return this.cancellation.isAlive;
+    return this.cancellation.isAlive();
   }
   public readonly events = {
     send: new Observation<[Prop<V>], { [P in Prop<V>]: StorageChannel.Event<V, P>; }[Prop<V>], void>({ limit: Infinity }),

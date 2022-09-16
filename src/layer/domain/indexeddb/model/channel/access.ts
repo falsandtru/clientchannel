@@ -67,7 +67,7 @@ export class AccessStore<K extends string> {
       schedule = Date.now() + timeout;
       untimer?.();
       untimer = setTimer(timeout, async () => {
-        if (!this.cancellation.isAlive) return;
+        if (!this.cancellation.isAlive()) return;
         if (schedule === 0) return;
         schedule = Infinity;
         if (!this.ownership.take('store', delay)) return void this.schedule(delay *= 2);
@@ -91,7 +91,7 @@ export class AccessStore<K extends string> {
             this.chan.lock = false;
             schedule = Infinity;
             untimer();
-            if (!this.cancellation.isAlive) return;
+            if (!this.cancellation.isAlive()) return;
             if (error) return void this.schedule(delay * 10);
             if (!cursor) return;
             if (!this.ownership.extend('store', delay)) return void this.schedule(delay *= 2);

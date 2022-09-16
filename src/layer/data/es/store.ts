@@ -6,7 +6,7 @@ import { EventRecordType, UnstoredEventRecord, StoredEventRecord, LoadedEventRec
 import { Prop, hasBinary } from '../database/value';
 import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
-import { tick } from 'spica/clock';
+import { clock } from 'spica/clock';
 import { concat } from 'spica/concat';
 import { causeAsyncException } from 'spica/exception';
 
@@ -133,7 +133,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     this.tx.rw.addEventListener('abort', clear);
     this.tx.rw.addEventListener('error', clear);
     this.tx.rw.addEventListener('complete', clear);
-    tick(clear);
+    clock.now(clear);
   }
   public transact(
     cache: (db: IDBDatabase) => IDBTransaction | undefined,
@@ -155,7 +155,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     const events: LoadedEventRecord<K, V>[] = [];
     return void this.listen(db => {
       if (!this.alive) return void cb?.(new Error('Session is already closed.'));
-      if (cancellation?.isCancelled) return void cb?.(new Error('Request is cancelled.'));
+      if (cancellation?.isCancelled()) return void cb?.(new Error('Request is cancelled.'));
       const tx = db.transaction(this.name, 'readonly');
       const req = tx
         .objectStore(this.name)
