@@ -366,118 +366,54 @@ exports.Cancellation = void 0;
 
 const promise_1 = __webpack_require__(4879);
 
-const future_1 = __webpack_require__(3387);
-
-const exception_1 = __webpack_require__(7822);
-
 const maybe_1 = __webpack_require__(6512);
 
 const either_1 = __webpack_require__(8555);
 
 const function_1 = __webpack_require__(6288);
 
-const internal = Symbol.for('spica/cancellation::internal');
+const exception_1 = __webpack_require__(7822);
 
 class Cancellation {
   constructor(cancellees) {
     this[_a] = 'Cancellation';
-    this[_b] = new Internal();
+    this.reason = [];
+    this.listeners = [];
+    this[_b] = new promise_1.Internal();
     if (cancellees) for (const cancellee of cancellees) {
       cancellee.register(this.cancel);
     }
   }
 
-  get [(_a = Symbol.toStringTag, _b = internal, promise_1.internal)]() {
-    return this[internal].promise[promise_1.internal];
+  isAlive() {
+    return this.reason.length === 0;
   }
 
-  get isAlive() {
-    return this[internal].reason.length === 0;
+  isCancelled() {
+    return this.reason.length === 1;
   }
 
-  get isCancelled() {
-    return this[internal].reason.length === 1;
+  isClosed() {
+    return this.reason.length === 2;
   }
 
-  get isClosed() {
-    return this[internal].reason.length === 2;
+  isFinished() {
+    return this.reason.length !== 0;
   }
 
-  get isFinished() {
-    return this[internal].reason.length !== 0;
-  }
+  register$(listener) {
+    const {
+      listeners,
+      reason
+    } = this;
 
-  get register() {
-    return listener => this[internal].register(listener);
-  }
-
-  get cancel() {
-    return reason => this[internal].cancel(reason);
-  }
-
-  get close() {
-    return reason => this[internal].close(reason);
-  }
-
-  get then() {
-    return this[internal].promise.then;
-  }
-
-  get catch() {
-    return this[internal].promise.catch;
-  }
-
-  get finally() {
-    return this[internal].promise.finally;
-  }
-
-  get promise() {
-    return val => this.isCancelled ? promise_1.AtomicPromise.reject(this[internal].reason[0]) : promise_1.AtomicPromise.resolve(val);
-  }
-
-  get maybe() {
-    return val => (0, maybe_1.Just)(val).bind(val => this.isCancelled ? maybe_1.Nothing : (0, maybe_1.Just)(val));
-  }
-
-  get either() {
-    return val => (0, either_1.Right)(val).bind(val => this.isCancelled ? (0, either_1.Left)(this[internal].reason[0]) : (0, either_1.Right)(val));
-  }
-
-}
-
-exports.Cancellation = Cancellation;
-
-class Internal {
-  constructor() {
-    this.isFinished = false;
-    this.reason = [];
-    this.listeners = [];
-  }
-
-  get promise() {
-    if (!this.future) {
-      this.future = new future_1.AtomicFuture();
-
-      switch (this.reason.length) {
-        case 1:
-          return this.future.bind(this.reason[0]);
-
-        case 2:
-          return this.future.bind(promise_1.AtomicPromise.reject(this.reason[1]));
-      }
-    }
-
-    return this.future;
-  }
-
-  register(listener) {
-    if (this.isFinished) {
-      this.reason.length === 1 && handler(this.reason[0]);
+    if (reason.length !== 0 && listeners.length === 0) {
+      reason.length === 1 && handler(reason[0]);
       return function_1.noop;
     }
 
-    const i = this.listeners.push(handler) - 1;
-    return () => this.listeners[i] = void 0;
+    listeners.push(handler);
+    return () => listener = function_1.noop;
 
     function handler(reason) {
       try {
@@ -488,28 +424,65 @@ class Internal {
     }
   }
 
-  cancel(reason) {
+  get register() {
+    return listener => this.register$(listener);
+  }
+
+  cancel$(reason) {
     if (this.reason.length !== 0) return;
     this.reason = [reason];
 
-    for (let i = 0, {
+    for (let {
       listeners
-    } = this; i < listeners.length; ++i) {
-      listeners[i]?.(reason);
+    } = this; listeners.length;) {
+      listeners.shift()?.(reason);
     }
 
-    this.future?.bind(reason);
-    this.isFinished = true;
+    this[promise_1.internal].resolve(reason);
   }
 
-  close(reason) {
+  get cancel() {
+    return reason => this.cancel$(reason);
+  }
+
+  close$(reason) {
     if (this.reason.length !== 0) return;
     this.reason = [void 0, reason];
-    this.future?.bind(promise_1.AtomicPromise.reject(reason));
-    this.isFinished = true;
+    this[promise_1.internal].resolve(promise_1.AtomicPromise.reject(reason));
+  }
+
+  get close() {
+    return reason => this.close$(reason);
+  }
+
+  then(onfulfilled, onrejected) {
+    return new promise_1.AtomicPromise((resolve, reject) => this[promise_1.internal].then(resolve, reject, onfulfilled, onrejected));
+  }
+
+  catch(onrejected) {
+    return this.then(void 0, onrejected);
+  }
+
+  finally(onfinally) {
+    return this.then(onfinally, onfinally).then(() => this);
+  }
+
+  get promise() {
+    return value => this.isCancelled() ? promise_1.AtomicPromise.reject(this.reason[0]) : promise_1.AtomicPromise.resolve(value);
+  }
+
+  get maybe() {
+    return value => (0, maybe_1.Just)(value).bind(value => this.isCancelled() ? maybe_1.Nothing : (0, maybe_1.Just)(value));
+  }
+
+  get either() {
+    return value => (0, either_1.Right)(value).bind(value => this.isCancelled() ? (0, either_1.Left)(this.reason[0]) : (0, either_1.Right)(value));
   }
 
 }
+
+exports.Cancellation = Cancellation;
+_a = Symbol.toStringTag, _b = promise_1.internal;
 
 /***/ }),
 
@@ -521,7 +494,7 @@ class Internal {
 Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
-exports.tick = exports.promise = exports.clock = exports.now = void 0;
+exports.clock = exports.now = void 0;
 
 const global_1 = __webpack_require__(4128);
 
@@ -535,7 +508,7 @@ let count = 0;
 
 function now(nocache) {
   if (time === undefined) {
-    tick(() => time = undefined);
+    exports.clock.now(() => time = undefined);
   } else if (!nocache && count++ !== 20) {
     return time;
   }
@@ -545,32 +518,45 @@ function now(nocache) {
 }
 
 exports.now = now;
-exports.clock = global_1.Promise.resolve(undefined);
+exports.clock = new class Clock extends global_1.Promise {
+  constructor() {
+    super(resolve => resolve(undefined)); // Promise subclass is slow.
 
-function promise(cb) {
-  global_1.Promise.resolve().then(cb);
-}
+    const clock = global_1.Promise.resolve();
+    clock.next = this.next;
+    clock.now = this.now;
+    return clock;
+  }
 
-exports.promise = promise;
+  next(callback) {
+    scheduled || schedule();
+    exports.clock.then(callback);
+  }
+
+  now(callback) {
+    scheduled || schedule();
+    queue.push(callback);
+  }
+
+}();
 const queue = new queue_1.Queue();
-const scheduler = global_1.Promise.resolve();
+let scheduled = false;
 
-function tick(cb) {
-  queue.isEmpty() && scheduler.then(run);
-  queue.push(cb);
+function schedule() {
+  scheduled = true;
+  exports.clock.then(run);
 }
-
-exports.tick = tick;
 
 function run() {
-  for (let count = queue.length; count--;) {
+  for (let cb; cb = queue.pop();) {
     try {
-      // @ts-expect-error
-      (0, queue.pop())();
+      cb();
     } catch (reason) {
       (0, exception_1.causeAsyncException)(reason);
     }
   }
+
+  scheduled = false;
 }
 
 /***/ }),
@@ -693,15 +679,35 @@ __exportStar(__webpack_require__(14), exports);
 Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
-exports.causeAsyncException = void 0;
+exports.suppressAsyncException = exports.causeAsyncException = void 0;
 
 const global_1 = __webpack_require__(4128);
 
+const stack_1 = __webpack_require__(5352);
+
+const stack = new stack_1.Stack();
+
 function causeAsyncException(reason) {
-  global_1.Promise.reject(reason);
+  if (stack.isEmpty()) {
+    global_1.Promise.reject(reason);
+  } else {
+    stack.peek().push(reason);
+  }
 }
 
 exports.causeAsyncException = causeAsyncException;
+
+function suppressAsyncException(test) {
+  return done => {
+    stack.push([]);
+    return test(err => {
+      stack.pop();
+      done(err);
+    });
+  };
+}
+
+exports.suppressAsyncException = suppressAsyncException;
 
 /***/ }),
 
@@ -750,94 +756,6 @@ exports.fix = fix; // @ts-ignore
 function noop() {}
 
 exports.noop = noop;
-
-/***/ }),
-
-/***/ 3387:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-
-var _a, _b, _c, _d;
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports.AtomicFuture = exports.Future = void 0;
-
-const global_1 = __webpack_require__(4128);
-
-const promise_1 = __webpack_require__(4879);
-
-class Future {
-  constructor(strict = true) {
-    this[_a] = 'Promise';
-    this[_b] = new promise_1.Internal();
-
-    this.bind = value => {
-      const core = this[promise_1.internal];
-      if (!core.isPending && !strict) return this;
-      if (!core.isPending) throw new Error(`Spica: Future: Cannot rebind a value.`);
-      core.resolve(value);
-      return this;
-    };
-  }
-
-  static get [Symbol.species]() {
-    return global_1.Promise;
-  }
-
-  then(onfulfilled, onrejected) {
-    return new global_1.Promise((resolve, reject) => this[promise_1.internal].then(resolve, reject, onfulfilled, onrejected));
-  }
-
-  catch(onrejected) {
-    return this.then(void 0, onrejected);
-  }
-
-  finally(onfinally) {
-    return this.then(onfinally, onfinally).then(() => this);
-  }
-
-}
-
-exports.Future = Future;
-_a = Symbol.toStringTag, _b = promise_1.internal;
-
-class AtomicFuture {
-  constructor(strict = true) {
-    this[_c] = 'Promise';
-    this[_d] = new promise_1.Internal();
-
-    this.bind = value => {
-      const core = this[promise_1.internal];
-      if (!core.isPending && !strict) return this;
-      if (!core.isPending) throw new Error(`Spica: AtomicFuture: Cannot rebind a value.`);
-      core.resolve(value);
-      return this;
-    };
-  }
-
-  static get [Symbol.species]() {
-    return promise_1.AtomicPromise;
-  }
-
-  then(onfulfilled, onrejected) {
-    return new promise_1.AtomicPromise((resolve, reject) => this[promise_1.internal].then(resolve, reject, onfulfilled, onrejected));
-  }
-
-  catch(onrejected) {
-    return this.then(void 0, onrejected);
-  }
-
-  finally(onfinally) {
-    return this.then(onfinally, onfinally).then(() => this);
-  }
-
-}
-
-exports.AtomicFuture = AtomicFuture;
-_c = Symbol.toStringTag, _d = promise_1.internal;
 
 /***/ }),
 
@@ -940,8 +858,7 @@ class Heap {
     const array = this.array;
     const index = node[2];
     if (array[index] !== node) throw new Error('Invalid node');
-    swap(array, index, --this.$length); // @ts-expect-error
-
+    swap(array, index, --this.$length);
     array[this.$length] = undefined;
     index < this.$length && sort(this.cmp, array, index, this.$length, this.stable);
     return node[1];
@@ -1248,8 +1165,7 @@ class List {
     if (node.list === this) return node.moveTo(before), node;
     node.delete();
     ++this.$length;
-    this.head ??= node; // @ts-expect-error
-
+    this.head ??= node;
     node.list = this;
     const next = node.next = before ?? node;
     const prev = node.prev = next.prev ?? node;
@@ -1307,7 +1223,7 @@ class Node {
     this.value = value;
     this.next = next;
     this.prev = prev;
-    ++list.$length;
+    ++list['$length'];
     list.head ??= this;
     next && prev ? next.prev = prev.next = this : this.next = this.prev = this;
   }
@@ -1319,7 +1235,7 @@ class Node {
   delete() {
     const list = this.list;
     if (!list) return this.value;
-    --list.$length;
+    --list['$length'];
     const {
       next,
       prev
@@ -1335,11 +1251,9 @@ class Node {
 
     if (prev) {
       prev.next = next;
-    } // @ts-expect-error
+    }
 
-
-    this.list = undefined; // @ts-expect-error
-
+    this.list = undefined;
     this.next = this.prev = undefined;
     return this.value;
   }
@@ -2088,24 +2002,52 @@ class ListenerNode {
   constructor(name, parent) {
     this.name = name;
     this.parent = parent;
+    this.mid = 0;
+    this.sid = 0;
     this.monitors = new invlist_1.List();
     this.subscribers = new invlist_1.List();
     this.index = new global_1.Map();
     this.children = new invlist_1.List();
   }
 
-  clear() {
+  reset(listeners) {
+    switch (listeners) {
+      case this.monitors:
+        this.mid = 0;
+
+        for (let node = listeners.head, i = listeners.length; node && i--; node = node.next) {
+          node.value.id = ++this.mid;
+        }
+
+        return;
+
+      case this.subscribers:
+        this.sid = 0;
+
+        for (let node = listeners.head, i = listeners.length; node && i--; node = node.next) {
+          node.value.id = ++this.sid;
+        }
+
+        return;
+
+      default:
+        throw new global_1.Error('Unreachable');
+    }
+  }
+
+  clear(disposable = false) {
     const {
       monitors,
       subscribers,
       index,
       children
     } = this;
+    const stack = [];
 
     for (let child = children.head, i = children.length; child && i--;) {
-      if (child.value.clear()) {
+      if (child.value.clear(true)) {
         const next = child.next;
-        index.delete(child.value.name);
+        disposable ? stack.push(child.value.name) : index.delete(child.value.name);
         child.delete();
         child = next;
       } else {
@@ -2113,6 +2055,9 @@ class ListenerNode {
       }
     }
 
+    if (children.length) while (stack.length) {
+      index.delete(stack.pop());
+    }
     subscribers.clear();
     return monitors.length === 0 && children.length === 0;
   }
@@ -2121,22 +2066,20 @@ class ListenerNode {
 
 class Observation {
   constructor(opts) {
-    this.id = global_1.Number.MIN_SAFE_INTEGER;
     this.node = new ListenerNode(void 0);
     this.limit = opts?.limit ?? 10;
   }
 
   monitor(namespace, monitor, options = {}) {
     if (typeof monitor !== 'function') throw new global_1.Error(`Spica: Observation: Invalid listener: ${monitor}`);
-    const {
-      monitors
-    } = this.seekNode(namespace, 0
+    const node = this.seek(namespace, 0
     /* SeekMode.Extensible */
     );
+    const monitors = node.monitors;
     if (monitors.length === this.limit) throw new global_1.Error(`Spica: Observation: Exceeded max listener limit.`);
-    if (this.id === global_1.Number.MAX_SAFE_INTEGER) throw new global_1.Error(`Spica: Observation: Max listener ID reached max safe integer.`);
-    const node = monitors.push({
-      id: ++this.id,
+    node.mid === global_1.Number.MAX_SAFE_INTEGER && node.reset(monitors);
+    const inode = monitors.push({
+      id: ++node.mid,
       type: 0
       /* ListenerType.Monitor */
       ,
@@ -2144,20 +2087,19 @@ class Observation {
       listener: monitor,
       options
     });
-    return () => void node.delete();
+    return () => void inode.delete();
   }
 
   on(namespace, subscriber, options = {}) {
     if (typeof subscriber !== 'function') throw new global_1.Error(`Spica: Observation: Invalid listener: ${subscriber}`);
-    const {
-      subscribers
-    } = this.seekNode(namespace, 0
+    const node = this.seek(namespace, 0
     /* SeekMode.Extensible */
     );
+    const subscribers = node.subscribers;
     if (subscribers.length === this.limit) throw new global_1.Error(`Spica: Observation: Exceeded max listener limit.`);
-    if (this.id === global_1.Number.MAX_SAFE_INTEGER) throw new global_1.Error(`Spica: Observation: Max listener ID reached max safe integer.`);
-    const node = subscribers.push({
-      id: ++this.id,
+    node.sid === global_1.Number.MAX_SAFE_INTEGER && node.reset(subscribers);
+    const inode = subscribers.push({
+      id: ++node.sid,
       type: 1
       /* ListenerType.Subscriber */
       ,
@@ -2165,7 +2107,7 @@ class Observation {
       listener: subscriber,
       options
     });
-    return () => void node.delete();
+    return () => void inode.delete();
   }
 
   once(namespace, subscriber) {
@@ -2175,9 +2117,9 @@ class Observation {
   }
 
   off(namespace, subscriber) {
-    return subscriber ? void this.seekNode(namespace, 1
+    return subscriber ? void this.seek(namespace, 1
     /* SeekMode.Breakable */
-    )?.subscribers?.find(item => item.listener === subscriber)?.delete() : void this.seekNode(namespace, 1
+    )?.subscribers?.find(item => item.listener === subscriber)?.delete() : void this.seek(namespace, 1
     /* SeekMode.Breakable */
     )?.clear();
   }
@@ -2200,33 +2142,30 @@ class Observation {
   }
 
   refs(namespace) {
-    const node = this.seekNode(namespace, 1
+    const node = this.seek(namespace, 1
     /* SeekMode.Breakable */
     );
     if (!node) return [];
-    return (0, array_1.push)(this.refsBelow(node, 0
-    /* ListenerType.Monitor */
-    ), this.refsBelow(node, 1
-    /* ListenerType.Subscriber */
-    )).reduce((acc, listeners) => (0, array_1.push)(acc, listeners.toArray()), []);
+    return this.listenersBelow(node).reduce((acc, listeners) => (0, array_1.push)(acc, listeners.toArray()), []);
   }
 
   drain(namespace, data, tracker) {
-    const node = this.seekNode(namespace, 1
+    let node = this.seek(namespace, 1
     /* SeekMode.Breakable */
     );
     const results = [];
-    const sss = node ? this.refsBelow(node, 1
-    /* ListenerType.Subscriber */
-    ) : [];
 
-    for (let i = 0; i < sss.length; ++i) {
-      const items = sss[i];
+    for (let lists = node ? this.listenersBelow(node, 1
+    /* ListenerType.Subscriber */
+    ) : [], i = 0; i < lists.length; ++i) {
+      const items = lists[i];
       if (items.length === 0) continue;
       const recents = [];
+      const max = items.last.value.id;
+      let min = 0;
 
-      for (let node = items.head, min = node.value.id, max = node.prev.value.id; node && min <= node.value.id && node.value.id <= max;) {
-        min = node.value.id + 1;
+      for (let node = items.head; node && min < node.value.id && node.value.id <= max;) {
+        min = node.value.id;
         const item = node.value;
         item.options.once && node.delete();
 
@@ -2243,19 +2182,21 @@ class Observation {
       }
     }
 
-    const mss = this.refsAbove(node || this.seekNode(namespace, 2
+    node ??= this.seek(namespace, 2
     /* SeekMode.Closest */
-    ), 0
-    /* ListenerType.Monitor */
     );
 
-    for (let i = 0; i < mss.length; ++i) {
-      const items = mss[i];
+    for (let lists = this.listenersAbove(node, 0
+    /* ListenerType.Monitor */
+    ), i = 0; i < lists.length; ++i) {
+      const items = lists[i];
       if (items.length === 0) continue;
       const recents = [];
+      const max = items.last.value.id;
+      let min = 0;
 
-      for (let node = items.head, min = node.value.id, max = node.prev.value.id; node && min <= node.value.id && node.value.id <= max;) {
-        min = node.value.id + 1;
+      for (let node = items.head; node && min < node.value.id && node.value.id <= max;) {
+        min = node.value.id;
         const item = node.value;
         item.options.once && node.delete();
 
@@ -2280,58 +2221,7 @@ class Observation {
     }
   }
 
-  refsAbove({
-    parent,
-    monitors,
-    subscribers
-  }, type) {
-    const acc = type === 0
-    /* ListenerType.Monitor */
-    ? [monitors] : [subscribers];
-
-    while (parent) {
-      type === 0
-      /* ListenerType.Monitor */
-      ? acc.push(parent.monitors) : acc.push(parent.subscribers);
-      parent = parent.parent;
-    }
-
-    return acc;
-  }
-
-  refsBelow(node, type) {
-    return this.refsBelow_(node, type, [])[0];
-  }
-
-  refsBelow_({
-    monitors,
-    subscribers,
-    index,
-    children
-  }, type, acc) {
-    type === 0
-    /* ListenerType.Monitor */
-    ? acc.push(monitors) : acc.push(subscribers);
-    let count = 0;
-
-    for (let child = children.head, i = children.length; child && i--;) {
-      const cnt = this.refsBelow_(child.value, type, acc)[1];
-      count += cnt;
-
-      if (cnt === 0) {
-        const next = child.next;
-        index.delete(child.value.name);
-        child.delete();
-        child = next;
-      } else {
-        child = child.next;
-      }
-    }
-
-    return [acc, monitors.length + subscribers.length + count];
-  }
-
-  seekNode(namespace, mode) {
+  seek(namespace, mode) {
     let node = this.node;
 
     for (let i = 0; i < namespace.length; ++i) {
@@ -2364,6 +2254,60 @@ class Observation {
     }
 
     return node;
+  }
+
+  listenersAbove({
+    parent,
+    monitors
+  }) {
+    const acc = [monitors];
+
+    while (parent) {
+      acc.push(parent.monitors);
+      parent = parent.parent;
+    }
+
+    return acc;
+  }
+
+  listenersBelow(node, type) {
+    return this.listenersBelow$(node, type, [])[0];
+  }
+
+  listenersBelow$({
+    monitors,
+    subscribers,
+    index,
+    children
+  }, type, acc) {
+    switch (type) {
+      case 1
+      /* ListenerType.Subscriber */
+      :
+        acc.push(subscribers);
+        break;
+
+      default:
+        acc.push(monitors, subscribers);
+    }
+
+    let count = 0;
+
+    for (let child = children.head, i = children.length; child && i--;) {
+      const cnt = this.listenersBelow$(child.value, type, acc)[1];
+      count += cnt;
+
+      if (cnt === 0) {
+        const next = child.next;
+        index.delete(child.value.name);
+        child.delete();
+        child = next;
+      } else {
+        child = child.next;
+      }
+    }
+
+    return [acc, monitors.length + subscribers.length + count];
   }
 
 }
@@ -2408,10 +2352,6 @@ class AtomicPromise {
     } catch (reason) {
       this[exports.internal].reject(reason);
     }
-  }
-
-  static get [Symbol.species]() {
-    return AtomicPromise;
   }
 
   static all(vs) {
@@ -2660,7 +2600,7 @@ class Internal {
     this.rejectReactions = [];
   }
 
-  get isPending() {
+  isPending() {
     return this.status.state === 0
     /* State.pending */
     ;
@@ -2816,7 +2756,7 @@ function react(reactions, param) {
 }
 
 function call(resolve, reject, cont, callback, param) {
-  if (!callback) return cont(param);
+  if (!callback) return void cont(param);
 
   try {
     resolve(callback(param));
@@ -3160,6 +3100,59 @@ exports.MultiQueue = MultiQueue;
 
 /***/ }),
 
+/***/ 5352:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+
+Object.defineProperty(exports, "__esModule", ({
+  value: true
+}));
+exports.Stack = void 0;
+
+class Stack {
+  constructor() {
+    this.array = [];
+  }
+
+  get length() {
+    return this.array.length;
+  }
+
+  isEmpty() {
+    return this.length === 0;
+  }
+
+  peek(index = 0) {
+    return index === 0 ? this.array[this.array.length - 1] : this.array[0];
+  }
+
+  push(value) {
+    this.array.push(value);
+  }
+
+  pop() {
+    return this.array.pop();
+  }
+
+  clear() {
+    this.array = [];
+  }
+
+  *[Symbol.iterator]() {
+    while (!this.isEmpty()) {
+      yield this.pop();
+    }
+
+    return;
+  }
+
+}
+
+exports.Stack = Stack;
+
+/***/ }),
+
 /***/ 5026:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
@@ -3276,46 +3269,65 @@ exports.wait = exports.captureTimers = exports.setRepeatTimer = exports.setTimer
 
 const global_1 = __webpack_require__(4128);
 
+const invlist_1 = __webpack_require__(7452);
+
+const clock_1 = __webpack_require__(7681);
+
 const function_1 = __webpack_require__(6288);
 
 exports.setTimer = template(false);
 exports.setRepeatTimer = template(true);
 
-function template(repeat) {
-  return (timeout, handler, unhandler) => {
+function template(repeat, cancellers) {
+  const timer = (timeout, handler, unhandler) => {
     let params;
     let id = (0, global_1.setTimeout)(async function loop() {
       params = [await handler()];
       if (!repeat) return;
       id = (0, global_1.setTimeout)(loop, timeout);
     }, timeout);
-    return (0, function_1.singleton)(() => {
+    const cancel = (0, function_1.singleton)(() => {
       (0, global_1.clearTimeout)(id);
+      node?.delete();
       params && unhandler?.(params[0]);
     });
+    const node = cancellers?.push(cancel);
+    return cancel;
   };
+
+  if (!cancellers) {
+    timer.group = () => template(repeat, new invlist_1.List());
+  } else {
+    timer.clear = () => {
+      while (cancellers.length) {
+        cancellers.shift()();
+      }
+    };
+  }
+
+  return timer;
 }
 
-function captureTimers(callback) {
+function captureTimers(test) {
   const start = (0, global_1.setTimeout)(function_1.noop);
   (0, global_1.clearTimeout)(start);
-  if (typeof start !== 'number') throw new Error('Timer ID is not a number');
-  return (0, function_1.singleton)((...as) => {
+  if (typeof start !== 'number') throw new Error('Timer ID must be a number');
+  return done => test(err => {
+    // Must get the ID before calling done.
     const end = (0, global_1.setTimeout)(function_1.noop);
+    done(err);
     (0, global_1.clearTimeout)(end);
 
     for (let i = start; i < end; ++i) {
       (0, global_1.clearTimeout)(i);
     }
-
-    callback?.(...as);
   });
 }
 
 exports.captureTimers = captureTimers;
 
 function wait(ms) {
-  return ms === 0 ? Promise.resolve(void 0) : new Promise(resolve => void (0, global_1.setTimeout)(resolve, ms));
+  return ms === 0 ? clock_1.clock : new Promise(resolve => void (0, global_1.setTimeout)(resolve, ms));
 }
 
 exports.wait = wait;
@@ -3948,7 +3960,7 @@ class EventStore {
     this.tx.rw.addEventListener('abort', clear);
     this.tx.rw.addEventListener('error', clear);
     this.tx.rw.addEventListener('complete', clear);
-    (0, clock_1.tick)(clear);
+    clock_1.clock.now(clear);
   }
 
   transact(cache, success, failure, tx = this.txrw) {
@@ -3963,7 +3975,7 @@ class EventStore {
     const events = [];
     return void this.listen(db => {
       if (!this.alive) return void cb?.(new Error('Session is already closed.'));
-      if (cancellation?.isCancelled) return void cb?.(new Error('Request is cancelled.'));
+      if (cancellation?.isCancelled()) return void cb?.(new Error('Request is cancelled.'));
       const tx = db.transaction(this.name, 'readonly');
       const req = tx.objectStore(this.name).index(EventStoreSchema.key).openCursor(key, 'prev');
       req.addEventListener('success', () => {
@@ -4353,7 +4365,7 @@ class KeyValueStore {
     this.tx.rw.addEventListener('abort', clear);
     this.tx.rw.addEventListener('error', clear);
     this.tx.rw.addEventListener('complete', clear);
-    (0, clock_1.tick)(clear);
+    clock_1.clock.now(clear);
   }
 
   transact(cache, success, failure, tx = this.txrw) {
@@ -4367,7 +4379,7 @@ class KeyValueStore {
     if (!this.alive) return void cb?.(new Error('Session is already closed.'), key);
     return void this.listen(db => {
       if (!this.alive) return void cb?.(new Error('Session is already closed.'), key);
-      if (cancellation?.isCancelled) return void cb?.(new Error('Request is cancelled.'), key);
+      if (cancellation?.isCancelled()) return void cb?.(new Error('Request is cancelled.'), key);
       const tx = db.transaction(this.name, 'readonly');
       const req = this.index ? tx.objectStore(this.name).index(this.index).get(key) : tx.objectStore(this.name).get(key);
       req.addEventListener('success', () => void cb?.(tx.error || req.error, key, req.result) && this.cache.set(key, req.result));
@@ -4882,7 +4894,7 @@ class ChannelStore {
   }
 
   get alive() {
-    return this.cancellation.isAlive;
+    return this.cancellation.isAlive();
   }
 
   ensureAliveness() {
@@ -5077,7 +5089,7 @@ class AccessStore {
         schedule = global_1.Date.now() + timeout;
         untimer?.();
         untimer = (0, timer_1.setTimer)(timeout, async () => {
-          if (!this.cancellation.isAlive) return;
+          if (!this.cancellation.isAlive()) return;
           if (schedule === 0) return;
           schedule = global_1.Infinity;
           if (!this.ownership.take('store', delay)) return void this.schedule(delay *= 2);
@@ -5103,7 +5115,7 @@ class AccessStore {
             this.chan.lock = false;
             schedule = global_1.Infinity;
             untimer();
-            if (!this.cancellation.isAlive) return;
+            if (!this.cancellation.isAlive()) return;
             if (error) return void this.schedule(delay * 10);
             if (!cursor) return;
             if (!this.ownership.extend('store', delay)) return void this.schedule(delay *= 2);
@@ -5311,7 +5323,7 @@ class ExpiryStore {
         schedule = global_1.Date.now() + timeout;
         untimer?.();
         untimer = (0, timer_1.setTimer)(timeout, () => {
-          if (!this.cancellation.isAlive) return;
+          if (!this.cancellation.isAlive()) return;
           if (schedule === 0) return;
           schedule = global_1.Infinity;
           if (!this.ownership.take('store', delay)) return void this.schedule(delay *= 2);
@@ -5330,7 +5342,7 @@ class ExpiryStore {
             this.chan.lock = false;
             schedule = global_1.Infinity;
             untimer();
-            if (!this.cancellation.isAlive) return;
+            if (!this.cancellation.isAlive()) return;
             if (error) return void this.schedule(delay * 10);
             if (!cursor) return;
             if (!this.ownership.extend('store', delay)) return void this.schedule(delay *= 2);
@@ -5917,7 +5929,7 @@ class StorageChannel {
   }
 
   get alive() {
-    return this.cancellation.isAlive;
+    return this.cancellation.isAlive();
   }
 
   ensureAliveness() {
