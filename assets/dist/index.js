@@ -6872,7 +6872,7 @@ exports.storageEventStream$ = new observer_1.Observation({
   limit: Infinity
 });
 exports.storageEventStream = exports.storageEventStream$;
-void self.addEventListener('storage', event => {
+self.addEventListener('storage', event => {
   switch (event.storageArea) {
     case global_1.localStorage:
       return void exports.storageEventStream$.emit(event.key === null ? ['local'] : ['local', event.key], event);
