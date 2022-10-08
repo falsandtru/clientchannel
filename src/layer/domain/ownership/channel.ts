@@ -1,4 +1,3 @@
-import { Date, Promise, setTimeout } from 'spica/global';
 import { abs, floor, max, min } from 'spica/alias';
 import { Channel, ChannelMessage } from '../broadcast/channel';
 import { Cancellation } from 'spica/cancellation';
@@ -50,7 +49,7 @@ export class Ownership<K extends string> {
           // Release the foreign ownership.
           return newPriority === oldPriority
             ? void this.store.delete(key)
-            : void 0;
+            : undefined;
         case oldPriority === 0:
           assert(newPriority >= 0);
           // Accept the foreign ownership.
@@ -109,14 +108,14 @@ export class Ownership<K extends string> {
   public take(key: K, ttl: number, wait: number): Promise<boolean>
   public take(key: K, ttl: number, wait?: number): boolean | Promise<boolean> {
     if (!this.alive) throw new Error(`ClientChannel: Ownership channel "${this.channel.name}" is already closed.`);
-    if (!this.isTakable(key)) return wait === void 0 ? false : Promise.resolve(false);
+    if (!this.isTakable(key)) return wait === undefined ? false : Promise.resolve(false);
     assert(0 <= ttl && ttl < 60 * 1000);
     ttl = floor(min(max(ttl, 1 * 1000), 60 * 1000));
-    wait = wait === void 0 ? wait : min(wait, 0);
+    wait = wait === undefined ? wait : min(wait, 0);
     const priority = Ownership.genPriority() + Ownership.throttle + Ownership.margin;
     assert(priority > 0);
     this.setOwnership(key, priority, ttl);
-    return wait === void 0
+    return wait === undefined
       ? this.has(key)
       : new Promise(resolve => void setTimeout(() => void resolve(this.extend(key, ttl)), wait));
   }

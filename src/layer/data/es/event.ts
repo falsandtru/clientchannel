@@ -1,4 +1,3 @@
-import { Number, Object, Date } from 'spica/global';
 import { StoreChannel } from '../../../..';
 import { EventId, makeEventId } from './identifier';
 import { Prop, isValidProperty, isValidPropertyName } from '../database/value';

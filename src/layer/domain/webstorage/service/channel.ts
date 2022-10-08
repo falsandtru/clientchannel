@@ -1,4 +1,3 @@
-import { Object } from 'spica/global';
 import { StorageChannel as IStorageChannel } from '../../../../../';
 import { Observer } from '../../../../../internal';
 import { DAO, Prop, isValidProperty, build } from '../../dao/api';
@@ -26,7 +25,7 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
         const memory = parse<V>(newValue);
         const link = this.$link;
         if (!source || !link) return;
-        void (Object.entries(memory) as [Prop<V>, V[Prop<V>]][])
+        (Object.entries(memory) as [Prop<V>, V[Prop<V>]][])
           .filter(isValidProperty)
           .forEach(([prop]) => {
             const newValue = memory[prop];
@@ -75,7 +74,7 @@ export class StorageChannel<V extends StorageChannel.Value> implements IStorageC
   public unlink(link?: V): boolean {
     if (link && this.$link !== link) return false;
     const result = !!this.source;
-    this.source = this.$link = void 0;
+    this.source = this.$link = undefined;
     return result;
   }
   public close(): void {

@@ -1,4 +1,3 @@
-import { Infinity, Date } from 'spica/global';
 import { min } from 'spica/alias';
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';
@@ -111,7 +110,7 @@ export class AccessStore<K extends string> {
       let done = false;
       timeout && setTimer(timeout, () => done = !void reject(new Error('Timeout.')));
       const keys: K[] = [];
-      void this.store.cursor(
+      this.store.cursor(
         null, AccessStoreSchema.date, 'prev', 'readonly', [],
         (error, cursor): void => {
           if (done) return;

@@ -1,4 +1,3 @@
-import { Object } from 'spica/global';
 import { StoreChannel as IStoreChannel } from '../../../../../';
 import { K } from '../../../../../internal';
 import { Prop } from '../../../data/database/value';

@@ -1,4 +1,3 @@
-import { Promise } from 'spica/global';
 import { Listen, Config } from '../../infrastructure/indexeddb/api';
 import { Cancellation } from 'spica/cancellation';
 import { clock } from 'spica/clock';
@@ -36,7 +35,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     if (++this.tx.rwc < 25 || !this.tx.rw) return;
     const tx = this.tx.rw;
     this.tx.rwc = 0;
-    this.tx.rw = void 0;
+    this.tx.rw = undefined;
     tx.commit();
     return this.tx.rw;
   }
@@ -49,7 +48,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
     this.tx.rw = tx;
     const clear = () => {
       if (this.tx.rw !== tx) return;
-      this.tx.rw = void 0;
+      this.tx.rw = undefined;
     };
     this.tx.rw.addEventListener('abort', clear);
     this.tx.rw.addEventListener('error', clear);
@@ -115,7 +114,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
       db =>
         this.alive && this.cache.has(key)
           ? db.transaction(this.name, 'readwrite')
-          : void 0,
+          : undefined,
       tx => {
         this.index
           ? tx
@@ -141,7 +140,7 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
       db =>
         this.alive
           ? db.transaction(this.name, 'readwrite')
-          : void 0,
+          : undefined,
       tx => {
         tx
           .objectStore(this.name)
@@ -163,10 +162,10 @@ export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
         ? tx
           .objectStore(this.name)
           .index(index)
-          .count(query ?? void 0)
+          .count(query ?? undefined)
         : tx
           .objectStore(this.name)
-          .count(query ?? void 0);
+          .count(query ?? undefined);
       req.addEventListener('success', () =>
         void resolve(req.result));
       tx.addEventListener('complete', () =>

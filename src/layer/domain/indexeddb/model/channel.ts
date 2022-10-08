@@ -1,4 +1,3 @@
-import { Infinity, Promise, setTimeout } from 'spica/global';
 import { StoreChannel } from '../../../../../';
 import { Observer } from '../../../../../internal';
 import { open, Listen, close, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
@@ -123,8 +122,8 @@ export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Val
   }
   public sync(keys: readonly K[], timeout?: number): Promise<PromiseSettledResult<K>[]> {
     this.ensureAliveness();
-    const cancellation = timeout === void 0
-      ? void 0
+    const cancellation = timeout === undefined
+      ? undefined
       : new Cancellation();
     cancellation && setTimeout(cancellation.cancel, timeout);
     return Promise.resolve(AtomicPromise.allSettled(
@@ -184,7 +183,7 @@ export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Val
   public recent(timeout?: number): Promise<K[]>;
   public recent(cb?: (key: K, keys: readonly K[]) => boolean | void, timeout?: number): Promise<K[]>;
   public recent(cb?: number | ((key: K, keys: readonly K[]) => boolean | void), timeout?: number): Promise<K[]> {
-    if (typeof cb === 'number') return this.recent(void 0, cb);
+    if (typeof cb === 'number') return this.recent(undefined, cb);
     this.ensureAliveness();
     return this.stores.access.recent(cb, timeout);
   }

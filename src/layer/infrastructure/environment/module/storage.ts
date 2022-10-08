@@ -4,10 +4,10 @@ export let isStorageAvailable = verifyStorageAccess();
 
 export function verifyStorageAccess(): boolean {
   try {
-    if (!self.navigator.cookieEnabled) throw void 0;
+    if (!self.navigator.cookieEnabled) throw undefined;
     const key = 'clientchannel#' + uuid();
     self.sessionStorage.setItem(key, key);
-    if (key !== self.sessionStorage.getItem(key)) throw void 0;
+    if (key !== self.sessionStorage.getItem(key)) throw undefined;
     self.sessionStorage.removeItem(key);
     return isStorageAvailable = true;
   }

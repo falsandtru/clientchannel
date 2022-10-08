@@ -1,4 +1,3 @@
-import { Object, Map, indexedDB } from 'spica/global';
 import { max } from 'spica/alias';
 import { Listen, Config, IDBKeyRange } from '../../infrastructure/indexeddb/api';
 import { EventId, makeEventId } from './identifier';
@@ -115,7 +114,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     if (++this.tx.rwc < 25 || !this.tx.rw) return;
     const tx = this.tx.rw;
     this.tx.rwc = 0;
-    this.tx.rw = void 0;
+    this.tx.rw = undefined;
     tx.commit();
     return this.tx.rw;
   }
@@ -128,7 +127,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     this.tx.rw = tx;
     const clear = () => {
       if (this.tx.rw !== tx) return;
-      this.tx.rw = void 0;
+      this.tx.rw = undefined;
     };
     this.tx.rw.addEventListener('abort', clear);
     this.tx.rw.addEventListener('error', clear);
@@ -254,7 +253,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       db =>
         this.alive
           ? db.transaction(this.name, 'readwrite')
-          : void 0,
+          : undefined,
       tx => {
         if (!active()) return;
         const req = tx
@@ -295,7 +294,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
       db =>
         this.alive
           ? db.transaction(this.name, 'readwrite')
-          : void 0,
+          : undefined,
       tx => {
         if (!this.has(key) || this.meta(key).id === 0) return;
         const store = tx.objectStore(this.name);
@@ -341,7 +340,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           }
         });
       },
-      () => void 0);
+      () => undefined);
   }
   public clean(key: K): void {
     if (!this.alive) return;
@@ -508,7 +507,7 @@ export function compose<K extends string, V extends EventStore.Value>(
   function group(events: E[]): E[][] {
     return events
       .map<[E, number]>((ev, i) => [ev, i])
-      .sort(([a, ai], [b, bi]) => void 0
+      .sort(([a, ai], [b, bi]) => undefined
         || indexedDB.cmp(a.key, b.key)
         || b.date - a.date
         || b.id > 0 && a.id > 0 && b.id - a.id

@@ -1,4 +1,3 @@
-import { Object } from 'spica/global';
 import { Prop, isValidProperty, isValidPropertyValue } from '../../../data/database/value';
 
 export { Prop, isValidProperty, isValidPropertyName, isValidPropertyValue } from '../../../data/database/value';

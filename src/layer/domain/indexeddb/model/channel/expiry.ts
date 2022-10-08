@@ -1,4 +1,3 @@
-import { Infinity, Date } from 'spica/global';
 import { min } from 'spica/alias';
 import { Listen, Config } from '../../../../infrastructure/indexeddb/api';
 import { KeyValueStore } from '../../../../data/kvs/store';

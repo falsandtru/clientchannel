@@ -1,4 +1,3 @@
-import { Object } from 'spica/global';
 import { isPrimitive } from 'spica/type';
 
 export type Prop<O, K extends keyof O = keyof O> = K extends PropName<keyof O & string> ? [PropValue<O[K]>] extends [never] ? never : K : never;
