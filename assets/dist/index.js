@@ -73,7 +73,7 @@ exports.ObjectSetPrototypeOf = Object.setPrototypeOf;
 /***/ }),
 
 /***/ 8112:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+/***/ ((__unused_webpack_module, exports) => {
 
 
 
@@ -81,10 +81,6 @@ Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
 exports.splice = exports.pop = exports.push = exports.shift = exports.unshift = exports.indexOf = void 0;
-
-const global_1 = __webpack_require__(4128);
-
-const undefined = void 0;
 
 function indexOf(as, a) {
   if (as.length === 0) return -1;
@@ -96,7 +92,7 @@ exports.indexOf = indexOf;
 function unshift(as, bs) {
   if ('length' in as) {
     if (as.length === 1) return bs.unshift(as[0]), bs;
-    if (global_1.Symbol.iterator in as) return bs.unshift(...as), bs;
+    if (Symbol.iterator in as) return bs.unshift(...as), bs;
 
     for (let i = as.length; i--;) {
       bs.unshift(as[i]);
@@ -120,7 +116,7 @@ exports.shift = shift;
 function push(as, bs) {
   if ('length' in bs) {
     if (bs.length === 1) return as.push(bs[0]), as;
-    if (global_1.Symbol.iterator in bs && bs.length > 50) return as.push(...bs), as;
+    if (Symbol.iterator in bs && bs.length > 50) return as.push(...bs), as;
 
     for (let len = bs.length, i = 0; i < len; ++i) {
       as.push(bs[i]);
@@ -157,13 +153,14 @@ function splice(as, index, count, ...values) {
   if (count === 1 && values.length === 1) return [[as[index], as[index] = values[0]][0]];
 
   switch (index) {
+    case as.length - 1:
+      if (as.length === 0) return push(as, values), [];
+      if (count >= 1) return [[as.pop()], push(as, values)][0];
+      break;
+
     case 0:
       if (count === 0) return unshift(values, as), [];
       if (count === 1) return [[as.shift()], unshift(values, as)][0];
-      break;
-
-    case as.length - 1:
-      if (count === 1) return [[as.pop()], push(as, values)][0];
       break;
 
     case as.length:
@@ -207,8 +204,6 @@ Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
 exports.template = exports.inherit = exports.merge = exports.extend = exports.overwrite = exports.clone = exports.assign = void 0;
-
-const global_1 = __webpack_require__(4128);
 
 const alias_1 = __webpack_require__(5406);
 
@@ -333,7 +328,7 @@ function template(strategy) {
       const source = sources[i];
       if (source === target) continue;
       if ((0, type_1.isPrimitive)(source)) continue;
-      const keys = global_1.Object.keys(source);
+      const keys = Object.keys(source);
 
       for (let i = 0; i < keys.length; ++i) {
         strategy(keys[i], target, source);
@@ -347,7 +342,7 @@ function template(strategy) {
 exports.template = template;
 
 function empty(source) {
-  return source instanceof global_1.Object ? {} : (0, alias_1.ObjectCreate)(null);
+  return source instanceof Object ? {} : (0, alias_1.ObjectCreate)(null);
 }
 
 /***/ }),
@@ -377,7 +372,7 @@ const exception_1 = __webpack_require__(7822);
 class Cancellation {
   constructor(cancellees) {
     this[_a] = 'Cancellation';
-    this.reason = [];
+    this.state = [];
     this.listeners = [];
     this[_b] = new promise_1.Internal();
     if (cancellees) for (const cancellee of cancellees) {
@@ -386,34 +381,30 @@ class Cancellation {
   }
 
   isAlive() {
-    return this.reason.length === 0;
+    return this.state.length === 0;
   }
 
   isCancelled() {
-    return this.reason.length === 1;
+    return this.state.length === 1;
   }
 
   isClosed() {
-    return this.reason.length === 2;
-  }
-
-  isFinished() {
-    return this.reason.length !== 0;
+    return this.state.length === 2;
   }
 
   register$(listener) {
     const {
       listeners,
-      reason
+      state
     } = this;
 
-    if (reason.length !== 0 && listeners.length === 0) {
-      reason.length === 1 && handler(reason[0]);
+    if (!this.isAlive() && listeners.length === 0) {
+      state.length === 1 && handler(state[0]);
       return function_1.noop;
     }
 
     listeners.push(handler);
-    return () => listener = function_1.noop;
+    return () => void (listener = function_1.noop);
 
     function handler(reason) {
       try {
@@ -429,15 +420,16 @@ class Cancellation {
   }
 
   cancel$(reason) {
-    if (this.reason.length !== 0) return;
-    this.reason = [reason];
+    if (!this.isAlive()) return;
+    this.state = [reason];
 
     for (let {
       listeners
-    } = this; listeners.length;) {
-      listeners.shift()?.(reason);
+    } = this, i = 0; i < listeners.length; ++i) {
+      listeners[i](reason);
     }
 
+    this.listeners = [];
     this[promise_1.internal].resolve(reason);
   }
 
@@ -446,8 +438,9 @@ class Cancellation {
   }
 
   close$(reason) {
-    if (this.reason.length !== 0) return;
-    this.reason = [void 0, reason];
+    if (!this.isAlive()) return;
+    this.state = [undefined, reason];
+    this.listeners = [];
     this[promise_1.internal].resolve(promise_1.AtomicPromise.reject(reason));
   }
 
@@ -455,20 +448,8 @@ class Cancellation {
     return reason => this.close$(reason);
   }
 
-  then(onfulfilled, onrejected) {
-    return new promise_1.AtomicPromise((resolve, reject) => this[promise_1.internal].then(resolve, reject, onfulfilled, onrejected));
-  }
-
-  catch(onrejected) {
-    return this.then(void 0, onrejected);
-  }
-
-  finally(onfinally) {
-    return this.then(onfinally, onfinally).then(() => this);
-  }
-
   get promise() {
-    return value => this.isCancelled() ? promise_1.AtomicPromise.reject(this.reason[0]) : promise_1.AtomicPromise.resolve(value);
+    return value => this.isCancelled() ? promise_1.AtomicPromise.reject(this.state[0]) : promise_1.AtomicPromise.resolve(value);
   }
 
   get maybe() {
@@ -476,13 +457,16 @@ class Cancellation {
   }
 
   get either() {
-    return value => (0, either_1.Right)(value).bind(value => this.isCancelled() ? (0, either_1.Left)(this.reason[0]) : (0, either_1.Right)(value));
+    return value => (0, either_1.Right)(value).bind(value => this.isCancelled() ? (0, either_1.Left)(this.state[0]) : (0, either_1.Right)(value));
   }
 
 }
 
 exports.Cancellation = Cancellation;
 _a = Symbol.toStringTag, _b = promise_1.internal;
+Cancellation.prototype.then = promise_1.AtomicPromise.prototype.then;
+Cancellation.prototype.catch = promise_1.AtomicPromise.prototype.catch;
+Cancellation.prototype.finally = promise_1.AtomicPromise.prototype.finally;
 
 /***/ }),
 
@@ -496,13 +480,10 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.clock = exports.now = void 0;
 
-const global_1 = __webpack_require__(4128);
-
 const queue_1 = __webpack_require__(4934);
 
 const exception_1 = __webpack_require__(7822);
 
-const undefined = void 0;
 let time;
 let count = 0;
 
@@ -514,15 +495,15 @@ function now(nocache) {
   }
 
   count = 1;
-  return time = global_1.Date.now();
+  return time = Date.now();
 }
 
 exports.now = now;
-exports.clock = new class Clock extends global_1.Promise {
+exports.clock = new class Clock extends Promise {
   constructor() {
     super(resolve => resolve(undefined)); // Promise subclass is slow.
 
-    const clock = global_1.Promise.resolve();
+    const clock = Promise.resolve();
     clock.next = this.next;
     clock.now = this.now;
     return clock;
@@ -621,7 +602,7 @@ exports.curry = f => curry_(f, f.length);
 
 function curry_(f, arity, ...xs) {
   let g;
-  return xs.length < arity ? (...ys) => curry_(g ??= xs.length && f.bind(void 0, ...xs) || f, arity - xs.length, ...ys) : f(...xs);
+  return xs.length < arity ? (...ys) => curry_(g ??= xs.length && f.bind(undefined, ...xs) || f, arity - xs.length, ...ys) : f(...xs);
 }
 
 const uncurry = f => uncurry_(f);
@@ -681,15 +662,13 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.suppressAsyncException = exports.causeAsyncException = void 0;
 
-const global_1 = __webpack_require__(4128);
-
 const stack_1 = __webpack_require__(5352);
 
 const stack = new stack_1.Stack();
 
 function causeAsyncException(reason) {
   if (stack.isEmpty()) {
-    global_1.Promise.reject(reason);
+    Promise.reject(reason);
   } else {
     stack.peek().push(reason);
   }
@@ -759,31 +738,6 @@ exports.noop = noop;
 
 /***/ }),
 
-/***/ 4128:
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-
-
-__webpack_require__(6921);
-
-const global = void 0 || typeof globalThis !== 'undefined' && globalThis // @ts-ignore
-|| typeof self !== 'undefined' && self || Function('return this')();
-global.global = global;
-module.exports = global;
-
-/***/ }),
-
-/***/ 6921:
-/***/ (() => {
-
- // @ts-ignore
-
-var globalThis; // @ts-ignore
-
-var global = (/* unused pure expression or super */ null && (globalThis));
-
-/***/ }),
-
 /***/ 818:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
@@ -794,33 +748,29 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.MultiHeap = exports.Heap = void 0;
 
-const global_1 = __webpack_require__(4128);
+const alias_1 = __webpack_require__(5406);
 
 const invlist_1 = __webpack_require__(7452);
 
 const memoize_1 = __webpack_require__(1808);
 
-const undefined = void 0;
-let size = 16;
-
 class Heap {
-  constructor(cmp = Heap.max, stable = false) {
+  constructor(cmp = Heap.max, options) {
     this.cmp = cmp;
-    this.stable = stable;
-    this.array = (0, global_1.Array)(size);
-    this.$length = 0;
+    this.stable = options?.stable ?? false;
+    this.array = new List();
   }
 
   get length() {
-    return this.$length;
+    return this.array.length;
   }
 
   isEmpty() {
-    return this.array[0] !== undefined;
+    return this.array.length === 0;
   }
 
   peek() {
-    return this.array[0]?.[1];
+    return this.array.value(this.array.index(0));
   }
 
   insert(value, order) {
@@ -828,10 +778,9 @@ class Heap {
       order = value;
     }
 
-    const array = this.array;
-    const node = array[this.$length] = [order, value, this.$length++];
-    upHeapify(this.cmp, array, this.$length);
-    return node;
+    const index = this.array.push(value, order);
+    upHeapify(this.cmp, this.array, this.length);
+    return index;
   }
 
   replace(value, order) {
@@ -839,54 +788,50 @@ class Heap {
       order = value;
     }
 
-    if (this.$length === 0) return void this.insert(value, order);
-    const array = this.array;
-    const replaced = array[0][1];
-    array[0] = [order, value, 0];
-    downHeapify(this.cmp, array, 1, this.$length, this.stable);
+    if (this.length === 0) return void this.insert(value, order);
+    const replaced = this.peek();
+    const index = this.array.index(0);
+    this.array.setValue(index, value);
+    this.array.setOrder(index, order);
+    downHeapify(this.cmp, this.array, 1, this.length, this.stable);
     return replaced;
   }
 
   extract() {
-    if (this.$length === 0) return;
-    const node = this.array[0];
-    this.delete(node);
-    return node[1];
+    if (this.length === 0) return;
+    const value = this.peek();
+    this.del(0);
+    return value;
   }
 
-  delete(node) {
-    const array = this.array;
-    const index = node[2];
-    if (array[index] !== node) throw new Error('Invalid node');
-    swap(array, index, --this.$length);
-    array[this.$length] = undefined;
-    index < this.$length && sort(this.cmp, array, index, this.$length, this.stable);
-    return node[1];
+  del(pos) {
+    swap(this.array, pos + 1, this.length);
+    this.array.pop();
+    sort(this.cmp, this.array, pos + 1, this.length, this.stable);
   }
 
-  update(node, order, value) {
-    if (arguments.length < 2) {
-      order = node[0];
+  delete(index) {
+    const value = this.array.value(index);
+    this.del(this.array.position(index));
+    return value;
+  }
+
+  update(index, order, value) {
+    const ord = this.array.order(index);
+
+    if (arguments.length < 3) {
+      this.array.setOrder(index, order);
+    } else {
+      this.array.setOrder(index, order);
+      this.array.setValue(index, value);
     }
 
-    const array = this.array;
-    if (array[node[2]] !== node) throw new Error('Invalid node');
-
-    if (arguments.length > 2) {
-      node[1] = value;
-    }
-
-    if (this.cmp(node[0], node[0] = order) === 0) return;
-    sort(this.cmp, array, node[2], this.$length, this.stable);
-  }
-
-  find(order) {
-    return this.array.find(node => node && node[0] === order);
+    if (this.cmp(ord, order) === 0) return;
+    sort(this.cmp, this.array, this.array.position(index) + 1, this.length, this.stable);
   }
 
   clear() {
-    this.array = (0, global_1.Array)(size);
-    this.$length = 0;
+    this.array.clear();
   }
 
 }
@@ -897,12 +842,186 @@ Heap.max = (a, b) => a > b ? -1 : a < b ? 1 : 0;
 
 Heap.min = (a, b) => a > b ? 1 : a < b ? -1 : 0;
 
+function sort(cmp, array, index, length, stable) {
+  if (length === 0) return false;
+
+  switch (index) {
+    case 1:
+      return  false || downHeapify(cmp, array, index, length, stable);
+
+    case length:
+      return upHeapify(cmp, array, index);
+
+    default:
+      return upHeapify(cmp, array, index) || downHeapify(cmp, array, index, length, stable);
+  }
+}
+
+function upHeapify(cmp, array, index) {
+  const order = array.ord(index - 1);
+  let changed = false;
+
+  while (index > 1) {
+    const parent = index / 2 | 0;
+    if (cmp(array.ord(parent - 1), order) <= 0) break;
+    swap(array, index, parent);
+    index = parent;
+    changed ||= true;
+  }
+
+  return changed;
+}
+
+function downHeapify(cmp, array, index, length, stable) {
+  let changed = false;
+
+  while (index < length) {
+    const left = index * 2;
+    const right = index * 2 + 1;
+    let min = index;
+
+    if (left <= length) {
+      const result = cmp(array.ord(left - 1), array.ord(min - 1));
+
+      if (stable ? result <= 0 : result < 0) {
+        min = left;
+      }
+    }
+
+    if (right <= length) {
+      const result = cmp(array.ord(right - 1), array.ord(min - 1));
+
+      if (stable ? result <= 0 : result < 0) {
+        min = right;
+      }
+    }
+
+    if (min === index) break;
+    swap(array, index, min);
+    index = min;
+    changed ||= true;
+  }
+
+  return changed;
+}
+
+function swap(array, index1, index2) {
+  array.swap(index1 - 1, index2 - 1);
+}
+
+class List {
+  constructor() {
+    this.capacity = 4;
+    this.orders = Array(this.capacity);
+    this.values = Array(this.capacity);
+    this.indexes = new Uint32Array(this.capacity);
+    this.positions = new Uint32Array(this.capacity);
+    this.$length = 0;
+  }
+
+  get length() {
+    return this.$length;
+  }
+
+  index(pos) {
+    return this.indexes[pos];
+  }
+
+  position(index) {
+    return this.positions[index];
+  }
+
+  ord(pos) {
+    return this.orders[this.indexes[pos]];
+  }
+
+  order(index) {
+    return this.orders[index];
+  }
+
+  value(index) {
+    return this.values[index];
+  }
+
+  isFull() {
+    return this.$length === this.capacity;
+  }
+
+  extend() {
+    if (this.capacity === 2 ** 32) throw new Error(`Too large capacity`);
+    const capacity = (0, alias_1.min)(this.capacity * 2, 2 ** 32);
+    this.orders.length = capacity;
+    this.values.length = capacity;
+    const indexes = new Uint32Array(capacity);
+    indexes.set(this.indexes);
+    this.indexes = indexes;
+    const positions = new Uint32Array(capacity);
+    positions.set(this.positions);
+    this.positions = positions;
+    this.capacity = capacity;
+  }
+
+  clear() {
+    this.orders = Array(this.capacity);
+    this.values = Array(this.capacity);
+    this.$length = 0;
+  }
+
+  setValue(index, value) {
+    this.values[index] = value;
+  }
+
+  setOrder(index, order) {
+    this.orders[index] = order;
+  }
+
+  push(value, order) {
+    this.isFull() && this.extend();
+    const pos = this.$length++;
+    this.indexes[pos] = pos;
+    this.positions[pos] = pos;
+    this.values[pos] = value;
+    this.orders[pos] = order;
+    return pos;
+  }
+
+  pop() {
+    if (this.$length === 0) return;
+    const pos = this.indexes[--this.$length];
+    this.values[pos] = undefined;
+    this.orders[pos] = undefined;
+  }
+
+  swap(pos1, pos2) {
+    if (pos1 === pos2) return false;
+    const {
+      indexes,
+      positions
+    } = this;
+    const idx1 = indexes[pos1];
+    const idx2 = indexes[pos2];
+    indexes[pos1] = idx2;
+    indexes[pos2] = idx1;
+    positions[idx1] = pos2;
+    positions[idx2] = pos1;
+    return true;
+  }
+
+  *[Symbol.iterator]() {
+    if (this.$length === 0) return;
+
+    for (let i = 0; i < this.$length; ++i) {
+      const index = this.indexes[i];
+      yield [this.orders[index], this.values[index], i];
+    }
+  }
+
+}
+
 class MultiHeap {
-  constructor(cmp = MultiHeap.max, clean = true) {
+  constructor(cmp = MultiHeap.max, options) {
     this.cmp = cmp;
-    this.clean = clean;
-    this.heap = new Heap(this.cmp);
-    this.dict = new global_1.Map();
+    this.dict = new Map();
     this.list = (0, memoize_1.memoize)(order => {
       const list = new invlist_1.List();
       list[MultiHeap.order] = order;
@@ -910,6 +1029,8 @@ class MultiHeap {
       return list;
     }, this.dict);
     this.$length = 0;
+    this.clean = options?.clean ?? true;
+    this.heap = new Heap(this.cmp);
   }
 
   get length() {
@@ -995,60 +1116,6 @@ MultiHeap.heap = Symbol('heap');
 MultiHeap.max = Heap.max;
 MultiHeap.min = Heap.min;
 
-function sort(cmp, array, index, length, stable) {
-  return upHeapify(cmp, array, index + 1) || downHeapify(cmp, array, index + 1, length, stable);
-}
-
-function upHeapify(cmp, array, index) {
-  const order = array[index - 1][0];
-  let changed = false;
-
-  while (index > 1) {
-    const parent = index / 2 | 0;
-    if (cmp(array[parent - 1][0], order) <= 0) break;
-    swap(array, index - 1, parent - 1);
-    index = parent;
-    changed ||= true;
-  }
-
-  return changed;
-}
-
-function downHeapify(cmp, array, index, length, stable) {
-  let changed = false;
-
-  while (index < length) {
-    const left = index * 2;
-    const right = index * 2 + 1;
-    let min = index;
-
-    if (left <= length && (stable ? cmp(array[left - 1][0], array[min - 1][0]) <= 0 : cmp(array[left - 1][0], array[min - 1][0]) < 0)) {
-      min = left;
-    }
-
-    if (right <= length && (stable ? cmp(array[right - 1][0], array[min - 1][0]) <= 0 : cmp(array[right - 1][0], array[min - 1][0]) < 0)) {
-      min = right;
-    }
-
-    if (min === index) break;
-    swap(array, index - 1, min - 1);
-    index = min;
-    changed ||= true;
-  }
-
-  return changed;
-}
-
-function swap(array, index1, index2) {
-  if (index1 === index2) return;
-  const node1 = array[index1];
-  const node2 = array[index2];
-  node1[2] = index2;
-  node2[2] = index1;
-  array[index1] = node2;
-  array[index2] = node1;
-}
-
 /***/ }),
 
 /***/ 7452:
@@ -1096,7 +1163,6 @@ Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
 exports.List = void 0;
-const undefined = void 0;
 
 class List {
   constructor() {
@@ -1162,7 +1228,7 @@ class List {
   }
 
   insert(node, before = this.head) {
-    if (node.list === this) return node.moveTo(before), node;
+    if (node.list === this) return node.move(before), node;
     node.delete();
     ++this.$length;
     this.head ??= node;
@@ -1206,7 +1272,9 @@ class List {
   }
 
   *[Symbol.iterator]() {
-    for (let head = this.head, node = head; node;) {
+    const head = this.head;
+
+    for (let node = head; node;) {
       yield node.value;
       node = node.next;
       if (node === head) return;
@@ -1266,7 +1334,7 @@ class Node {
     return new Node(this.list, value, this.next, this);
   }
 
-  moveTo(before) {
+  move(before) {
     if (!before) return false;
     if (this === before) return false;
     if (before.list !== this.list) return before.list.insert(this, before), true;
@@ -1286,12 +1354,12 @@ class Node {
   }
 
   moveToHead() {
-    this.moveTo(this.list.head);
+    this.move(this.list.head);
     this.list.head = this;
   }
 
   moveToLast() {
-    this.moveTo(this.list.head);
+    this.move(this.list.head);
   }
 
   swap(node) {
@@ -1300,8 +1368,8 @@ class Node {
     if (node1 === node2) return false;
     const node3 = node2.next;
     if (node1.list !== node2.list) throw new Error(`Spica: InvList: Cannot swap nodes across lists.`);
-    node2.moveTo(node1);
-    node1.moveTo(node3);
+    node2.move(node1);
+    node1.move(node3);
 
     switch (this.list.head) {
       case node1:
@@ -1366,17 +1434,13 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.reduce = exports.memoize = void 0;
 
-const global_1 = __webpack_require__(4128);
-
 const alias_1 = __webpack_require__(5406);
 
 const compare_1 = __webpack_require__(5529);
 
-const undefined = void 0;
-
 function memoize(f, identify = (...as) => as[0], memory) {
   if (typeof identify === 'object') return memoize(f, undefined, identify);
-  return (0, alias_1.isArray)(memory) ? memoizeArray(f, identify, memory) : memoizeObject(f, identify, memory ?? new global_1.Map());
+  return (0, alias_1.isArray)(memory) ? memoizeArray(f, identify, memory) : memoizeObject(f, identify, memory ?? new Map());
 }
 
 exports.memoize = memoize;
@@ -1703,7 +1767,7 @@ exports.Lazy = void 0;
 class Lazy {
   constructor(thunk) {
     this.thunk = thunk;
-    this.$memory = void 0;
+    this.$memory = undefined;
   }
 
   evaluate() {
@@ -1990,8 +2054,6 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.Observation = void 0;
 
-const global_1 = __webpack_require__(4128);
-
 const invlist_1 = __webpack_require__(7452);
 
 const array_1 = __webpack_require__(8112);
@@ -2006,7 +2068,7 @@ class ListenerNode {
     this.sid = 0;
     this.monitors = new invlist_1.List();
     this.subscribers = new invlist_1.List();
-    this.index = new global_1.Map();
+    this.index = new Map();
     this.children = new invlist_1.List();
   }
 
@@ -2031,7 +2093,7 @@ class ListenerNode {
         return;
 
       default:
-        throw new global_1.Error('Unreachable');
+        throw new Error('Unreachable');
     }
   }
 
@@ -2066,18 +2128,18 @@ class ListenerNode {
 
 class Observation {
   constructor(opts) {
-    this.node = new ListenerNode(void 0);
+    this.node = new ListenerNode(undefined);
     this.limit = opts?.limit ?? 10;
   }
 
   monitor(namespace, monitor, options = {}) {
-    if (typeof monitor !== 'function') throw new global_1.Error(`Spica: Observation: Invalid listener: ${monitor}`);
+    if (typeof monitor !== 'function') throw new Error(`Spica: Observation: Invalid listener: ${monitor}`);
     const node = this.seek(namespace, 0
     /* SeekMode.Extensible */
     );
     const monitors = node.monitors;
-    if (monitors.length === this.limit) throw new global_1.Error(`Spica: Observation: Exceeded max listener limit.`);
-    node.mid === global_1.Number.MAX_SAFE_INTEGER && node.reset(monitors);
+    if (monitors.length === this.limit) throw new Error(`Spica: Observation: Exceeded max listener limit.`);
+    node.mid === Number.MAX_SAFE_INTEGER && node.reset(monitors);
     const inode = monitors.push({
       id: ++node.mid,
       type: 0
@@ -2091,13 +2153,13 @@ class Observation {
   }
 
   on(namespace, subscriber, options = {}) {
-    if (typeof subscriber !== 'function') throw new global_1.Error(`Spica: Observation: Invalid listener: ${subscriber}`);
+    if (typeof subscriber !== 'function') throw new Error(`Spica: Observation: Invalid listener: ${subscriber}`);
     const node = this.seek(namespace, 0
     /* SeekMode.Extensible */
     );
     const subscribers = node.subscribers;
-    if (subscribers.length === this.limit) throw new global_1.Error(`Spica: Observation: Exceeded max listener limit.`);
-    node.sid === global_1.Number.MAX_SAFE_INTEGER && node.reset(subscribers);
+    if (subscribers.length === this.limit) throw new Error(`Spica: Observation: Exceeded max listener limit.`);
+    node.sid === Number.MAX_SAFE_INTEGER && node.reset(subscribers);
     const inode = subscribers.push({
       id: ++node.sid,
       type: 1
@@ -2135,8 +2197,8 @@ class Observation {
   }
 
   relay(source) {
-    this.relaies ??= new global_1.WeakSet();
-    if (this.relaies.has(source)) throw new global_1.Error(`Spica: Observation: Relay source is already registered.`);
+    this.relaies ??= new WeakSet();
+    if (this.relaies.has(source)) throw new Error(`Spica: Observation: Relay source is already registered.`);
     this.relaies.add(source);
     return source.monitor([], (data, namespace) => void this.emit(namespace, data));
   }
@@ -2163,6 +2225,7 @@ class Observation {
       const recents = [];
       const max = items.last.value.id;
       let min = 0;
+      let prev;
 
       for (let node = items.head; node && min < node.value.id && node.value.id <= max;) {
         min = node.value.id;
@@ -2176,9 +2239,9 @@ class Observation {
           (0, exception_1.causeAsyncException)(reason);
         }
 
-        node.alive && recents.push(node); // TODO: Use Array.findLast.
-
-        node = node.next ?? findLast(recents, item => item.next) ?? items.head;
+        node.alive && recents.push(node);
+        node = node.next ?? prev?.next ?? rollback(recents, item => item.next) ?? items.head;
+        prev = node?.prev;
       }
     }
 
@@ -2194,6 +2257,7 @@ class Observation {
       const recents = [];
       const max = items.last.value.id;
       let min = 0;
+      let prev;
 
       for (let node = items.head; node && min < node.value.id && node.value.id <= max;) {
         min = node.value.id;
@@ -2206,9 +2270,9 @@ class Observation {
           (0, exception_1.causeAsyncException)(reason);
         }
 
-        node.alive && recents.push(node); // TODO: Use Array.findLast.
-
-        node = node.next ?? findLast(recents, item => item.next) ?? items.head;
+        node.alive && recents.push(node);
+        node = node.next ?? prev?.next ?? rollback(recents, item => item.next) ?? items.head;
+        prev = node?.prev;
       }
     }
 
@@ -2314,9 +2378,10 @@ class Observation {
 
 exports.Observation = Observation;
 
-function findLast(array, f) {
+function rollback(array, matcher) {
   for (let i = array.length; i--;) {
-    if (f(array[i])) return array[i];
+    if (matcher(array[i])) return array[i];
+    array.pop();
   }
 }
 
@@ -2334,8 +2399,6 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.never = exports.isPromiseLike = exports.Internal = exports.AtomicPromise = exports.internal = void 0;
 
-const global_1 = __webpack_require__(4128);
-
 const alias_1 = __webpack_require__(5406);
 
 const function_1 = __webpack_require__(6288);
@@ -2346,6 +2409,7 @@ class AtomicPromise {
   constructor(executor) {
     this[_a] = 'Promise';
     this[_b] = new Internal();
+    if (executor === function_1.noop) return;
 
     try {
       executor(value => void this[exports.internal].resolve(value), reason => void this[exports.internal].reject(reason));
@@ -2357,7 +2421,7 @@ class AtomicPromise {
   static all(vs) {
     return new AtomicPromise((resolve, reject) => {
       const values = (0, alias_1.isArray)(vs) ? vs : [...vs];
-      const results = (0, global_1.Array)(values.length);
+      const results = Array(values.length);
       let done = false;
       let count = 0;
 
@@ -2452,7 +2516,7 @@ class AtomicPromise {
   static allSettled(vs) {
     return new AtomicPromise(resolve => {
       const values = (0, alias_1.isArray)(vs) ? vs : [...vs];
-      const results = (0, global_1.Array)(values.length);
+      const results = Array(values.length);
       let count = 0;
 
       for (let i = 0; i < values.length; ++i) {
@@ -2519,7 +2583,7 @@ class AtomicPromise {
   static any(vs) {
     return new AtomicPromise((resolve, reject) => {
       const values = (0, alias_1.isArray)(vs) ? vs : [...vs];
-      const reasons = (0, global_1.Array)(values.length);
+      const reasons = Array(values.length);
       let done = false;
       let count = 0;
 
@@ -2573,11 +2637,13 @@ class AtomicPromise {
   }
 
   then(onfulfilled, onrejected) {
-    return new AtomicPromise((resolve, reject) => this[exports.internal].then(resolve, reject, onfulfilled, onrejected));
+    const p = new AtomicPromise(function_1.noop);
+    this[exports.internal].then(p[exports.internal], onfulfilled, onrejected);
+    return p;
   }
 
   catch(onrejected) {
-    return this.then(void 0, onrejected);
+    return this.then(undefined, onrejected);
   }
 
   finally(onfinally) {
@@ -2607,9 +2673,7 @@ class Internal {
   }
 
   resolve(value) {
-    if (this.status.state !== 0
-    /* State.pending */
-    ) return;
+    if (!this.isPending()) return;
 
     if (!isPromiseLike(value)) {
       this.status = {
@@ -2622,21 +2686,7 @@ class Internal {
     }
 
     if (isAtomicPromiseLike(value)) {
-      const core = value[exports.internal];
-
-      switch (core.status.state) {
-        case 2
-        /* State.fulfilled */
-        :
-        case 3
-        /* State.rejected */
-        :
-          this.status = core.status;
-          return this.resume();
-
-        default:
-          return core.then(() => (this.status = core.status, this.resume()), () => (this.status = core.status, this.resume()));
-      }
+      return value[exports.internal].then(this);
     }
 
     this.status = {
@@ -2665,9 +2715,7 @@ class Internal {
   }
 
   reject(reason) {
-    if (this.status.state !== 0
-    /* State.pending */
-    ) return;
+    if (!this.isPending()) return;
     this.status = {
       state: 3
       /* State.rejected */
@@ -2677,7 +2725,7 @@ class Internal {
     return this.resume();
   }
 
-  then(resolve, reject, onfulfilled, onrejected) {
+  then(internal, onfulfilled, onrejected) {
     const {
       status,
       fulfillReactions,
@@ -2689,17 +2737,17 @@ class Internal {
       /* State.fulfilled */
       :
         if (fulfillReactions.length !== 0) break;
-        return call(resolve, reject, resolve, onfulfilled, status.value);
+        return call(internal, true, onfulfilled, status.value);
 
       case 3
       /* State.rejected */
       :
         if (rejectReactions.length !== 0) break;
-        return call(resolve, reject, reject, onrejected, status.reason);
+        return call(internal, false, onrejected, status.reason);
     }
 
-    fulfillReactions.push([resolve, reject, resolve, onfulfilled]);
-    rejectReactions.push([resolve, reject, reject, onrejected]);
+    fulfillReactions.push([internal, true, onfulfilled]);
+    rejectReactions.push([internal, false, onrejected]);
   }
 
   resume() {
@@ -2751,22 +2799,22 @@ exports.Internal = Internal;
 function react(reactions, param) {
   for (let i = 0; i < reactions.length; ++i) {
     const reaction = reactions[i];
-    call(reaction[0], reaction[1], reaction[2], reaction[3], param);
+    call(reaction[0], reaction[1], reaction[2], param);
   }
 }
 
-function call(resolve, reject, cont, callback, param) {
-  if (!callback) return void cont(param);
+function call(internal, state, procedure, param) {
+  if (!procedure) return state ? internal.resolve(param) : internal.reject(param);
 
   try {
-    resolve(callback(param));
+    internal.resolve(procedure(param));
   } catch (reason) {
-    reject(reason);
+    internal.reject(reason);
   }
 }
 
 function isPromiseLike(value) {
-  return value !== null && typeof value === 'object' && typeof value.then === 'function';
+  return value != null && typeof value === 'object' && typeof value.then === 'function';
 }
 
 exports.isPromiseLike = isPromiseLike;
@@ -2810,13 +2858,10 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.MultiQueue = exports.PriorityQueue = exports.Queue = void 0;
 
-const global_1 = __webpack_require__(4128);
-
 const heap_1 = __webpack_require__(818);
 
 const memoize_1 = __webpack_require__(1808);
 
-const undefined = void 0;
 const size = 2048;
 const initsize = 16;
 
@@ -2897,7 +2942,7 @@ exports.Queue = Queue;
 class FixedQueue {
   constructor(size, next) {
     this.size = size;
-    this.array = (0, global_1.Array)(this.size);
+    this.array = Array(this.size);
     this.mask = this.array.length - 1;
     this.head = 0;
     this.tail = 0;
@@ -2938,7 +2983,7 @@ class FixedQueue {
 class PriorityQueue {
   constructor(cmp = PriorityQueue.max, clean = true) {
     this.clean = clean;
-    this.dict = new global_1.Map();
+    this.dict = new Map();
     this.queue = (0, memoize_1.memoize)(priority => {
       const queue = new Queue();
       queue[PriorityQueue.priority] = priority;
@@ -3003,7 +3048,7 @@ PriorityQueue.min = heap_1.Heap.min;
 
 class MultiQueue {
   constructor(entries) {
-    this.dict = new global_1.Map();
+    this.dict = new Map();
     if (entries) for (const {
       0: k,
       1: v
@@ -3037,11 +3082,11 @@ class MultiQueue {
   }
 
   clear() {
-    this.dict = new global_1.Map();
+    this.dict = new Map();
   }
 
   take(key, count) {
-    if (count === void 0) return this.pop(key);
+    if (count === undefined) return this.pop(key);
     const vs = this.dict.get(key);
     const acc = [];
 
@@ -3163,8 +3208,6 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.cothrottle = exports.debounce = exports.throttle = void 0;
 
-const global_1 = __webpack_require__(4128);
-
 const clock_1 = __webpack_require__(7681);
 
 const exception_1 = __webpack_require__(7822);
@@ -3182,7 +3225,7 @@ function throttle(interval, callback, capacity = 1) {
     }
 
     if (timer !== 0) return;
-    timer = (0, global_1.setTimeout)(async () => {
+    timer = setTimeout(async () => {
       const buf = buffer;
       buffer = [];
 
@@ -3214,9 +3257,9 @@ function debounce(delay, callback, capacity = 1) {
     }
 
     if (timer !== 0) return;
-    timer = (0, global_1.setTimeout)(() => {
+    timer = setTimeout(() => {
       timer = 0;
-      (0, global_1.setTimeout)(async () => {
+      setTimeout(async () => {
         if (timer !== 0) return;
         if (!callable) return;
         const buf = buffer;
@@ -3267,8 +3310,6 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.wait = exports.captureTimers = exports.setRepeatTimer = exports.setTimer = void 0;
 
-const global_1 = __webpack_require__(4128);
-
 const invlist_1 = __webpack_require__(7452);
 
 const clock_1 = __webpack_require__(7681);
@@ -3281,13 +3322,13 @@ exports.setRepeatTimer = template(true);
 function template(repeat, cancellers) {
   const timer = (timeout, handler, unhandler) => {
     let params;
-    let id = (0, global_1.setTimeout)(async function loop() {
+    let id = setTimeout(async function loop() {
       params = [await handler()];
       if (!repeat) return;
-      id = (0, global_1.setTimeout)(loop, timeout);
+      id = setTimeout(loop, timeout);
     }, timeout);
     const cancel = (0, function_1.singleton)(() => {
-      (0, global_1.clearTimeout)(id);
+      clearTimeout(id);
       node?.delete();
       params && unhandler?.(params[0]);
     });
@@ -3309,17 +3350,17 @@ function template(repeat, cancellers) {
 }
 
 function captureTimers(test) {
-  const start = (0, global_1.setTimeout)(function_1.noop);
-  (0, global_1.clearTimeout)(start);
+  const start = setTimeout(function_1.noop);
+  clearTimeout(start);
   if (typeof start !== 'number') throw new Error('Timer ID must be a number');
   return done => test(err => {
     // Must get the ID before calling done.
-    const end = (0, global_1.setTimeout)(function_1.noop);
+    const end = setTimeout(function_1.noop);
     done(err);
-    (0, global_1.clearTimeout)(end);
+    clearTimeout(end);
 
     for (let i = start; i < end; ++i) {
-      (0, global_1.clearTimeout)(i);
+      clearTimeout(i);
     }
   });
 }
@@ -3327,7 +3368,7 @@ function captureTimers(test) {
 exports.captureTimers = captureTimers;
 
 function wait(ms) {
-  return ms === 0 ? clock_1.clock : new Promise(resolve => void (0, global_1.setTimeout)(resolve, ms));
+  return ms === 0 ? clock_1.clock : new Promise(resolve => void setTimeout(resolve, ms));
 }
 
 exports.wait = wait;
@@ -3344,8 +3385,6 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.isPrimitive = exports.is = exports.type = void 0;
 
-const global_1 = __webpack_require__(4128);
-
 const alias_1 = __webpack_require__(5406);
 
 const ObjectPrototype = Object.prototype;
@@ -3360,7 +3399,7 @@ function type(value) {
 
     case 'object':
       if (value === null) return 'null';
-      const tag = value[global_1.Symbol.toStringTag];
+      const tag = value[Symbol.toStringTag];
       if (tag) return tag;
 
       switch ((0, alias_1.ObjectGetPrototypeOf)(value)) {
@@ -3371,7 +3410,7 @@ function type(value) {
           return 'Object';
 
         default:
-          return (0, alias_1.toString)(value).slice(8, -1);
+          return value?.constructor?.name || (0, alias_1.toString)(value).slice(8, -1);
       }
 
     default:
@@ -3417,18 +3456,14 @@ exports.isPrimitive = isPrimitive;
 /***/ }),
 
 /***/ 7099:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+/***/ ((__unused_webpack_module, exports) => {
 
-
+ // Version 4
 
 Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
 exports.uuid = void 0;
-
-const global_1 = __webpack_require__(4128); // Version 4
-
-
 const format = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx';
 
 function uuid() {
@@ -3461,20 +3496,24 @@ const buffer = new Uint16Array(512);
 const digit = 16;
 const mask = digit - 1;
 let index = buffer.length;
+let rnd = 2 ** digit;
 let offset = digit;
 
 function rnd16() {
-  if (index === buffer.length) {
-    global_1.crypto.getRandomValues(buffer);
+  if (rnd === 2 ** digit) {
+    crypto.getRandomValues(buffer);
     index = 0;
+    rnd = buffer[index];
   }
 
   if (offset === 4) {
     offset = digit;
-    return buffer[index++] & mask;
+    const r = rnd & mask;
+    rnd = buffer[++index] ?? 2 ** digit;
+    return r;
   } else {
     offset -= 4;
-    return buffer[index] >> offset & mask;
+    return rnd >> offset & mask;
   }
 }
 
@@ -3608,8 +3647,6 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.hasBinary = exports.isValidPropertyValue = exports.isValidPropertyName = exports.isValidProperty = void 0;
 
-const global_1 = __webpack_require__(4128);
-
 const type_1 = __webpack_require__(5177);
 
 function isValidProperty([name, value]) {
@@ -3634,7 +3671,7 @@ function isValidPropertyValue(value) {
 
     case 'object':
       try {
-        return value === null || isBinary(value) || global_1.Object.entries(value).every(isValidProperty);
+        return value === null || isBinary(value) || Object.entries(value).every(isValidProperty);
       } catch {
         return false;
       }
@@ -3651,7 +3688,7 @@ function isBinary(value) {
 }
 
 function hasBinary(value) {
-  return !(0, type_1.isPrimitive)(value) ? isBinary(value) || global_1.Object.values(value).some(hasBinary) : false;
+  return !(0, type_1.isPrimitive)(value) ? isBinary(value) || Object.values(value).some(hasBinary) : false;
 }
 
 exports.hasBinary = hasBinary;
@@ -3667,8 +3704,6 @@ Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
 exports.EventRecordValue = exports.SavedEventRecord = exports.LoadedEventRecord = exports.StoredEventRecord = exports.UnstoredEventRecord = exports.EventRecordType = void 0;
-
-const global_1 = __webpack_require__(4128);
 
 const identifier_1 = __webpack_require__(4581);
 
@@ -3689,12 +3724,12 @@ class EventRecord {
     this.key = key;
     this.value = value;
     this.date = date;
-    if (typeof this.id !== 'number' || this.id >= 0 === false || !global_1.Number.isSafeInteger(this.id)) throw new TypeError(`ClientChannel: EventRecord: Invalid event id: ${this.id}`);
+    if (typeof this.id !== 'number' || this.id >= 0 === false || !Number.isSafeInteger(this.id)) throw new TypeError(`ClientChannel: EventRecord: Invalid event id: ${this.id}`);
     if (typeof this.type !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event type: ${this.type}`);
     if (typeof this.key !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event key: ${this.key}`);
     if (typeof this.value !== 'object' || !this.value) throw new TypeError(`ClientChannel: EventRecord: Invalid event value: ${JSON.stringify(this.value)}`);
-    if (typeof this.date !== 'number' || this.date >= 0 === false || !global_1.Number.isFinite(this.date)) throw new TypeError(`ClientChannel: EventRecord: Invalid event date: ${this.date}`);
-    this.prop = this.type === exports.EventRecordType.Put ? global_1.Object.keys(value).filter(value_1.isValidPropertyName)[0] : '';
+    if (typeof this.date !== 'number' || this.date >= 0 === false || !Number.isFinite(this.date)) throw new TypeError(`ClientChannel: EventRecord: Invalid event date: ${this.date}`);
+    this.prop = this.type === exports.EventRecordType.Put ? Object.keys(value).filter(value_1.isValidPropertyName)[0] : '';
     if (typeof this.prop !== 'string') throw new TypeError(`ClientChannel: EventRecord: Invalid event prop: ${this.key}`);
 
     switch (type) {
@@ -3723,7 +3758,7 @@ class EventRecord {
 }
 
 class UnstoredEventRecord extends EventRecord {
-  constructor(key, value, type = exports.EventRecordType.Put, date = global_1.Date.now()) {
+  constructor(key, value, type = exports.EventRecordType.Put, date = Date.now()) {
     super((0, identifier_1.makeEventId)(0), type, key, value, date);
     this.EVENT_RECORD; // Must not have id property.
 
@@ -3812,8 +3847,6 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.compose = exports.record = exports.EventStore = void 0;
 
-const global_1 = __webpack_require__(4128);
-
 const alias_1 = __webpack_require__(5406);
 
 const api_1 = __webpack_require__(3648);
@@ -3854,8 +3887,8 @@ class EventStore {
     });
     this.status = {
       store: this,
-      ids: new global_1.Map(),
-      dates: new global_1.Map(),
+      ids: new Map(),
+      dates: new Map(),
 
       update(event) {
         this.dates.set(event.key, (0, alias_1.max)(event.date, this.dates.get(event.key) || 0));
@@ -3942,7 +3975,7 @@ class EventStore {
     if (++this.tx.rwc < 25 || !this.tx.rw) return;
     const tx = this.tx.rw;
     this.tx.rwc = 0;
-    this.tx.rw = void 0;
+    this.tx.rw = undefined;
     tx.commit();
     return this.tx.rw;
   }
@@ -3954,7 +3987,7 @@ class EventStore {
 
     const clear = () => {
       if (this.tx.rw !== tx) return;
-      this.tx.rw = void 0;
+      this.tx.rw = undefined;
     };
 
     this.tx.rw.addEventListener('abort', clear);
@@ -3998,7 +4031,7 @@ class EventStore {
       });
       tx.addEventListener('complete', () => {
         // Remove overridable events.
-        for (const [, event] of new global_1.Map(events.map(ev => [ev.prop, ev]))) {
+        for (const [, event] of new Map(events.map(ev => [ev.prop, ev]))) {
           this.memory.off([event.key, event.prop, event.id > 0, event.id]);
           this.memory.on([event.key, event.prop, event.id > 0, event.id], () => event);
           this.status.update(event);
@@ -4039,7 +4072,7 @@ class EventStore {
   }
 
   get(key) {
-    return global_1.Object.assign(global_1.Object.create(null), compose(key, this.memory.reflect([key])).value);
+    return Object.assign(Object.create(null), compose(key, this.memory.reflect([key])).value);
   }
 
   add(event, tx) {
@@ -4051,7 +4084,7 @@ class EventStore {
 
     const loss = () => void this.events.loss.emit([event.key, event.prop, event.type], new EventStore.Event(event.type, (0, identifier_1.makeEventId)(0), event.key, event.prop, event.date));
 
-    return void this.transact(db => this.alive ? db.transaction(this.name, 'readwrite') : void 0, tx => {
+    return void this.transact(db => this.alive ? db.transaction(this.name, 'readwrite') : undefined, tx => {
       if (!active()) return;
       const req = tx.objectStore(this.name).add(record(event));
       const ev = event;
@@ -4086,7 +4119,7 @@ class EventStore {
 
   snapshot(key) {
     if (!this.alive) return;
-    return void this.transact(db => this.alive ? db.transaction(this.name, 'readwrite') : void 0, tx => {
+    return void this.transact(db => this.alive ? db.transaction(this.name, 'readwrite') : undefined, tx => {
       if (!this.has(key) || this.meta(key).id === 0) return;
       const store = tx.objectStore(this.name);
       const req = store.index(EventStoreSchema.key).openCursor(key, 'prev');
@@ -4124,7 +4157,7 @@ class EventStore {
           }
         }
       });
-    }, () => void 0);
+    }, () => undefined);
   }
 
   clean(key) {
@@ -4269,7 +4302,7 @@ function compose(key, events) {
   return group(events).map(events => events.reduceRight(compose, new event_1.UnstoredEventRecord(key, new EventStore.Value(), EventStore.EventType.Delete, 0))).reduce(ev => ev);
 
   function group(events) {
-    return events.map((ev, i) => [ev, i]).sort(([a, ai], [b, bi]) => void 0 || global_1.indexedDB.cmp(a.key, b.key) || b.date - a.date || b.id > 0 && a.id > 0 && b.id - a.id || bi - ai).reduceRight(([head, ...tail], [event]) => {
+    return events.map((ev, i) => [ev, i]).sort(([a, ai], [b, bi]) =>  false || indexedDB.cmp(a.key, b.key) || b.date - a.date || b.id > 0 && a.id > 0 && b.id - a.id || bi - ai).reduceRight(([head, ...tail], [event]) => {
       const prev = head[0];
       if (!prev) return [[event]];
       return prev.key === event.key ? (0, concat_1.concat)([(0, concat_1.concat)([event], head)], tail) : (0, concat_1.concat)([[event]], (0, concat_1.concat)([head], tail));
@@ -4308,8 +4341,6 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.KeyValueStore = void 0;
 
-const global_1 = __webpack_require__(4128);
-
 const clock_1 = __webpack_require__(7681);
 
 const exception_1 = __webpack_require__(7822);
@@ -4347,7 +4378,7 @@ class KeyValueStore {
     if (++this.tx.rwc < 25 || !this.tx.rw) return;
     const tx = this.tx.rw;
     this.tx.rwc = 0;
-    this.tx.rw = void 0;
+    this.tx.rw = undefined;
     tx.commit();
     return this.tx.rw;
   }
@@ -4359,7 +4390,7 @@ class KeyValueStore {
 
     const clear = () => {
       if (this.tx.rw !== tx) return;
-      this.tx.rw = void 0;
+      this.tx.rw = undefined;
     };
 
     this.tx.rw.addEventListener('abort', clear);
@@ -4405,7 +4436,7 @@ class KeyValueStore {
   put(value, key, cb) {
     this.cache.set(key, value);
     if (!this.alive) return value;
-    this.transact(db => this.alive && this.cache.has(key) ? db.transaction(this.name, 'readwrite') : void 0, tx => {
+    this.transact(db => this.alive && this.cache.has(key) ? db.transaction(this.name, 'readwrite') : undefined, tx => {
       this.index ? tx.objectStore(this.name).put(this.cache.get(key)) : tx.objectStore(this.name).put(this.cache.get(key), key);
       tx.addEventListener('complete', () => void cb?.(tx.error, key, value));
       tx.addEventListener('error', () => void cb?.(tx.error, key, value));
@@ -4417,7 +4448,7 @@ class KeyValueStore {
   delete(key, cb) {
     this.cache.delete(key);
     if (!this.alive) return;
-    this.transact(db => this.alive ? db.transaction(this.name, 'readwrite') : void 0, tx => {
+    this.transact(db => this.alive ? db.transaction(this.name, 'readwrite') : undefined, tx => {
       tx.objectStore(this.name).delete(key);
       tx.addEventListener('complete', () => void cb?.(tx.error, key));
       tx.addEventListener('error', () => void cb?.(tx.error, key));
@@ -4426,10 +4457,10 @@ class KeyValueStore {
   }
 
   count(query, index) {
-    return new global_1.Promise((resolve, reject) => void this.listen(db => {
+    return new Promise((resolve, reject) => void this.listen(db => {
       if (!this.alive) return void reject(new Error('Session is already closed.'));
       const tx = db.transaction(this.name, 'readonly');
-      const req = index ? tx.objectStore(this.name).index(index).count(query ?? void 0) : tx.objectStore(this.name).count(query ?? void 0);
+      const req = index ? tx.objectStore(this.name).index(index).count(query ?? undefined) : tx.objectStore(this.name).count(query ?? undefined);
       req.addEventListener('success', () => void resolve(req.result));
       tx.addEventListener('complete', () => void reject(req.error));
       tx.addEventListener('error', () => void reject(req.error));
@@ -4646,8 +4677,6 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.build = exports.DAO = exports.isValidPropertyValue = exports.isValidPropertyName = exports.isValidProperty = void 0;
 
-const global_1 = __webpack_require__(4128);
-
 const value_1 = __webpack_require__(8089);
 
 var value_2 = __webpack_require__(8089);
@@ -4682,9 +4711,9 @@ var DAO;
 
 function build(source, target, set, get) {
   if (typeof source[DAO.key] !== 'string') throw new TypeError(`ClientChannel: DAO: Invalid key: ${source[DAO.key]}`);
-  const descmap = { ...global_1.Object.entries(target).filter(value_1.isValidProperty).reduce((map, [prop, iniValue]) => {
+  const descmap = { ...Object.entries(target).filter(value_1.isValidProperty).reduce((map, [prop, iniValue]) => {
       {
-        const desc = global_1.Object.getOwnPropertyDescriptor(target, prop) ?? {};
+        const desc = Object.getOwnPropertyDescriptor(target, prop) ?? {};
         if (desc.get || desc.set) return map;
       }
 
@@ -4739,8 +4768,8 @@ function build(source, target, set, get) {
       }
     }
   };
-  global_1.Object.defineProperties(target, descmap);
-  global_1.Object.seal(target);
+  Object.defineProperties(target, descmap);
+  Object.seal(target);
   return target;
 }
 
@@ -4778,8 +4807,6 @@ Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
 exports.ChannelStore = void 0;
-
-const global_1 = __webpack_require__(4128);
 
 const api_1 = __webpack_require__(3648);
 
@@ -4828,13 +4855,13 @@ class ChannelStore {
     };
     this.events = {
       load: new observer_1.Observation({
-        limit: global_1.Infinity
+        limit: Infinity
       }),
       save: new observer_1.Observation({
-        limit: global_1.Infinity
+        limit: Infinity
       }),
       loss: new observer_1.Observation({
-        limit: global_1.Infinity
+        limit: Infinity
       })
     };
     this.ages = new Map();
@@ -4869,7 +4896,7 @@ class ChannelStore {
     this.events$.save.monitor([], ({
       key
     }) => void this.channel.post(new SaveMessage(key)));
-    if (this.capacity === global_1.Infinity) return;
+    if (this.capacity === Infinity) return;
     this.events$.load.monitor([], ({
       key,
       type
@@ -4903,9 +4930,9 @@ class ChannelStore {
 
   sync(keys, timeout) {
     this.ensureAliveness();
-    const cancellation = timeout === void 0 ? void 0 : new cancellation_1.Cancellation();
-    cancellation && (0, global_1.setTimeout)(cancellation.cancel, timeout);
-    return global_1.Promise.resolve(promise_1.AtomicPromise.allSettled(keys.map(key => new global_1.Promise((resolve, reject) => void this.load(key, error => error ? void reject(error) : void resolve(key), cancellation)))));
+    const cancellation = timeout === undefined ? undefined : new cancellation_1.Cancellation();
+    cancellation && setTimeout(cancellation.cancel, timeout);
+    return Promise.resolve(promise_1.AtomicPromise.allSettled(keys.map(key => new Promise((resolve, reject) => void this.load(key, error => error ? void reject(error) : void resolve(key), cancellation)))));
   }
 
   load(key, cb, cancellation) {
@@ -4959,7 +4986,7 @@ class ChannelStore {
   }
 
   recent(cb, timeout) {
-    if (typeof cb === 'number') return this.recent(void 0, cb);
+    if (typeof cb === 'number') return this.recent(undefined, cb);
     this.ensureAliveness();
     return this.stores.access.recent(cb, timeout);
   }
@@ -5056,8 +5083,6 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.AccessStore = exports.name = void 0;
 
-const global_1 = __webpack_require__(4128);
-
 const alias_1 = __webpack_require__(5406);
 
 const store_1 = __webpack_require__(7216);
@@ -5081,17 +5106,17 @@ class AccessStore {
     this.schedule = (() => {
       let untimer;
       let delay = 10 * 1000;
-      let schedule = global_1.Infinity;
+      let schedule = Infinity;
       return timeout => {
-        if (this.capacity === global_1.Infinity) return;
+        if (this.capacity === Infinity) return;
         timeout = (0, alias_1.min)(timeout, 60 * 60 * 1000);
-        if (global_1.Date.now() + timeout >= schedule) return;
-        schedule = global_1.Date.now() + timeout;
+        if (Date.now() + timeout >= schedule) return;
+        schedule = Date.now() + timeout;
         untimer?.();
         untimer = (0, timer_1.setTimer)(timeout, async () => {
           if (!this.cancellation.isAlive()) return;
           if (schedule === 0) return;
-          schedule = global_1.Infinity;
+          schedule = Infinity;
           if (!this.ownership.take('store', delay)) return void this.schedule(delay *= 2);
           if (this.chan.lock) return void this.schedule(delay);
           let untimer = (0, timer_1.setRepeatTimer)(1000, () => {
@@ -5113,7 +5138,7 @@ class AccessStore {
           , 'readonly', [], (error, cursor, tx) => {
             if (!cursor && !tx) return;
             this.chan.lock = false;
-            schedule = global_1.Infinity;
+            schedule = Infinity;
             untimer();
             if (!this.cancellation.isAlive()) return;
             if (error) return void this.schedule(delay * 10);
@@ -5190,7 +5215,7 @@ class AccessStore {
       let done = false;
       timeout && (0, timer_1.setTimer)(timeout, () => done = !void reject(new Error('Timeout.')));
       const keys = [];
-      void this.store.cursor(null, "date"
+      this.store.cursor(null, "date"
       /* AccessStoreSchema.date */
       , 'prev', 'readonly', [], (error, cursor) => {
         if (done) return;
@@ -5228,7 +5253,7 @@ class AccessRecord {
     this.active = active; // Bug: TypeScript
 
     this[_a] = '';
-    this[_b] = global_1.Date.now();
+    this[_b] = Date.now();
     this["key"
     /* AccessStoreSchema.key */
     ] = key;
@@ -5292,8 +5317,6 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.ExpiryStore = void 0;
 
-const global_1 = __webpack_require__(4128);
-
 const alias_1 = __webpack_require__(5406);
 
 const store_1 = __webpack_require__(7216);
@@ -5316,16 +5339,16 @@ class ExpiryStore {
     this.schedule = (() => {
       let untimer;
       let delay = 10 * 1000;
-      let schedule = global_1.Infinity;
+      let schedule = Infinity;
       return timeout => {
         timeout = (0, alias_1.min)(timeout, 60 * 60 * 1000);
-        if (global_1.Date.now() + timeout >= schedule) return;
-        schedule = global_1.Date.now() + timeout;
+        if (Date.now() + timeout >= schedule) return;
+        schedule = Date.now() + timeout;
         untimer?.();
         untimer = (0, timer_1.setTimer)(timeout, () => {
           if (!this.cancellation.isAlive()) return;
           if (schedule === 0) return;
-          schedule = global_1.Infinity;
+          schedule = Infinity;
           if (!this.ownership.take('store', delay)) return void this.schedule(delay *= 2);
           if (this.chan.lock) return void this.schedule(delay);
           let untimer = (0, timer_1.setRepeatTimer)(1000, () => {
@@ -5340,7 +5363,7 @@ class ExpiryStore {
           , 'readonly', [], (error, cursor, tx) => {
             if (!cursor && !tx) return;
             this.chan.lock = false;
-            schedule = global_1.Infinity;
+            schedule = Infinity;
             untimer();
             if (!this.cancellation.isAlive()) return;
             if (error) return void this.schedule(delay * 10);
@@ -5351,7 +5374,7 @@ class ExpiryStore {
               key,
               expiry
             } of cursor) {
-              if (expiry > global_1.Date.now()) return void this.schedule(expiry - global_1.Date.now());
+              if (expiry > Date.now()) return void this.schedule(expiry - Date.now());
               this.chan.has(key) || this.chan.meta(key).date === 0 ? this.chan.delete(key) : this.chan.clean(key);
             }
 
@@ -5419,9 +5442,9 @@ class ExpiryStore {
   }
 
   set(key, age) {
-    if (age === global_1.Infinity) return void this.store.delete(key);
+    if (age === Infinity) return void this.store.delete(key);
     this.schedule(age);
-    this.store.set(key, new ExpiryRecord(key, global_1.Date.now() + age));
+    this.store.set(key, new ExpiryRecord(key, Date.now() + age));
   }
 
   close() {
@@ -5466,8 +5489,6 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.StoreChannel = void 0;
 
-const global_1 = __webpack_require__(4128);
-
 const api_1 = __webpack_require__(903);
 
 const channel_1 = __webpack_require__(312);
@@ -5497,7 +5518,7 @@ class StoreChannel extends channel_1.ChannelStore {
       const source = this.sources.get(key);
       const memory = this.get(key);
       const link = this.link$(key);
-      const props = prop === '' ? global_1.Object.keys(memory) : prop in memory ? [prop] : [];
+      const props = prop === '' ? Object.keys(memory) : prop in memory ? [prop] : [];
       const changes = props.map(prop => {
         const newValue = memory[prop];
         const oldValue = source[prop];
@@ -5544,7 +5565,7 @@ class StoreChannel extends channel_1.ChannelStore {
     if (this.links.has(key)) return this.links.get(key);
     const source = this.get(key);
     this.sources.set(key, source);
-    this.links.set(key, (0, api_1.build)(global_1.Object.defineProperties(source, {
+    this.links.set(key, (0, api_1.build)(Object.defineProperties(source, {
       [StoreChannel.Value.meta]: {
         get: () => this.meta(key)
       },
@@ -5621,8 +5642,6 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.Ownership = void 0;
 
-const global_1 = __webpack_require__(4128);
-
 const alias_1 = __webpack_require__(5406);
 
 const channel_1 = __webpack_require__(2825);
@@ -5670,7 +5689,7 @@ class Ownership {
       switch (true) {
         case newPriority < 0:
           // Release the foreign ownership.
-          return newPriority === oldPriority ? void this.store.delete(key) : void 0;
+          return newPriority === oldPriority ? void this.store.delete(key) : undefined;
 
         case oldPriority === 0:
           // Accept the foreign ownership.
@@ -5693,7 +5712,7 @@ class Ownership {
   }
 
   static genPriority() {
-    return global_1.Date.now();
+    return Date.now();
   }
 
   getOwnership(key) {
@@ -5744,12 +5763,12 @@ class Ownership {
 
   take(key, ttl, wait) {
     if (!this.alive) throw new Error(`ClientChannel: Ownership channel "${this.channel.name}" is already closed.`);
-    if (!this.isTakable(key)) return wait === void 0 ? false : global_1.Promise.resolve(false);
+    if (!this.isTakable(key)) return wait === undefined ? false : Promise.resolve(false);
     ttl = (0, alias_1.floor)((0, alias_1.min)((0, alias_1.max)(ttl, 1 * 1000), 60 * 1000));
-    wait = wait === void 0 ? wait : (0, alias_1.min)(wait, 0);
+    wait = wait === undefined ? wait : (0, alias_1.min)(wait, 0);
     const priority = Ownership.genPriority() + Ownership.throttle + Ownership.margin;
     this.setOwnership(key, priority, ttl);
-    return wait === void 0 ? this.has(key) : new global_1.Promise(resolve => void (0, global_1.setTimeout)(() => void resolve(this.extend(key, ttl)), wait));
+    return wait === undefined ? this.has(key) : new Promise(resolve => void setTimeout(() => void resolve(this.extend(key, ttl)), wait));
   }
 
   extend(key, ttl) {
@@ -5874,8 +5893,6 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.StorageChannel = void 0;
 
-const global_1 = __webpack_require__(4128);
-
 const api_1 = __webpack_require__(903);
 
 const api_2 = __webpack_require__(2376);
@@ -5915,7 +5932,7 @@ class StorageChannel {
       const memory = parse(newValue);
       const link = this.$link;
       if (!source || !link) return;
-      void global_1.Object.entries(memory).filter(api_1.isValidProperty).forEach(([prop]) => {
+      Object.entries(memory).filter(api_1.isValidProperty).forEach(([prop]) => {
         const newValue = memory[prop];
         const oldValue = source[prop];
         if ((0, compare_1.equal)(newValue, oldValue)) return;
@@ -5947,7 +5964,7 @@ class StorageChannel {
     };
     this.$link = (0, api_1.build)(source, this.config.schema(), (prop, newValue, oldValue) => {
       if (!this.alive || this.source !== source) return;
-      this.storage.setItem(this.name, JSON.stringify(global_1.Object.fromEntries(global_1.Object.entries(source).filter(api_1.isValidProperty))));
+      this.storage.setItem(this.name, JSON.stringify(Object.fromEntries(Object.entries(source).filter(api_1.isValidProperty))));
       const event = new StorageChannel.Event(StorageChannel.EventType.send, prop, newValue, oldValue);
       this.events.send.emit([event.prop], event);
       source[StorageChannel.Value.event].emit([event.type, event.prop], event);
@@ -5959,7 +5976,7 @@ class StorageChannel {
   unlink(link) {
     if (link && this.$link !== link) return false;
     const result = !!this.source;
-    this.source = this.$link = void 0;
+    this.source = this.$link = undefined;
     return result;
   }
 
@@ -6057,10 +6074,10 @@ exports.isStorageAvailable = verifyStorageAccess();
 
 function verifyStorageAccess() {
   try {
-    if (!self.navigator.cookieEnabled) throw void 0;
+    if (!self.navigator.cookieEnabled) throw undefined;
     const key = 'clientchannel#' + (0, uuid_1.uuid)();
     self.sessionStorage.setItem(key, key);
-    if (key !== self.sessionStorage.getItem(key)) throw void 0;
+    if (key !== self.sessionStorage.getItem(key)) throw undefined;
     self.sessionStorage.removeItem(key);
     return exports.isStorageAvailable = true;
   } catch {
@@ -6882,8 +6899,8 @@ exports.sessionStorage = exports.localStorage = void 0;
 
 const api_1 = __webpack_require__(6480);
 
-exports.localStorage = api_1.isStorageAvailable ? self.localStorage : void 0;
-exports.sessionStorage = api_1.isStorageAvailable ? self.sessionStorage : void 0;
+exports.localStorage = api_1.isStorageAvailable ? self.localStorage : undefined;
+exports.sessionStorage = api_1.isStorageAvailable ? self.sessionStorage : undefined;
 
 /***/ }),
 
