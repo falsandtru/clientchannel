@@ -68,8 +68,7 @@ export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChan
   private link$<L extends K<M>>(key: L): M[L] {
     if (this.links.has(key)) return this.links.get(key) as M[L];
     const source = this.get(key) as Partial<M[L]>;
-    this.sources.set(key, source);
-    this.links.set(key, build<M[L]>(
+    const link = build<M[L]>(
       Object.defineProperties(
         source as M[L] & object,
         {
@@ -101,9 +100,10 @@ export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChan
       },
       throttle(100, () => {
         this.alive && this.sources.get(key) === source && this.log(key);
-      })))
-      .get(key) as M[L];
-    return this.link$(key);
+      }));
+    this.sources.set(key, source);
+    this.links.set(key, link);
+    return link;
   }
   public link<L extends K<M>>(key: L, age?: number): M[L] {
     this.ensureAliveness();
@@ -127,6 +127,7 @@ export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChan
   }
   public override delete(key: K<M>): void {
     this.ensureAliveness();
+    this.sources.delete(key);
     this.links.delete(key);
     super.delete(key);
   }
