@@ -11,7 +11,7 @@ export class StoreChannel<M extends object> extends BaseStoreChannel<M> {
     name: string,
     config: StoreChannel.Config<M>,
   ) {
-    super(name, config.schemas, config);
+    super(name, config);
   }
 }
 export namespace StoreChannel {

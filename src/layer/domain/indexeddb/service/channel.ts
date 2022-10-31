@@ -12,25 +12,25 @@ import { equal } from 'spica/compare';
 export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChannel.Value<K<M>>, M> implements IStoreChannel<M> {
   constructor(
     name: string,
-    private readonly schemas: { [L in K<M>]: (key: L) => M[L]; },
     {
-      migrate,
+      schemas,
       destroy = () => true,
       age = Infinity,
       keepalive = Infinity,
       capacity = Infinity,
+      migrate,
       debug = false,
-    }: Partial<StoreChannel.Config<M>> & { debug?: boolean; } = {},
+    }: StoreChannel.Config<M> & { debug?: boolean; },
   ) {
-    super(name, destroy, age, capacity, debug);
-
-    this.keepalive = keepalive;
-    this.cancellation.register(() => {
+    super(name, destroy, age, capacity, () => {
       for (const [key, cancel] of this.timers) {
         this.timers.delete(key);
         cancel();
       }
-    });
+    }, debug);
+
+    this.schemas = schemas;
+    this.keepalive = keepalive || Infinity;
 
     const update = (key: K<M>, prop: Prop<M[K<M>]> | ''): void => {
       const source = this.sources.get(key)! as M[K<M>];
@@ -73,6 +73,7 @@ export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChan
         }
       });
   }
+  private readonly schemas: { [L in K<M>]: (key: L) => M[L]; };
   private readonly keepalive: number;
   private readonly timers = new Map<K<M>, () => void>();
   private readonly sources = new Map<K<M>, Partial<M[K<M>]>>();

@@ -34,6 +34,7 @@ export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Val
     destroy: (reason: unknown, event?: Event) => boolean,
     private readonly age: number,
     private readonly capacity: number,
+    destructor: () => void = () => undefined,
     private readonly debug = false,
   ) {
     if (cache.has(name)) throw new Error(`ClientChannel: Store channel "${name}" is already open.`);
@@ -75,6 +76,7 @@ export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Val
       void this.load(key)));
     this.events$.save.monitor([], ({ key }) =>
       void this.channel.post(new SaveMessage(key)));
+    this.cancellation.register(destructor);
 
     if (this.capacity === Infinity) return;
 
@@ -96,7 +98,7 @@ export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Val
       }
     });
   }
-  protected readonly cancellation = new Cancellation();
+  private readonly cancellation = new Cancellation();
   private readonly stores: Stores<K, V>;
   private readonly channel = new Channel<K>(this.name, this.debug);
   private readonly ownership = new Ownership<string>(this.channel);
