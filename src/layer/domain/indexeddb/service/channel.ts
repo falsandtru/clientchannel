@@ -6,6 +6,7 @@ import { ChannelStore } from '../model/channel';
 import { StorageChannel } from '../../webstorage/api';
 import { Observation } from 'spica/observer';
 import { throttle } from 'spica/throttle';
+import { setRepeatTimer } from 'spica/timer';
 import { equal } from 'spica/compare';
 
 export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChannel.Value<K<M>>, M> implements IStoreChannel<M> {
@@ -16,11 +17,20 @@ export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChan
       migrate,
       destroy = () => true,
       age = Infinity,
+      keepalive = Infinity,
       capacity = Infinity,
       debug = false,
     }: Partial<StoreChannel.Config<M>> & { debug?: boolean; } = {},
   ) {
     super(name, destroy, age, capacity, debug);
+
+    this.keepalive = keepalive;
+    this.cancellation.register(() => {
+      for (const [key, cancel] of this.timers) {
+        this.timers.delete(key);
+        cancel();
+      }
+    });
 
     const update = (key: K<M>, prop: Prop<M[K<M>]> | ''): void => {
       const source = this.sources.get(key)! as M[K<M>];
@@ -63,6 +73,8 @@ export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChan
         }
       });
   }
+  private readonly keepalive: number;
+  private readonly timers = new Map<K<M>, () => void>();
   private readonly sources = new Map<K<M>, Partial<M[K<M>]>>();
   private readonly links = new Map<K<M>, M[K<M>]>();
   private link$<L extends K<M>>(key: L): M[L] {
@@ -103,6 +115,14 @@ export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChan
       }));
     this.sources.set(key, source);
     this.links.set(key, link);
+    if (this.keepalive < Infinity) {
+      this.timers.get(key)?.();
+      this.timers.set(key, setRepeatTimer(this.keepalive, () => {
+        assert(this.alive);
+        assert(this.sources.get(key) === source);
+        this.log(key);
+      }));
+    }
     return link;
   }
   public link<L extends K<M>>(key: L, age?: number): M[L] {
@@ -123,10 +143,14 @@ export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChan
       ? link
       : link[StoreChannel.Value.key];
     if (key !== link) return link === this.links.get(key) && this.unlink(key);
+    this.timers.get(key)?.();
+    assert(this.sources.has(key) === this.links.has(key));
     return this.sources.delete(key) && this.links.delete(key);
   }
   public override delete(key: K<M>): void {
     this.ensureAliveness();
+    this.timers.get(key)?.();
+    assert(this.sources.has(key) === this.links.has(key));
     this.sources.delete(key);
     this.links.delete(key);
     super.delete(key);

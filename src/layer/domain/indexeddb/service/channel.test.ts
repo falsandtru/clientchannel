@@ -1,6 +1,7 @@
 import { StoreChannel } from './channel';
 import { listen_, destroy, idbEventStream, IDBEventType } from '../../../infrastructure/indexeddb/api';
 import { record } from '../../../data/es/store';
+import { wait } from 'spica/timer';
 
 describe('Unit: layers/domain/indexeddb/service/channel', function () {
   this.timeout(9 * 1e3);
@@ -147,6 +148,18 @@ describe('Unit: layers/domain/indexeddb/service/channel', function () {
           });
         };
       });
+    });
+
+    it('keepalive', async () => {
+      const chan = new StoreChannel<Record<string, Value>>('test', { '': () => new Value() }, { age: 100, keepalive: 50 });
+      const link = chan.link('a');
+
+      assert(link === chan.link('a'));
+      await wait(300);
+      assert(link[StoreChannel.Value.id] === 0);
+      assert(chan.unlink('a') === true);
+
+      chan.destroy();
     });
 
     it('migrate', async () => {

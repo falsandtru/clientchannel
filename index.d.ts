@@ -23,6 +23,7 @@ export namespace StoreChannel {
     schemas: { readonly [L in K<M>]: (key: L) => M[L]; };
     capacity?: number;
     age?: number;
+    keepalive?: number;
     migrate?(link: M[keyof M & string]): void;
     destroy?(reason: unknown, event?: globalThis.Event): boolean;
   }

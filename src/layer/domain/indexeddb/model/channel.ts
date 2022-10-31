@@ -96,7 +96,7 @@ export class ChannelStore<K extends keyof M & string, V extends ChannelStore.Val
       }
     });
   }
-  private readonly cancellation = new Cancellation();
+  protected readonly cancellation = new Cancellation();
   private readonly stores: Stores<K, V>;
   private readonly channel = new Channel<K>(this.name, this.debug);
   private readonly ownership = new Ownership<string>(this.channel);
