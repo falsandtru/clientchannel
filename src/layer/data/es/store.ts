@@ -5,7 +5,7 @@ import { EventRecordType, UnstoredEventRecord, StoredEventRecord, LoadedEventRec
 import { Prop, hasBinary } from '../database/value';
 import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
-import { clock } from 'spica/clock';
+import { clock } from 'spica/chrono';
 import { concat } from 'spica/concat';
 import { causeAsyncException } from 'spica/exception';
 

@@ -1,6 +1,6 @@
 import { Listen, Config } from '../../infrastructure/indexeddb/api';
 import { Cancellation } from 'spica/cancellation';
-import { clock } from 'spica/clock';
+import { clock } from 'spica/chrono';
 import { causeAsyncException } from 'spica/exception';
 
 export abstract class KeyValueStore<K extends string, V extends IDBValidValue> {
