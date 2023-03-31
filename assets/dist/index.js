@@ -52,9 +52,9 @@ __exportStar(__webpack_require__(4279), exports);
 Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
-exports.ObjectSetPrototypeOf = exports.ObjectGetPrototypeOf = exports.ObjectCreate = exports.ObjectAssign = exports.toString = exports.isEnumerable = exports.isPrototypeOf = exports.hasOwnProperty = exports.isArray = exports.sqrt = exports.log = exports.tan = exports.cos = exports.sign = exports.round = exports.random = exports.min = exports.max = exports.floor = exports.ceil = exports.abs = exports.PI = exports.parseInt = exports.parseFloat = exports.isSafeInteger = exports.isNaN = exports.isInteger = exports.isFinite = exports.EPSILON = exports.MIN_VALUE = exports.MIN_SAFE_INTEGER = exports.MAX_VALUE = exports.MAX_SAFE_INTEGER = void 0;
+exports.ObjectSetPrototypeOf = exports.ObjectGetPrototypeOf = exports.ObjectCreate = exports.ObjectAssign = exports.toString = exports.isEnumerable = exports.isPrototypeOf = exports.hasOwnProperty = exports.isArray = exports.sqrt = exports.log10 = exports.log2 = exports.log = exports.tan = exports.cos = exports.sign = exports.round = exports.random = exports.min = exports.max = exports.floor = exports.ceil = exports.abs = exports.PI = exports.parseInt = exports.parseFloat = exports.isSafeInteger = exports.isNaN = exports.isInteger = exports.isFinite = exports.EPSILON = exports.MIN_VALUE = exports.MIN_SAFE_INTEGER = exports.MAX_VALUE = exports.MAX_SAFE_INTEGER = void 0;
 exports.MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER, exports.MAX_VALUE = Number.MAX_VALUE, exports.MIN_SAFE_INTEGER = Number.MIN_SAFE_INTEGER, exports.MIN_VALUE = Number.MIN_VALUE, exports.EPSILON = Number.EPSILON, exports.isFinite = Number.isFinite, exports.isInteger = Number.isInteger, exports.isNaN = Number.isNaN, exports.isSafeInteger = Number.isSafeInteger, exports.parseFloat = Number.parseFloat, exports.parseInt = Number.parseInt;
-exports.PI = Math.PI, exports.abs = Math.abs, exports.ceil = Math.ceil, exports.floor = Math.floor, exports.max = Math.max, exports.min = Math.min, exports.random = Math.random, exports.round = Math.round, exports.sign = Math.sign, exports.cos = Math.cos, exports.tan = Math.tan, exports.log = Math.log, exports.sqrt = Math.sqrt;
+exports.PI = Math.PI, exports.abs = Math.abs, exports.ceil = Math.ceil, exports.floor = Math.floor, exports.max = Math.max, exports.min = Math.min, exports.random = Math.random, exports.round = Math.round, exports.sign = Math.sign, exports.cos = Math.cos, exports.tan = Math.tan, exports.log = Math.log, exports.log2 = Math.log2, exports.log10 = Math.log10, exports.sqrt = Math.sqrt;
 exports.isArray = Array.isArray;
 exports.hasOwnProperty = Object.prototype.hasOwnProperty.call.bind(Object.prototype.hasOwnProperty);
 exports.isPrototypeOf = Object.prototype.isPrototypeOf.call.bind(Object.prototype.isPrototypeOf);
@@ -84,7 +84,7 @@ exports.indexOf = indexOf;
 function unshift(as, bs) {
   if ('length' in as) {
     if (as.length === 1) return bs.unshift(as[0]), bs;
-    if (Symbol.iterator in as) return bs.unshift(...as), bs;
+    if (Array.isArray(as)) return bs.unshift(...as), bs;
     for (let i = as.length; i--;) {
       bs.unshift(as[i]);
     }
@@ -102,7 +102,7 @@ exports.shift = shift;
 function push(as, bs) {
   if ('length' in bs) {
     if (bs.length === 1) return as.push(bs[0]), as;
-    if (Symbol.iterator in bs && bs.length > 50) return as.push(...bs), as;
+    if (Array.isArray(bs) && bs.length > 100) return as.push(...bs), as;
     for (let len = bs.length, i = 0; i < len; ++i) {
       as.push(bs[i]);
     }
@@ -381,7 +381,7 @@ Cancellation.prototype.finally = promise_1.AtomicPromise.prototype.finally;
 
 /***/ }),
 
-/***/ 7681:
+/***/ 4393:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
@@ -615,13 +615,12 @@ Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
 exports.MultiHeap = exports.Heap = void 0;
-const invlist_1 = __webpack_require__(7452);
+const list_1 = __webpack_require__(3667);
 const memoize_1 = __webpack_require__(1808);
-let size = 16;
 class Heap {
   constructor(cmp = Heap.max, options) {
     this.cmp = cmp;
-    this.array = Array(size);
+    this.array = {};
     this.$length = 0;
     this.stable = options?.stable ?? false;
   }
@@ -632,14 +631,18 @@ class Heap {
     return this.array[0] !== undefined;
   }
   peek() {
-    return this.array[0]?.[1];
+    return this.array[0];
   }
   insert(value, order) {
     if (arguments.length === 1) {
       order = value;
     }
     const array = this.array;
-    const node = array[this.$length] = [order, value, ++this.$length];
+    const node = array[this.$length] = {
+      index: ++this.$length,
+      order,
+      value
+    };
     upHeapify(this.cmp, array, this.$length);
     return node;
   }
@@ -649,41 +652,43 @@ class Heap {
     }
     if (this.$length === 0) return void this.insert(value, order);
     const array = this.array;
-    const old = array[0][1];
-    array[0] = [order, value, 1];
+    const node = array[0];
+    const val = node.value;
+    node.order = order;
+    node.value = value;
     downHeapify(this.cmp, array, 1, this.$length, this.stable);
-    return old;
+    return val;
   }
   extract() {
     if (this.$length === 0) return;
     const node = this.array[0];
     this.delete(node);
-    return node[1];
+    return node.value;
   }
   delete(node) {
     const array = this.array;
-    const index = node[2];
+    const index = node.index;
     if (array[index - 1] !== node) throw new Error('Invalid node');
     swap(array, index, this.$length--);
-    array[this.$length] = undefined;
     sort(this.cmp, array, index, this.$length, this.stable);
-    return node[1];
+    array[this.$length] = undefined;
+    return node.value;
   }
   update(node, order, value) {
     const array = this.array;
-    const index = node[2];
+    const index = node.index;
     if (array[index - 1] !== node) throw new Error('Invalid node');
     if (arguments.length === 1) {
-      order = node[0];
+      order = node.order;
     }
     if (arguments.length >= 3) {
-      node[1] = value;
+      node.value = value;
     }
-    if (this.cmp(node[0], node[0] = order) === 0) return;
+    if (this.cmp(node.order, node.order = order) === 0) return;
     sort(this.cmp, array, index, this.$length, this.stable);
   }
   clear() {
-    this.array = Array(size);
+    this.array = {};
     this.$length = 0;
   }
 }
@@ -702,11 +707,11 @@ function sort(cmp, array, index, length, stable) {
   }
 }
 function upHeapify(cmp, array, index) {
-  const order = array[index - 1][0];
+  const order = array[index - 1].order;
   let changed = false;
   while (index > 1) {
     const parent = index / 2 | 0;
-    if (cmp(array[parent - 1][0], order) <= 0) break;
+    if (cmp(array[parent - 1].order, order) <= 0) break;
     swap(array, index, parent);
     index = parent;
     changed ||= true;
@@ -720,13 +725,13 @@ function downHeapify(cmp, array, index, length, stable) {
     const right = index * 2 + 1;
     let min = index;
     if (left <= length) {
-      const result = cmp(array[left - 1][0], array[min - 1][0]);
+      const result = cmp(array[left - 1].order, array[min - 1].order);
       if (stable ? result <= 0 : result < 0) {
         min = left;
       }
     }
     if (right <= length) {
-      const result = cmp(array[right - 1][0], array[min - 1][0]);
+      const result = cmp(array[right - 1].order, array[min - 1].order);
       if (stable ? result <= 0 : result < 0) {
         min = right;
       }
@@ -746,18 +751,31 @@ function swap(array, index1, index2) {
   const node2 = array[pos2];
   array[pos1] = node2;
   array[pos2] = node1;
-  node1[2] = index2;
-  node2[2] = index1;
+  node1.index = index2;
+  node2.index = index1;
+}
+class MList extends list_1.List {
+  constructor(order, heap) {
+    super();
+    this.order = order;
+    this.heap = heap.insert(this, order);
+  }
+}
+class MNode {
+  constructor(list, order, value) {
+    this.list = list;
+    this.order = order;
+    this.value = value;
+    this.next = undefined;
+    this.prev = undefined;
+  }
 }
 class MultiHeap {
   constructor(cmp = MultiHeap.max, options) {
     this.cmp = cmp;
     this.dict = new Map();
     this.list = (0, memoize_1.memoize)(order => {
-      const list = new invlist_1.List();
-      list[MultiHeap.order] = order;
-      list[MultiHeap.heap] = this.heap.insert(list, order);
-      return list;
+      return new MList(order, this.heap);
     }, this.dict);
     this.$length = 0;
     this.clean = options?.clean ?? true;
@@ -770,35 +788,37 @@ class MultiHeap {
     return this.heap.isEmpty();
   }
   peek() {
-    return this.heap.peek()?.head.value;
+    return this.heap.peek()?.value.head;
   }
   insert(value, order) {
     if (arguments.length === 1) {
       order = value;
     }
     ++this.$length;
-    return this.list(order).push(value);
+    const node = new MNode(this.list(order), order, value);
+    node.list.push(node);
+    return node;
   }
   extract() {
     if (this.$length === 0) return;
     --this.$length;
-    const list = this.heap.peek();
-    const value = list.shift();
+    const list = this.heap.peek()?.value;
+    const value = list.shift().value;
     if (list.length === 0) {
       this.heap.extract();
-      this.clean && this.dict.delete(list[MultiHeap.order]);
+      this.clean && this.dict.delete(list.order);
     }
     return value;
   }
   delete(node) {
+    if (node.next === undefined) throw new Error('Invalid node');
     const list = node.list;
-    if (list === undefined) throw new Error('Invalid node');
     --this.$length;
     if (list.length === 1) {
-      this.heap.delete(list[MultiHeap.heap]);
-      this.clean && this.dict.delete(list[MultiHeap.order]);
+      this.heap.delete(list.heap);
+      this.clean && this.dict.delete(list.order);
     }
-    return node.delete();
+    return list.delete(node).value;
   }
   update(node, order, value) {
     const list = node.list;
@@ -806,12 +826,9 @@ class MultiHeap {
     if (arguments.length >= 3) {
       node.value = value;
     }
-    if (this.cmp(list[MultiHeap.order], order) === 0) return node;
+    if (this.cmp(list.order, order) === 0) return node;
     this.delete(node);
     return this.insert(node.value, order);
-  }
-  find(order) {
-    return this.dict.get(order);
   }
   clear() {
     this.heap.clear();
@@ -820,14 +837,12 @@ class MultiHeap {
   }
 }
 exports.MultiHeap = MultiHeap;
-MultiHeap.order = Symbol('order');
-MultiHeap.heap = Symbol('heap');
 MultiHeap.max = Heap.max;
 MultiHeap.min = Heap.min;
 
 /***/ }),
 
-/***/ 7452:
+/***/ 3667:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -854,27 +869,24 @@ var __exportStar = this && this.__exportStar || function (m, exports) {
 Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
-__exportStar(__webpack_require__(2310), exports);
+__exportStar(__webpack_require__(5096), exports);
 
 /***/ }),
 
-/***/ 2310:
+/***/ 5096:
 /***/ ((__unused_webpack_module, exports) => {
 
 
 
-// Circular Inverse List
+// Memory-efficient flexible list.
 Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
 exports.List = void 0;
 class List {
   constructor() {
-    this.$length = 0;
+    this.length = 0;
     this.head = undefined;
-  }
-  get length() {
-    return this.$length;
   }
   get tail() {
     return this.head?.next;
@@ -882,176 +894,96 @@ class List {
   get last() {
     return this.head?.prev;
   }
-  clear() {
-    this.head = undefined;
-    this.$length = 0;
+  insert(node, before) {
+    if (++this.length === 1) {
+      return this.head = node.next = node.prev = node;
+    }
+    const next = node.next = before ?? this.head;
+    const prev = node.prev = next.prev;
+    return next.prev = prev.next = node;
   }
-  unshift(value) {
-    return this.head = this.push(value);
+  delete(node) {
+    if (--this.length === 0) {
+      this.head = undefined;
+    } else {
+      const {
+        next,
+        prev
+      } = node;
+      if (node === this.head) {
+        this.head = next;
+      }
+      // Error if not used.
+      prev.next = next;
+      next.prev = prev;
+    }
+    node.next = node.prev = undefined;
+    return node;
   }
-  push(value) {
-    const head = this.head;
-    return new Node(this, value, head, head?.prev);
+  unshift(node) {
+    return this.head = this.insert(node, this.head);
   }
-  unshiftNode(node) {
-    return this.head = this.pushNode(node);
-  }
-  pushNode(node) {
+  push(node) {
     return this.insert(node, this.head);
   }
-  unshiftRotationally(value) {
-    const node = this.last;
-    if (node === undefined) return this.unshift(value);
-    node.value = value;
-    this.head = node;
-    return node;
-  }
-  pushRotationally(value) {
-    const node = this.head;
-    if (node === undefined) return this.push(value);
-    node.value = value;
-    this.head = node.next;
-    return node;
-  }
   shift() {
-    return this.head?.delete();
+    if (this.length === 0) return;
+    return this.delete(this.head);
   }
   pop() {
-    return this.last?.delete();
+    if (this.length === 0) return;
+    return this.delete(this.head.prev);
   }
-  insert(node, before = this.head) {
-    if (node.list === this) return node.move(before), node;
-    node.delete();
-    if (this.$length++ === 0) {
-      this.head = node;
-    }
-    node.list = this;
-    const next = node.next = before ?? node;
-    const prev = node.prev = next.prev ?? node;
-    next.prev = prev.next = node;
-    return node;
-  }
-  find(f) {
-    for (let head = this.head, node = head; node;) {
-      if (f(node.value)) return node;
-      node = node.next;
-      if (node === head) break;
-    }
-  }
-  toNodes() {
-    const acc = [];
-    for (let head = this.head, node = head; node;) {
-      acc.push(node);
-      node = node.next;
-      if (node === head) break;
-    }
-    return acc;
-  }
-  toArray() {
-    const acc = [];
-    for (let head = this.head, node = head; node;) {
-      acc.push(node.value);
-      node = node.next;
-      if (node === head) break;
-    }
-    return acc;
+  clear() {
+    this.length = 0;
+    this.head = undefined;
   }
   *[Symbol.iterator]() {
-    const head = this.head;
-    for (let node = head; node;) {
-      yield node.value;
+    let head = this.head;
+    for (let node = head; node !== undefined;) {
+      yield node;
       node = node.next;
       if (node === head) return;
     }
   }
+  flatMap(f) {
+    const acc = [];
+    for (let head = this.head, node = head; node;) {
+      const as = f(node);
+      switch (as.length) {
+        case 0:
+          break;
+        case 1:
+          acc.push(as[0]);
+          break;
+        default:
+          for (let len = as.length, i = 0; i < len; ++i) {
+            acc.push(as[i]);
+          }
+      }
+      node = node.next;
+      if (node === head) break;
+    }
+    return acc;
+  }
+  find(f) {
+    for (let head = this.head, node = head; node;) {
+      if (f(node)) return node;
+      node = node.next;
+      if (node === head) break;
+    }
+  }
 }
 exports.List = List;
-class Node {
-  constructor(list, value, next, prev) {
-    this.list = list;
-    this.value = value;
-    this.next = next;
-    this.prev = prev;
-    list.head ??= this;
-    if (list['$length']++ === 0) {
-      this.next = this.prev = this;
-    } else {
-      next.prev = prev.next = this;
+(function (List) {
+  class Node {
+    constructor() {
+      this.next = undefined;
+      this.prev = undefined;
     }
   }
-  get alive() {
-    return this.list !== undefined;
-  }
-  delete() {
-    const list = this.list;
-    if (list === undefined) return this.value;
-    const {
-      next,
-      prev
-    } = this;
-    if (--list['$length'] === 0) {
-      list.head = undefined;
-    } else {
-      next.prev = prev;
-      prev.next = next;
-      if (this === list.head) {
-        list.head = next;
-      }
-    }
-    this.next = this.prev = undefined;
-    this.list = undefined;
-    return this.value;
-  }
-  insertBefore(value) {
-    return new Node(this.list, value, this, this.prev);
-  }
-  insertAfter(value) {
-    return new Node(this.list, value, this.next, this);
-  }
-  move(before) {
-    if (before === undefined) return false;
-    if (this === before) return false;
-    if (before.list !== this.list) return before.list.insert(this, before), true;
-    const a1 = this;
-    const b1 = before;
-    if (a1.next === b1) return false;
-    const b0 = b1.prev;
-    const a0 = a1.prev;
-    const a2 = a1.next;
-    b0.next = a1;
-    a1.next = b1;
-    b1.prev = a1;
-    a1.prev = b0;
-    a0.next = a2;
-    a2.prev = a0;
-    return true;
-  }
-  moveToHead() {
-    this.move(this.list.head);
-    this.list.head = this;
-  }
-  moveToLast() {
-    this.move(this.list.head);
-  }
-  swap(node) {
-    const node1 = this;
-    const node2 = node;
-    if (node1 === node2) return false;
-    const node3 = node2.next;
-    if (node1.list !== node2.list) throw new Error(`Spica: InvList: Cannot swap nodes across lists.`);
-    node2.move(node1);
-    node1.move(node3);
-    switch (this.list.head) {
-      case node1:
-        this.list.head = node2;
-        break;
-      case node2:
-        this.list.head = node1;
-        break;
-    }
-    return true;
-  }
-}
+  List.Node = Node;
+})(List = exports.List || (exports.List = {}));
 
 /***/ }),
 
@@ -1099,30 +1031,30 @@ const alias_1 = __webpack_require__(5406);
 const compare_1 = __webpack_require__(5529);
 function memoize(f, identify = (...as) => as[0], memory) {
   if (typeof identify === 'object') return memoize(f, undefined, identify);
-  return (0, alias_1.isArray)(memory) ? memoizeArray(f, identify, memory) : memoizeObject(f, identify, memory ?? new Map());
+  return (0, alias_1.isArray)(memory) || memory?.constructor === Object ? memoizeRecord(f, identify, memory) : memoizeDict(f, identify, memory ?? new Map());
 }
 exports.memoize = memoize;
-function memoizeArray(f, identify, memory) {
-  let nullish = false;
+function memoizeRecord(f, identify, memory) {
+  let nullable = false;
   return (...as) => {
     const b = identify(...as);
     let z = memory[b];
-    if (z !== undefined || nullish && memory[b] !== undefined) return z;
+    if (z !== undefined || nullable && memory[b] !== undefined) return z;
     z = f(...as);
-    nullish ||= z === undefined;
+    nullable ||= z === undefined;
     memory[b] = z;
     return z;
   };
 }
-function memoizeObject(f, identify, memory) {
-  let nullish = false;
+function memoizeDict(f, identify, memory) {
+  let nullable = false;
   return (...as) => {
     const b = identify(...as);
     let z = memory.get(b);
-    if (z !== undefined || nullish && memory.has(b)) return z;
+    if (z !== undefined || nullable && memory.has(b)) return z;
     z = f(...as);
-    nullish ||= z === undefined;
-    memory.set(b, z);
+    nullable ||= z === undefined;
+    memory.add?.(b, z) ?? memory.set(b, z);
     return z;
   };
 }
@@ -1210,7 +1142,7 @@ class Either extends monad_1.Monad {
   static do(block) {
     const iter = block();
     let value;
-    while (true) {
+    for (;;) {
       const {
         value: m,
         done
@@ -1416,7 +1348,7 @@ class Maybe extends monadplus_1.MonadPlus {
   static do(block) {
     const iter = block();
     let value;
-    while (true) {
+    for (;;) {
       const {
         value: m,
         done
@@ -1581,19 +1513,27 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports.Observation = void 0;
 const alias_1 = __webpack_require__(5406);
-const invlist_1 = __webpack_require__(7452);
+const list_1 = __webpack_require__(3667);
 const array_1 = __webpack_require__(8112);
+const function_1 = __webpack_require__(6288);
 const exception_1 = __webpack_require__(7822);
+class Node {
+  constructor(value) {
+    this.value = value;
+    this.next = undefined;
+    this.prev = undefined;
+  }
+}
 class ListenerNode {
   constructor(name, parent) {
     this.name = name;
     this.parent = parent;
     this.mid = 0;
     this.sid = 0;
-    this.monitors = new invlist_1.List();
-    this.subscribers = new invlist_1.List();
+    this.monitors = new list_1.List();
+    this.subscribers = new list_1.List();
     this.index = new Map();
-    this.children = new invlist_1.List();
+    this.children = new list_1.List();
   }
   reset(listeners) {
     switch (listeners) {
@@ -1625,7 +1565,7 @@ class ListenerNode {
       if (child.value.clear(true)) {
         const next = child.next;
         disposable ? stack.push(child.value.name) : index.delete(child.value.name);
-        child.delete();
+        children.delete(child);
         child = next;
       } else {
         child = child.next;
@@ -1649,14 +1589,14 @@ class Observation {
     const monitors = node.monitors;
     if (monitors.length === this.limit) throw new Error(`Spica: Observation: Exceeded max listener limit.`);
     node.mid === alias_1.MAX_SAFE_INTEGER && node.reset(monitors);
-    const inode = monitors.push({
+    const inode = monitors.push(new Node({
       id: ++node.mid,
       type: 0 /* ListenerType.Monitor */,
       namespace,
       listener: monitor,
       options
-    });
-    return () => void inode.delete();
+    }));
+    return (0, function_1.singleton)(() => void monitors.delete(inode));
   }
   on(namespace, subscriber, options = {}) {
     if (typeof subscriber !== 'function') throw new Error(`Spica: Observation: Invalid listener: ${subscriber}`);
@@ -1664,14 +1604,14 @@ class Observation {
     const subscribers = node.subscribers;
     if (subscribers.length === this.limit) throw new Error(`Spica: Observation: Exceeded max listener limit.`);
     node.sid === alias_1.MAX_SAFE_INTEGER && node.reset(subscribers);
-    const inode = subscribers.push({
+    const inode = subscribers.push(new Node({
       id: ++node.sid,
       type: 1 /* ListenerType.Subscriber */,
       namespace,
       listener: subscriber,
       options
-    });
-    return () => void inode.delete();
+    }));
+    return (0, function_1.singleton)(() => void subscribers.delete(inode));
   }
   once(namespace, subscriber) {
     return this.on(namespace, subscriber, {
@@ -1679,7 +1619,13 @@ class Observation {
     });
   }
   off(namespace, subscriber) {
-    return subscriber ? void this.seek(namespace, 1 /* SeekMode.Breakable */)?.subscribers?.find(item => item.listener === subscriber)?.delete() : void this.seek(namespace, 1 /* SeekMode.Breakable */)?.clear();
+    if (subscriber) {
+      const list = this.seek(namespace, 1 /* SeekMode.Breakable */)?.subscribers;
+      const node = list?.find(node => node.value.listener === subscriber);
+      node?.next && list?.delete(node);
+    } else {
+      void this.seek(namespace, 1 /* SeekMode.Breakable */)?.clear();
+    }
   }
   emit(namespace, data, tracker) {
     this.drain(namespace, data, tracker);
@@ -1698,7 +1644,7 @@ class Observation {
   refs(namespace) {
     const node = this.seek(namespace, 1 /* SeekMode.Breakable */);
     if (node === undefined) return [];
-    return this.listenersBelow(node).reduce((acc, listeners) => (0, array_1.push)(acc, listeners.toArray()), []);
+    return this.listenersBelow(node).reduce((acc, listeners) => (0, array_1.push)(acc, listeners.flatMap(node => [node.value])), []);
   }
   drain(namespace, data, tracker) {
     let node = this.seek(namespace, 1 /* SeekMode.Breakable */);
@@ -1713,14 +1659,14 @@ class Observation {
       for (let node = items.head; node && min < node.value.id && node.value.id <= max;) {
         min = node.value.id;
         const item = node.value;
-        item.options.once && node.delete();
+        item.options.once && items.delete(node);
         try {
           const result = item.listener(data, namespace);
           tracker && results.push(result);
         } catch (reason) {
           (0, exception_1.causeAsyncException)(reason);
         }
-        node.alive && recents.push(node);
+        node.next !== undefined && recents.push(node);
         node = node.next ?? prev?.next ?? rollback(recents, item => item.next) ?? items.head;
         prev = node?.prev;
       }
@@ -1736,13 +1682,13 @@ class Observation {
       for (let node = items.head; node && min < node.value.id && node.value.id <= max;) {
         min = node.value.id;
         const item = node.value;
-        item.options.once && node.delete();
+        item.options.once && items.delete(node);
         try {
           item.listener(data, namespace);
         } catch (reason) {
           (0, exception_1.causeAsyncException)(reason);
         }
-        node.alive && recents.push(node);
+        node.next !== undefined && recents.push(node);
         node = node.next ?? prev?.next ?? rollback(recents, item => item.next) ?? items.head;
         prev = node?.prev;
       }
@@ -1773,7 +1719,7 @@ class Observation {
         }
         child = new ListenerNode(name, node);
         index.set(name, child);
-        children.push(child);
+        children.push(new Node(child));
       }
       node = child;
     }
@@ -1813,7 +1759,7 @@ class Observation {
       if (cnt === 0) {
         const next = child.next;
         index.delete(child.value.name);
-        child.delete();
+        children.delete(child);
         child = next;
       } else {
         child = child.next;
@@ -1846,16 +1792,6 @@ const alias_1 = __webpack_require__(5406);
 const function_1 = __webpack_require__(6288);
 exports.internal = Symbol.for('spica/promise::internal');
 class AtomicPromise {
-  constructor(executor) {
-    this[_a] = 'Promise';
-    this[_b] = new Internal();
-    if (executor === function_1.noop) return;
-    try {
-      executor(value => void this[exports.internal].resolve(value), reason => void this[exports.internal].reject(reason));
-    } catch (reason) {
-      this[exports.internal].reject(reason);
-    }
-  }
   static all(vs) {
     return new AtomicPromise((resolve, reject) => {
       const values = (0, alias_1.isArray)(vs) ? vs : [...vs];
@@ -2023,6 +1959,16 @@ class AtomicPromise {
   }
   static reject(reason) {
     return new AtomicPromise((_, reject) => reject(reason));
+  }
+  constructor(executor) {
+    this[_a] = 'Promise';
+    this[_b] = new Internal();
+    if (executor === function_1.noop) return;
+    try {
+      executor(value => void this[exports.internal].resolve(value), reason => void this[exports.internal].reject(reason));
+    } catch (reason) {
+      this[exports.internal].reject(reason);
+    }
   }
   then(onfulfilled, onrejected) {
     const p = new AtomicPromise(function_1.noop);
@@ -2298,7 +2244,7 @@ class PriorityQueue {
     return this.$length === 0;
   }
   peek(priority) {
-    return arguments.length === 0 ? this.heap.peek()?.peek() : this.dict.get(priority)?.peek();
+    return arguments.length === 0 ? this.heap.peek()?.value.peek() : this.dict.get(priority)?.peek();
   }
   push(priority, value) {
     ++this.$length;
@@ -2307,7 +2253,7 @@ class PriorityQueue {
   pop(priority) {
     if (this.$length === 0) return;
     --this.$length;
-    const queue = arguments.length === 0 ? this.heap.peek() : this.dict.get(priority);
+    const queue = arguments.length === 0 ? this.heap.peek().value : this.dict.get(priority);
     const value = queue?.pop();
     if (queue?.isEmpty()) {
       this.heap.extract();
@@ -2434,7 +2380,7 @@ class Stack {
     const {
       array
     } = this;
-    return index === 0 ? array[(array.length || 1) - 1] : array[0];
+    return index === 0 ? array.at(-1) : array[0];
   }
   push(value) {
     this.array.push(value);
@@ -2469,7 +2415,7 @@ Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
 exports.cothrottle = exports.debounce = exports.throttle = void 0;
-const clock_1 = __webpack_require__(7681);
+const chrono_1 = __webpack_require__(4393);
 const exception_1 = __webpack_require__(7822);
 function throttle(interval, callback, capacity = 1) {
   // Bug: Karma and TypeScript
@@ -2532,13 +2478,13 @@ function debounce(delay, callback, capacity = 1) {
 exports.debounce = debounce;
 function cothrottle(routine, resource, scheduler) {
   return async function* () {
-    let start = (0, clock_1.now)();
+    let start = (0, chrono_1.now)();
     for await (const value of routine()) {
-      if (resource - ((0, clock_1.now)() - start) > 0) {
+      if (resource - ((0, chrono_1.now)() - start) > 0) {
         yield value;
       } else {
         await scheduler();
-        start = (0, clock_1.now)();
+        start = (0, chrono_1.now)();
       }
     }
   };
@@ -2556,9 +2502,15 @@ Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
 exports.wait = exports.captureTimers = exports.setRepeatTimer = exports.setTimer = void 0;
-const invlist_1 = __webpack_require__(7452);
-const clock_1 = __webpack_require__(7681);
+const list_1 = __webpack_require__(3667);
+const chrono_1 = __webpack_require__(4393);
 const function_1 = __webpack_require__(6288);
+class Node extends list_1.List.Node {
+  constructor(value) {
+    super();
+    this.value = value;
+  }
+}
 exports.setTimer = template(false);
 exports.setRepeatTimer = template(true);
 function template(repeat, cancellers) {
@@ -2571,18 +2523,18 @@ function template(repeat, cancellers) {
     }, timeout);
     const cancel = (0, function_1.singleton)(() => {
       clearTimeout(id);
-      node?.delete();
+      node && cancellers?.delete(node);
       params && unhandler?.(params[0]);
     });
-    const node = cancellers?.push(cancel);
+    const node = cancellers?.push(new Node(cancel));
     return cancel;
   };
   if (!cancellers) {
-    timer.group = () => template(repeat, new invlist_1.List());
+    timer.group = () => template(repeat, new list_1.List());
   } else {
     timer.clear = () => {
       while (cancellers.length) {
-        cancellers.shift()();
+        cancellers.shift().value();
       }
     };
   }
@@ -2604,7 +2556,7 @@ function captureTimers(test) {
 }
 exports.captureTimers = captureTimers;
 function wait(ms) {
-  return ms === 0 ? clock_1.clock : new Promise(resolve => void setTimeout(resolve, ms));
+  return ms === 0 ? chrono_1.clock : new Promise(resolve => void setTimeout(resolve, ms));
 }
 exports.wait = wait;
 
@@ -2979,7 +2931,7 @@ const identifier_1 = __webpack_require__(4581);
 const event_1 = __webpack_require__(7155);
 const value_1 = __webpack_require__(8089);
 const observer_1 = __webpack_require__(4615);
-const clock_1 = __webpack_require__(7681);
+const chrono_1 = __webpack_require__(4393);
 const concat_1 = __webpack_require__(302);
 const exception_1 = __webpack_require__(7822);
 var EventStoreSchema;
@@ -2993,6 +2945,31 @@ var EventStoreSchema;
   //export const surrogateKeyDateField = 'key+date';
 })(EventStoreSchema || (EventStoreSchema = {}));
 class EventStore {
+  static configure(name) {
+    return {
+      make(tx) {
+        const store = tx.db.objectStoreNames.contains(name) ? tx.objectStore(name) : tx.db.createObjectStore(name, {
+          keyPath: EventStoreSchema.id,
+          autoIncrement: true
+        });
+        if (!store.indexNames.contains(EventStoreSchema.id)) {
+          store.createIndex(EventStoreSchema.id, EventStoreSchema.id, {
+            unique: true
+          });
+        }
+        if (!store.indexNames.contains(EventStoreSchema.key)) {
+          store.createIndex(EventStoreSchema.key, EventStoreSchema.key);
+        }
+        return true;
+      },
+      verify(db) {
+        return db.objectStoreNames.contains(name) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.id) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.key);
+      },
+      destroy() {
+        return true;
+      }
+    };
+  }
   constructor(name, listen, relation) {
     this.name = name;
     this.listen = listen;
@@ -3049,31 +3026,6 @@ class EventStore {
       }
     };
   }
-  static configure(name) {
-    return {
-      make(tx) {
-        const store = tx.db.objectStoreNames.contains(name) ? tx.objectStore(name) : tx.db.createObjectStore(name, {
-          keyPath: EventStoreSchema.id,
-          autoIncrement: true
-        });
-        if (!store.indexNames.contains(EventStoreSchema.id)) {
-          store.createIndex(EventStoreSchema.id, EventStoreSchema.id, {
-            unique: true
-          });
-        }
-        if (!store.indexNames.contains(EventStoreSchema.key)) {
-          store.createIndex(EventStoreSchema.key, EventStoreSchema.key);
-        }
-        return true;
-      },
-      verify(db) {
-        return db.objectStoreNames.contains(name) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.id) && db.transaction(name).objectStore(name).indexNames.contains(EventStoreSchema.key);
-      },
-      destroy() {
-        return true;
-      }
-    };
-  }
   get txrw() {
     if (++this.tx.rwc < 25 || !this.tx.rw) return;
     const tx = this.tx.rw;
@@ -3093,7 +3045,7 @@ class EventStore {
     this.tx.rw.addEventListener('abort', clear);
     this.tx.rw.addEventListener('error', clear);
     this.tx.rw.addEventListener('complete', clear);
-    clock_1.clock.now(clear);
+    chrono_1.clock.now(clear);
   }
   transact(cache, success, failure, tx = this.txrw) {
     return tx ? void success(tx) : void this.listen(db => {
@@ -3384,19 +3336,9 @@ Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
 exports.KeyValueStore = void 0;
-const clock_1 = __webpack_require__(7681);
+const chrono_1 = __webpack_require__(4393);
 const exception_1 = __webpack_require__(7822);
 class KeyValueStore {
-  constructor(name, index, listen) {
-    this.name = name;
-    this.index = index;
-    this.listen = listen;
-    this.alive = true;
-    this.cache = new Map();
-    this.tx = {
-      rwc: 0
-    };
-  }
   static configure() {
     return {
       make() {
@@ -3408,6 +3350,16 @@ class KeyValueStore {
       destroy() {
         return true;
       }
+    };
+  }
+  constructor(name, index, listen) {
+    this.name = name;
+    this.index = index;
+    this.listen = listen;
+    this.alive = true;
+    this.cache = new Map();
+    this.tx = {
+      rwc: 0
     };
   }
   get txrw() {
@@ -3429,7 +3381,7 @@ class KeyValueStore {
     this.tx.rw.addEventListener('abort', clear);
     this.tx.rw.addEventListener('error', clear);
     this.tx.rw.addEventListener('complete', clear);
-    clock_1.clock.now(clear);
+    chrono_1.clock.now(clear);
   }
   transact(cache, success, failure, tx = this.txrw) {
     return tx ? void success(tx) : void this.listen(db => {
@@ -4033,6 +3985,33 @@ const store_1 = __webpack_require__(7216);
 const timer_1 = __webpack_require__(8520);
 exports.name = 'access';
 class AccessStore {
+  static configure() {
+    return {
+      make(tx) {
+        const store = tx.db.objectStoreNames.contains(exports.name) ? tx.objectStore(exports.name) : tx.db.createObjectStore(exports.name, {
+          keyPath: "key" /* AccessStoreSchema.key */,
+          autoIncrement: false
+        });
+        if (!store.indexNames.contains("key" /* AccessStoreSchema.key */)) {
+          store.createIndex("key" /* AccessStoreSchema.key */, "key" /* AccessStoreSchema.key */, {
+            unique: true
+          });
+        }
+        if (!store.indexNames.contains("date" /* AccessStoreSchema.date */)) {
+          store.createIndex("date" /* AccessStoreSchema.date */, "date" /* AccessStoreSchema.date */);
+        }
+
+        return true;
+      },
+      verify(db) {
+        return db.objectStoreNames.contains(exports.name) && db.transaction(exports.name).objectStore(exports.name).indexNames.contains("key" /* AccessStoreSchema.key */) && db.transaction(exports.name).objectStore(exports.name).indexNames.contains("date" /* AccessStoreSchema.date */);
+      },
+
+      destroy() {
+        return true;
+      }
+    };
+  }
   constructor(chan, cancellation, ownership, listen, capacity) {
     this.chan = chan;
     this.cancellation = cancellation;
@@ -4089,33 +4068,6 @@ class AccessStore {
       };
     })();
     this.schedule(10 * 1000);
-  }
-  static configure() {
-    return {
-      make(tx) {
-        const store = tx.db.objectStoreNames.contains(exports.name) ? tx.objectStore(exports.name) : tx.db.createObjectStore(exports.name, {
-          keyPath: "key" /* AccessStoreSchema.key */,
-          autoIncrement: false
-        });
-        if (!store.indexNames.contains("key" /* AccessStoreSchema.key */)) {
-          store.createIndex("key" /* AccessStoreSchema.key */, "key" /* AccessStoreSchema.key */, {
-            unique: true
-          });
-        }
-        if (!store.indexNames.contains("date" /* AccessStoreSchema.date */)) {
-          store.createIndex("date" /* AccessStoreSchema.date */, "date" /* AccessStoreSchema.date */);
-        }
-
-        return true;
-      },
-      verify(db) {
-        return db.objectStoreNames.contains(exports.name) && db.transaction(exports.name).objectStore(exports.name).indexNames.contains("key" /* AccessStoreSchema.key */) && db.transaction(exports.name).objectStore(exports.name).indexNames.contains("date" /* AccessStoreSchema.date */);
-      },
-
-      destroy() {
-        return true;
-      }
-    };
   }
   recent(cb, timeout) {
     return new Promise((resolve, reject) => {
@@ -4203,6 +4155,33 @@ const store_1 = __webpack_require__(7216);
 const timer_1 = __webpack_require__(8520);
 const name = 'expiry';
 class ExpiryStore {
+  static configure() {
+    return {
+      make(tx) {
+        const store = tx.db.objectStoreNames.contains(name) ? tx.objectStore(name) : tx.db.createObjectStore(name, {
+          keyPath: "key" /* ExpiryStoreSchema.key */,
+          autoIncrement: false
+        });
+        if (!store.indexNames.contains("key" /* ExpiryStoreSchema.key */)) {
+          store.createIndex("key" /* ExpiryStoreSchema.key */, "key" /* ExpiryStoreSchema.key */, {
+            unique: true
+          });
+        }
+        if (!store.indexNames.contains("expiry" /* ExpiryStoreSchema.expiry */)) {
+          store.createIndex("expiry" /* ExpiryStoreSchema.expiry */, "expiry" /* ExpiryStoreSchema.expiry */);
+        }
+
+        return true;
+      },
+      verify(db) {
+        return db.objectStoreNames.contains(name) && db.transaction(name).objectStore(name).indexNames.contains("key" /* ExpiryStoreSchema.key */) && db.transaction(name).objectStore(name).indexNames.contains("expiry" /* ExpiryStoreSchema.expiry */);
+      },
+
+      destroy() {
+        return true;
+      }
+    };
+  }
   constructor(chan, cancellation, ownership, listen) {
     this.chan = chan;
     this.cancellation = cancellation;
@@ -4254,33 +4233,6 @@ class ExpiryStore {
       };
     })();
     this.schedule(10 * 1000);
-  }
-  static configure() {
-    return {
-      make(tx) {
-        const store = tx.db.objectStoreNames.contains(name) ? tx.objectStore(name) : tx.db.createObjectStore(name, {
-          keyPath: "key" /* ExpiryStoreSchema.key */,
-          autoIncrement: false
-        });
-        if (!store.indexNames.contains("key" /* ExpiryStoreSchema.key */)) {
-          store.createIndex("key" /* ExpiryStoreSchema.key */, "key" /* ExpiryStoreSchema.key */, {
-            unique: true
-          });
-        }
-        if (!store.indexNames.contains("expiry" /* ExpiryStoreSchema.expiry */)) {
-          store.createIndex("expiry" /* ExpiryStoreSchema.expiry */, "expiry" /* ExpiryStoreSchema.expiry */);
-        }
-
-        return true;
-      },
-      verify(db) {
-        return db.objectStoreNames.contains(name) && db.transaction(name).objectStore(name).indexNames.contains("key" /* ExpiryStoreSchema.key */) && db.transaction(name).objectStore(name).indexNames.contains("expiry" /* ExpiryStoreSchema.expiry */);
-      },
-
-      destroy() {
-        return true;
-      }
-    };
   }
   load(key, cancellation) {
     return this.store.load(key, (err, key, value) => !err && value?.expiry > this.store.get(key)?.expiry, cancellation);
@@ -4484,6 +4436,9 @@ class OwnershipMessage extends channel_1.ChannelMessage {
   }
 }
 class Ownership {
+  static genPriority() {
+    return Date.now();
+  }
   constructor(channel) {
     this.channel = channel;
     this.store = new Map();
@@ -4529,9 +4484,6 @@ class Ownership {
         default:
       }
     });
-  }
-  static genPriority() {
-    return Date.now();
   }
   getOwnership(key) {
     return this.store.get(key) ?? {
