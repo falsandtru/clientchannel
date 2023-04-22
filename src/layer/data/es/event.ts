@@ -59,7 +59,7 @@ abstract class EventRecord<K extends string, V extends EventRecordValue> {
   public readonly prop: Prop<V> | '';
 }
 export class UnstoredEventRecord<K extends string, V extends EventRecordValue> extends EventRecord<K, V> {
-  private readonly EVENT_RECORD!: this;
+  declare private readonly EVENT_RECORD: this;
   constructor(
     key: K,
     value: Partial<V>,
@@ -67,13 +67,12 @@ export class UnstoredEventRecord<K extends string, V extends EventRecordValue> e
     date: number = Date.now()
   ) {
     super(makeEventId(0), type, key, value, date);
-    this.EVENT_RECORD;
     // Must not have id property.
     if (this.id !== 0) throw new TypeError(`ClientChannel: UnstoredEventRecord: Invalid event id: ${this.id}`);
   }
 }
 export abstract class StoredEventRecord<K extends string, V extends EventRecordValue> extends EventRecord<K, V> {
-  protected readonly EVENT_RECORD!: this;
+  declare protected readonly EVENT_RECORD: this;
   constructor(
     id: EventId,
     key: K,
@@ -86,7 +85,7 @@ export abstract class StoredEventRecord<K extends string, V extends EventRecordV
   }
 }
 export class LoadedEventRecord<K extends string, V extends EventRecordValue> extends StoredEventRecord<K, V> {
-  protected override readonly EVENT_RECORD!: this;
+  declare protected readonly EVENT_RECORD: this;
   constructor(
     {
       id,
@@ -97,11 +96,10 @@ export class LoadedEventRecord<K extends string, V extends EventRecordValue> ext
     }: LoadedEventRecord<K, V>
   ) {
     super(id, key, value, type, date);
-    this.EVENT_RECORD;
   }
 }
 export class SavedEventRecord<K extends string, V extends EventRecordValue> extends StoredEventRecord<K, V> {
-  protected override readonly EVENT_RECORD!: this;
+  declare protected readonly EVENT_RECORD: this;
   constructor(
     id: EventId,
     key: K,
@@ -110,7 +108,6 @@ export class SavedEventRecord<K extends string, V extends EventRecordValue> exte
     date: number
   ) {
     super(id, key, value, type, date);
-    this.EVENT_RECORD;
   }
 }
 

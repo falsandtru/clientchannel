@@ -261,7 +261,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
           .add(record(event));
         const ev = event;
         tx.addEventListener('complete', () => {
-          assert(req.result > 0);
+          assert(req.result as number > 0);
           revert();
           const event = new SavedEventRecord(makeEventId(req.result as number), ev.key, ev.value, ev.type, ev.date);
           this.memory
