@@ -692,9 +692,9 @@ class Heap {
     this.$length = 0;
   }
 }
-exports.Heap = Heap;
 Heap.max = (a, b) => a > b ? -1 : a < b ? 1 : 0;
 Heap.min = (a, b) => a > b ? 1 : a < b ? -1 : 0;
+exports.Heap = Heap;
 function sort(cmp, array, index, length, stable) {
   if (length === 0) return false;
   switch (index) {
@@ -836,9 +836,9 @@ class MultiHeap {
     this.$length = 0;
   }
 }
-exports.MultiHeap = MultiHeap;
 MultiHeap.max = Heap.max;
 MultiHeap.min = Heap.min;
+exports.MultiHeap = MultiHeap;
 
 /***/ }),
 
@@ -2273,10 +2273,10 @@ class PriorityQueue {
     return;
   }
 }
-exports.PriorityQueue = PriorityQueue;
 PriorityQueue.priority = Symbol('priority');
 PriorityQueue.max = heap_1.Heap.max;
 PriorityQueue.min = heap_1.Heap.min;
+exports.PriorityQueue = PriorityQueue;
 class MultiQueue {
   constructor(entries) {
     this.dict = new Map();
@@ -2856,7 +2856,6 @@ class EventRecord {
 class UnstoredEventRecord extends EventRecord {
   constructor(key, value, type = exports.EventRecordType.Put, date = Date.now()) {
     super((0, identifier_1.makeEventId)(0), type, key, value, date);
-    this.EVENT_RECORD;
     // Must not have id property.
     if (this.id !== 0) throw new TypeError(`ClientChannel: UnstoredEventRecord: Invalid event id: ${this.id}`);
   }
@@ -2878,14 +2877,12 @@ class LoadedEventRecord extends StoredEventRecord {
     date
   }) {
     super(id, key, value, type, date);
-    this.EVENT_RECORD;
   }
 }
 exports.LoadedEventRecord = LoadedEventRecord;
 class SavedEventRecord extends StoredEventRecord {
   constructor(id, key, value, type, date) {
     super(id, key, value, type, date);
-    this.EVENT_RECORD;
   }
 }
 exports.SavedEventRecord = SavedEventRecord;
@@ -4550,9 +4547,9 @@ class Ownership {
     this.alive = false;
   }
 }
-exports.Ownership = Ownership;
 Ownership.throttle = 5 * 1000;
 Ownership.margin = 1 * 1000;
+exports.Ownership = Ownership;
 
 /***/ }),
 
