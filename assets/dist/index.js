@@ -40,6 +40,7 @@ var __exportStar = this && this.__exportStar || function (m, exports) {
 Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
+__webpack_require__(4128);
 __exportStar(__webpack_require__(4279), exports);
 
 /***/ }),
@@ -603,6 +604,31 @@ function fix(f) {
 exports.fix = fix;
 function noop() {}
 exports.noop = noop;
+
+/***/ }),
+
+/***/ 4128:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+
+Object.defineProperty(exports, "__esModule", ({
+  value: true
+}));
+__webpack_require__(6921);
+const global = globalThis;
+global.global = global;
+exports["default"] = global;
+
+/***/ }),
+
+/***/ 6921:
+/***/ (() => {
+
+
+
+// @ts-ignore
+var global = (/* unused pure expression or super */ null && (globalThis));
 
 /***/ }),
 
@@ -4394,7 +4420,7 @@ class StoreChannel extends channel_1.ChannelStore {
           limit: Infinity
         })
       }
-    }), '' in this.schemas ? (this.schemas[key] ?? this.schemas[''])(key) : this.schemas[key](key), (prop, newValue, oldValue) => {
+    }), (this.schemas[key] ?? this.schemas[''])(key), (prop, newValue, oldValue) => {
       if (!this.alive || this.sources.get(key) !== source) return;
       this.add(new StoreChannel.Record(key, {
         [prop]: newValue
