@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.38.1
+
+- Update dependencies.
+
 ## 0.38.0
 
 - Add StoreChannel.Config.keepalive option.
