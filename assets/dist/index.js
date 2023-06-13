@@ -579,9 +579,10 @@ exports.noop = exports.fix = exports.id = exports.clear = exports.singleton = vo
 function singleton(f) {
   let result;
   return function (...as) {
-    if (result) return result[0];
-    result = [f.call(this, ...as)];
-    return result[0];
+    if (f === noop) return result;
+    result = f.call(this, ...as);
+    f = noop;
+    return result;
   };
 }
 exports.singleton = singleton;
@@ -600,7 +601,6 @@ function fix(f) {
   };
 }
 exports.fix = fix;
-// @ts-ignore
 function noop() {}
 exports.noop = noop;
 
@@ -692,9 +692,9 @@ class Heap {
     this.$length = 0;
   }
 }
+exports.Heap = Heap;
 Heap.max = (a, b) => a > b ? -1 : a < b ? 1 : 0;
 Heap.min = (a, b) => a > b ? 1 : a < b ? -1 : 0;
-exports.Heap = Heap;
 function sort(cmp, array, index, length, stable) {
   if (length === 0) return false;
   switch (index) {
@@ -836,9 +836,9 @@ class MultiHeap {
     this.$length = 0;
   }
 }
+exports.MultiHeap = MultiHeap;
 MultiHeap.max = Heap.max;
 MultiHeap.min = Heap.min;
-exports.MultiHeap = MultiHeap;
 
 /***/ }),
 
@@ -983,7 +983,7 @@ exports.List = List;
     }
   }
   List.Node = Node;
-})(List = exports.List || (exports.List = {}));
+})(List || (exports.List = List = {}));
 
 /***/ }),
 
@@ -1029,17 +1029,38 @@ Object.defineProperty(exports, "__esModule", ({
 exports.reduce = exports.memoize = void 0;
 const alias_1 = __webpack_require__(5406);
 const compare_1 = __webpack_require__(5529);
-function memoize(f, identify = (...as) => as[0], memory) {
-  if (typeof identify === 'object') return memoize(f, undefined, identify);
-  return (0, alias_1.isArray)(memory) || memory?.constructor === Object ? memoizeRecord(f, identify, memory) : memoizeDict(f, identify, memory ?? new Map());
+function memoize(f, identify, memory) {
+  if (typeof identify === 'object') {
+    memory = identify;
+    identify = undefined;
+  }
+  identify ??= (...as) => as[0];
+  switch (true) {
+    case (0, alias_1.isArray)(memory):
+      return memoizeArray(f, identify, memory);
+    case memory?.constructor === Object:
+      return memoizeObject(f, identify, memory);
+    default:
+      return memoizeDict(f, identify, memory ?? new Map());
+  }
 }
 exports.memoize = memoize;
-function memoizeRecord(f, identify, memory) {
+function memoizeArray(f, identify, memory) {
+  return (...as) => {
+    const b = identify(...as);
+    let z = memory[b];
+    if (z !== undefined) return z;
+    z = f(...as);
+    memory[b] = z;
+    return z;
+  };
+}
+function memoizeObject(f, identify, memory) {
   let nullable = false;
   return (...as) => {
     const b = identify(...as);
     let z = memory[b];
-    if (z !== undefined || nullable && memory[b] !== undefined) return z;
+    if (z !== undefined || nullable && b in memory) return z;
     z = f(...as);
     nullable ||= z === undefined;
     memory[b] = z;
@@ -1092,7 +1113,7 @@ exports.Applicative = Applicative;
     return aa ? af.bind(f => aa.fmap((0, curry_1.curry)(f))) : aa => ap(af, aa);
   }
   Applicative.ap = ap;
-})(Applicative = exports.Applicative || (exports.Applicative = {}));
+})(Applicative || (exports.Applicative = Applicative = {}));
 
 /***/ }),
 
@@ -1163,7 +1184,7 @@ exports.Either = Either;
     return fm instanceof Either ? fm.extract(b => promise_1.AtomicPromise.resolve(new Left(b)), a => promise_1.AtomicPromise.resolve(a).then(Either.Return)) : fm.reduce((acc, m) => acc.bind(as => m.fmap(a => [...as, a])), Either.Return([]));
   }
   Either.sequence = sequence;
-})(Either = exports.Either || (exports.Either = {}));
+})(Either || (exports.Either = Either = {}));
 class Left extends Either {
   constructor(value) {
     super(throwCallError);
@@ -1273,7 +1294,7 @@ exports.Functor = Functor;
     return f ? m.fmap(f) : f => m.fmap(f);
   }
   Functor.fmap = fmap;
-})(Functor = exports.Functor || (exports.Functor = {}));
+})(Functor || (exports.Functor = Functor = {}));
 
 /***/ }),
 
@@ -1369,7 +1390,7 @@ exports.Maybe = Maybe;
     return fm instanceof Maybe ? fm.extract(() => promise_1.AtomicPromise.resolve(Maybe.mzero), a => promise_1.AtomicPromise.resolve(a).then(Maybe.Return)) : fm.reduce((acc, m) => acc.bind(as => m.fmap(a => [...as, a])), Maybe.Return([]));
   }
   Maybe.sequence = sequence;
-})(Maybe = exports.Maybe || (exports.Maybe = {}));
+})(Maybe || (exports.Maybe = Maybe = {}));
 class Just extends Maybe {
   constructor(value) {
     super(throwCallError);
@@ -1402,7 +1423,7 @@ exports.Nothing = Nothing;
     return new Maybe(() => ml.fmap(() => ml).extract(() => mr));
   }
   Maybe.mplus = mplus;
-})(Maybe = exports.Maybe || (exports.Maybe = {}));
+})(Maybe || (exports.Maybe = Maybe = {}));
 function throwCallError() {
   throw new Error(`Spica: Maybe: Invalid thunk call.`);
 }
@@ -1483,7 +1504,7 @@ exports.Monad = Monad;
   }
   Monad.bind = bind;
   //export declare function sequence<a>(fm: Monad<PromiseLike<a>>): AtomicPromise<Monad<a>>;
-})(Monad = exports.Monad || (exports.Monad = {}));
+})(Monad || (exports.Monad = Monad = {}));
 
 /***/ }),
 
@@ -1499,7 +1520,7 @@ exports.MonadPlus = void 0;
 const monad_1 = __webpack_require__(7991);
 class MonadPlus extends monad_1.Monad {}
 exports.MonadPlus = MonadPlus;
-(function (MonadPlus) {})(MonadPlus = exports.MonadPlus || (exports.MonadPlus = {}));
+(function (MonadPlus) {})(MonadPlus || (exports.MonadPlus = MonadPlus = {}));
 
 /***/ }),
 
@@ -1792,6 +1813,9 @@ const alias_1 = __webpack_require__(5406);
 const function_1 = __webpack_require__(6288);
 exports.internal = Symbol.for('spica/promise::internal');
 class AtomicPromise {
+  static get [(_a = Symbol.toStringTag, Symbol.species)]() {
+    return AtomicPromise;
+  }
   static all(vs) {
     return new AtomicPromise((resolve, reject) => {
       const values = (0, alias_1.isArray)(vs) ? vs : [...vs];
@@ -1955,10 +1979,14 @@ class AtomicPromise {
     });
   }
   static resolve(value) {
-    return new AtomicPromise(resolve => resolve(value));
+    const p = new AtomicPromise(function_1.noop);
+    p[exports.internal].resolve(value);
+    return p;
   }
   static reject(reason) {
-    return new AtomicPromise((_, reject) => reject(reason));
+    const p = new AtomicPromise(function_1.noop);
+    p[exports.internal].reject(reason);
+    return p;
   }
   constructor(executor) {
     this[_a] = 'Promise';
@@ -1983,7 +2011,7 @@ class AtomicPromise {
   }
 }
 exports.AtomicPromise = AtomicPromise;
-_a = Symbol.toStringTag, _b = exports.internal;
+_b = exports.internal;
 class Internal {
   constructor() {
     this.status = {
@@ -2048,8 +2076,16 @@ class Internal {
         if (rejectReactions.length !== 0) break;
         return call(internal, false, onrejected, status.reason);
     }
-    fulfillReactions.push([internal, true, onfulfilled]);
-    rejectReactions.push([internal, false, onrejected]);
+    fulfillReactions.push({
+      internal,
+      state: true,
+      procedure: onfulfilled
+    });
+    rejectReactions.push({
+      internal,
+      state: false,
+      procedure: onrejected
+    });
   }
   resume() {
     const {
@@ -2083,8 +2119,12 @@ class Internal {
 exports.Internal = Internal;
 function react(reactions, param) {
   for (let i = 0; i < reactions.length; ++i) {
-    const reaction = reactions[i];
-    call(reaction[0], reaction[1], reaction[2], param);
+    const {
+      internal,
+      state,
+      procedure
+    } = reactions[i];
+    call(internal, state, procedure, param);
   }
 }
 function call(internal, state, procedure, param) {
@@ -2187,7 +2227,6 @@ class Queue {
     while (!this.isEmpty()) {
       yield this.pop();
     }
-    return;
   }
 }
 exports.Queue = Queue;
@@ -2270,13 +2309,12 @@ class PriorityQueue {
     while (!this.isEmpty()) {
       yield this.pop();
     }
-    return;
   }
 }
+exports.PriorityQueue = PriorityQueue;
 PriorityQueue.priority = Symbol('priority');
 PriorityQueue.max = heap_1.Heap.max;
 PriorityQueue.min = heap_1.Heap.min;
-exports.PriorityQueue = PriorityQueue;
 class MultiQueue {
   constructor(entries) {
     this.dict = new Map();
@@ -2350,7 +2388,6 @@ class MultiQueue {
         yield [k, vs.pop()];
       }
     }
-    return;
   }
 }
 exports.MultiQueue = MultiQueue;
@@ -2399,7 +2436,6 @@ class Stack {
     while (!this.isEmpty()) {
       yield this.pop();
     }
-    return;
   }
 }
 exports.Stack = Stack;
@@ -2737,7 +2773,7 @@ class StoreChannel extends api_1.StoreChannel {
 exports.StoreChannel = StoreChannel;
 (function (StoreChannel) {
   StoreChannel.Value = api_1.StoreChannel.Value;
-})(StoreChannel = exports.StoreChannel || (exports.StoreChannel = {}));
+})(StoreChannel || (exports.StoreChannel = StoreChannel = {}));
 class StorageChannel extends api_2.StorageChannel {
   constructor(name, config) {
     super(name, api_2.localStorage || api_2.sessionStorage || api_2.fakeStorage, config);
@@ -2746,7 +2782,7 @@ class StorageChannel extends api_2.StorageChannel {
 exports.StorageChannel = StorageChannel;
 (function (StorageChannel) {
   StorageChannel.Value = api_2.StorageChannel.Value;
-})(StorageChannel = exports.StorageChannel || (exports.StorageChannel = {}));
+})(StorageChannel || (exports.StorageChannel = StorageChannel = {}));
 class Ownership extends channel_2.Ownership {
   constructor(name) {
     super(new channel_1.Channel(name, false));
@@ -3287,7 +3323,7 @@ exports.EventStore = EventStore;
   EventStore.Record = Record;
   class Value extends event_1.EventRecordValue {}
   EventStore.Value = Value;
-})(EventStore = exports.EventStore || (exports.EventStore = {}));
+})(EventStore || (exports.EventStore = EventStore = {}));
 function record(event) {
   const record = {
     ...event
@@ -3654,7 +3690,7 @@ var DAO;
   DAO.key = Symbol.for('clientchannel/DAO.key');
   DAO.date = Symbol.for('clientchannel/DAO.data');
   DAO.event = Symbol.for('clientchannel/DAO.event');
-})(DAO = exports.DAO || (exports.DAO = {}));
+})(DAO || (exports.DAO = DAO = {}));
 function build(source, target, set, get) {
   if (typeof source[DAO.key] !== 'string') throw new TypeError(`ClientChannel: DAO: Invalid key: ${source[DAO.key]}`);
   const descmap = {
@@ -3921,7 +3957,7 @@ exports.ChannelStore = ChannelStore;
   ChannelStore.Event = data_1.DataStore.Event;
   ChannelStore.EventType = data_1.DataStore.EventType;
   ChannelStore.Record = data_1.DataStore.Record;
-})(ChannelStore = exports.ChannelStore || (exports.ChannelStore = {}));
+})(ChannelStore || (exports.ChannelStore = ChannelStore = {}));
 class Stores {
   constructor(store, ownership, capacity, listen) {
     this.store = store;
@@ -4133,7 +4169,7 @@ exports.DataStore = DataStore;
   DataStore.EventType = store_1.EventStore.EventType;
   DataStore.Record = store_1.EventStore.Record;
   DataStore.Value = store_1.EventStore.Value;
-})(DataStore = exports.DataStore || (exports.DataStore = {}));
+})(DataStore || (exports.DataStore = DataStore = {}));
 
 /***/ }),
 
@@ -4408,7 +4444,7 @@ exports.StoreChannel = StoreChannel;
   StoreChannel.Event = channel_1.ChannelStore.Event;
   StoreChannel.EventType = channel_1.ChannelStore.EventType;
   StoreChannel.Record = channel_1.ChannelStore.Record;
-})(StoreChannel = exports.StoreChannel || (exports.StoreChannel = {}));
+})(StoreChannel || (exports.StoreChannel = StoreChannel = {}));
 
 /***/ }),
 
@@ -4547,9 +4583,9 @@ class Ownership {
     this.alive = false;
   }
 }
+exports.Ownership = Ownership;
 Ownership.throttle = 5 * 1000;
 Ownership.margin = 1 * 1000;
-exports.Ownership = Ownership;
 
 /***/ }),
 
@@ -4740,7 +4776,7 @@ exports.StorageChannel = StorageChannel;
     EventType.send = 'send';
     EventType.recv = 'recv';
   })(EventType = StorageChannel.EventType || (StorageChannel.EventType = {}));
-})(StorageChannel = exports.StorageChannel || (exports.StorageChannel = {}));
+})(StorageChannel || (exports.StorageChannel = StorageChannel = {}));
 function parse(item) {
   try {
     return JSON.parse(item || '{}') || {};
