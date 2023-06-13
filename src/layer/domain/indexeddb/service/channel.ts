@@ -101,9 +101,7 @@ export class StoreChannel<M extends object> extends ChannelStore<K<M>, StoreChan
             value: new Observation<[StorageChannel.EventType, Prop<M[L]>], StorageChannel.Event<M[L]>, void>({ limit: Infinity })
           },
         }),
-      '' in this.schemas
-        ? (this.schemas[key] ?? this.schemas[''])(key) as M[L] & object
-        : this.schemas[key](key) as M[L] & object,
+      (this.schemas[key] ?? this.schemas[''])(key) as M[L] & object,
       (prop, newValue, oldValue) => {
         if (!this.alive || this.sources.get(key) !== source) return;
         this.add(new StoreChannel.Record<L, StoreChannel.Value<L>>(key, { [prop]: newValue }));
