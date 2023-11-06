@@ -303,32 +303,35 @@ const exception_1 = __webpack_require__(7822);
 class Cancellation {
   constructor(cancellees) {
     this[_a] = 'Cancellation';
-    this.state = [];
-    this.listeners = [];
+    this.state = 0 /* State.alive */;
+    this.reason = undefined;
+    this.handlers = [];
     this[_b] = new promise_1.Internal();
     if (cancellees) for (const cancellee of cancellees) {
       cancellee.register(this.cancel);
     }
   }
   isAlive() {
-    return this.state.length === 0;
+    return this.state === 0 /* State.alive */;
   }
+
   isCancelled() {
-    return this.state.length === 1;
+    return this.state === 1 /* State.cancelled */;
   }
+
   isClosed() {
-    return this.state.length === 2;
+    return this.state === 2 /* State.closed */;
   }
+
   register$(listener) {
     const {
-      listeners,
-      state
+      handlers
     } = this;
-    if (!this.isAlive() && listeners.length === 0) {
-      state.length === 1 && handler(state[0]);
+    if (!this.isAlive() && handlers.length === 0) {
+      this.isCancelled() && handler(this.reason);
       return function_1.noop;
     }
-    listeners.push(handler);
+    handlers.push(handler);
     return () => void (listener = function_1.noop);
     function handler(reason) {
       try {
@@ -343,13 +346,14 @@ class Cancellation {
   }
   cancel$(reason) {
     if (!this.isAlive()) return;
-    this.state = [reason];
+    this.state = 1 /* State.cancelled */;
+    this.reason = reason;
     for (let {
-        listeners
-      } = this, i = 0; i < listeners.length; ++i) {
-      listeners[i](reason);
+        handlers
+      } = this, i = 0; i < handlers.length; ++i) {
+      handlers[i](reason);
     }
-    this.listeners = [];
+    this.handlers = [];
     this[promise_1.internal].resolve(reason);
   }
   get cancel() {
@@ -357,21 +361,22 @@ class Cancellation {
   }
   close$(reason) {
     if (!this.isAlive()) return;
-    this.state = [undefined, reason];
-    this.listeners = [];
-    this[promise_1.internal].resolve(promise_1.AtomicPromise.reject(reason));
+    this.state = 2 /* State.closed */;
+    this.reason = reason;
+    this.handlers = [];
+    this[promise_1.internal].reject(reason);
   }
   get close() {
     return reason => this.close$(reason);
   }
   get promise() {
-    return value => this.isCancelled() ? promise_1.AtomicPromise.reject(this.state[0]) : promise_1.AtomicPromise.resolve(value);
+    return value => this.isCancelled() ? promise_1.AtomicPromise.reject(this.reason) : promise_1.AtomicPromise.resolve(value);
   }
   get maybe() {
     return value => (0, maybe_1.Just)(value).bind(value => this.isCancelled() ? maybe_1.Nothing : (0, maybe_1.Just)(value));
   }
   get either() {
-    return value => (0, either_1.Right)(value).bind(value => this.isCancelled() ? (0, either_1.Left)(this.state[0]) : (0, either_1.Right)(value));
+    return value => (0, either_1.Right)(value).bind(value => this.isCancelled() ? (0, either_1.Left)(this.reason) : (0, either_1.Right)(value));
   }
 }
 exports.Cancellation = Cancellation;
@@ -458,29 +463,6 @@ exports.equal = equal;
 
 /***/ }),
 
-/***/ 302:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports.concat = void 0;
-function concat(target, source) {
-  if ('length' in source) {
-    for (let i = 0; i < source.length; ++i) {
-      target.push(source[i]);
-    }
-  } else {
-    target.push(...source);
-  }
-  return target;
-}
-exports.concat = concat;
-
-/***/ }),
-
 /***/ 4877:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
@@ -494,7 +476,7 @@ const array_1 = __webpack_require__(8112);
 exports.curry = f => curry_(f, f.length);
 function curry_(f, arity, ...xs) {
   let g;
-  return xs.length < arity ? (...ys) => curry_(g ??= xs.length && f.bind(undefined, ...xs) || f, arity - xs.length, ...ys) : f(...xs);
+  return xs.length < arity ? (...ys) => curry_(g ??= xs.length ? f.bind(undefined, ...xs) : f, arity - xs.length, ...ys) : f(...xs);
 }
 const uncurry = f => uncurry_(f);
 exports.uncurry = uncurry;
@@ -506,33 +488,88 @@ function uncurry_(f) {
 /***/ }),
 
 /***/ 8555:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 
-var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
-  if (k2 === undefined) k2 = k;
-  var desc = Object.getOwnPropertyDescriptor(m, k);
-  if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-    desc = {
-      enumerable: true,
-      get: function () {
-        return m[k];
-      }
-    };
-  }
-  Object.defineProperty(o, k2, desc);
-} : function (o, m, k, k2) {
-  if (k2 === undefined) k2 = k;
-  o[k2] = m[k];
-});
-var __exportStar = this && this.__exportStar || function (m, exports) {
-  for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
-};
 Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
-__exportStar(__webpack_require__(14), exports);
+exports.Either = exports.Left = exports.Right = void 0;
+const promise_1 = __webpack_require__(4879);
+const curry_1 = __webpack_require__(4877);
+const array_1 = __webpack_require__(8112);
+class Right {
+  constructor(value) {
+    this.value = value;
+  }
+  fmap(f) {
+    return new Right(f(this.value));
+  }
+  ap(b) {
+    return Either.ap(this, b);
+  }
+  bind(f) {
+    return f(this.extract());
+  }
+  join() {
+    return this.value;
+  }
+  extract(left, right) {
+    if (right !== undefined) return right(this.value);
+    return this.value;
+  }
+}
+class Left {
+  constructor(value) {
+    this.value = value;
+  }
+  fmap(f) {
+    return this;
+  }
+  ap(_) {
+    return this;
+  }
+  bind(f) {
+    return this;
+  }
+  join() {
+    return this;
+  }
+  extract(left) {
+    if (left !== undefined) return left(this.value);
+    throw this.value;
+  }
+}
+function right(b) {
+  return new Right(b);
+}
+exports.Right = right;
+function left(value) {
+  return new Left(value);
+}
+exports.Left = left;
+var Either;
+(function (Either) {
+  function fmap(f, m) {
+    return m.fmap(f);
+  }
+  Either.fmap = fmap;
+  Either.pure = right;
+  function ap(af, aa) {
+    return aa ? af.bind(f => aa.fmap((0, curry_1.curry)(f))) : aa => ap(af, aa);
+  }
+  Either.ap = ap;
+  Either.Return = Either.pure;
+  function bind(f, m) {
+    return m.bind(f);
+  }
+  Either.bind = bind;
+  function sequence(fm) {
+    return Array.isArray(fm) ? fm.reduce((acc, m) => acc.bind(as => m.fmap(a => (0, array_1.push)(as, [a]))), Either.Return([])) : fm.extract(b => promise_1.AtomicPromise.resolve(new Left(b)), a => promise_1.AtomicPromise.resolve(a).then(Either.Return));
+  }
+  Either.sequence = sequence;
+})(Either || (exports.Either = Either = {}));
 
 /***/ }),
 
@@ -1014,33 +1051,94 @@ exports.List = List;
 /***/ }),
 
 /***/ 6512:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 
-var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
-  if (k2 === undefined) k2 = k;
-  var desc = Object.getOwnPropertyDescriptor(m, k);
-  if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-    desc = {
-      enumerable: true,
-      get: function () {
-        return m[k];
-      }
-    };
-  }
-  Object.defineProperty(o, k2, desc);
-} : function (o, m, k, k2) {
-  if (k2 === undefined) k2 = k;
-  o[k2] = m[k];
-});
-var __exportStar = this && this.__exportStar || function (m, exports) {
-  for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
-};
 Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
-__exportStar(__webpack_require__(1869), exports);
+exports.Maybe = exports.Nothing = exports.Just = void 0;
+const promise_1 = __webpack_require__(4879);
+const curry_1 = __webpack_require__(4877);
+const array_1 = __webpack_require__(8112);
+class Just {
+  constructor(value) {
+    this.value = value;
+  }
+  fmap(f) {
+    return new Just(f(this.value));
+  }
+  ap(a) {
+    return Maybe.ap(this, a);
+  }
+  bind(f) {
+    return f(this.value);
+  }
+  join() {
+    return this.value;
+  }
+  guard(cond) {
+    return cond ? this : Maybe.mzero;
+  }
+  extract(nothing, just) {
+    if (just !== undefined) return just(this.value);
+    return this.value;
+  }
+}
+class Nothing {
+  fmap(f) {
+    return this;
+  }
+  ap(_) {
+    return this;
+  }
+  bind(f) {
+    return this;
+  }
+  join() {
+    return this;
+  }
+  guard(cond) {
+    return this;
+  }
+  extract(nothing) {
+    if (nothing !== undefined) return nothing();
+    throw new Error(`Spica: Maybe: Nothing value is extracted.`);
+  }
+}
+function just(value) {
+  return new Just(value);
+}
+exports.Just = just;
+const nothing = new Nothing();
+exports.Nothing = nothing;
+var Maybe;
+(function (Maybe) {
+  function fmap(f, m) {
+    return m.fmap(f);
+  }
+  Maybe.fmap = fmap;
+  Maybe.pure = just;
+  function ap(af, aa) {
+    return aa ? af.bind(f => aa.fmap((0, curry_1.curry)(f))) : aa => ap(af, aa);
+  }
+  Maybe.ap = ap;
+  Maybe.Return = Maybe.pure;
+  function bind(f, m) {
+    return m.bind(f);
+  }
+  Maybe.bind = bind;
+  function sequence(fm) {
+    return Array.isArray(fm) ? fm.reduce((acc, m) => acc.bind(as => m.fmap(a => (0, array_1.push)(as, [a]))), Maybe.Return([])) : fm.extract(() => promise_1.AtomicPromise.resolve(Maybe.mzero), a => promise_1.AtomicPromise.resolve(a).then(Maybe.Return));
+  }
+  Maybe.sequence = sequence;
+  Maybe.mzero = nothing;
+  function mplus(ml, mr) {
+    return ml.extract(() => mr, () => ml);
+  }
+  Maybe.mplus = mplus;
+})(Maybe || (exports.Maybe = Maybe = {}));
 
 /***/ }),
 
@@ -1118,435 +1216,6 @@ function reduce(f, identify = (...as) => as[0]) {
   };
 }
 exports.reduce = reduce;
-
-/***/ }),
-
-/***/ 9983:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports.Applicative = void 0;
-const functor_1 = __webpack_require__(8946);
-const curry_1 = __webpack_require__(4877);
-class Applicative extends functor_1.Functor {}
-exports.Applicative = Applicative;
-(function (Applicative) {
-  function ap(af, aa) {
-    return aa ? af.bind(f => aa.fmap((0, curry_1.curry)(f))) : aa => ap(af, aa);
-  }
-  Applicative.ap = ap;
-})(Applicative || (exports.Applicative = Applicative = {}));
-
-/***/ }),
-
-/***/ 8554:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports.Right = exports.Left = exports.Either = void 0;
-const monad_1 = __webpack_require__(7991);
-const promise_1 = __webpack_require__(4879);
-const function_1 = __webpack_require__(6288);
-class Either extends monad_1.Monad {
-  constructor(thunk) {
-    super(thunk);
-  }
-  fmap(f) {
-    return this.bind(b => new Right(f(b)));
-  }
-  ap(b) {
-    return Either.ap(this, b);
-  }
-  bind(f) {
-    return new Either(() => {
-      const m = this.evaluate();
-      if (m instanceof Left) {
-        return m;
-      }
-      if (m instanceof Right) {
-        return f(m.extract());
-      }
-      if (m instanceof Either) {
-        return m.bind(f);
-      }
-      throw new TypeError(`Spica: Either: Invalid monad value: ${m}`);
-    });
-  }
-  join() {
-    return this.bind(m => m);
-  }
-  extract(left, right) {
-    return right === undefined ? this.evaluate().extract(left) : this.fmap(right).extract(left);
-  }
-  static do(block) {
-    const iter = block();
-    let value;
-    for (;;) {
-      const {
-        value: m,
-        done
-      } = iter.next(value);
-      if (done) return m;
-      if (m.extract(function_1.noop, a => [value = a]) === undefined) return m;
-    }
-  }
-}
-exports.Either = Either;
-(function (Either) {
-  function pure(b) {
-    return new Right(b);
-  }
-  Either.pure = pure;
-  Either.Return = pure;
-  function sequence(fm) {
-    return fm instanceof Either ? fm.extract(b => promise_1.AtomicPromise.resolve(new Left(b)), a => promise_1.AtomicPromise.resolve(a).then(Either.Return)) : fm.reduce((acc, m) => acc.bind(as => m.fmap(a => [...as, a])), Either.Return([]));
-  }
-  Either.sequence = sequence;
-})(Either || (exports.Either = Either = {}));
-class Left extends Either {
-  constructor(value) {
-    super(throwCallError);
-    this.value = value;
-  }
-  bind(_) {
-    return this;
-  }
-  extract(left) {
-    if (left === undefined) throw this.value;
-    return left(this.value);
-  }
-}
-exports.Left = Left;
-class Right extends Either {
-  constructor(value) {
-    super(throwCallError);
-    this.value = value;
-  }
-  bind(f) {
-    return new Either(() => f(this.extract()));
-  }
-  extract(_, right) {
-    return right === undefined ? this.value : right(this.value);
-  }
-}
-exports.Right = Right;
-function throwCallError() {
-  throw new Error(`Spica: Either: Invalid thunk call.`);
-}
-
-/***/ }),
-
-/***/ 14:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-
-var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
-  if (k2 === undefined) k2 = k;
-  var desc = Object.getOwnPropertyDescriptor(m, k);
-  if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-    desc = {
-      enumerable: true,
-      get: function () {
-        return m[k];
-      }
-    };
-  }
-  Object.defineProperty(o, k2, desc);
-} : function (o, m, k, k2) {
-  if (k2 === undefined) k2 = k;
-  o[k2] = m[k];
-});
-var __setModuleDefault = this && this.__setModuleDefault || (Object.create ? function (o, v) {
-  Object.defineProperty(o, "default", {
-    enumerable: true,
-    value: v
-  });
-} : function (o, v) {
-  o["default"] = v;
-});
-var __importStar = this && this.__importStar || function (mod) {
-  if (mod && mod.__esModule) return mod;
-  var result = {};
-  if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-  __setModuleDefault(result, mod);
-  return result;
-};
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports.Right = exports.Left = exports.Either = void 0;
-const Monad = __importStar(__webpack_require__(8554));
-const function_1 = __webpack_require__(6288);
-class Either extends Monad.Either {
-  constructor() {
-    super(function_1.noop);
-  }
-}
-exports.Either = Either;
-function Left(a) {
-  return new Monad.Left(a);
-}
-exports.Left = Left;
-function Right(b) {
-  return new Monad.Right(b);
-}
-exports.Right = Right;
-
-/***/ }),
-
-/***/ 8946:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports.Functor = void 0;
-const lazy_1 = __webpack_require__(7395);
-class Functor extends lazy_1.Lazy {}
-exports.Functor = Functor;
-(function (Functor) {
-  function fmap(m, f) {
-    return f ? m.fmap(f) : f => m.fmap(f);
-  }
-  Functor.fmap = fmap;
-})(Functor || (exports.Functor = Functor = {}));
-
-/***/ }),
-
-/***/ 7395:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports.Lazy = void 0;
-class Lazy {
-  constructor(thunk) {
-    this.thunk = thunk;
-    this.$memory = undefined;
-  }
-  evaluate() {
-    return this.$memory ??= this.thunk();
-  }
-}
-exports.Lazy = Lazy;
-
-/***/ }),
-
-/***/ 1605:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports.Nothing = exports.Just = exports.Maybe = void 0;
-const monadplus_1 = __webpack_require__(4716);
-const promise_1 = __webpack_require__(4879);
-const function_1 = __webpack_require__(6288);
-class Maybe extends monadplus_1.MonadPlus {
-  constructor(thunk) {
-    super(thunk);
-  }
-  fmap(f) {
-    return this.bind(a => new Just(f(a)));
-  }
-  ap(a) {
-    return Maybe.ap(this, a);
-  }
-  bind(f) {
-    return new Maybe(() => {
-      const m = this.evaluate();
-      if (m instanceof Just) {
-        return f(m.extract());
-      }
-      if (m instanceof Nothing) {
-        return m;
-      }
-      if (m instanceof Maybe) {
-        return m.bind(f);
-      }
-      throw new TypeError(`Spica: Maybe: Invalid monad value: ${m}`);
-    });
-  }
-  guard(cond) {
-    return cond ? this : Maybe.mzero;
-  }
-  join() {
-    return this.bind(m => m);
-  }
-  extract(nothing, just) {
-    return just === undefined ? this.evaluate().extract(nothing) : this.fmap(just).extract(nothing);
-  }
-  static do(block) {
-    const iter = block();
-    let value;
-    for (;;) {
-      const {
-        value: m,
-        done
-      } = iter.next(value);
-      if (done) return m;
-      if (m.extract(function_1.noop, a => [value = a]) === undefined) return m;
-    }
-  }
-}
-exports.Maybe = Maybe;
-(function (Maybe) {
-  function pure(a) {
-    return new Just(a);
-  }
-  Maybe.pure = pure;
-  Maybe.Return = pure;
-  function sequence(fm) {
-    return fm instanceof Maybe ? fm.extract(() => promise_1.AtomicPromise.resolve(Maybe.mzero), a => promise_1.AtomicPromise.resolve(a).then(Maybe.Return)) : fm.reduce((acc, m) => acc.bind(as => m.fmap(a => [...as, a])), Maybe.Return([]));
-  }
-  Maybe.sequence = sequence;
-})(Maybe || (exports.Maybe = Maybe = {}));
-class Just extends Maybe {
-  constructor(value) {
-    super(throwCallError);
-    this.value = value;
-  }
-  bind(f) {
-    return new Maybe(() => f(this.extract()));
-  }
-  extract(_, just) {
-    return just === undefined ? this.value : just(this.value);
-  }
-}
-exports.Just = Just;
-class Nothing extends Maybe {
-  constructor() {
-    super(throwCallError);
-  }
-  bind(_) {
-    return this;
-  }
-  extract(nothing) {
-    if (nothing === undefined) throw new Error(`Spica: Maybe: Nothig value is extracted.`);
-    return nothing();
-  }
-}
-exports.Nothing = Nothing;
-(function (Maybe) {
-  Maybe.mzero = new Nothing();
-  function mplus(ml, mr) {
-    return new Maybe(() => ml.fmap(() => ml).extract(() => mr));
-  }
-  Maybe.mplus = mplus;
-})(Maybe || (exports.Maybe = Maybe = {}));
-function throwCallError() {
-  throw new Error(`Spica: Maybe: Invalid thunk call.`);
-}
-
-/***/ }),
-
-/***/ 1869:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-
-var __createBinding = this && this.__createBinding || (Object.create ? function (o, m, k, k2) {
-  if (k2 === undefined) k2 = k;
-  var desc = Object.getOwnPropertyDescriptor(m, k);
-  if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-    desc = {
-      enumerable: true,
-      get: function () {
-        return m[k];
-      }
-    };
-  }
-  Object.defineProperty(o, k2, desc);
-} : function (o, m, k, k2) {
-  if (k2 === undefined) k2 = k;
-  o[k2] = m[k];
-});
-var __setModuleDefault = this && this.__setModuleDefault || (Object.create ? function (o, v) {
-  Object.defineProperty(o, "default", {
-    enumerable: true,
-    value: v
-  });
-} : function (o, v) {
-  o["default"] = v;
-});
-var __importStar = this && this.__importStar || function (mod) {
-  if (mod && mod.__esModule) return mod;
-  var result = {};
-  if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-  __setModuleDefault(result, mod);
-  return result;
-};
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports.Nothing = exports.Just = exports.Maybe = void 0;
-const Monad = __importStar(__webpack_require__(1605));
-const function_1 = __webpack_require__(6288);
-class Maybe extends Monad.Maybe {
-  constructor() {
-    super(function_1.noop);
-  }
-}
-exports.Maybe = Maybe;
-function Just(a) {
-  return new Monad.Just(a);
-}
-exports.Just = Just;
-exports.Nothing = Monad.Maybe.mzero;
-
-/***/ }),
-
-/***/ 7991:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports.Monad = void 0;
-const applicative_1 = __webpack_require__(9983);
-class Monad extends applicative_1.Applicative {}
-exports.Monad = Monad;
-(function (Monad) {
-  function bind(m, f) {
-    return f ? m.bind(f) : f => bind(m, f);
-  }
-  Monad.bind = bind;
-  //export declare function sequence<a>(fm: Monad<PromiseLike<a>>): AtomicPromise<Monad<a>>;
-})(Monad || (exports.Monad = Monad = {}));
-
-/***/ }),
-
-/***/ 4716:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports.MonadPlus = void 0;
-const monad_1 = __webpack_require__(7991);
-class MonadPlus extends monad_1.Monad {}
-exports.MonadPlus = MonadPlus;
-(function (MonadPlus) {})(MonadPlus || (exports.MonadPlus = MonadPlus = {}));
 
 /***/ }),
 
@@ -2542,12 +2211,10 @@ function cothrottle(routine, resource, scheduler) {
   return async function* () {
     let start = (0, chrono_1.now)();
     for await (const value of routine()) {
-      if (resource - ((0, chrono_1.now)() - start) > 0) {
-        yield value;
-      } else {
-        await scheduler();
-        start = (0, chrono_1.now)();
-      }
+      yield value;
+      if (resource - ((0, chrono_1.now)() - start) > 0) continue;
+      await scheduler();
+      start = (0, chrono_1.now)();
     }
   };
 }
@@ -2695,7 +2362,7 @@ Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
 exports.uuid = void 0;
-// 32: Closest power of 2 from the number of random values in an UUID.
+// 32: Closest power of 2 from the number of random values in a UUID.
 // 4: Number of bits required to represent a hex number.
 // 8: Number of 16 bit values required to create a UUID.
 const digit = 16;
@@ -2716,7 +2383,7 @@ const gen = ((i, offset) => eval(['() => {', ...[...Array(unit)].map((_, i) => `
   offset ||= digit;
   switch (c) {
     case 'x':
-      return `+ HEX[buf${i++ >> 2} >> ${offset -= 4} & 15]`;
+      return `+ HEX[buf${i++ >> 2} >> ${offset -= 4} & 0x0f]`;
     case 'y':
       return `+ HEX[buf${i++ >> 2} >> ${offset -= 4} & 0x03 | 0x08]`;
     default:
@@ -2991,7 +2658,7 @@ const event_1 = __webpack_require__(7155);
 const value_1 = __webpack_require__(8089);
 const observer_1 = __webpack_require__(4615);
 const chrono_1 = __webpack_require__(4393);
-const concat_1 = __webpack_require__(302);
+const array_1 = __webpack_require__(8112);
 const exception_1 = __webpack_require__(7822);
 var EventStoreSchema;
 (function (EventStoreSchema) {
@@ -3159,7 +2826,7 @@ class EventStore {
     }, () => void cb?.(new Error('Request has failed.')));
   }
   keys() {
-    return this.memory.reflect([]).reduce((keys, ev) => keys.at(-1) !== ev.key ? (0, concat_1.concat)(keys, [ev.key]) : keys, []).sort();
+    return this.memory.reflect([]).reduce((keys, ev) => keys.at(-1) !== ev.key ? (0, array_1.push)(keys, [ev.key]) : keys, []).sort();
   }
   has(key) {
     return compose(key, this.memory.reflect([key])).type !== EventStore.EventType.Delete;
@@ -3365,7 +3032,7 @@ function compose(key, events) {
     return events.map((ev, i) => [ev, i]).sort(([a, ai], [b, bi]) =>  false || indexedDB.cmp(a.key, b.key) || b.date - a.date || b.id > 0 && a.id > 0 && b.id - a.id || bi - ai).reduceRight(([head, ...tail], [event]) => {
       const prev = head[0];
       if (!prev) return [[event]];
-      return prev.key === event.key ? (0, concat_1.concat)([(0, concat_1.concat)([event], head)], tail) : (0, concat_1.concat)([[event]], (0, concat_1.concat)([head], tail));
+      return prev.key === event.key ? (0, array_1.unshift)([(0, array_1.unshift)([event], head)], tail) : (0, array_1.unshift)([[event]], (0, array_1.unshift)([head], tail));
     }, [[]]);
   }
   function compose(target, source) {
