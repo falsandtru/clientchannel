@@ -6,7 +6,7 @@ import { Prop, hasBinary } from '../database/value';
 import { Observation } from 'spica/observer';
 import { Cancellation } from 'spica/cancellation';
 import { clock } from 'spica/chrono';
-import { concat } from 'spica/concat';
+import { push, unshift } from 'spica/array';
 import { causeAsyncException } from 'spica/exception';
 
 namespace EventStoreSchema {
@@ -213,7 +213,7 @@ export abstract class EventStore<K extends string, V extends EventStore.Value> {
     return this.memory.reflect([])
       .reduce<K[]>((keys, ev) =>
         keys.at(-1) !== ev.key
-          ? concat(keys, [ev.key])
+          ? push(keys, [ev.key])
           : keys
       , [])
       .sort();
@@ -517,8 +517,8 @@ export function compose<K extends string, V extends EventStore.Value>(
         if (!prev) return [[event]];
         assert(prev.key === event.key);
         return prev.key === event.key
-          ? concat([concat([event], head)], tail)
-          : concat([[event]], concat([head], tail));
+          ? unshift([unshift([event], head)], tail)
+          : unshift([[event]], unshift([head], tail));
       }, [[]]);
   }
   function compose(target: E, source: E): E {
